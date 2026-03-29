@@ -24,11 +24,8 @@ export default async function handler(req, res) {
   try {
     const timestamp = Date.now().toString();
     const message = `${timestamp}\nGET\n/keywordstool`;
-
-    // 비밀키는 Base64 인코딩된 값 → 디코딩 후 사용
-    const decodedSecretKey = Buffer.from(secretKey, "base64");
     const signature = crypto
-      .createHmac("sha256", decodedSecretKey)
+      .createHmac("sha256", secretKey)
       .update(message)
       .digest("base64");
 
@@ -46,10 +43,7 @@ export default async function handler(req, res) {
     });
 
     const text = await response.text();
-    if (!response.ok) {
-      return res.status(response.status).json({ error: text });
-    }
-
+    if (!response.ok) return res.status(response.status).json({ error: text });
     return res.status(200).json(JSON.parse(text));
   } catch (e) {
     return res.status(500).json({ error: e.message });
