@@ -23,11 +23,12 @@ export default async function handler(req, res) {
 
   try {
     const timestamp = Date.now().toString();
-
-    // 가장 단순한 방식: 쿼리 없이 path만
     const message = `${timestamp}\nGET\n/keywordstool`;
+
+    // 비밀키는 Base64 인코딩된 값 → 디코딩 후 사용
+    const decodedSecretKey = Buffer.from(secretKey, "base64");
     const signature = crypto
-      .createHmac("sha256", secretKey)
+      .createHmac("sha256", decodedSecretKey)
       .update(message)
       .digest("base64");
 
