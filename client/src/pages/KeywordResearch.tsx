@@ -3,13 +3,13 @@
  * 키워드 수집 → 제목 생성 → 콘텐츠 생성 플로우
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
   Search, TrendingUp, TrendingDown, RefreshCw,
-  Download, Star, StarOff, Zap, ChevronRight,
+  Download, Star, StarOff, Zap, ArrowUpDown,
   Sparkles, ArrowRight, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,26 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getContentProvider, getAPIKey } from "@/lib/ai-config";
+
+// 대형 키워드 풀 - 매번 랜덤 선택
+const KEYWORD_POOL = [
+  "맛집", "여행", "재테크", "다이어트", "인테리어", "강아지", "건강", "운동",
+  "주식", "부업", "육아", "요리", "뷰티", "패션", "독서", "커피", "카페",
+  "제주도", "부산", "서울", "캠핑", "등산", "자전거", "요가", "필라테스",
+  "영어", "중국어", "자격증", "이직", "창업", "프리랜서", "재테크", "부동산",
+  "고양이", "강아지용품", "식물", "원예", "홈카페", "홈트", "다이어트식단",
+  "스킨케어", "헤어케어", "네일", "향수", "시계", "가방", "신발",
+  "넷플릭스", "유튜브", "OTT", "게임", "아이폰", "갤럭시", "노트북",
+];
+
+function getRandomBatches(count = 3, batchSize = 5): string[][] {
+  const shuffled = [...KEYWORD_POOL].sort(() => Math.random() - 0.5);
+  const batches: string[][] = [];
+  for (let i = 0; i < count; i++) {
+    batches.push(shuffled.slice(i * batchSize, (i + 1) * batchSize));
+  }
+  return batches;
+}
 
 const KEYWORDS = [
   { id: 1, keyword: "맛집 추천 2026", volume: 89400, clicks: 2340, cpc: 450, trend: "up", competition: "중", category: "음식", starred: true },
@@ -34,19 +54,44 @@ const CHART_DATA = [
 ];
 
 export default function KeywordResearch() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  const urlParams = new URLSearchParams(location.split("?")[1] || "");
+  const urlQuery = urlParams.get("q") || "";
+
   const [adsenseOn, setAdsenseOn] = useState(true);
   const [adpostOn, setAdpostOn] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(urlQuery);
   const [isCollecting, setIsCollecting] = useState(false);
   const [keywords, setKeywords] = useState(KEYWORDS);
+  // 정렬: "default" | "hard" | "easy"
+  const [sortMode, setSortMode] = useState<"default" | "hard" | "easy">("default");
 
   // 제목 생성 패널
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
   const [titles, setTitles] = useState<string[]>([]);
   const [isGeneratingTitles, setIsGeneratingTitles] = useState(false);
 
-  const filtered = keywords.filter(k =>
+  // URL에 q 파라미터 있으면 자동 수집
+  useEffect(() => {
+    if (urlQuery) {
+      setSearchQuery(urlQuery);
+      setTimeout(() => handleCollectWithKeyword(urlQuery), 300);
+    }
+  }, []);
+
+  const sortedKeywords = [...keywords].sort((a, b) => {
+    const compScore = (c: string) => c === "높음" ? 3 : c === "중" ? 2 : 1;
+    if (sortMode === "hard") return compScore(b.competition) - compScore(a.competition);
+    if (sortMode === "easy") {
+      // 경쟁 낮음 + 검색량 높음 순
+      const aScore = (4 - compScore(a.competition)) * 100000 + a.volume;
+      const bScore = (4 - compScore(b.competition)) * 100000 + b.volume;
+      return bScore - aScore;
+    }
+    return b.volume - a.volume;
+  });
+
+  const filtered = sortedKeywords.filter(k =>
     k.keyword.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -54,8 +99,17 @@ export default function KeywordResearch() {
     setKeywords(prev => prev.map(k => k.id === id ? { ...k, starred: !k.starred } : k));
   };
 
-  // 키워드 수집
-  const handleCollect = async () => {
+  const handleSortToggle = () => {
+    setSortMode(prev =>
+      prev === "default" ? "hard" : prev === "hard" ? "easy" : "default"
+    );
+  };
+
+  const sortLabel = sortMode === "default" ? "기본순" : sortMode === "hard" ? "어려운순" : "가능성순";
+  const sortColor = sortMode === "default" ? "var(--muted-foreground)" : sortMode === "hard" ? "oklch(0.65 0.22 25)" : "var(--color-emerald)";
+
+  // 공통 수집 함수
+  const collectKeywords = async (query: string) => {
     const accessLicense = localStorage.getItem("naver_access_license");
     const secretKey = localStorage.getItem("naver_secret_key");
     const customerId = localStorage.getItem("naver_customer_id");
@@ -69,13 +123,10 @@ export default function KeywordResearch() {
     toast.loading("네이버에서 키워드 수집 중...", { id: "collect" });
 
     try {
-      const batches = searchQuery.trim()
-        ? [[searchQuery.trim()]]
-        : [
-            ["맛집", "여행", "재테크", "다이어트", "인테리어"],
-            ["강아지", "건강", "운동", "주식", "부업"],
-            ["육아", "요리", "뷰티", "패션", "독서"],
-          ];
+      // 매번 랜덤 배치로 수집 (무한 재수집 가능)
+      const batches = query.trim()
+        ? [[query.trim()]]
+        : getRandomBatches(3, 5);
 
       const allItems: any[] = [];
 
@@ -104,7 +155,7 @@ export default function KeywordResearch() {
           cpc: Math.round((parseFloat(item.avgMonthlyPC || "0") || 0) * 1000),
           trend: total > 5000 ? "up" as const : "down" as const,
           competition: item.compIdx === "높음" ? "높음" : item.compIdx === "낮음" ? "낮음" : "중",
-          category: searchQuery.trim() || "수집",
+          category: query.trim() || "수집",
           starred: false,
         };
       });
@@ -117,6 +168,9 @@ export default function KeywordResearch() {
       setIsCollecting(false);
     }
   };
+
+  const handleCollect = () => collectKeywords(searchQuery);
+  const handleCollectWithKeyword = (kw: string) => collectKeywords(kw);
 
   // 제목 생성
   const handleGenerateTitles = async (keyword: string) => {
@@ -221,13 +275,19 @@ export default function KeywordResearch() {
 
         {/* Search + Keyword Table */}
         <div className="rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-3 p-3 sm:p-4 border-b" style={{ borderColor: "var(--border)" }}>
+          <div className="flex items-center gap-2 p-3 sm:p-4 border-b" style={{ borderColor: "var(--border)" }}>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
               <Input placeholder="키워드 입력 후 수집 버튼..." className="pl-9 text-sm"
                 value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCollect()} />
             </div>
+            <Button variant="outline" size="sm" className="gap-1.5 shrink-0 text-xs"
+              style={{ color: sortColor, borderColor: sortColor }}
+              onClick={handleSortToggle}>
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              {sortLabel}
+            </Button>
           </div>
 
           {/* Table header - 모바일에서 간소화 */}

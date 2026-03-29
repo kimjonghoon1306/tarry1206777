@@ -226,16 +226,25 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
           {/* Desktop spacer */}
           <div className="hidden lg:block" style={{ width: "240px", flexShrink: 0 }} />
 
-          {/* Search bar placeholder */}
-          <div
+          {/* Search bar - keywords 페이지로 이동 */}
+          <form
             className="flex-1 max-w-md hidden sm:flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
-            style={{ background: "var(--muted)", color: "var(--muted-foreground)", cursor: "pointer" }}
-            onClick={() => toast.info("검색 기능은 준비 중입니다")}
+            style={{ background: "var(--muted)", color: "var(--muted-foreground)", cursor: "text" }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              const val = (e.currentTarget.querySelector("input") as HTMLInputElement)?.value?.trim();
+              if (val) window.location.href = `/keywords?q=${encodeURIComponent(val)}`;
+              else window.location.href = "/keywords";
+            }}
           >
-            <Search className="w-4 h-4" />
-            <span>키워드, 콘텐츠 검색...</span>
+            <Search className="w-4 h-4 flex-shrink-0" />
+            <input
+              className="flex-1 bg-transparent outline-none text-sm"
+              style={{ color: "var(--foreground)" }}
+              placeholder="키워드 검색 후 Enter..."
+            />
             <span className="ml-auto text-xs opacity-60">⌘K</span>
-          </div>
+          </form>
 
           <div className="ml-auto flex items-center gap-2">
             {/* Language selector */}
