@@ -23,7 +23,8 @@ export default async function handler(req, res) {
 
   try {
     const timestamp = Date.now().toString();
-    const message = `${timestamp}\nGET\n/keywordstool`;
+    // 구분자는 "." (점) - "\n" 아님!
+    const message = `${timestamp}.GET./keywordstool`;
     const signature = crypto
       .createHmac("sha256", secretKey)
       .update(message)
@@ -39,6 +40,7 @@ export default async function handler(req, res) {
         "X-API-KEY": accessLicense,
         "X-Customer": customerId,
         "X-Signature": signature,
+        "Content-Type": "application/json; charset=UTF-8",
       },
     });
 
