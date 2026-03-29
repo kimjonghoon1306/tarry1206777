@@ -23,13 +23,12 @@ export default async function handler(req, res) {
 
   try {
     const timestamp = Date.now().toString();
-    const method = "GET";
-    const uri = "/keywordstool";
 
-    const message = `${timestamp}\n${method}\n${uri}`;
+    // 가장 단순한 방식: 쿼리 없이 path만
+    const message = `${timestamp}\nGET\n/keywordstool`;
     const signature = crypto
-      .createHmac("sha256", Buffer.from(secretKey, "utf8"))
-      .update(Buffer.from(message, "utf8"))
+      .createHmac("sha256", secretKey)
+      .update(message)
       .digest("base64");
 
     const hintKeywords = keywords.slice(0, 5).join(",");
@@ -50,8 +49,7 @@ export default async function handler(req, res) {
       return res.status(response.status).json({ error: text });
     }
 
-    const data = JSON.parse(text);
-    return res.status(200).json(data);
+    return res.status(200).json(JSON.parse(text));
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
