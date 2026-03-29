@@ -65,37 +65,65 @@ const RECENT_CONTENTS = [
   { title: "강아지 기초 훈련 방법 A to Z", chars: 1780, status: "완료", lang: "한국어", date: "어제" },
 ];
 
+import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-config";
+
 export default function ContentGenerator() {
   const [keyword, setKeyword] = useState("맛집 추천 2026");
-  const [selectedLang, setSelectedLang] = useState("ko");
+  const [selectedLang, setSelectedLang] = useState(
+    () => localStorage.getItem("content_language") || "ko"
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [generatedContent, setGeneratedContent] = useState(SAMPLE_CONTENT);
   const [charCount, setCharCount] = useState(SAMPLE_CONTENT.length);
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("preview");
 
-  const handleGenerate = () => {
+  const currentAI = CONTENT_AI_OPTIONS.find(o => o.value === getContentProvider());
+
+  const handleGenerate = async () => {
+    const provider = getContentProvider();
+    const apiKey = getAPIKey(provider);
+    if (!apiKey) {
+      toast.error(`설정 페이지에서 ${currentAI?.label} API 키를 먼저 입력해주세요`);
+      return;
+    }
+    if (!keyword.trim()) { toast.error("키워드를 입력해주세요"); return; }
+
     setIsGenerating(true);
     setProgress(0);
-    toast.loading("AI가 콘텐츠를 생성 중입니다...", { id: "generate" });
+    toast.loading(`${currentAI?.label}이 콘텐츠를 생성 중...`, { id: "generate" });
 
     const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 95) {
-          clearInterval(interval);
-          return 95;
-        }
-        return prev + Math.random() * 15;
-      });
-    }, 300);
+      setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 12);
+    }, 400);
 
-    setTimeout(() => {
+    try {
+      const resp = await fetch("/api/generate-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, apiKey, keyword, language: selectedLang }),
+      });
+
       clearInterval(interval);
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error || "API 오류");
+      }
+
+      const data = await resp.json();
+      const content = data.content || "";
+      setGeneratedContent(content);
+      setCharCount(content.length);
       setProgress(100);
+      setActiveTab("preview");
+      toast.success(`생성 완료! 총 ${content.length.toLocaleString()}자`, { id: "generate" });
+    } catch (e: any) {
+      clearInterval(interval);
+      toast.error(`생성 실패: ${e.message}`, { id: "generate" });
+    } finally {
       setIsGenerating(false);
-      setCharCount(SAMPLE_CONTENT.length);
-      toast.success("콘텐츠 생성 완료! 총 1,847자", { id: "generate" });
-    }, 3000);
+    }
   };
 
   const handleCopy = () => {
@@ -194,7 +222,7 @@ export default function ContentGenerator() {
               ) : (
                 <Sparkles className="w-4 h-4" />
               )}
-              {isGenerating ? "생성 중..." : "콘텐츠 생성"}
+              {isGenerating ? "생성 중..." : `${currentAI?.label || "AI"} 생성`}
             </Button>
             <Button variant="outline" className="gap-2" onClick={handleCopy}>
               <Copy className="w-4 h-4" />

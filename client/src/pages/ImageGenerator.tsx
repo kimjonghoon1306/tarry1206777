@@ -33,6 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { getImageProvider, getAPIKey, IMAGE_AI_OPTIONS } from "@/lib/ai-config";
+
 const IMAGE_GEN_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/image-generation-visual-Y2GnT3gv3AaEqJvBKP7dSz.webp";
 const KEYWORD_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/keyword-analytics-visual-XspDmCrENBwXQzrBnVdD2H.webp";
 const CONTENT_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/ai-content-generation-aRDuHC7gHwMgLJAjFXjdyv.webp";
@@ -64,25 +66,64 @@ export default function ImageGenerator() {
   const [progress, setProgress] = useState(0);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedImages, setSelectedImages] = useState<number[]>([]);
+  const [gallery, setGallery] = useState(GALLERY_IMAGES);
 
-  const handleGenerate = () => {
+  const currentAI = IMAGE_AI_OPTIONS.find(o => o.value === getImageProvider());
+
+  const handleGenerate = async () => {
+    const provider = getImageProvider();
+    const apiKey = getAPIKey(provider);
+    if (!apiKey) {
+      toast.error(`설정 페이지에서 ${currentAI?.label} API 키를 먼저 입력해주세요`);
+      return;
+    }
+    if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
+
     setIsGenerating(true);
     setProgress(0);
-    toast.loading(`${count}개 이미지 생성 중...`, { id: "imggen" });
+    toast.loading(`${currentAI?.label}로 이미지 생성 중...`, { id: "imggen" });
 
     const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) { clearInterval(interval); return 90; }
-        return prev + Math.random() * 20;
-      });
-    }, 400);
+      setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 18);
+    }, 500);
 
-    setTimeout(() => {
+    try {
+      const resp = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, apiKey, prompt, size }),
+      });
+
       clearInterval(interval);
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error || "API 오류");
+      }
+
+      const data = await resp.json();
+      const images: string[] = data.images || [];
+
+      if (images.length === 0) throw new Error("이미지 생성 결과가 없습니다");
+
+      const newItems = images.map((src, i) => ({
+        id: Date.now() + i,
+        src,
+        title: `${prompt.slice(0, 20)}...`,
+        keyword: prompt.slice(0, 15),
+        style: style === "realistic" ? "실사" : style === "illustration" ? "일러스트" : style,
+        size,
+      }));
+
+      setGallery(prev => [...newItems, ...prev]);
       setProgress(100);
+      toast.success(`이미지 ${images.length}개 생성 완료!`, { id: "imggen" });
+    } catch (e: any) {
+      clearInterval(interval);
+      toast.error(`생성 실패: ${e.message}`, { id: "imggen" });
+    } finally {
       setIsGenerating(false);
-      toast.success(`${count}개 이미지 생성 완료!`, { id: "imggen" });
-    }, 3500);
+    }
   };
 
   const toggleSelect = (id: number) => {
@@ -242,7 +283,7 @@ export default function ImageGenerator() {
                   <span
                     className="text-xs px-2 py-0.5 rounded-full badge-active"
                   >
-                    {GALLERY_IMAGES.length}개
+                    {gallery.length}개
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -281,7 +322,7 @@ export default function ImageGenerator() {
 
               {viewMode === "grid" ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
-                  {GALLERY_IMAGES.map((img) => (
+                  {gallery.map((img) => (
                     <div
                       key={img.id}
                       className="relative rounded-xl overflow-hidden cursor-pointer group"
@@ -309,7 +350,7 @@ export default function ImageGenerator() {
                 </div>
               ) : (
                 <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                  {GALLERY_IMAGES.map((img) => (
+                  {gallery.map((img) => (
                     <div
                       key={img.id}
                       className="flex items-center gap-4 p-4 hover:bg-accent/20 transition-colors cursor-pointer"
