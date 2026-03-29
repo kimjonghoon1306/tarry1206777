@@ -12,6 +12,7 @@ import {
   Palette, Download, Save, ChevronRight,
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
+  Smartphone, Upload, QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,6 +150,37 @@ export default function SettingsPage() {
         .map(o => [o!.keyStorageKey, o!])
     ).values()
   );
+
+  // 모바일 동기화
+  const [syncCode, setSyncCode] = useState("");
+  const [importCode, setImportCode] = useState("");
+  const [showImport, setShowImport] = useState(false);
+
+  const handleExportSettings = () => {
+    const keys = [
+      "naver_access_license", "naver_secret_key", "naver_customer_id",
+      "gemini_api_key", "claude_api_key", "openai_api_key", "flux_api_key",
+      "wp_url", "wp_username", "wp_app_password",
+      "content_ai_provider", "image_ai_provider", "content_language",
+    ];
+    const data: Record<string, string> = {};
+    keys.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = v; });
+    const code = btoa(JSON.stringify(data));
+    setSyncCode(code);
+    navigator.clipboard.writeText(code).then(() => toast.success("설정 코드가 클립보드에 복사됐어요!"));
+  };
+
+  const handleImportSettings = () => {
+    try {
+      const data = JSON.parse(atob(importCode.trim()));
+      Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v as string));
+      toast.success("설정이 가져와졌어요! 페이지를 새로고침해주세요.");
+      setShowImport(false);
+      setImportCode("");
+    } catch {
+      toast.error("올바르지 않은 코드예요");
+    }
+  };
 
   return (
     <Layout>
@@ -328,6 +360,54 @@ export default function SettingsPage() {
               {wpSaved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
               {wpSaved ? "저장됨" : "WordPress 설정 저장"}
             </Button>
+          </div>
+        </div>
+
+        {/* 모바일 설정 동기화 */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Smartphone className="w-5 h-5" style={{ color: "oklch(0.6 0.15 220)" }} />
+            <h3 className="font-semibold text-foreground">모바일 설정 동기화</h3>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+            PC에서 저장한 API 키를 모바일에서도 쓸 수 있어요. 코드를 복사해서 모바일 설정 페이지에 붙여넣으세요.
+          </p>
+          <div className="space-y-3">
+            <Button className="w-full gap-2" style={{ background: "oklch(0.6 0.15 220)", color: "white" }}
+              onClick={handleExportSettings}>
+              <Upload className="w-4 h-4" /> 설정 내보내기 (코드 복사)
+            </Button>
+
+            {syncCode && (
+              <div className="rounded-lg p-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+                <div className="text-xs font-semibold mb-1.5" style={{ color: "var(--muted-foreground)" }}>설정 코드 (복사됨)</div>
+                <div className="text-xs font-mono break-all select-all" style={{ color: "oklch(0.6 0.15 220)" }}>
+                  {syncCode.substring(0, 80)}...
+                </div>
+              </div>
+            )}
+
+            <button className="w-full text-sm text-center py-2"
+              style={{ color: "var(--muted-foreground)" }}
+              onClick={() => setShowImport(v => !v)}>
+              ▼ 모바일에서 코드 가져오기
+            </button>
+
+            {showImport && (
+              <div className="space-y-2">
+                <textarea
+                  className="w-full rounded-lg p-3 text-xs font-mono resize-none"
+                  style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", minHeight: "80px" }}
+                  placeholder="PC에서 복사한 설정 코드를 여기에 붙여넣으세요..."
+                  value={importCode}
+                  onChange={e => setImportCode(e.target.value)}
+                />
+                <Button className="w-full gap-2" style={{ background: "var(--color-emerald)", color: "white" }}
+                  onClick={handleImportSettings}>
+                  <Download className="w-4 h-4" /> 설정 가져오기
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

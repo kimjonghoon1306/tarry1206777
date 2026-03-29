@@ -66,17 +66,25 @@ const RECENT_CONTENTS = [
 ];
 
 import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-config";
+import { useLocation } from "wouter";
 
 export default function ContentGenerator() {
-  const [keyword, setKeyword] = useState("맛집 추천 2026");
+  const [location] = useLocation();
+  const params = new URLSearchParams(location.split("?")[1] || "");
+  const prefilledKeyword = params.get("keyword") || "";
+  const prefilledTitle = params.get("title") || "";
+
+  const [keyword, setKeyword] = useState(prefilledKeyword || "맛집 추천 2026");
+  const [title, setTitle] = useState(prefilledTitle || "");
   const [selectedLang, setSelectedLang] = useState(
     () => localStorage.getItem("content_language") || "ko"
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [generatedContent, setGeneratedContent] = useState(SAMPLE_CONTENT);
-  const [charCount, setCharCount] = useState(SAMPLE_CONTENT.length);
-  const [activeTab, setActiveTab] = useState<"edit" | "preview">("preview");
+  const [generatedContent, setGeneratedContent] = useState(prefilledTitle ? "" : SAMPLE_CONTENT);
+  const [charCount, setCharCount] = useState(prefilledTitle ? 0 : SAMPLE_CONTENT.length);
+  const [activeTab, setActiveTab] = useState<"edit" | "preview">(prefilledTitle ? "edit" : "preview");
+  const [isDeploying, setIsDeploying] = useState(false);
 
   const currentAI = CONTENT_AI_OPTIONS.find(o => o.value === getContentProvider());
 
