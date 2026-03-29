@@ -10,7 +10,10 @@
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
-    "vercel-build": "vite build"
+    "vercel-build": "vite build",
+    "auto:once": "tsx server/automation.ts once",
+    "auto:loop": "tsx server/automation.ts loop 60",
+    "auto:loop:fast": "tsx server/automation.ts loop 10"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
