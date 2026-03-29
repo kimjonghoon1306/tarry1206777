@@ -4,13 +4,20 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { accessLicense, secretKey, customerId, keywords } = req.body;
+  let body = req.body;
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch (e) { return res.status(400).json({ error: "Invalid JSON" }); }
+  }
 
-  if (!accessLicense || !secretKey || !customerId || !keywords?.length) {
+  const accessLicense = (body?.accessLicense || "").trim();
+  const secretKey = (body?.secretKey || "").trim();
+  const customerId = (body?.customerId || "").toString().trim();
+  const keywords = body?.keywords || [];
+
+  if (!accessLicense || !secretKey || !customerId || !keywords.length) {
     return res.status(400).json({ error: "필수 파라미터 누락" });
   }
 
@@ -18,9 +25,12 @@ export default async function handler(req, res) {
     const timestamp = Date.now().toString();
     const method = "GET";
     const uri = "/keywordstool";
-    const hmac = crypto.createHmac("sha256", secretKey);
-    hmac.update(`${timestamp}\n${method}\n${uri}`);
-    const signature = hmac.digest("base64");
+
+    const message = `${timestamp}\n${method}\n${uri}`;
+    const signature = crypto
+      .createHmac("sha256", Buffer.from(secretKey, "utf8"))
+      .update(Buffer.from(message, "utf8"))
+      .digest("base64");
 
     const hintKeywords = keywords.slice(0, 5).join(",");
     const url = `https://api.naver.com/keywordstool?hintKeywords=${encodeURIComponent(hintKeywords)}&showDetail=1`;
@@ -32,16 +42,15 @@ export default async function handler(req, res) {
         "X-API-KEY": accessLicense,
         "X-Customer": customerId,
         "X-Signature": signature,
-        "Content-Type": "application/json",
       },
     });
 
+    const text = await response.text();
     if (!response.ok) {
-      const errText = await response.text();
-      return res.status(response.status).json({ error: errText });
+      return res.status(response.status).json({ error: text });
     }
 
-    const data = await response.json();
+    const data = JSON.parse(text);
     return res.status(200).json(data);
   } catch (e) {
     return res.status(500).json({ error: e.message });
