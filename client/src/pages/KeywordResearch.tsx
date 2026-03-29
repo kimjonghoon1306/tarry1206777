@@ -83,13 +83,63 @@ export default function KeywordResearch() {
     );
   };
 
-  const handleCollect = () => {
+  const handleCollect = async () => {
+    const apiKey = localStorage.getItem("anthropic_api_key");
+    if (!apiKey) {
+      toast.error("설정 페이지에서 Anthropic API 키를 먼저 입력해주세요");
+      return;
+    }
+
     setIsCollecting(true);
-    toast.loading("키워드 수집 중...", { id: "collect" });
-    setTimeout(() => {
+    toast.loading("AI가 키워드를 수집 중...", { id: "collect" });
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [
+            {
+              role: "user",
+              content: `한국 블로그용 고수익 키워드 8개를 JSON 배열로 생성해줘. 카테고리: 음식, 여행, 금융, 건강, 인테리어, 반려동물 중에서 골고루. 응답은 반드시 JSON만, 설명 없이.
+형식:
+[{"keyword":"키워드명","volume":숫자,"clicks":숫자,"cpc":숫자,"trend":"up"또는"down","competition":"낮음"또는"중"또는"높음","category":"카테고리명","starred":false}]`
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "API 오류");
+      }
+
+      const data = await response.json();
+      const text = data.content?.[0]?.text || "";
+      const clean = text.replace(/```json|```/g, "").trim();
+      const newKeywords = JSON.parse(clean);
+
+      const withIds = newKeywords.map((k: any, i: number) => ({
+        ...k,
+        id: Date.now() + i,
+        starred: false,
+      }));
+
+      setKeywords(prev => [...withIds, ...prev]);
+      toast.success(`새 키워드 ${withIds.length}개가 수집되었습니다!`, { id: "collect" });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`키워드 수집 실패: ${e.message}`, { id: "collect" });
+    } finally {
       setIsCollecting(false);
-      toast.success("새 키워드 142개가 수집되었습니다!", { id: "collect" });
-    }, 2500);
+    }
   };
 
   const handleGenerateContent = () => {

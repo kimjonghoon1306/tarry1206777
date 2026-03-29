@@ -21,6 +21,10 @@ import {
   Save,
   ChevronRight,
   Monitor,
+  Key,
+  Eye,
+  EyeOff,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +52,9 @@ const LANGUAGES = [
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [contentLang, setContentLang] = useState("ko");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("anthropic_api_key") || "");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeySaved, setApiKeySaved] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
     deploy: true,
@@ -58,6 +65,17 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     toast.success("설정이 저장되었습니다");
+  };
+
+  const handleSaveApiKey = () => {
+    if (!apiKey.trim()) {
+      toast.error("API 키를 입력해주세요");
+      return;
+    }
+    localStorage.setItem("anthropic_api_key", apiKey.trim());
+    setApiKeySaved(true);
+    toast.success("API 키가 저장되었습니다");
+    setTimeout(() => setApiKeySaved(false), 3000);
   };
 
   const handleDownloadZip = () => {
@@ -237,6 +255,66 @@ export default function SettingsPage() {
                   이메일
                 </label>
                 <Input defaultValue="admin@blogauto.pro" type="email" className="text-sm" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* API Key Settings */}
+        <div
+          className="rounded-xl p-5"
+          style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Key className="w-5 h-5" style={{ color: "oklch(0.75 0.12 300)" }} />
+            <h3 className="font-semibold text-foreground">API 키 설정</h3>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">
+                Anthropic API 키
+              </label>
+              <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>
+                키워드 수집 및 AI 콘텐츠 생성에 사용됩니다. 키는 브라우저에 안전하게 저장됩니다.
+              </p>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showApiKey ? "text" : "password"}
+                    placeholder="sk-ant-api03-..."
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="pr-10 text-sm font-mono"
+                  />
+                  <button
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    style={{ color: "var(--muted-foreground)" }}
+                    onClick={() => setShowApiKey(v => !v)}
+                  >
+                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <Button
+                  className="gap-2 shrink-0"
+                  style={{
+                    background: apiKeySaved ? "var(--color-emerald)" : "oklch(0.75 0.12 300)",
+                    color: "white"
+                  }}
+                  onClick={handleSaveApiKey}
+                >
+                  {apiKeySaved ? (
+                    <><CheckCircle2 className="w-4 h-4" />저장됨</>
+                  ) : (
+                    <><Key className="w-4 h-4" />저장</>
+                  )}
+                </Button>
+              </div>
+              <div
+                className="mt-3 rounded-lg p-3 text-xs"
+                style={{ background: "oklch(0.75 0.12 300 / 10%)", border: "1px solid oklch(0.75 0.12 300 / 20%)", color: "oklch(0.75 0.12 300)" }}
+              >
+                💡 API 키는 <strong>console.anthropic.com</strong>에서 발급받을 수 있습니다
               </div>
             </div>
           </div>
