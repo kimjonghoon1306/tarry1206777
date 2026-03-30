@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Search, TrendingUp, TrendingDown, RefreshCw,
   Download, Star, StarOff, Zap, ArrowUpDown,
-  Sparkles, ArrowRight, X, Trash2,
+  Sparkles, ArrowRight, X, Trash2, Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,19 +13,21 @@ import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getContentProvider, getAPIKey } from "@/lib/ai-config";
 
-const POOL = [
-  "맛집","여행","재테크","다이어트","인테리어","강아지","건강","운동",
-  "주식","부업","육아","요리","뷰티","패션","독서","커피","카페",
-  "제주도","부산","서울","캠핑","등산","자전거","요가","필라테스",
-  "영어","중국어","자격증","이직","창업","프리랜서","부동산",
-  "고양이","식물","원예","홈카페","홈트","스킨케어","헤어케어",
-  "넷플릭스","유튜브","게임","아이폰","갤럭시","노트북","태블릿",
-  "쇼핑몰","온라인쇼핑","해외직구","명품","중고거래",
-];
+// 대형 키워드 풀 - 다양한 카테고리
+const POOLS: Record<string, string[]> = {
+  "음식/맛집": ["맛집","레시피","요리","카페","디저트","배달음식","건강식","다이어트식단","브런치","홈쿡"],
+  "여행": ["국내여행","해외여행","제주도","부산","서울","캠핑","호텔","항공권","여행코스","배낭여행"],
+  "재테크/금융": ["주식","부동산","재테크","ETF","코인","절약","부업","투자","청약","연금"],
+  "건강/뷰티": ["다이어트","운동","헬스","요가","필라테스","스킨케어","헤어케어","영양제","수면","명상"],
+  "생활/인테리어": ["인테리어","정리수납","홈카페","셀프인테리어","가구","청소","미니멀","원룸","이사","소품"],
+  "육아/교육": ["육아","임신","아기용품","영어","자격증","독서","온라인강의","이직","취업","스펙"],
+  "취미/라이프": ["강아지","고양이","식물","독서","게임","넷플릭스","유튜브","사진","등산","자전거"],
+  "쇼핑": ["명품","중고거래","해외직구","온라인쇼핑","아이폰","갤럭시","노트북","패션","신발","가방"],
+};
 
-function randomBatches() {
-  const s = [...POOL].sort(() => Math.random() - 0.5);
-  return [s.slice(0,5), s.slice(5,10), s.slice(10,15)];
+function getRandomKeywords(count = 15): string[] {
+  const all = Object.values(POOLS).flat();
+  return [...all].sort(() => Math.random() - 0.5).slice(0, count);
 }
 
 type KW = {
@@ -48,22 +50,51 @@ const CHART = [
   {name:"건강",volume:58200},{name:"인테리어",volume:49100},{name:"반려동물",volume:43700},
 ];
 
+const STORAGE_KEY = "blogauto_keywords";
+
 export default function KeywordResearch() {
   const [location, navigate] = useLocation();
   const [adsenseOn, setAdsenseOn] = useState(true);
   const [adpostOn, setAdpostOn] = useState(true);
   const [inputKW, setInputKW] = useState("");
   const [isCollecting, setIsCollecting] = useState(false);
-  const [keywords, setKeywords] = useState<KW[]>(INIT);
+
+  // 1. localStorage에서 키워드 불러오기 (페이지 이탈해도 유지)
+  const [keywords, setKeywords] = useState<KW[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : INIT;
+    } catch { return INIT; }
+  });
+
   const [sort, setSort] = useState<"volume"|"hard"|"easy">("volume");
   const [selKW, setSelKW] = useState<string|null>(null);
   const [titles, setTitles] = useState<string[]>([]);
   const [isGenTitles, setIsGenTitles] = useState(false);
   const [collectCount, setCollectCount] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string>("전체");
 
+  // 키워드 변경시 자동 저장
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(keywords)); } catch {}
+  }, [keywords]);
+
+  // URL q 파라미터 처리 (상단 검색창 연동)
   useEffect(() => {
     const q = new URLSearchParams(location.split("?")[1]||"").get("q")||"";
-    if (q) { setInputKW(q); setTimeout(() => doCollect(q), 500); }
+    if (q) { setInputKW(q); doCollect(q); }
+  }, []);
+
+  // 3. 모바일/PC API 키 동기화 - URL 파라미터로 공유 코드 처리
+  useEffect(() => {
+    const sync = new URLSearchParams(location.split("?")[1]||"").get("sync")||"";
+    if (sync) {
+      try {
+        const data = JSON.parse(atob(sync));
+        Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v as string));
+        toast.success("설정이 동기화되었습니다!");
+      } catch {}
+    }
   }, []);
 
   const sc = (c: string) => c==="높음"?3:c==="중"?2:1;
@@ -73,7 +104,12 @@ export default function KeywordResearch() {
     if (sort==="easy") return (sc(a.competition)*1e6+b.volume)-(sc(b.competition)*1e6+a.volume);
     return b.volume-a.volume;
   });
-  const filtered = sorted;
+
+  const filtered = selectedCategory === "전체"
+    ? sorted
+    : sorted.filter(k => k.category === selectedCategory);
+
+  const categories = ["전체", ...Array.from(new Set(keywords.map(k => k.category)))];
 
   const sortLabel = sort==="volume"?"검색량순":sort==="hard"?"어려운순":"가능성순";
   const sortColor = sort==="volume"?"var(--muted-foreground)":sort==="hard"?"oklch(0.65 0.22 25)":"var(--color-emerald)";
@@ -85,7 +121,9 @@ export default function KeywordResearch() {
     setKeywords(prev => prev.filter(k => k.id !== id));
   }
   function clearAll() {
-    setKeywords(INIT); setCollectCount(0);
+    setKeywords(INIT);
+    setCollectCount(0);
+    localStorage.removeItem(STORAGE_KEY);
     toast.success("초기화되었습니다");
   }
 
@@ -94,24 +132,34 @@ export default function KeywordResearch() {
     const accessLicense = localStorage.getItem("naver_access_license");
     const secretKey = localStorage.getItem("naver_secret_key");
     const customerId = localStorage.getItem("naver_customer_id");
+
     if (!accessLicense || !secretKey || !customerId) {
-      toast.error("설정 페이지에서 네이버 검색광고 API 키를 먼저 입력해주세요"); return;
+      toast.error("설정 페이지에서 네이버 검색광고 API 키를 먼저 입력해주세요");
+      return;
     }
+
     setIsCollecting(true);
-    toast.loading("네이버에서 키워드 수집 중...", { id:"collect" });
+    toast.loading("키워드 수집 중...", { id:"collect" });
+
     try {
-      const batches = kw ? [[kw]] : randomBatches();
+      // 5. 다양한 카테고리 키워드 사용
+      const seeds = kw ? [kw] : getRandomKeywords(15);
+      const batches = kw ? [[kw]] : [seeds.slice(0,5), seeds.slice(5,10), seeds.slice(10,15)];
       const allItems: any[] = [];
+
       for (const batch of batches) {
         const resp = await fetch(`/api/naver-keywords?_=${Date.now()}`, {
-          method:"POST", headers:{"Content-Type":"application/json","Cache-Control":"no-cache"},
+          method:"POST",
+          headers:{"Content-Type":"application/json","Cache-Control":"no-cache"},
           body:JSON.stringify({ accessLicense, secretKey, customerId, keywords:batch }),
         });
         if (!resp.ok) { const err=await resp.json(); throw new Error(err.error||"API 오류"); }
         const data = await resp.json();
         allItems.push(...(data.keywordList||[]));
       }
+
       if (allItems.length===0) throw new Error("수집된 키워드가 없습니다");
+
       const newKWs: KW[] = allItems.slice(0,30).map((item:any,i:number) => {
         const pc=parseInt((item.monthlyPcQcCnt||"0").toString().replace(/,/g,""))||0;
         const mob=parseInt((item.monthlyMobileQcCnt||"0").toString().replace(/,/g,""))||0;
@@ -125,6 +173,7 @@ export default function KeywordResearch() {
           category:kw||"수집", starred:false,
         };
       });
+
       setKeywords(prev => {
         const existing = new Set(prev.map(k=>k.keyword));
         const unique = newKWs.filter(k=>!existing.has(k.keyword));
@@ -137,20 +186,35 @@ export default function KeywordResearch() {
     } finally { setIsCollecting(false); }
   }
 
+  // 2. 제목 생성 - API 키 체크 개선
   async function genTitles(kw: string) {
     const provider = getContentProvider();
     const apiKey = getAPIKey(provider);
-    if (!apiKey) { toast.error("설정 페이지에서 AI API 키를 입력해주세요"); return; }
-    setSelKW(kw); setTitles([]); setIsGenTitles(true);
+
+    if (!apiKey) {
+      toast.error("설정 페이지에서 AI API 키를 입력해주세요 (Gemini 또는 Claude)", {
+        duration: 4000,
+      });
+      return;
+    }
+
+    setSelKW(kw);
+    setTitles([]);
+    setIsGenTitles(true);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+
     try {
       const resp = await fetch("/api/generate-titles", {
-        method:"POST", headers:{"Content-Type":"application/json"},
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ provider, apiKey, keyword:kw }),
       });
       const data = await resp.json();
+      if (data.error) throw new Error(data.error);
       setTitles(data.titles||[]);
-    } catch(e:any) { toast.error(`제목 생성 실패: ${e.message}`); }
-    finally { setIsGenTitles(false); }
+    } catch(e:any) {
+      toast.error(`제목 생성 실패: ${e.message}`);
+    } finally { setIsGenTitles(false); }
   }
 
   function goContent(title: string) {
@@ -210,29 +274,35 @@ export default function KeywordResearch() {
           </div>
         </div>
 
-        {/* 차트 */}
-        <div className="rounded-xl p-4" style={{background:"var(--card)",border:"1px solid var(--border)"}}>
-          <h3 className="font-semibold text-foreground mb-3 text-sm">카테고리별 검색량</h3>
-          <ResponsiveContainer width="100%" height={130}>
-            <BarChart data={CHART}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0/5%)"/>
-              <XAxis dataKey="name" tick={{fill:"oklch(0.62 0.015 286.067)",fontSize:10}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fill:"oklch(0.62 0.015 286.067)",fontSize:10}} axisLine={false} tickLine={false}/>
-              <Tooltip contentStyle={{background:"var(--popover)",border:"1px solid var(--border)",borderRadius:"8px",fontSize:"12px"}}/>
-              <Bar dataKey="volume" fill="oklch(0.696 0.17 162.48)" radius={[4,4,0,0]}/>
-            </BarChart>
-          </ResponsiveContainer>
+        {/* 카테고리 필터 */}
+        <div className="flex gap-2 flex-wrap">
+          {categories.map(cat => (
+            <button key={cat}
+              className="text-xs px-3 py-1.5 rounded-full transition-all"
+              style={{
+                background: selectedCategory===cat ? "var(--color-emerald)" : "var(--card)",
+                color: selectedCategory===cat ? "white" : "var(--muted-foreground)",
+                border: `1px solid ${selectedCategory===cat ? "var(--color-emerald)" : "var(--border)"}`,
+              }}
+              onClick={()=>setSelectedCategory(cat)}>
+              {cat}
+            </button>
+          ))}
         </div>
 
         {/* 키워드 테이블 */}
         <div className="rounded-xl" style={{background:"var(--card)",border:"1px solid var(--border)"}}>
+          {/* 4. 검색창 - 실제 수집과 연동 */}
           <div className="flex items-center gap-2 p-3 sm:p-4 border-b" style={{borderColor:"var(--border)"}}>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{color:"var(--muted-foreground)"}}/>
-              <Input placeholder="키워드 입력 후 Enter → 해당 키워드 수집 / 비우고 수집 버튼 → 랜덤 수집"
-                className="pl-9 text-sm" value={inputKW}
+              <Input
+                placeholder="키워드 입력 후 Enter → 수집 / 비우고 수집버튼 → 랜덤"
+                className="pl-9 text-sm"
+                value={inputKW}
                 onChange={e=>setInputKW(e.target.value)}
-                onKeyDown={e=>{ if(e.key==="Enter") doCollect(); }}/>
+                onKeyDown={e=>{ if(e.key==="Enter"){ e.preventDefault(); doCollect(inputKW); }}}
+              />
             </div>
             <Button variant="outline" size="sm" className="shrink-0 gap-1.5 text-xs"
               style={{color:sortColor,borderColor:sortColor}}
@@ -246,7 +316,7 @@ export default function KeywordResearch() {
             style={{gridTemplateColumns:"36px 36px 1fr 100px 80px 80px 36px 36px 36px",color:"var(--muted-foreground)",borderBottom:"1px solid var(--border)"}}>
             <div className="text-center">#</div>
             <div></div>
-            <div>키워드</div>
+            <div>키워드 (클릭 → 제목 생성)</div>
             <div className="text-right">검색량</div>
             <div className="text-right">클릭수</div>
             <div className="text-right">CPC</div>
@@ -261,13 +331,12 @@ export default function KeywordResearch() {
               return (
                 <div key={kw.id} className="px-3 sm:px-4 py-3 hover:bg-accent/10 transition-colors">
 
-                  {/* 모바일 */}
+                  {/* 모바일 - 키워드 텍스트 클릭 → 제목 생성 */}
                   <div className="flex items-center gap-2 sm:hidden">
                     <span className="text-xs font-bold shrink-0 w-5 text-center" style={{color:"var(--muted-foreground)"}}>{idx+1}</span>
                     <button onClick={(e)=>{e.stopPropagation();toggleStar(kw.id);}} className="shrink-0 p-1">
                       {kw.starred?<Star className="w-4 h-4 fill-amber-400 text-amber-400"/>:<StarOff className="w-4 h-4" style={{color:"var(--muted-foreground)"}}/>}
                     </button>
-                    {/* 키워드 텍스트 클릭 → 제목 생성 */}
                     <div className="flex-1 min-w-0 cursor-pointer active:opacity-70 py-1"
                       onClick={()=>genTitles(kw.keyword)}>
                       <div className="text-sm font-medium text-foreground truncate flex items-center gap-1">
@@ -282,15 +351,18 @@ export default function KeywordResearch() {
                     <ArrowRight className="w-4 h-4 shrink-0" style={{color:"oklch(0.75 0.12 300)"}}/>
                   </div>
 
-                  {/* 데스크탑 */}
+                  {/* 데스크탑 - 키워드 클릭 → 제목 생성 */}
                   <div className="hidden sm:grid gap-2 items-center"
                     style={{gridTemplateColumns:"36px 36px 1fr 100px 80px 80px 36px 36px 36px"}}>
                     <div className="text-center text-xs font-bold" style={{color:"var(--muted-foreground)"}}>{idx+1}</div>
                     <button onClick={()=>toggleStar(kw.id)}>
                       {kw.starred?<Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400"/>:<StarOff className="w-3.5 h-3.5" style={{color:"var(--muted-foreground)"}}/>}
                     </button>
-                    <div>
-                      <div className="text-sm font-medium text-foreground">{kw.keyword}</div>
+                    <div className="cursor-pointer hover:opacity-70" onClick={()=>genTitles(kw.keyword)}>
+                      <div className="text-sm font-medium text-foreground flex items-center gap-1">
+                        {kw.keyword}
+                        <Sparkles className="w-3 h-3" style={{color:"oklch(0.75 0.12 300)"}}/>
+                      </div>
                       <span className="text-xs px-1.5 py-0.5 rounded" style={{background:style.bg,color:style.fg}}>경쟁 {kw.competition}</span>
                     </div>
                     <div className="text-right text-sm text-foreground">{kw.volume.toLocaleString()}</div>
@@ -316,6 +388,12 @@ export default function KeywordResearch() {
                 </div>
               );
             })}
+            {filtered.length === 0 && (
+              <div className="py-12 text-center" style={{color:"var(--muted-foreground)"}}>
+                <Bot className="w-8 h-8 mx-auto mb-2 opacity-30"/>
+                <p className="text-sm">키워드를 수집해주세요</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -352,7 +430,7 @@ export default function KeywordResearch() {
                     onClick={()=>goContent(title)}>
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-xs font-bold shrink-0" style={{color:"oklch(0.75 0.12 300)"}}>{String(i+1).padStart(2,"0")}</span>
-                      <span className="text-sm text-foreground truncate">{title}</span>
+                      <span className="text-sm text-foreground">{title}</span>
                     </div>
                     <ArrowRight className="w-4 h-4 shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" style={{color:"var(--color-emerald)"}}/>
                   </button>
