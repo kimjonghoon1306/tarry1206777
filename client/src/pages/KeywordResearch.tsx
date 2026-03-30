@@ -264,21 +264,22 @@ export default function KeywordResearch() {
                   {/* 모바일 */}
                   <div className="flex items-center gap-2 sm:hidden">
                     <span className="text-xs font-bold shrink-0 w-5 text-center" style={{color:"var(--muted-foreground)"}}>{idx+1}</span>
-                    <button onClick={()=>toggleStar(kw.id)} className="shrink-0">
+                    <button onClick={(e)=>{e.stopPropagation();toggleStar(kw.id);}} className="shrink-0 p-1">
                       {kw.starred?<Star className="w-4 h-4 fill-amber-400 text-amber-400"/>:<StarOff className="w-4 h-4" style={{color:"var(--muted-foreground)"}}/>}
                     </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-foreground truncate">{kw.keyword}</div>
+                    {/* 키워드 텍스트 클릭 → 제목 생성 */}
+                    <div className="flex-1 min-w-0 cursor-pointer active:opacity-70 py-1"
+                      onClick={()=>genTitles(kw.keyword)}>
+                      <div className="text-sm font-medium text-foreground truncate flex items-center gap-1">
+                        {kw.keyword}
+                        <Sparkles className="w-3 h-3 shrink-0" style={{color:"oklch(0.75 0.12 300)"}}/>
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs" style={{color:"var(--muted-foreground)"}}>{kw.volume.toLocaleString()}</span>
                         <span className="text-xs px-1.5 py-0.5 rounded" style={{background:style.bg,color:style.fg}}>{kw.competition}</span>
                       </div>
                     </div>
-                    <Button size="sm" className="shrink-0 h-8 px-2 gap-1 text-xs"
-                      style={{background:"oklch(0.75 0.12 300)",color:"white"}}
-                      onClick={()=>genTitles(kw.keyword)}>
-                      <Sparkles className="w-3 h-3"/>제목
-                    </Button>
+                    <ArrowRight className="w-4 h-4 shrink-0" style={{color:"oklch(0.75 0.12 300)"}}/>
                   </div>
 
                   {/* 데스크탑 */}
