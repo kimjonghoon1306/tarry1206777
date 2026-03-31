@@ -374,47 +374,71 @@ export default function SettingsPage() {
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
           <div className="flex items-center gap-2 mb-1">
             <Smartphone className="w-5 h-5" style={{ color: "oklch(0.6 0.15 220)" }} />
-            <h3 className="font-semibold text-foreground">모바일 설정 동기화</h3>
+            <h3 className="font-semibold text-foreground">모바일 ↔ PC 설정 동기화</h3>
           </div>
           <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            PC에서 저장한 API 키를 모바일에서도 쓸 수 있어요. 코드를 복사해서 모바일 설정 페이지에 붙여넣으세요.
+            버튼 하나로 모든 API 키를 다른 기기에 복사할 수 있어요.
           </p>
-          <div className="space-y-3">
-            <Button className="w-full gap-2" style={{ background: "oklch(0.6 0.15 220)", color: "white" }}
-              onClick={handleExportSettings}>
-              <Upload className="w-4 h-4" /> 설정 내보내기 (코드 복사)
-            </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* PC → 모바일 */}
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <div className="text-sm font-semibold text-foreground">📱 모바일로 보내기</div>
+              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                아래 링크를 복사해서 모바일 브라우저에서 열면 자동 적용돼요
+              </p>
+              <Button className="w-full gap-2 text-sm" style={{ background: "oklch(0.6 0.15 220)", color: "white" }}
+                onClick={() => {
+                  const keys = [
+                    "naver_access_license","naver_secret_key","naver_customer_id",
+                    "gemini_api_key","claude_api_key","openai_api_key","flux_api_key",
+                    "wp_url","wp_username","wp_app_password",
+                    "content_ai_provider","image_ai_provider","content_language",
+                  ];
+                  const data: Record<string,string> = {};
+                  keys.forEach(k => { const v = localStorage.getItem(k); if(v) data[k]=v; });
+                  const code = btoa(JSON.stringify(data));
+                  const url = `${window.location.origin}/settings?sync=${code}`;
+                  navigator.clipboard.writeText(url).then(() =>
+                    toast.success("링크가 복사됐어요! 모바일 브라우저에 붙여넣으세요 📱")
+                  );
+                }}>
+                <Upload className="w-4 h-4" /> 동기화 링크 복사
+              </Button>
+            </div>
 
-            {syncCode && (
-              <div className="rounded-lg p-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-                <div className="text-xs font-semibold mb-1.5" style={{ color: "var(--muted-foreground)" }}>설정 코드 (복사됨)</div>
-                <div className="text-xs font-mono break-all select-all" style={{ color: "oklch(0.6 0.15 220)" }}>
-                  {syncCode.substring(0, 80)}...
-                </div>
-              </div>
-            )}
-
-            <button className="w-full text-sm text-center py-2"
-              style={{ color: "var(--muted-foreground)" }}
-              onClick={() => setShowImport(v => !v)}>
-              ▼ 모바일에서 코드 가져오기
-            </button>
-
-            {showImport && (
-              <div className="space-y-2">
-                <textarea
-                  className="w-full rounded-lg p-3 text-xs font-mono resize-none"
-                  style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", minHeight: "80px" }}
-                  placeholder="PC에서 복사한 설정 코드를 여기에 붙여넣으세요..."
+            {/* 모바일 → PC (코드 직접 입력) */}
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <div className="text-sm font-semibold text-foreground">💻 다른 기기에서 가져오기</div>
+              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                다른 기기에서 복사한 동기화 링크를 붙여넣으세요
+              </p>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 rounded-lg px-3 py-2 text-xs"
+                  style={{ background: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                  placeholder="동기화 링크 붙여넣기..."
                   value={importCode}
                   onChange={e => setImportCode(e.target.value)}
                 />
-                <Button className="w-full gap-2" style={{ background: "var(--color-emerald)", color: "white" }}
-                  onClick={handleImportSettings}>
-                  <Download className="w-4 h-4" /> 설정 가져오기
+                <Button className="shrink-0 gap-1 text-xs" style={{ background: "var(--color-emerald)", color: "white" }}
+                  onClick={() => {
+                    try {
+                      const url = new URL(importCode.trim());
+                      const sync = url.searchParams.get("sync") || "";
+                      if (!sync) throw new Error();
+                      const data = JSON.parse(atob(sync));
+                      Object.entries(data).forEach(([k,v]) => localStorage.setItem(k, v as string));
+                      toast.success("설정이 적용됐어요! 새로고침해주세요 ✅");
+                      setImportCode("");
+                      setTimeout(() => window.location.reload(), 1500);
+                    } catch {
+                      toast.error("올바른 링크가 아니에요");
+                    }
+                  }}>
+                  적용
                 </Button>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
