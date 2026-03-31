@@ -161,7 +161,7 @@ export default function LandingPage() {
             <span className="gradient-text">자동으로 극대화</span>
           </h1>
 
-          <p className="text-lg lg:text-xl mb-10 max-w-2xl mx-auto" style={{ color: "oklch(0.8 0.005 65)" }}>
+          <p className="text-lg lg:text-xl mb-10 max-w-2xl mx-auto text-white/80">
             키워드 수집부터 콘텐츠 작성, 이미지 생성, 자동 배포까지
             <br className="hidden sm:block" />
             블로그 운영의 모든 과정을 AI가 완전 자동화합니다
@@ -196,7 +196,7 @@ export default function LandingPage() {
               { icon: CheckCircle2, text: "네이버 블로그 배포" },
               { icon: CheckCircle2, text: "8개국 언어 지원" },
             ].map((item) => (
-              <div key={item.text} className="flex items-center gap-1.5 text-sm" style={{ color: "oklch(0.75 0.005 65)" }}>
+              <div key={item.text} className="flex items-center gap-1.5 text-sm text-white/70">
                 <item.icon className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
                 {item.text}
               </div>

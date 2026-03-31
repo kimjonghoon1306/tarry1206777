@@ -12,7 +12,7 @@ import {
   Palette, Download, Save, ChevronRight,
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
-  Smartphone, Upload, QrCode,
+  Smartphone, Upload, QrCode, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +103,18 @@ export default function SettingsPage() {
   const [wpPass, setWpPass] = useState(() => localStorage.getItem("wp_app_password") || "");
   const [showWpPass, setShowWpPass] = useState(false);
   const [wpSaved, setWpSaved] = useState(false);
+
+  // 네이버 블로그 배포
+  const [naverBlogId, setNaverBlogId] = useState(() => localStorage.getItem("naver_blog_id") || "");
+  const [naverBlogToken, setNaverBlogToken] = useState(() => localStorage.getItem("naver_blog_access_token") || "");
+  const [showNaverBlogToken, setShowNaverBlogToken] = useState(false);
+  const [naverBlogSaved, setNaverBlogSaved] = useState(false);
+
+  // 일반 웹사이트 배포
+  const [webhookUrl, setWebhookUrl] = useState(() => localStorage.getItem("webhook_url") || "");
+  const [webhookKey, setWebhookKey] = useState(() => localStorage.getItem("webhook_auth_key") || "");
+  const [showWebhookKey, setShowWebhookKey] = useState(false);
+  const [webhookSaved, setWebhookSaved] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true, deploy: true, revenue: true, error: true, weekly: false,
   });
@@ -143,6 +155,28 @@ export default function SettingsPage() {
     setTimeout(() => setWpSaved(false), 3000);
   };
 
+  const handleSaveNaverBlog = () => {
+    if (!naverBlogId || !naverBlogToken) {
+      toast.error("네이버 블로그 정보를 모두 입력해주세요"); return;
+    }
+    localStorage.setItem("naver_blog_id", naverBlogId);
+    localStorage.setItem("naver_blog_access_token", naverBlogToken);
+    setNaverBlogSaved(true);
+    toast.success("네이버 블로그 배포 설정 저장됨");
+    setTimeout(() => setNaverBlogSaved(false), 3000);
+  };
+
+  const handleSaveWebhook = () => {
+    if (!webhookUrl) {
+      toast.error("Webhook URL을 입력해주세요"); return;
+    }
+    localStorage.setItem("webhook_url", webhookUrl);
+    localStorage.setItem("webhook_auth_key", webhookKey);
+    setWebhookSaved(true);
+    toast.success("웹사이트 배포 설정 저장됨");
+    setTimeout(() => setWebhookSaved(false), 3000);
+  };
+
   const requiredKeys = Array.from(
     new Map(
       [CONTENT_AI_OPTIONS.find(o => o.value === contentAI), IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
@@ -161,6 +195,8 @@ export default function SettingsPage() {
       "naver_access_license", "naver_secret_key", "naver_customer_id",
       "gemini_api_key", "claude_api_key", "openai_api_key", "flux_api_key",
       "wp_url", "wp_username", "wp_app_password",
+      "naver_blog_id", "naver_blog_access_token",
+      "webhook_url", "webhook_auth_key",
       "content_ai_provider", "image_ai_provider", "content_language",
     ];
     const data: Record<string, string> = {};
@@ -328,6 +364,95 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* ─── 배포 대상 설정 ─── */}
+        <div className="rounded-xl p-5" style={{ background: "oklch(0.696 0.17 162.48 / 6%)", border: "2px solid oklch(0.696 0.17 162.48 / 25%)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Send className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
+            <h3 className="font-semibold text-foreground">배포 대상 설정</h3>
+          </div>
+          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+            작성된 글을 발행할 플랫폼 연결 정보를 입력하세요 (복수 선택 가능)
+          </p>
+        </div>
+
+        {/* 네이버 블로그 배포 설정 */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-black text-white" style={{ background: "#03C75A" }}>N</div>
+              <h3 className="font-semibold text-foreground">네이버 블로그 배포 설정</h3>
+            </div>
+            <a href="https://developers.naver.com/apps" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs hover:underline" style={{ color: "#03C75A" }}>
+              앱 등록 <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+            네이버 개발자센터에서 앱 등록 후 블로그 쓰기 권한으로 Access Token 발급
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>블로그 ID</label>
+              <Input className="text-sm" placeholder="myblog (naver.com/myblog)"
+                value={naverBlogId} onChange={e => setNaverBlogId(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Access Token</label>
+              <div className="relative">
+                <Input className="text-sm font-mono pr-10" type={showNaverBlogToken ? "text" : "password"}
+                  placeholder="네이버 OAuth Access Token"
+                  value={naverBlogToken} onChange={e => setNaverBlogToken(e.target.value)} />
+                <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
+                  onClick={() => setShowNaverBlogToken(v => !v)}>
+                  {showNaverBlogToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <Button className="gap-2"
+              style={{ background: naverBlogSaved ? "var(--color-emerald)" : "#03C75A", color: "white" }}
+              onClick={handleSaveNaverBlog}>
+              {naverBlogSaved ? <CheckCircle2 className="w-4 h-4" /> : <Key className="w-4 h-4" />}
+              {naverBlogSaved ? "저장됨" : "네이버 블로그 저장"}
+            </Button>
+          </div>
+        </div>
+
+        {/* 일반 웹사이트 배포 설정 */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="w-5 h-5" style={{ color: "oklch(0.6 0.15 220)" }} />
+            <h3 className="font-semibold text-foreground">일반 웹사이트 배포 설정</h3>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+            Webhook URL로 발행 — 직접 제작한 웹사이트나 커스텀 CMS에 POST 요청으로 글이 전달됩니다
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Webhook URL</label>
+              <Input className="text-sm" placeholder="https://mysite.com/api/post"
+                value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>인증 키 (선택)</label>
+              <div className="relative">
+                <Input className="text-sm font-mono pr-10" type={showWebhookKey ? "text" : "password"}
+                  placeholder="Authorization 헤더 값 (없으면 생략)"
+                  value={webhookKey} onChange={e => setWebhookKey(e.target.value)} />
+                <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
+                  onClick={() => setShowWebhookKey(v => !v)}>
+                  {showWebhookKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <Button className="gap-2"
+              style={{ background: webhookSaved ? "var(--color-emerald)" : "oklch(0.6 0.15 220)", color: "white" }}
+              onClick={handleSaveWebhook}>
+              {webhookSaved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              {webhookSaved ? "저장됨" : "웹사이트 설정 저장"}
+            </Button>
+          </div>
+        </div>
+
         {/* WordPress 발행 설정 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-1">
@@ -392,6 +517,8 @@ export default function SettingsPage() {
                     "naver_access_license","naver_secret_key","naver_customer_id",
                     "gemini_api_key","claude_api_key","openai_api_key","flux_api_key",
                     "wp_url","wp_username","wp_app_password",
+                    "naver_blog_id","naver_blog_access_token",
+                    "webhook_url","webhook_auth_key",
                     "content_ai_provider","image_ai_provider","content_language",
                   ];
                   const data: Record<string,string> = {};
