@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import KeywordResearch from "./pages/KeywordResearch";
 import ContentGenerator from "./pages/ContentGenerator";
@@ -12,11 +13,15 @@ import DeploymentPage from "./pages/DeploymentPage";
 import AdminPage from "./pages/AdminPage";
 import SettingsPage from "./pages/SettingsPage";
 import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/signup" component={SignupPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/keywords" component={KeywordResearch} />
       <Route path="/content" component={ContentGenerator} />
@@ -34,10 +39,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
