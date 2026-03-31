@@ -42,18 +42,7 @@ export async function generateContent(
     ? `글 제목은 반드시 "${title}" 으로 시작해줘.`
     : `글 제목은 키워드 "${keyword}"를 포함한 클릭률 높은 제목으로 만들어줘.`;
 
-  const prompt = `다음 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글을 ${langLabel}로 작성해줘.
-
-키워드: "${keyword}"
-${titleInstruction}
-
-조건:
-- 반드시 ${minChars}자 이상 작성 (이 조건이 가장 중요!)
-- 마크다운 형식 사용 (# 제목, ## 소제목, **강조**, - 목록)
-- 구성: 제목 → 서론(흥미 유발) → 본문(소제목 5개 이상) → 결론 → 마무리 문장
-- SEO 최적화: 키워드 자연스럽게 5회 이상 포함
-- 독자에게 실제 도움이 되는 구체적인 정보
-- 숫자, 통계, 팁, 예시 적극 활용`;
+  const prompt = `다음 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글을 ${langLabel}로 작성해줘.\n\n키워드: "${keyword}"\n${titleInstruction}\n\n조건:\n- 반드시 ${minChars}자 이상 작성 (이 조건이 가장 중요!)\n- 마크다운 형식 사용 (# 제목, ## 소제목, **강조**, - 목록)\n- 구성: 제목 → 서론(흥미 유발) → 본문(소제목 5개 이상) → 결론 → 마무리 문장\n- SEO 최적화: 키워드 자연스럽게 5회 이상 포함\n- 독자에게 실제 도움이 되는 구체적인 정보\n- 숫자, 통계, 팁, 예시 적극 활용`;
 
   // ── Gemini → Vercel 서버 경유 (CORS 문제로 브라우저 직접 호출 불가) ──
   if (provider === "gemini") {
@@ -157,13 +146,7 @@ export async function generateTitles(
   keyword: string
 ): Promise<string[]> {
 
-  const prompt = `"${keyword}" 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글 제목 10개를 생성해줘.
-조건:
-- 클릭률(CTR)이 높은 제목
-- 숫자 포함 (TOP 10, 5가지, 2026 등)
-- 궁금증 유발 또는 정보성 제목
-- 한국어
-- 반드시 JSON 배열로만 응답 (다른 텍스트 없이): ["제목1", "제목2", ...]`;
+  const prompt = `"${keyword}" 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글 제목 10개를 생성해줘.\n조건:\n- 클릭률(CTR)이 높은 제목\n- 숫자 포함 (TOP 10, 5가지, 2026 등)\n- 궁금증 유발 또는 정보성 제목\n- 한국어\n- 반드시 JSON 배열로만 응답 (다른 텍스트 없이): ["제목1", "제목2", ...]`;
 
   function extractTitles(text: string): string[] {
     try {
@@ -276,10 +259,43 @@ export async function generateTitles(
   return titles;
 }
 
-// ── Pollinations 이미지 - URL 즉시 반환 (로딩 체크 없음) ──
-// img 로드 확인 과정 자체가 onerror를 유발 → 그냥 URL 바로 반환
-// 브라우저가 <img src={url}> 로 직접 로드할 때는 정상 표시됨
-export async function fetchPollinationsImage(prompt: string, width: number, height: number, seed: number): Promise<string> {
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&cache=false`;
-  return url;
+// ── Pollinations 이미지 ──────────────────────────────
+// URL 생성 후 실제 로딩될 때까지 기다림 (타임아웃: 60초)
+// crossOrigin 없이 일반 img 태그처럼 로드 → CORS 우회
+export async function fetchPollinationsImage(
+  prompt: string,
+  width: number,
+  height: number,
+  seed: number
+): Promise<string> {
+  // 타임스탬프로 캐시 방지 + 매번 다른 이미지
+  const ts = Date.now();
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&cache=false&t=${ts}`;
+
+  // img 태그를 DOM 외부에서 생성해 실제 로드 확인
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    // crossOrigin 설정 안 함 → 브라우저 일반 이미지 로딩 방식 사용 (CORS 우회)
+    
+    const timeout = setTimeout(() => {
+      img.onload = null;
+      img.onerror = null;
+      // 타임아웃시에도 URL 반환 (이미지가 늦게 뜰 수 있음)
+      resolve(url);
+    }, 60000); // 60초 대기
+
+    img.onload = () => {
+      clearTimeout(timeout);
+      resolve(url);
+    };
+
+    img.onerror = () => {
+      clearTimeout(timeout);
+      // 에러 시 재시도용 다른 seed로 URL 반환
+      const retryUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed + 1}&model=flux&cache=false&t=${ts + 1}`;
+      resolve(retryUrl);
+    };
+
+    img.src = url;
+  });
 }
