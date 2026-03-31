@@ -227,6 +227,11 @@ export default function KeywordResearch() {
     setIsGenTitles(true);
     toast.loading("제목 생성 중...", { id: "gen-titles" });
 
+    // 제목 패널로 자동 스크롤
+    setTimeout(() => {
+      document.getElementById("title-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+
     try {
       const resp = await fetch("/api/generate-titles", {
         method:"POST",
@@ -288,7 +293,7 @@ export default function KeywordResearch() {
 
         {/* ── 제목 생성 패널 (헤더 바로 아래, 항상 보이는 위치) ── */}
         {(selKW || isGenTitles) && (
-          <div className="rounded-xl overflow-hidden"
+          <div id="title-panel" className="rounded-xl overflow-hidden"
             style={{background:"var(--card)", border:"2px solid oklch(0.75 0.12 300/60%)"}}>
             {/* 패널 헤더 */}
             <div className="flex items-center justify-between px-5 py-3"
