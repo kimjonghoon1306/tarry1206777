@@ -23,7 +23,6 @@ import {
   type ContentAIProvider, type ImageAIProvider,
 } from "@/lib/ai-config";
 import { userGet, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings } from "@/lib/user-storage";
-import { useAuth } from "@/contexts/AuthContext";
 
 const LANGUAGES = [
   { code: "ko", label: "한국어", flag: "🇰🇷" },
@@ -218,7 +217,35 @@ function PlatformSection({ title, color, logo, type, desc, link, fields }: {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { user, saveSettings, loadSettings } = useAuth();
+  // 로그인 유저 직접 읽기 (순환 import 방지)
+  const [user] = useState<{id:string;name:string;email:string}|null>(() => {
+    try { return JSON.parse(localStorage.getItem("ba_user") || "null"); } catch { return null; }
+  });
+  const token = localStorage.getItem("ba_token") || "";
+
+  const saveAllToServer = async (settings: Record<string,string>) => {
+    if (!token) return;
+    try {
+      await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "saveSettings", settings }),
+      });
+    } catch {}
+  };
+
+  const loadFromServer = async (): Promise<Record<string,string>> => {
+    if (!token) return {};
+    try {
+      const r = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "loadSettings" }),
+      });
+      const d = await r.json();
+      return d.settings || {};
+    } catch { return {}; }
+  };
   const [contentLang, setContentLang] = useState(
     () => userGet(SETTINGS_KEYS.CONTENT_LANG, "ko")
   );
@@ -258,7 +285,7 @@ export default function SettingsPage() {
     setContentAI(v);
     userSet(SETTINGS_KEYS.CONTENT_AI, v);
     const s1 = { [SETTINGS_KEYS.CONTENT_AI]: v };
-    saveSettingsToServer(s1); saveSettings(s1);
+    saveSettingsToServer(s1); saveAllToServer(s1);
     toast.success(`글 생성 AI: ${CONTENT_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
   };
 
@@ -266,7 +293,7 @@ export default function SettingsPage() {
     setImageAI(v);
     userSet(SETTINGS_KEYS.IMAGE_AI, v);
     const s2 = { [SETTINGS_KEYS.IMAGE_AI]: v };
-    saveSettingsToServer(s2); saveSettings(s2);
+    saveSettingsToServer(s2); saveAllToServer(s2);
     toast.success(`이미지 생성 AI: ${IMAGE_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
   };
 
@@ -278,7 +305,7 @@ export default function SettingsPage() {
     userSet(SETTINGS_KEYS.NAVER_SECRET, naverSecret);
     userSet(SETTINGS_KEYS.NAVER_CUSTOMER, naverCustomer);
     const sn = { [SETTINGS_KEYS.NAVER_LICENSE]: naverLicense, [SETTINGS_KEYS.NAVER_SECRET]: naverSecret, [SETTINGS_KEYS.NAVER_CUSTOMER]: naverCustomer };
-    saveSettingsToServer(sn); saveSettings(sn);
+    saveSettingsToServer(sn); saveAllToServer(sn);
     setNaverSaved(true);
     toast.success("네이버 검색광고 API 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setNaverSaved(false), 3000);
@@ -292,7 +319,7 @@ export default function SettingsPage() {
     userSet(SETTINGS_KEYS.WP_USER, wpUser);
     userSet(SETTINGS_KEYS.WP_PASS, wpPass);
     const sw = { [SETTINGS_KEYS.WP_URL]: wpUrl, [SETTINGS_KEYS.WP_USER]: wpUser, [SETTINGS_KEYS.WP_PASS]: wpPass };
-    saveSettingsToServer(sw); saveSettings(sw);
+    saveSettingsToServer(sw); saveAllToServer(sw);
     setWpSaved(true);
     toast.success("WordPress 설정 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setWpSaved(false), 3000);
@@ -305,7 +332,7 @@ export default function SettingsPage() {
     userSet(SETTINGS_KEYS.NAVER_BLOG_ID, naverBlogId);
     userSet(SETTINGS_KEYS.NAVER_BLOG_TOKEN, naverBlogToken);
     const snb = { [SETTINGS_KEYS.NAVER_BLOG_ID]: naverBlogId, [SETTINGS_KEYS.NAVER_BLOG_TOKEN]: naverBlogToken };
-    saveSettingsToServer(snb); saveSettings(snb);
+    saveSettingsToServer(snb); saveAllToServer(snb);
     setNaverBlogSaved(true);
     toast.success("네이버 블로그 설정 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setNaverBlogSaved(false), 3000);
@@ -318,7 +345,7 @@ export default function SettingsPage() {
     userSet(SETTINGS_KEYS.WEBHOOK_URL, webhookUrl);
     userSet(SETTINGS_KEYS.WEBHOOK_KEY, webhookKey);
     const shk = { [SETTINGS_KEYS.WEBHOOK_URL]: webhookUrl, [SETTINGS_KEYS.WEBHOOK_KEY]: webhookKey };
-    saveSettingsToServer(shk); saveSettings(shk);
+    saveSettingsToServer(shk); saveAllToServer(shk);
     setWebhookSaved(true);
     toast.success("웹사이트 설정 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setWebhookSaved(false), 3000);
@@ -626,7 +653,7 @@ export default function SettingsPage() {
                   Object.values(SETTINGS_KEYS).forEach(k => {
                     const v = userGet(k); if (v) allData[k] = v;
                   });
-                  await saveSettings(allData);
+                  await saveAllToServer(allData);
                   toast.success("✅ 모든 설정이 서버에 저장됐어요! 다른 기기에서 로그인하면 자동 적용됩니다");
                 }}>
                 <Upload className="w-4 h-4" /> 지금 모든 설정 서버에 저장하기
@@ -635,7 +662,7 @@ export default function SettingsPage() {
               {/* 서버에서 불러오기 */}
               <Button variant="outline" className="w-full gap-2 h-11 font-semibold"
                 onClick={async () => {
-                  const settings = await loadSettings();
+                  const settings = await loadFromServer();
                   if (!settings || Object.keys(settings).length === 0) {
                     toast.info("서버에 저장된 설정이 없어요. 위 버튼으로 먼저 저장해주세요");
                     return;
