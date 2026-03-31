@@ -51,6 +51,8 @@ const CHART = [
 ];
 
 const STORAGE_KEY = "blogauto_keywords";
+const TITLES_KEY = "blogauto_titles";
+const SELKW_KEY = "blogauto_selkw";
 
 export default function KeywordResearch() {
   const [location, navigate] = useLocation();
@@ -68,11 +70,24 @@ export default function KeywordResearch() {
   });
 
   const [sort, setSort] = useState<"volume"|"hard"|"easy">("volume");
-  const [selKW, setSelKW] = useState<string|null>(null);
-  const [titles, setTitles] = useState<string[]>([]);
+  const [selKW, setSelKW] = useState<string|null>(() => localStorage.getItem(SELKW_KEY) || null);
+  const [titles, setTitles] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(TITLES_KEY) || "[]"); } catch { return []; }
+  });
   const [isGenTitles, setIsGenTitles] = useState(false);
   const [collectCount, setCollectCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string>("전체");
+
+  // 제목/선택키워드 변경시 자동 저장
+  useEffect(() => {
+    try { localStorage.setItem(TITLES_KEY, JSON.stringify(titles)); } catch {}
+  }, [titles]);
+  useEffect(() => {
+    try {
+      if (selKW) localStorage.setItem(SELKW_KEY, selKW);
+      else localStorage.removeItem(SELKW_KEY);
+    } catch {}
+  }, [selKW]);
 
   // 키워드 변경시 자동 저장
   useEffect(() => {
@@ -206,10 +221,10 @@ export default function KeywordResearch() {
       return;
     }
 
+    const isNewKeyword = kw !== selKW;
     setSelKW(kw);
-    setTitles([]);
+    if (isNewKeyword) setTitles([]); // 새 키워드면 초기화, 다시 생성은 누적
     setIsGenTitles(true);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
 
     try {
       const resp = await fetch("/api/generate-titles", {
@@ -219,7 +234,15 @@ export default function KeywordResearch() {
       });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
-      setTitles(data.titles||[]);
+      const newTitles: string[] = data.titles || [];
+      setTitles(prev => {
+        if (isNewKeyword) return newTitles; // 새 키워드 → 초기화
+        if (prev.length >= 30) return newTitles; // 30개 꽉 찼으면 → 초기화 후 새로 생성
+        // 누적 + 중복 제거
+        const existingSet = new Set(prev);
+        const unique = newTitles.filter(t => !existingSet.has(t));
+        return [...prev, ...unique].slice(0, 30);
+      });
     } catch(e:any) {
       toast.error(`제목 생성 실패: ${e.message}`);
     } finally { setIsGenTitles(false); }
@@ -260,6 +283,72 @@ export default function KeywordResearch() {
             </Button>
           </div>
         </div>
+
+        {/* ── 제목 생성 패널 (헤더 바로 아래, 항상 보이는 위치) ── */}
+        {(selKW || isGenTitles) && (
+          <div className="rounded-xl overflow-hidden"
+            style={{background:"var(--card)", border:"2px solid oklch(0.75 0.12 300/60%)"}}>
+            {/* 패널 헤더 */}
+            <div className="flex items-center justify-between px-5 py-3"
+              style={{background:"oklch(0.75 0.12 300/12%)", borderBottom:"1px solid oklch(0.75 0.12 300/30%)"}}>
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles className="w-4 h-4 shrink-0" style={{color:"oklch(0.75 0.12 300)"}}/>
+                <span className="text-sm font-bold text-foreground truncate">
+                  제목 추천 —&nbsp;
+                  <span style={{color:"oklch(0.75 0.12 300)"}}>{selKW}</span>
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
+                  style={{background:"oklch(0.75 0.12 300/20%)", color:"oklch(0.75 0.12 300)"}}>
+                  {titles.length}/30
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7"
+                  onClick={()=>genTitles(selKW!)} disabled={isGenTitles}>
+                  <RefreshCw className={`w-3.5 h-3.5 ${isGenTitles?"animate-spin":""}`}/>
+                  {titles.length >= 30 ? "초기화 후 재생성" : "10개 더"}
+                </Button>
+                <button onClick={()=>{setSelKW(null);setTitles([]);}}
+                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-accent/20"
+                  style={{color:"var(--muted-foreground)"}}>
+                  <X className="w-4 h-4"/>
+                </button>
+              </div>
+            </div>
+
+            {/* 제목 목록 */}
+            <div className="p-3 space-y-1.5 max-h-80 overflow-y-auto">
+              {isGenTitles && titles.length === 0 ? (
+                [...Array(10)].map((_,i)=>(
+                  <div key={i} className="h-11 rounded-lg animate-pulse" style={{background:"var(--muted)"}}/>
+                ))
+              ) : (
+                <>
+                  {titles.map((title, i) => (
+                    <div key={i}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 group"
+                      style={{background:"var(--background)", border:"1px solid var(--border)"}}>
+                      <span className="text-xs font-black shrink-0 w-6 text-center"
+                        style={{color:"oklch(0.75 0.12 300)"}}>{i+1}</span>
+                      <span className="flex-1 text-sm text-foreground leading-snug">{title}</span>
+                      <Button size="sm"
+                        className="shrink-0 gap-1.5 text-xs h-8 px-3 opacity-80 group-hover:opacity-100"
+                        style={{background:"var(--color-emerald)", color:"white"}}
+                        onClick={()=>goContent(title)}>
+                        글 생성 <ArrowRight className="w-3.5 h-3.5"/>
+                      </Button>
+                    </div>
+                  ))}
+                  {isGenTitles && (
+                    [...Array(10)].map((_,i)=>(
+                      <div key={`loading-${i}`} className="h-11 rounded-lg animate-pulse" style={{background:"var(--muted)"}}/>
+                    ))
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 수익 플랫폼 */}
         <div className="rounded-xl p-4" style={{background:"var(--card)",border:"1px solid var(--border)"}}>
@@ -405,48 +494,6 @@ export default function KeywordResearch() {
           </div>
         </div>
 
-        {/* 제목 생성 패널 */}
-        {selKW && (
-          <div className="rounded-xl p-4 sm:p-5" style={{background:"var(--card)",border:"2px solid oklch(0.75 0.12 300/50%)"}}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-foreground text-sm sm:text-base">
-                  제목 생성 — <span style={{color:"oklch(0.75 0.12 300)"}}>{selKW}</span>
-                </h3>
-                <p className="text-xs mt-0.5" style={{color:"var(--muted-foreground)"}}>제목 클릭 → 바로 글 생성으로 이동</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="gap-1.5 text-xs"
-                  onClick={()=>genTitles(selKW)} disabled={isGenTitles}>
-                  <RefreshCw className={`w-3.5 h-3.5 ${isGenTitles?"animate-spin":""}`}/>다시 생성
-                </Button>
-                <button onClick={()=>{setSelKW(null);setTitles([]);}} style={{color:"var(--muted-foreground)"}}>
-                  <X className="w-4 h-4"/>
-                </button>
-              </div>
-            </div>
-            {isGenTitles ? (
-              <div className="space-y-2">
-                {[...Array(10)].map((_,i)=>(<div key={i} className="h-10 rounded-lg animate-pulse" style={{background:"var(--muted)"}}/>))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {titles.map((title,i)=>(
-                  <button key={i}
-                    className="w-full flex items-center justify-between rounded-lg px-4 py-2.5 text-left hover:bg-accent/30 transition-colors group"
-                    style={{background:"var(--background)",border:"1px solid var(--border)"}}
-                    onClick={()=>goContent(title)}>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-xs font-bold shrink-0" style={{color:"oklch(0.75 0.12 300)"}}>{String(i+1).padStart(2,"0")}</span>
-                      <span className="text-sm text-foreground">{title}</span>
-                    </div>
-                    <ArrowRight className="w-4 h-4 shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" style={{color:"var(--color-emerald)"}}/>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </Layout>
   );
