@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Search, TrendingUp, TrendingDown, RefreshCw,
   Download, Star, StarOff, Zap, ArrowUpDown,
-  Sparkles, ArrowRight, X, Trash2, Bot, CheckCircle2,
+  Sparkles, ArrowRight, X, Trash2, Bot, CheckCircle2, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,8 +209,8 @@ export default function KeywordResearch() {
     } finally { setIsCollecting(false); }
   }
 
-  // 2. 제목 생성 - API 키 체크 개선
-  async function genTitles(kw: string) {
+  // 2. 제목 생성 - forceNew=true면 항상 초기화 후 생성
+  async function genTitles(kw: string, forceNew = false) {
     const provider = getContentProvider();
     const apiKey = getAPIKey(provider);
 
@@ -221,10 +221,11 @@ export default function KeywordResearch() {
       return;
     }
 
-    const isNewKeyword = kw !== selKW;
+    const isReset = kw !== selKW || forceNew;
     setSelKW(kw);
-    if (isNewKeyword) setTitles([]); // 새 키워드면 초기화, 다시 생성은 누적
+    if (isReset) setTitles([]);
     setIsGenTitles(true);
+    toast.loading("제목 생성 중...", { id: "gen-titles" });
 
     try {
       const resp = await fetch("/api/generate-titles", {
@@ -235,16 +236,17 @@ export default function KeywordResearch() {
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
       const newTitles: string[] = data.titles || [];
+      if (newTitles.length === 0) throw new Error("생성된 제목이 없습니다. API 키를 확인해주세요.");
       setTitles(prev => {
-        if (isNewKeyword) return newTitles; // 새 키워드 → 초기화
-        if (prev.length >= 30) return newTitles; // 30개 꽉 찼으면 → 초기화 후 새로 생성
-        // 누적 + 중복 제거
+        if (isReset) return newTitles;
+        if (prev.length >= 30) return newTitles; // 30개 꽉 찼으면 초기화 후 재생성
         const existingSet = new Set(prev);
         const unique = newTitles.filter(t => !existingSet.has(t));
         return [...prev, ...unique].slice(0, 30);
       });
+      toast.success(`제목 ${newTitles.length}개 생성 완료!`, { id: "gen-titles" });
     } catch(e:any) {
-      toast.error(`제목 생성 실패: ${e.message}`);
+      toast.error(`제목 생성 실패: ${e.message}`, { id: "gen-titles" });
     } finally { setIsGenTitles(false); }
   }
 
@@ -303,6 +305,14 @@ export default function KeywordResearch() {
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {/* 제목 생성 (초기화 후 새로 생성) */}
+                <Button size="sm" className="gap-1.5 text-xs h-7"
+                  style={{background:"oklch(0.75 0.12 300)", color:"white"}}
+                  onClick={()=>genTitles(selKW!, true)} disabled={isGenTitles}>
+                  <Sparkles className={`w-3.5 h-3.5 ${isGenTitles?"animate-spin":""}`}/>
+                  제목 생성
+                </Button>
+                {/* 10개 더 (누적) */}
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7"
                   onClick={()=>genTitles(selKW!)} disabled={isGenTitles}>
                   <RefreshCw className={`w-3.5 h-3.5 ${isGenTitles?"animate-spin":""}`}/>
@@ -372,6 +382,25 @@ export default function KeywordResearch() {
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {/* 키워드 150개 초과 알림 */}
+        {keywords.length >= 150 && (
+          <div className="flex items-center justify-between rounded-xl px-4 py-3"
+            style={{background:"oklch(0.65 0.22 25/12%)", border:"1px solid oklch(0.65 0.22 25/40%)"}}>
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-4 h-4 shrink-0" style={{color:"oklch(0.65 0.22 25)"}}/>
+              <span className="text-sm" style={{color:"oklch(0.65 0.22 25)"}}>
+                키워드가 <span className="font-bold">{keywords.length}개</span>로 많아졌어요!
+                초기화 후 새로 수집하면 더 빠르게 관리할 수 있어요.
+              </span>
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0 ml-3 gap-1.5 text-xs"
+              style={{borderColor:"oklch(0.65 0.22 25/50%)", color:"oklch(0.65 0.22 25)"}}
+              onClick={clearAll}>
+              <Trash2 className="w-3.5 h-3.5"/>초기화
+            </Button>
           </div>
         )}
 
