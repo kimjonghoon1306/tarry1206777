@@ -134,7 +134,7 @@ export default function LandingPage() {
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(to bottom, oklch(0.145 0.006 285.823 / 70%) 0%, oklch(0.145 0.006 285.823 / 85%) 50%, var(--background) 100%)" }}
+          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.75) 50%, var(--background) 100%)" }}
         />
 
         {/* Hero content */}
