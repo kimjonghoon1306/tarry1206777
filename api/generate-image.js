@@ -11,66 +11,67 @@ export default async function handler(req, res) {
   if (!provider || !prompt) {
     return res.status(400).json({ error: "필수 파라미터 누락" });
   }
-  // pollinations는 API 키 불필요
   if (provider !== "pollinations" && !apiKey) {
     return res.status(400).json({ error: "API 키가 없습니다. 설정 페이지에서 입력해주세요." });
   }
 
-  // 사이즈 파싱
   const [w, h] = (size || "1024x1024").split("x").map(Number);
   const width = w || 1024;
   const height = h || 1024;
 
   try {
 
-    // ── Pollinations.ai (완전 무료, API 키 없음) ──────────────
+    // ── Pollinations.ai - URL 반환 방식 (Vercel 타임아웃 우회, 완전 무료) ──
     if (provider === "pollinations") {
-      // Vercel 타임아웃(10초) 때문에 1개씩만 생성
-      const seed = Math.floor(Math.random() * 999999);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000);
-      try {
-        const imgResp = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeout);
-        if (!imgResp.ok) throw new Error(`Pollinations 오류 (${imgResp.status}). 잠시 후 다시 시도해주세요.`);
-        const buffer = await imgResp.arrayBuffer();
-        const base64 = Buffer.from(buffer).toString("base64");
-        // numImages만큼 같은 이미지 + 약간 다른 시드로 추가
-        const images = [base64].map(b => `data:image/jpeg;base64,${b}`);
-        return res.json({ type: "base64", images });
-      } catch (e) {
-        clearTimeout(timeout);
-        if (e.name === "AbortError") throw new Error("이미지 생성 시간 초과 (25초). 다시 시도해주세요.");
-        throw e;
+      const images = [];
+      for (let i = 0; i < numImages; i++) {
+        const seed = Math.floor(Math.random() * 999999) + i * 1000;
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+        images.push(url);
       }
+      return res.json({ type: "url", images });
     }
 
-    // ── Gemini Imagen ─────────────────────────────────────────
+    // ── Gemini Flash 이미지 생성 (무료 API 키로 동작) ─────────────────
     if (provider === "gemini") {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            instances: [{ prompt }],
-            parameters: { sampleCount: numImages, aspectRatio: width === height ? "1:1" : "16:9" },
-          }),
+      const images = [];
+      for (let i = 0; i < numImages; i++) {
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+            }),
+          }
+        );
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = (err.error?.message || "").toLowerCase();
+          const status = resp.status;
+          if (status === 429 || msg.includes("quota") || msg.includes("rate") || msg.includes("limit") || msg.includes("exhausted") || msg.includes("resource_exhausted")) {
+            throw new Error("Gemini 무료 요청 한도 초과. 잠시 후 다시 시도하거나 Pollinations(무료)로 전환해보세요.");
+          }
+          if (msg.includes("api key") || msg.includes("api_key") || status === 400) throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+          if (status === 403) throw new Error("Gemini API 키 권한 없음. Google AI Studio에서 키를 확인해주세요.");
+          throw new Error(`Gemini 오류 (${status}): ${err.error?.message || "알 수 없는 오류"}`);
         }
-      );
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        const msg = err.error?.message || "";
-        if (msg.includes("quota") || msg.includes("billing")) throw new Error("Gemini 크레딧 부족. Google AI Studio에서 결제 설정을 확인해주세요.");
-        throw new Error(`Gemini 오류: ${resp.status}`);
+        const data = await resp.json();
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        for (const part of parts) {
+          if (part.inlineData?.mimeType?.startsWith("image/")) {
+            images.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
+            break;
+          }
+        }
       }
-      const data = await resp.json();
-      const images = (data.predictions || []).map(p => `data:image/png;base64,${p.bytesBase64Encoded}`);
+      if (images.length === 0) throw new Error("Gemini에서 이미지를 반환하지 않았습니다. 프롬프트를 수정하거나 다시 시도해주세요.");
       return res.json({ type: "base64", images });
     }
 
-    // ── OpenAI DALL-E ─────────────────────────────────────────
+    // ── OpenAI DALL-E ─────────────────────────────────────────────────
     if (provider === "openai") {
       const resp = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
@@ -87,7 +88,7 @@ export default async function handler(req, res) {
       return res.json({ type: "url", images: data.data.map(d => d.url) });
     }
 
-    // ── fal.ai Flux Schnell ───────────────────────────────────
+    // ── fal.ai Flux Schnell ───────────────────────────────────────────
     if (provider === "flux") {
       const resp = await fetch("https://fal.run/fal-ai/flux/schnell", {
         method: "POST",
