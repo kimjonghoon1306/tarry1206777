@@ -720,7 +720,7 @@ export default function DeploymentPage() {
     });
   }
 
-  // ── 자동 이미지 삽입 ──
+  // ── 자동 이미지 삽입 (균등 배치) ──
   function triggerAutoInsert(images: { id: number; src: string; alt?: string }[]) {
     const imgs = images.slice(0, 15);
     const textOnly = blocks.filter(
@@ -732,6 +732,7 @@ export default function DeploymentPage() {
       return;
     }
 
+    // ── 이미지를 2장씩 쌍으로 그룹화 ──
     const imageGroups: ContentBlock[] = [];
     let idx = 0;
     while (idx < imgs.length) {
@@ -759,15 +760,32 @@ export default function DeploymentPage() {
       }
     }
 
+    // ── 균등 배치: 텍스트 N단락마다 이미지 1그룹 삽입 ──
+    // 예) 텍스트 10단락, 이미지 4그룹 → 2단락마다 1그룹
+    const textBlockCount = textBlocks.length;
+    const groupCount = imageGroups.length;
+
+    // 몇 단락마다 이미지 1개 넣을지 계산 (최소 1)
+    const interval = Math.max(1, Math.floor(textBlockCount / (groupCount + 1)));
+
     const result: ContentBlock[] = [];
     let grpIdx = 0;
+    let textCount = 0;
+
     for (let i = 0; i < textOnly.length; i++) {
       result.push(textOnly[i]);
-      if (textOnly[i].type === "text" && grpIdx < imageGroups.length) {
-        result.push(imageGroups[grpIdx++]);
+
+      if (textOnly[i].type === "text") {
+        textCount++;
+        // interval 단락마다 이미지 그룹 삽입
+        if (textCount % interval === 0 && grpIdx < groupCount) {
+          result.push(imageGroups[grpIdx++]);
+        }
       }
     }
-    while (grpIdx < imageGroups.length) {
+
+    // 남은 이미지 그룹은 맨 끝에 추가
+    while (grpIdx < groupCount) {
       result.push(imageGroups[grpIdx++]);
     }
 
@@ -776,7 +794,7 @@ export default function DeploymentPage() {
     const pairCount = imageGroups.filter((g) => g.type === "image-pair").length;
     const singleCount = imageGroups.filter((g) => g.type === "image").length;
     toast.success(
-      `이미지 ${imgs.length}개 배치! (2열 ${pairCount}쌍${singleCount > 0 ? ` + 단독 ${singleCount}` : ""})`
+      `이미지 ${imgs.length}개 균등 배치 완료! (2열 ${pairCount}쌍${singleCount > 0 ? ` + 단독 ${singleCount}` : ""})`
     );
   }
 
