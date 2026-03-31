@@ -3,13 +3,13 @@
  * 글 작성, 인사말, 해시태그, 이미지 연동, 썸네일 선택, 미리보기
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
   FileText, Zap, RefreshCw, Copy, Send, Globe,
   Clock, CheckCircle2, Edit3, Eye, Languages, Bot,
-  Sparkles, Image, Hash, MessageSquare, Trash2, X,
+  Sparkles, Image, Hash, MessageSquare, Trash2, X, Upload, Clipboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-config";
+import { generateContent } from "@/lib/ai-client";
 import { useLocation } from "wouter";
 
 const CONTENT_KEY = "blogauto_content";
@@ -57,10 +58,69 @@ export default function ContentGenerator() {
   const [thumbnailUrl, setThumbnailUrl] = useState(saved?.thumbnail || "");
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [savedImages, setSavedImages] = useState<string[]>([]);
+  const [showFloatingPreview, setShowFloatingPreview] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 이미지를 base64로 변환
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 파일 선택으로 이미지 업로드
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("이미지 파일만 업로드 가능합니다");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("파일 크기는 10MB 이하만 가능합니다");
+      return;
+    }
+    try {
+      const base64 = await fileToBase64(file);
+      setThumbnailUrl(base64);
+      // 저장된 이미지 목록에도 추가
+      try {
+        const existing = JSON.parse(localStorage.getItem("blogauto_generated_images") || "[]");
+        const updated = [base64, ...existing].slice(0, 20);
+        localStorage.setItem("blogauto_generated_images", JSON.stringify(updated));
+        setSavedImages(updated);
+      } catch {}
+      toast.success("이미지가 썸네일로 설정되었습니다!");
+    } catch {
+      toast.error("이미지 로드에 실패했습니다");
+    }
+  }, []);
+
+  // Ctrl+V 클립보드 붙여넣기 이벤트 리스너
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            toast.loading("클립보드 이미지 불러오는 중...", { id: "paste-img" });
+            await handleFileUpload(file);
+            toast.dismiss("paste-img");
+          }
+          break;
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [handleFileUpload]);
 
   const currentAI = CONTENT_AI_OPTIONS.find(o => o.value === getContentProvider());
-
-  // 내용 자동 저장
   useEffect(() => {
     if (generatedContent || keyword) {
       try {
@@ -113,20 +173,13 @@ export default function ContentGenerator() {
     }, 600);
 
     try {
-      const resp = await fetch("/api/generate-content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider, apiKey, keyword,
-          title: title.trim() || undefined,
-          language: selectedLang,
-          minChars: parseInt(minChars),
-        }),
-      });
+      const content = await generateContent(
+        provider, apiKey, keyword,
+        title.trim() || undefined,
+        selectedLang,
+        parseInt(minChars)
+      );
       clearInterval(interval);
-      if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "API 오류"); }
-      const data = await resp.json();
-      const content = data.content || "";
 
       // 해시태그 자동 생성
       const tags = generateHashtags(keyword, title, content);
@@ -411,7 +464,9 @@ export default function ContentGenerator() {
                       onClick={() => setShowImagePicker(true)}>
                       <Image className="w-8 h-8 opacity-30" style={{ color: "var(--muted-foreground)" }} />
                       <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>썸네일 선택하기</p>
-                      <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>이미지 생성 페이지에서 만든 이미지를 선택하세요</p>
+                      <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
+                        파일 업로드 · Ctrl+V 붙여넣기 · AI 생성
+                      </p>
                     </button>
                   )}
 
@@ -450,16 +505,42 @@ export default function ContentGenerator() {
                   <Image className="w-4 h-4" style={{ color: "oklch(0.75 0.12 300)" }} />
                   <h3 className="font-semibold text-foreground text-sm">썸네일 선택</h3>
                 </div>
-                <Button size="sm" className="text-xs gap-1.5"
-                  style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
-                  onClick={() => {
-                    const autoPrompt = title
-                      ? `${title}, ${keyword}, 블로그 썸네일, 고품질`
-                      : `${keyword}, 블로그 썸네일, 고품질`;
-                    navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
-                  }}>
-                  <Sparkles className="w-3.5 h-3.5" /> 이미지 생성
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  {/* 숨긴 파일 input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) await handleFileUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  {/* 파일 첨부 버튼 */}
+                  <Button size="sm" variant="outline" className="text-xs gap-1 px-2"
+                    title="내 이미지 파일 업로드"
+                    onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="w-3 h-3" /> 파일
+                  </Button>
+                  {/* Ctrl+V 안내 버튼 */}
+                  <Button size="sm" variant="outline" className="text-xs gap-1 px-2"
+                    title="Ctrl+V로 클립보드 이미지 붙여넣기"
+                    onClick={() => toast.info("Ctrl+V (또는 Cmd+V)를 누르면 클립보드 이미지가 바로 썸네일로 설정됩니다!")}>
+                    <Clipboard className="w-3 h-3" /> Ctrl+V
+                  </Button>
+                  <Button size="sm" className="text-xs gap-1.5"
+                    style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
+                    onClick={() => {
+                      const autoPrompt = title
+                        ? `${title}, ${keyword}, 블로그 썸네일, 고품질`
+                        : `${keyword}, 블로그 썸네일, 고품질`;
+                      navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
+                    }}>
+                    <Sparkles className="w-3.5 h-3.5" /> AI생성
+                  </Button>
+                </div>
               </div>
               {savedImages.length > 0 ? (
                 <div className="grid grid-cols-2 gap-2 p-3">
@@ -479,8 +560,10 @@ export default function ContentGenerator() {
                 </div>
               ) : (
                 <div className="p-4 text-center">
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                    이미지 생성 페이지에서<br />이미지를 먼저 만들어주세요
+                  <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
+                    📁 파일 버튼으로 내 이미지 업로드<br />
+                    ⌨️ Ctrl+V로 클립보드 이미지 붙여넣기<br />
+                    ✨ AI생성으로 새 이미지 만들기
                   </p>
                 </div>
               )}
@@ -498,5 +581,54 @@ export default function ContentGenerator() {
         </div>
       </div>
     </Layout>
+
+      {/* ── 플로팅 미리보기 버튼 ── */}
+      {generatedContent && (
+        <button
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
+          style={{ background: "var(--color-emerald)", color: "white", boxShadow: "0 8px 32px oklch(0.696 0.17 162.48/40%)" }}
+          onClick={() => setShowFloatingPreview(true)}>
+          <Eye className="w-4 h-4" />
+          구독자 미리보기
+        </button>
+      )}
+
+      {/* ── 미리보기 풀스크린 모달 ── */}
+      {showFloatingPreview && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--background)" }}>
+          <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full" style={{ background: "var(--color-emerald)" }} />
+              <span className="text-sm font-semibold text-foreground">구독자 시점 미리보기</span>
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/10%)", color: "var(--color-emerald)" }}>실제 발행 모습</span>
+            </div>
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent/20"
+              style={{ color: "var(--muted-foreground)" }}
+              onClick={() => setShowFloatingPreview(false)}>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-2xl mx-auto px-4 py-8">
+              {thumbnailUrl && (
+                <div className="rounded-xl overflow-hidden mb-6" style={{ aspectRatio: "16/9" }}>
+                  <img src={thumbnailUrl} alt="썸네일" className="w-full h-full object-cover" />
+                </div>
+              )}
+              {title && <h1 className="text-2xl font-bold text-foreground mb-4 leading-tight">{title}</h1>}
+              <div className="prose prose-sm max-w-none" style={{ color: "var(--foreground)" }}>
+                {renderPreview(generatedContent)}
+              </div>
+              {hashtags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-8 pt-6" style={{ borderTop: "1px solid var(--border)" }}>
+                  {hashtags.map((tag, i) => (
+                    <span key={i} className="text-sm px-3 py-1 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/10%)", color: "var(--color-emerald)" }}>{tag}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
   );
 }
