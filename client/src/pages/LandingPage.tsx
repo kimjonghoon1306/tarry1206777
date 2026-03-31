@@ -83,7 +83,7 @@ export default function LandingPage() {
         className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 lg:px-12"
         style={{
           height: "64px",
-          background: "oklch(0.145 0.006 285.823 / 90%)",
+          background: "var(--background)",
           backdropFilter: "blur(16px)",
           borderBottom: "1px solid var(--border)",
         }}
@@ -107,14 +107,14 @@ export default function LandingPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/login")}
             className="hidden sm:flex"
           >
-            대시보드
+            로그인
           </Button>
           <Button
             size="sm"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/signup")}
             style={{ background: "var(--color-emerald)", color: "white" }}
           >
             시작하기 <ArrowRight className="w-4 h-4 ml-1" />
@@ -172,19 +172,19 @@ export default function LandingPage() {
               size="lg"
               className="gap-2 text-base px-8 py-6 glow-emerald"
               style={{ background: "var(--color-emerald)", color: "white" }}
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/signup")}
             >
               <Bot className="w-5 h-5" />
               무료로 시작하기
             </Button>
             <Button
               size="lg"
-              variant="outline"
               className="gap-2 text-base px-8 py-6"
-              onClick={() => navigate("/dashboard")}
+              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)" }}
+              onClick={() => navigate("/login")}
             >
               <BarChart3 className="w-5 h-5" />
-              대시보드 미리보기
+              로그인
             </Button>
           </div>
 
