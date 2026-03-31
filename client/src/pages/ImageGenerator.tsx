@@ -41,14 +41,30 @@ const CONTENT_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5
 const DEPLOY_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/deployment-visual-Df9Tr6zMZqCfL6CgepL5hz.webp";
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/hero-dashboard-bg-4ZxYwSEJt8froqSKC2fNZb.webp";
 
-const GALLERY_IMAGES = [
-  { id: 1, src: KEYWORD_IMG, title: "맛집 추천 - 음식 사진", keyword: "맛집 추천", style: "실사", size: "1024x1024" },
-  { id: 2, src: CONTENT_IMG, title: "여행 코스 - 풍경 사진", keyword: "제주도 여행", style: "실사", size: "1280x720" },
-  { id: 3, src: IMAGE_GEN_IMG, title: "재테크 - 금융 이미지", keyword: "재테크 방법", style: "일러스트", size: "1024x1024" },
-  { id: 4, src: DEPLOY_IMG, title: "인테리어 소품", keyword: "인테리어 소품", style: "실사", size: "1024x1024" },
-  { id: 5, src: HERO_BG, title: "다이어트 식단", keyword: "다이어트 식단", style: "실사", size: "1280x720" },
-  { id: 6, src: KEYWORD_IMG, title: "강아지 훈련", keyword: "강아지 훈련", style: "실사", size: "1024x1024" },
-];
+const GALLERY_IMAGES: { id: number; src: string; title: string; keyword: string; style: string; size: string }[] = [];
+
+// 스타일별 프롬프트 보조어
+const STYLE_PROMPTS: Record<string, string> = {
+  realistic: "photorealistic, 실사 사진, 고품질, 자연스러운 조명, DSLR 촬영",
+  illustration: "디지털 일러스트, flat design, 깔끔한 벡터 스타일, 선명한 색상",
+  infographic: "인포그래픽 디자인, 정보 시각화, 아이콘, 깔끔한 레이아웃, 화이트 배경",
+  product: "제품 사진, 상업용 광고 사진, 화이트 배경, 깔끔한 조명, 고해상도",
+};
+
+// 통계 localStorage 관리
+const STATS_KEY = "img_stats";
+function loadStats() {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (!raw) return { todayCount: 0, todayDate: "", monthCount: 0, monthKey: "", times: [] as number[] };
+    return JSON.parse(raw);
+  } catch { return { todayCount: 0, todayDate: "", monthCount: 0, monthKey: "", times: [] as number[] }; }
+}
+function saveStats(stats: ReturnType<typeof loadStats>) {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch {}
+}
+function getTodayKey() { return new Date().toISOString().slice(0, 10); }
+function getMonthKey() { return new Date().toISOString().slice(0, 7); }
 
 const STYLES = [
   { value: "realistic", label: "실사 사진", desc: "실물처럼 사실적인 이미지" },
@@ -68,12 +84,27 @@ export default function ImageGenerator() {
   const [selectedImages, setSelectedImages] = useState<number[]>([]);
   const [gallery, setGallery] = useState(GALLERY_IMAGES);
 
+  // 실시간 통계 (localStorage)
+  const [stats, setStats] = useState(() => {
+    const s = loadStats();
+    const today = getTodayKey();
+    const month = getMonthKey();
+    if (s.todayDate !== today) { s.todayCount = 0; s.todayDate = today; }
+    if (s.monthKey !== month) { s.monthCount = 0; s.monthKey = month; }
+    return s;
+  });
+
+  const avgTime = stats.times.length > 0
+    ? (stats.times.slice(-10).reduce((a: number, b: number) => a + b, 0) / Math.min(stats.times.length, 10)).toFixed(1)
+    : "0.0";
+
   const currentAI = IMAGE_AI_OPTIONS.find(o => o.value === getImageProvider());
 
   const handleGenerate = async () => {
     const provider = getImageProvider();
     const apiKey = getAPIKey(provider);
-    if (!apiKey) {
+    // Pollinations는 API 키 불필요
+    if (provider !== "pollinations" && !apiKey) {
       toast.error(`설정 페이지에서 ${currentAI?.label} API 키를 먼저 입력해주세요`);
       return;
     }
@@ -83,15 +114,20 @@ export default function ImageGenerator() {
     setProgress(0);
     toast.loading(`${currentAI?.label}로 이미지 생성 중...`, { id: "imggen" });
 
+    const startTime = Date.now();
     const interval = setInterval(() => {
       setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 18);
     }, 500);
+
+    // 스타일 프롬프트 합성
+    const styleKeywords = STYLE_PROMPTS[style] || "";
+    const fullPrompt = `${prompt.trim()}, ${styleKeywords}`;
 
     try {
       const resp = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey, prompt, size }),
+        body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size, count: parseInt(count), style }),
       });
 
       clearInterval(interval);
@@ -106,12 +142,28 @@ export default function ImageGenerator() {
 
       if (images.length === 0) throw new Error("이미지 생성 결과가 없습니다");
 
+      const elapsed = (Date.now() - startTime) / 1000;
+      const genCount = images.length;
+
+      // 통계 업데이트
+      setStats(prev => {
+        const updated = {
+          ...prev,
+          todayCount: prev.todayCount + genCount,
+          monthCount: prev.monthCount + genCount,
+          times: [...(prev.times || []), elapsed].slice(-20),
+        };
+        saveStats(updated);
+        return updated;
+      });
+
+      const styleLabel = STYLES.find(s => s.value === style)?.label || style;
       const newItems = images.map((src, i) => ({
         id: Date.now() + i,
         src,
         title: `${prompt.slice(0, 20)}...`,
         keyword: prompt.slice(0, 15),
-        style: style === "realistic" ? "실사" : style === "illustration" ? "일러스트" : style,
+        style: styleLabel,
         size,
       }));
 
@@ -259,9 +311,9 @@ export default function ImageGenerator() {
                 생성 통계
               </div>
               {[
-                { label: "오늘 생성", value: "47개" },
-                { label: "이번달 총", value: "1,284개" },
-                { label: "평균 생성 시간", value: "3.2초" },
+                { label: "오늘 생성", value: `${stats.todayCount}개` },
+                { label: "이번달 총", value: `${stats.monthCount.toLocaleString()}개` },
+                { label: "평균 생성 시간", value: `${avgTime}초` },
               ].map(stat => (
                 <div key={stat.label} className="flex justify-between text-sm">
                   <span style={{ color: "var(--muted-foreground)" }}>{stat.label}</span>
@@ -320,7 +372,17 @@ export default function ImageGenerator() {
                 </div>
               </div>
 
-              {viewMode === "grid" ? (
+              {gallery.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <Image className="w-10 h-10 opacity-20" style={{ color: "var(--muted-foreground)" }} />
+                  <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                    아직 생성된 이미지가 없어요
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    왼쪽에서 프롬프트 입력 후 생성 버튼을 눌러주세요
+                  </p>
+                </div>
+              ) : viewMode === "grid" ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
                   {gallery.map((img) => (
                     <div

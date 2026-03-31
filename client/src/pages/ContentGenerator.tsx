@@ -69,12 +69,14 @@ import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-conf
 import { useLocation } from "wouter";
 
 export default function ContentGenerator() {
-  const [location] = useLocation();
-  const params = new URLSearchParams(location.split("?")[1] || "");
+  // window.location.search 사용 - wouter useLocation이 쿼리스트링 안 줄 때 대비
+  const params = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
   const prefilledKeyword = params.get("keyword") || "";
   const prefilledTitle = params.get("title") || "";
 
-  const [keyword, setKeyword] = useState(prefilledKeyword || "맛집 추천 2026");
+  const [keyword, setKeyword] = useState(prefilledKeyword || "");
   const [title, setTitle] = useState(prefilledTitle || "");
   const [selectedLang, setSelectedLang] = useState(
     () => localStorage.getItem("content_language") || "ko"
