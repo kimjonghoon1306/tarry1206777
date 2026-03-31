@@ -42,8 +42,24 @@ export default function SignupPage() {
   };
 
   const set = (k:string) => (e:React.ChangeEvent<HTMLInputElement>) => {
-    setForm(prev=>({...prev,[k]:e.target.value}));
-    setErrors(prev=>({...prev,[k]:""}));
+    const val = e.target.value;
+    setForm(prev=>({...prev,[k]:val}));
+    // 실시간 검증
+    if (k==="email" && val) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+        setErrors(prev=>({...prev,email:"올바른 이메일 형식이 아니에요 (예: name@email.com)"}));
+      } else {
+        setErrors(prev=>({...prev,email:""}));
+      }
+    } else if (k==="confirm" && val) {
+      if (val !== form.password) {
+        setErrors(prev=>({...prev,confirm:"비밀번호가 일치하지 않아요"}));
+      } else {
+        setErrors(prev=>({...prev,confirm:""}));
+      }
+    } else {
+      setErrors(prev=>({...prev,[k]:""}));
+    }
   };
 
   const handleSignup = async () => {
