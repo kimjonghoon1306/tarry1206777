@@ -28,13 +28,22 @@ export default async function handler(req, res) {
       const images = [];
       for (let i = 0; i < numImages; i++) {
         const seed = Math.floor(Math.random() * 999999) + i * 1000;
-        // 서버에서 직접 fetch → base64 반환 (CORS 우회)
         const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
-        const imgResp = await fetch(url);
-        if (!imgResp.ok) throw new Error(`Pollinations 이미지 생성 실패 (${imgResp.status}). 잠시 후 다시 시도해주세요.`);
-        const buffer = await imgResp.arrayBuffer();
-        const base64 = Buffer.from(buffer).toString("base64");
-        images.push(`data:image/jpeg;base64,${base64}`);
+        // 30초 타임아웃
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        try {
+          const imgResp = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeout);
+          if (!imgResp.ok) throw new Error(`이미지 생성 실패 (${imgResp.status})`);
+          const buffer = await imgResp.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString("base64");
+          images.push(`data:image/jpeg;base64,${base64}`);
+        } catch (e) {
+          clearTimeout(timeout);
+          if (e.name === "AbortError") throw new Error("이미지 생성 시간 초과. 다시 시도해주세요.");
+          throw e;
+        }
       }
       return res.json({ type: "base64", images });
     }
