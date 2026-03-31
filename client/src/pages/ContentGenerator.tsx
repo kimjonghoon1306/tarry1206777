@@ -79,6 +79,7 @@ export default function ContentGenerator() {
   const [selectedLang, setSelectedLang] = useState(
     () => localStorage.getItem("content_language") || "ko"
   );
+  const [minChars, setMinChars] = useState("1500");
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [generatedContent, setGeneratedContent] = useState(prefilledTitle ? "" : SAMPLE_CONTENT);
@@ -109,7 +110,13 @@ export default function ContentGenerator() {
       const resp = await fetch("/api/generate-content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey, keyword, language: selectedLang }),
+        body: JSON.stringify({
+          provider, apiKey,
+          keyword,
+          title: title.trim() || undefined,
+          language: selectedLang,
+          minChars: parseInt(minChars),
+        }),
       });
 
       clearInterval(interval);
@@ -204,7 +211,7 @@ export default function ContentGenerator() {
               <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>
                 최소 글자수
               </label>
-              <Select defaultValue="1500">
+              <Select value={minChars} onValueChange={setMinChars}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -216,6 +223,28 @@ export default function ContentGenerator() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* 제목 입력 (키워드 연구에서 넘어왔을 때 자동 입력) */}
+          <div className="mt-4">
+            <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>
+              글 제목 (선택 · 비우면 AI가 자동 생성)
+            </label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="제목을 직접 입력하거나 키워드 수집에서 선택하세요..."
+              className="text-sm"
+              style={{
+                borderColor: title ? "oklch(0.696 0.17 162.48 / 60%)" : undefined,
+                background: title ? "oklch(0.696 0.17 162.48 / 5%)" : undefined,
+              }}
+            />
+            {title && (
+              <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--color-emerald)" }}>
+                <CheckCircle2 className="w-3 h-3" /> 키워드 수집에서 선택된 제목
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3 mt-4">
