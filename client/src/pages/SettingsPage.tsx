@@ -309,6 +309,23 @@ export default function SettingsPage() {
           <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
             선택한 AI에 필요한 키만 표시됩니다. 키는 브라우저에 저장됩니다.
           </p>
+
+          {/* Pollinations 선택 시 안내 */}
+          {imageAI === "pollinations" && (
+            <div className="rounded-xl px-4 py-3 flex items-center gap-3 mb-4"
+              style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
+              <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-emerald)" }} />
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "var(--color-emerald)" }}>
+                  Pollinations AI는 API 키가 필요 없어요! 🎉
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                  바로 이미지 생성 페이지에서 사용 가능합니다.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             {requiredKeys.map((opt) => (
               <ApiKeyInput key={opt.keyStorageKey} label={opt.keyLabel}
