@@ -450,14 +450,15 @@ export default function ContentGenerator() {
                   <Image className="w-4 h-4" style={{ color: "oklch(0.75 0.12 300)" }} />
                   <h3 className="font-semibold text-foreground text-sm">썸네일 선택</h3>
                 </div>
-                <Button size="sm" variant="ghost" className="text-xs gap-1"
+                <Button size="sm" className="text-xs gap-1.5"
+                  style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
                   onClick={() => {
                     const autoPrompt = title
                       ? `${title}, ${keyword}, 블로그 썸네일, 고품질`
                       : `${keyword}, 블로그 썸네일, 고품질`;
                     navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
                   }}>
-                  <Sparkles className="w-3 h-3" /> 이미지 생성
+                  <Sparkles className="w-3.5 h-3.5" /> 이미지 생성
                 </Button>
               </div>
               {savedImages.length > 0 ? (
