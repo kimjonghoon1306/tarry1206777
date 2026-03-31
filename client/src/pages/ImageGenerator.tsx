@@ -111,7 +111,7 @@ export default function ImageGenerator() {
         clearInterval(interval);
         const [w, h] = (size || "1024x1024").split("x").map(Number);
         const numImages = Math.min(parseInt(count) || 1, 4);
-        toast.loading("Pollinations 이미지 생성 중... (30초 소요될 수 있어요)", { id: "imggen" });
+        toast.loading(`Pollinations로 이미지 ${numImages}개 생성 중...`, { id: "imggen" });
         for (let i = 0; i < numImages; i++) {
           const seed = Math.floor(Math.random() * 999999) + i * 1000;
           try {
