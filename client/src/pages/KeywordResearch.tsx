@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Search, TrendingUp, TrendingDown, RefreshCw,
   Download, Star, StarOff, Zap, ArrowUpDown,
-  Sparkles, ArrowRight, X, Trash2, Bot,
+  Sparkles, ArrowRight, X, Trash2, Bot, CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -318,10 +318,35 @@ export default function KeywordResearch() {
 
             {/* 제목 목록 */}
             <div className="p-3 space-y-1.5 max-h-80 overflow-y-auto">
+
+              {/* 30개 꽉 찼을 때 안내 문구 */}
+              {titles.length >= 30 && !isGenTitles && (
+                <div className="flex items-center gap-2 rounded-lg px-4 py-2.5 mb-1"
+                  style={{background:"oklch(0.769 0.188 70.08/12%)", border:"1px solid oklch(0.769 0.188 70.08/30%)"}}>
+                  <RefreshCw className="w-3.5 h-3.5 shrink-0" style={{color:"var(--color-amber-brand)"}}/>
+                  <span className="text-xs" style={{color:"var(--color-amber-brand)"}}>
+                    제목이 30개 모두 채워졌어요! <span className="font-bold">'초기화 후 재생성'</span>을 누르면 기존 목록을 지우고 새 제목 10개를 생성합니다.
+                  </span>
+                </div>
+              )}
               {isGenTitles && titles.length === 0 ? (
                 [...Array(10)].map((_,i)=>(
                   <div key={i} className="h-11 rounded-lg animate-pulse" style={{background:"var(--muted)"}}/>
                 ))
+              ) : titles.length === 0 ? (
+                /* 빈 상태 - API 실패 또는 미생성 */
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                  <Sparkles className="w-8 h-8 opacity-20" style={{color:"oklch(0.75 0.12 300)"}}/>
+                  <p className="text-sm text-center" style={{color:"var(--muted-foreground)"}}>
+                    아직 제목이 없어요.<br/>
+                    <span className="text-xs">API 키가 설정됐는지 확인 후 아래 버튼을 눌러주세요.</span>
+                  </p>
+                  <Button size="sm" className="gap-2"
+                    style={{background:"oklch(0.75 0.12 300)", color:"white"}}
+                    onClick={()=>genTitles(selKW!)} disabled={isGenTitles}>
+                    <RefreshCw className="w-3.5 h-3.5"/>제목 생성 시작
+                  </Button>
+                </div>
               ) : (
                 <>
                   {titles.map((title, i) => (
@@ -426,7 +451,8 @@ export default function KeywordResearch() {
             {filtered.map((kw, idx) => {
               const style = cs(kw.competition);
               return (
-                <div key={kw.id} className="px-3 sm:px-4 py-3 hover:bg-accent/10 transition-colors">
+                <div key={kw.id} className="px-3 sm:px-4 py-3 hover:bg-accent/10 transition-colors"
+                  style={selKW === kw.keyword ? {background:"oklch(0.75 0.12 300/8%)", borderLeft:"3px solid oklch(0.75 0.12 300)"} : {}}>
 
                   {/* 모바일 - 키워드 텍스트 클릭 → 제목 생성 */}
                   <div className="flex items-center gap-2 sm:hidden">
@@ -458,7 +484,12 @@ export default function KeywordResearch() {
                     <div className="cursor-pointer hover:opacity-70" onClick={()=>genTitles(kw.keyword)}>
                       <div className="text-sm font-medium text-foreground flex items-center gap-1">
                         {kw.keyword}
-                        <Sparkles className="w-3 h-3" style={{color:"oklch(0.75 0.12 300)"}}/>
+                        {selKW === kw.keyword && isGenTitles
+                          ? <RefreshCw className="w-3 h-3 animate-spin" style={{color:"oklch(0.75 0.12 300)"}}/>
+                          : selKW === kw.keyword
+                          ? <CheckCircle2 className="w-3 h-3" style={{color:"var(--color-emerald)"}}/>
+                          : <Sparkles className="w-3 h-3" style={{color:"oklch(0.75 0.12 300)"}}/>
+                        }
                       </div>
                       <span className="text-xs px-1.5 py-0.5 rounded" style={{background:style.bg,color:style.fg}}>경쟁 {kw.competition}</span>
                     </div>
