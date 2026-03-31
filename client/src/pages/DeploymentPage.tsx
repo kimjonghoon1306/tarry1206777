@@ -1,17 +1,18 @@
 /**
  * BlogAuto Pro - Deployment Page
- * 자동 이미지 삽입 (AI 생성 이미지 본문 자동 배치)
- * 수동 이미지 삽입 (내 이미지 원하는 위치에 직접 삽입)
+ * ✅ 구독자 미리보기 (풀스크린 모달)
+ * ✅ 모바일 완전 최적화
+ * ✅ 자동/수동 이미지 삽입
  */
 
 import { useState, useEffect, useRef } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
-  Send, Calendar, Clock, Image, Plus, X, ChevronDown,
+  Send, Calendar, Clock, Image, Plus, X,
   CheckCircle2, Globe, FileText, Zap, Eye,
   Hash, MessageSquare, Upload, Trash2, AlignLeft,
-  Wand2, FolderOpen, Info,
+  Wand2, FolderOpen, Info, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,19 @@ const DEPLOY_PLATFORMS_KEY = "blogauto_deploy_platforms";
 
 function uid() { return Math.random().toString(36).slice(2); }
 
+// ── 마크다운 렌더러 ───────────────────────────────────
+function renderPreview(text: string) {
+  return text.split("\n").map((line, i) => {
+    if (line.startsWith("# ")) return <h1 key={i} className="text-xl font-bold mt-3 mb-2 text-foreground leading-tight">{line.slice(2)}</h1>;
+    if (line.startsWith("## ")) return <h2 key={i} className="text-lg font-semibold mt-4 mb-2 text-foreground">{line.slice(3)}</h2>;
+    if (line.startsWith("### ")) return <h3 key={i} className="text-base font-semibold mt-3 mb-1 text-foreground">{line.slice(4)}</h3>;
+    if (line.startsWith("**") && line.endsWith("**")) return <p key={i} className="text-sm mt-1 mb-2 font-semibold" style={{ color: "var(--muted-foreground)" }}>{line.replace(/\*\*/g, "")}</p>;
+    if (line === "---") return <hr key={i} className="my-4" style={{ borderColor: "var(--border)" }} />;
+    if (line === "") return <br key={i} />;
+    return <p key={i} className="mb-2 text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>{line}</p>;
+  });
+}
+
 // ── 이미지 블록 컴포넌트 ──────────────────────────────
 function ImageBlock({ block, onRemove, onChange }: {
   block: Extract<ContentBlock, { type: "image" }>;
@@ -38,7 +52,7 @@ function ImageBlock({ block, onRemove, onChange }: {
   const isAuto = block.source === "auto";
 
   return (
-    <div className="relative rounded-xl overflow-hidden group"
+    <div className="relative rounded-xl overflow-hidden"
       style={{
         border: `2px solid ${isAuto ? "oklch(0.696 0.17 162.48/50%)" : "oklch(0.75 0.12 300/50%)"}`,
         background: isAuto ? "oklch(0.696 0.17 162.48/5%)" : "oklch(0.75 0.12 300/5%)",
@@ -48,10 +62,10 @@ function ImageBlock({ block, onRemove, onChange }: {
         <div className="flex items-center gap-2 text-xs"
           style={{ color: isAuto ? "var(--color-emerald)" : "oklch(0.75 0.12 300)" }}>
           {isAuto ? <Wand2 className="w-3.5 h-3.5" /> : <FolderOpen className="w-3.5 h-3.5" />}
-          {isAuto ? "자동 삽입 이미지 (AI 생성)" : "수동 삽입 이미지 (내 이미지)"}
+          <span className="truncate">{isAuto ? "AI 생성 이미지" : "내 이미지"}</span>
         </div>
         <div className="flex items-center gap-2">
-          <select className="text-xs rounded px-2 py-0.5"
+          <select className="text-xs rounded px-1.5 py-0.5"
             style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
             value={block.position} onChange={e => onChange({ position: e.target.value as "left" | "center" | "right" })}>
             <option value="left">왼쪽</option>
@@ -67,16 +81,15 @@ function ImageBlock({ block, onRemove, onChange }: {
 
       {block.src ? (
         <div className={`p-3 flex ${block.position === "center" ? "justify-center" : block.position === "right" ? "justify-end" : "justify-start"}`}>
-          <div className="relative group/img">
-            <img src={block.src} alt={block.alt} className="max-h-48 rounded-lg object-cover"
+          <div className="relative">
+            <img src={block.src} alt={block.alt} className="max-h-40 rounded-lg object-cover"
               onError={(e) => {
                 const el = e.target as HTMLImageElement;
                 el.style.display = "none";
-                el.parentElement!.innerHTML = `<div style="padding:16px;color:var(--muted-foreground);font-size:12px;text-align:center">이미지를 불러올 수 없습니다</div>`;
               }} />
             {!isAuto && (
               <button onClick={() => onChange({ src: "" })}
-                className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center"
                 style={{ background: "rgba(0,0,0,0.7)" }}>
                 <X className="w-3 h-3 text-white" />
               </button>
@@ -85,11 +98,10 @@ function ImageBlock({ block, onRemove, onChange }: {
         </div>
       ) : (
         !isAuto && (
-          <button className="w-full p-6 flex flex-col items-center gap-2 hover:bg-accent/10 transition-colors"
+          <button className="w-full p-5 flex flex-col items-center gap-2 hover:bg-accent/10 transition-colors"
             onClick={() => fileRef.current?.click()}>
             <Upload className="w-6 h-6 opacity-40" style={{ color: "var(--muted-foreground)" }} />
-            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>클릭하여 내 이미지 업로드</span>
-            <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>JPG, PNG, GIF 지원</span>
+            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>이미지 업로드</span>
           </button>
         )
       )}
@@ -103,8 +115,8 @@ function ImageBlock({ block, onRemove, onChange }: {
           reader.readAsDataURL(file);
         }} />
       <div className="px-3 pb-2">
-        <Input placeholder="이미지 설명 (alt 텍스트)" value={block.alt} onChange={e => onChange({ alt: e.target.value })}
-          className="text-xs h-7" style={{ fontSize: "11px" }} />
+        <Input placeholder="이미지 설명 (alt)" value={block.alt} onChange={e => onChange({ alt: e.target.value })}
+          className="text-xs h-7" />
       </div>
     </div>
   );
@@ -121,13 +133,15 @@ export default function DeploymentPage() {
   const [thumbnail, setThumbnail] = useState(saved?.thumbnail || "");
   const [imageMode, setImageMode] = useState<"auto" | "manual">("auto");
   const [autoInserted, setAutoInserted] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
-  // 이미지생성 페이지에서 넘어온 이미지
+  // 모바일용 섹션 접기/펼치기
+  const [showPublishPanel, setShowPublishPanel] = useState(false);
+
   const [deployImages, setDeployImages] = useState<{ id: number; src: string; alt?: string }[]>(() => {
     try { return JSON.parse(localStorage.getItem("blogauto_deploy_images") || "[]"); } catch { return []; }
   });
 
-  // 블록 초기화: 텍스트 단락으로 분리
   const [blocks, setBlocks] = useState<ContentBlock[]>(() => {
     const content = saved?.content || "";
     if (!content) return [{ type: "text", id: uid(), content: "" }];
@@ -150,13 +164,12 @@ export default function DeploymentPage() {
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isPublishing, setIsPublishing] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
   const thumbnailRef = useRef<HTMLInputElement>(null);
   const manualFileRef = useRef<HTMLInputElement>(null);
   const imageModeRef = useRef(imageMode);
   imageModeRef.current = imageMode;
 
-  // Ctrl+V 클립보드 이미지 붙여넣기 (수동 모드일 때 이미지 블록 자동 추가)
+  // Ctrl+V 클립보드
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -171,11 +184,9 @@ export default function DeploymentPage() {
             const src = ev.target?.result as string;
             if (!src) return;
             if (imageModeRef.current === "manual") {
-              // 수동 모드: 새 이미지 블록 추가
               setBlocks(prev => [...prev, { type: "image", id: uid(), src, alt: "붙여넣은 이미지", position: "center", source: "manual" }]);
               toast.success("✅ 클립보드 이미지가 본문에 추가되었습니다!");
             } else {
-              // 자동 모드: 썸네일로 설정
               setThumbnail(src);
               toast.success("✅ 클립보드 이미지가 썸네일로 설정되었습니다!");
             }
@@ -189,77 +200,47 @@ export default function DeploymentPage() {
     return () => window.removeEventListener("paste", handlePaste);
   }, []);
 
-  // 자동 이미지 삽입: 텍스트 블록 사이사이에 균등 배치
+  // 자동 이미지 삽입
   const handleAutoInsert = () => {
     if (deployImages.length === 0) {
       toast.error("이미지 생성 페이지에서 이미지를 먼저 만들어오세요");
       return;
     }
-
-    // 기존 auto 이미지 블록 제거하고 텍스트만 남기기
-    const textOnly = blocks.filter(b => b.type === "text" || b.source === "manual") as ContentBlock[];
+    const textOnly = blocks.filter(b => b.type === "text" || (b as any).source === "manual") as ContentBlock[];
     const textBlocks = textOnly.filter(b => b.type === "text");
+    if (textBlocks.length === 0) { toast.error("본문 텍스트가 없습니다"); return; }
 
-    if (textBlocks.length === 0) {
-      toast.error("본문 텍스트가 없습니다");
-      return;
-    }
-
-    // 이미지를 텍스트 블록 사이에 균등 분배
     const result: ContentBlock[] = [];
-    const imgCount = deployImages.length;
-    // 텍스트 n개, 이미지 m개 → 텍스트 사이사이에 배치 (앞뒤 포함)
-    // 예: 텍스트 5개, 이미지 4개 → T I T I T I T I T
     let imgIdx = 0;
     for (let i = 0; i < textOnly.length; i++) {
       result.push(textOnly[i]);
-      // 텍스트 블록 뒤에 이미지 삽입 (이미지 소진 전까지)
-      if (textOnly[i].type === "text" && imgIdx < imgCount) {
+      if (textOnly[i].type === "text" && imgIdx < deployImages.length) {
         const img = deployImages[imgIdx++];
-        result.push({
-          type: "image",
-          id: uid(),
-          src: img.src,
-          alt: img.alt || `이미지 ${imgIdx}`,
-          position: "center",
-          source: "auto",
-        });
+        result.push({ type: "image", id: uid(), src: img.src, alt: img.alt || `이미지 ${imgIdx}`, position: "center", source: "auto" });
       }
     }
-
     setBlocks(result);
     setAutoInserted(true);
-    toast.success(`이미지 ${Math.min(imgCount, textOnly.filter(b => b.type === "text").length)}개가 본문 사이에 자동 삽입되었습니다!`);
+    toast.success(`이미지 ${Math.min(deployImages.length, textBlocks.length)}개 자동 삽입!`);
   };
 
-  // 이미지 페이지에서 autoInsert=true 파라미터로 넘어온 경우 → 자동 실행
   useEffect(() => {
     const autoInsertParam = new URLSearchParams(window.location.search).get("autoInsert");
     if (autoInsertParam === "true") {
       const stored = (() => { try { return JSON.parse(localStorage.getItem("blogauto_deploy_images") || "[]"); } catch { return []; } })();
       if (stored.length > 0) {
-        // 짧은 딜레이 후 자동 삽입 (상태 초기화 완료 후)
-        setTimeout(() => {
-          const textOnly = (JSON.parse(localStorage.getItem(CONTENT_KEY) || "{}").content || "")
-            .split("\n\n").filter(Boolean);
-          if (textOnly.length > 0) {
-            handleAutoInsert();
-            toast.success(`✅ 이미지 ${stored.length}개가 본문에 자동 배치되었습니다!`);
-          }
-        }, 400);
+        setTimeout(() => { handleAutoInsert(); }, 400);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 자동 삽입 이미지 전체 제거
   const handleRemoveAutoImages = () => {
     setBlocks(prev => prev.filter(b => b.type === "text" || (b.type === "image" && b.source === "manual")));
     setAutoInserted(false);
-    toast.success("자동 삽입 이미지가 모두 제거되었습니다");
+    toast.success("자동 삽입 이미지 제거됨");
   };
 
-  // 수동 이미지 추가 (특정 블록 뒤에)
   const addManualImageBlock = (afterId?: string) => {
     const newBlock: ContentBlock = { type: "image", id: uid(), src: "", alt: "", position: "center", source: "manual" };
     if (!afterId) { setBlocks(prev => [...prev, newBlock]); return; }
@@ -306,8 +287,7 @@ export default function DeploymentPage() {
     if (!title.trim()) { toast.error("제목을 입력해주세요"); return; }
     if (publishMode === "scheduled" && !scheduleDate) { toast.error("예약 날짜를 선택해주세요"); return; }
     setIsPublishing(true);
-    const mode = publishMode === "instant" ? "즉시 발행" : `${scheduleDate} ${scheduleTime} 예약`;
-    toast.loading(`${mode} 중...`, { id: "publish" });
+    toast.loading(`발행 중...`, { id: "publish" });
     try {
       for (const platformId of selectedPlatforms) {
         const platform = platforms.find(p => p.id === platformId);
@@ -320,7 +300,7 @@ export default function DeploymentPage() {
           await publishToWebhook();
         }
       }
-      toast.success(publishMode === "instant" ? "발행 완료! 🎉" : `${scheduleDate} ${scheduleTime}에 예약되었습니다 📅`, { id: "publish" });
+      toast.success(publishMode === "instant" ? "발행 완료! 🎉" : `${scheduleDate} ${scheduleTime}에 예약됨 📅`, { id: "publish" });
     } catch (e: any) {
       toast.error(`발행 실패: ${e.message}`, { id: "publish" });
     } finally {
@@ -332,9 +312,8 @@ export default function DeploymentPage() {
     const wpUrl = localStorage.getItem("wp_url");
     const wpUser = localStorage.getItem("wp_username");
     const wpPass = localStorage.getItem("wp_app_password");
-    if (!wpUrl || !wpUser || !wpPass) throw new Error("WordPress 설정이 없습니다. 설정 페이지를 확인해주세요.");
-    const content = buildFinalContent();
-    const postData: any = { title, content, status: scheduledAt ? "future" : "publish", tags: hashtags.map(t => t.replace("#", "")) };
+    if (!wpUrl || !wpUser || !wpPass) throw new Error("WordPress 설정이 없습니다.");
+    const postData: any = { title, content: buildFinalContent(), status: scheduledAt ? "future" : "publish", tags: hashtags.map(t => t.replace("#", "")) };
     if (scheduledAt) postData.date = scheduledAt;
     const resp = await fetch(`${wpUrl.replace(/\/$/, "")}/wp-json/wp/v2/posts`, {
       method: "POST",
@@ -347,7 +326,7 @@ export default function DeploymentPage() {
   const publishToWebhook = async () => {
     const url = localStorage.getItem("webhook_url");
     const key = localStorage.getItem("webhook_auth_key");
-    if (!url) throw new Error("Webhook URL이 없습니다. 설정 페이지를 확인해주세요.");
+    if (!url) throw new Error("Webhook URL이 없습니다.");
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (key) headers["Authorization"] = key;
     const resp = await fetch(url, {
@@ -359,22 +338,30 @@ export default function DeploymentPage() {
 
   const autoCount = blocks.filter(b => b.type === "image" && b.source === "auto").length;
   const manualCount = blocks.filter(b => b.type === "image" && b.source === "manual").length;
+  const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join("\n\n");
 
   return (
+    <>
     <Layout>
-      <div className="p-4 sm:p-6 space-y-4">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-24 sm:pb-6">
+
+        {/* ── 헤더 ── */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>배포 관리</h1>
-            <p className="text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>이미지 삽입 · 글 편집 · 발행 설정</p>
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>배포 관리</h1>
+            <p className="text-xs sm:text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>이미지 삽입 · 글 편집 · 발행</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setPreviewMode(v => !v)}>
-              <Eye className="w-4 h-4" />{previewMode ? "편집 모드" : "미리보기"}
+            {/* 구독자 미리보기 버튼 */}
+            <Button size="sm" variant="outline" className="gap-1.5"
+              onClick={() => setShowPreview(true)}>
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">구독자 미리보기</span>
+              <span className="sm:hidden">미리보기</span>
             </Button>
-            <Button size="sm" className="gap-1.5"
+            <Button size="sm"
               style={{ background: "var(--color-emerald)", color: "white" }}
+              className="gap-1.5"
               disabled={isPublishing || selectedPlatforms.length === 0}
               onClick={handlePublish}>
               <Send className="w-4 h-4" />
@@ -383,22 +370,64 @@ export default function DeploymentPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* ── 모바일: 발행 설정 접기/펼치기 ── */}
+        <div className="lg:hidden">
+          <button
+            className="w-full flex items-center justify-between p-3 rounded-xl transition-all"
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+            onClick={() => setShowPublishPanel(v => !v)}>
+            <div className="flex items-center gap-2">
+              <Send className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+              <span className="text-sm font-semibold text-foreground">발행 설정</span>
+              {selectedPlatforms.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: "oklch(0.696 0.17 162.48/15%)", color: "var(--color-emerald)" }}>
+                  {selectedPlatforms.length}개 선택됨
+                </span>
+              )}
+            </div>
+            {showPublishPanel
+              ? <ChevronUp className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
+              : <ChevronDown className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />}
+          </button>
+
+          {showPublishPanel && (
+            <div className="mt-2 rounded-xl p-4 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <PublishPanel
+                platforms={platforms}
+                selectedPlatforms={selectedPlatforms}
+                setSelectedPlatforms={setSelectedPlatforms}
+                publishMode={publishMode}
+                setPublishMode={setPublishMode}
+                scheduleDate={scheduleDate}
+                setScheduleDate={setScheduleDate}
+                scheduleTime={scheduleTime}
+                setScheduleTime={setScheduleTime}
+                isPublishing={isPublishing}
+                onPublish={handlePublish}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* ── 메인 그리드 ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+
           {/* 왼쪽: 에디터 */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
 
             {/* 제목 */}
-            <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="rounded-xl p-3 sm:p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>글 제목</label>
               <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목을 입력하세요..."
-                className="text-base font-semibold h-11" />
+                className="text-sm sm:text-base font-semibold h-10 sm:h-11" />
             </div>
 
             {/* 썸네일 */}
-            <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="rounded-xl p-3 sm:p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <div className="flex items-center justify-between mb-3">
                 <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1" style={{ color: "var(--muted-foreground)" }}>
-                  <Image className="w-3.5 h-3.5" />썸네일 (대표 이미지)
+                  <Image className="w-3.5 h-3.5" />썸네일
                 </label>
                 {thumbnail && (
                   <button onClick={() => setThumbnail("")} style={{ color: "var(--muted-foreground)" }}><X className="w-4 h-4" /></button>
@@ -407,19 +436,18 @@ export default function DeploymentPage() {
               {thumbnail ? (
                 <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
                   <img src={thumbnail} alt="썸네일" className="w-full h-full object-cover"
-                    onError={(e) => { setThumbnail(""); toast.error("썸네일 이미지를 불러올 수 없습니다"); }} />
+                    onError={() => { setThumbnail(""); toast.error("썸네일을 불러올 수 없습니다"); }} />
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {/* 생성된 이미지에서 썸네일 선택 */}
                   {deployImages.length > 0 && (
                     <div>
                       <p className="text-xs mb-2" style={{ color: "var(--muted-foreground)" }}>생성된 이미지에서 선택:</p>
                       <div className="flex gap-2 overflow-x-auto pb-1">
                         {deployImages.slice(0, 6).map((img, i) => (
-                          <button key={i} className="shrink-0 rounded-lg overflow-hidden transition-all hover:ring-2"
-                            style={{ width: 64, height: 64, border: "1px solid var(--border)" }}
-                            onClick={() => { setThumbnail(img.src); toast.success("썸네일 설정 완료!"); }}>
+                          <button key={i} className="shrink-0 rounded-lg overflow-hidden"
+                            style={{ width: 56, height: 56, border: "1px solid var(--border)" }}
+                            onClick={() => { setThumbnail(img.src); toast.success("썸네일 설정!"); }}>
                             <img src={img.src} alt="" className="w-full h-full object-cover"
                               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                           </button>
@@ -427,11 +455,11 @@ export default function DeploymentPage() {
                       </div>
                     </div>
                   )}
-                  <button className="w-full rounded-xl flex flex-col items-center justify-center gap-2 py-5 transition-colors hover:bg-accent/10"
+                  <button className="w-full rounded-xl flex flex-col items-center justify-center gap-2 py-4 transition-colors hover:bg-accent/10"
                     style={{ border: "2px dashed var(--border)", background: "var(--background)" }}
                     onClick={() => thumbnailRef.current?.click()}>
-                    <Upload className="w-6 h-6 opacity-30" style={{ color: "var(--muted-foreground)" }} />
-                    <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>내 이미지 파일 업로드</p>
+                    <Upload className="w-5 h-5 opacity-30" style={{ color: "var(--muted-foreground)" }} />
+                    <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>이미지 업로드</p>
                   </button>
                 </div>
               )}
@@ -443,7 +471,6 @@ export default function DeploymentPage() {
                   reader.onload = ev => setThumbnail(ev.target?.result as string);
                   reader.readAsDataURL(file);
                 }} />
-              {/* 수동 이미지 파일 첨부용 hidden input */}
               <input ref={manualFileRef} type="file" accept="image/*" className="hidden"
                 onChange={e => {
                   const file = e.target.files?.[0];
@@ -452,7 +479,7 @@ export default function DeploymentPage() {
                   reader.onload = ev => {
                     const src = ev.target?.result as string;
                     setBlocks(prev => [...prev, { type: "image", id: uid(), src, alt: file.name, position: "center", source: "manual" }]);
-                    toast.success("✅ 이미지가 본문 끝에 추가되었습니다!");
+                    toast.success("✅ 이미지 추가됨!");
                   };
                   reader.readAsDataURL(file);
                   e.target.value = "";
@@ -460,150 +487,134 @@ export default function DeploymentPage() {
             </div>
 
             {/* 인사말 */}
-            <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="rounded-xl p-3 sm:p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <label className="text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1" style={{ color: "var(--muted-foreground)" }}>
                 <MessageSquare className="w-3.5 h-3.5" />글쓴이 인사말
               </label>
               <Textarea value={greeting} onChange={e => setGreeting(e.target.value)}
                 placeholder="안녕하세요! 오늘도 유용한 정보를 가지고 왔어요 😊"
-                className="text-sm min-h-16 resize-none" />
+                className="text-sm min-h-14 resize-none" />
             </div>
 
-            {/* ── 이미지 삽입 모드 선택 ── */}
+            {/* 이미지 삽입 */}
             <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-              <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
+              <div className="px-3 sm:px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
                 <div className="flex items-center gap-2 mb-3">
                   <Image className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
                   <span className="text-sm font-semibold text-foreground">이미지 삽입</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    className="rounded-xl p-3 text-left transition-all"
+                  <button className="rounded-xl p-2.5 sm:p-3 text-left transition-all"
                     style={{
                       background: imageMode === "auto" ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)",
                       border: `2px solid ${imageMode === "auto" ? "oklch(0.696 0.17 162.48/60%)" : "var(--border)"}`,
                     }}
                     onClick={() => setImageMode("auto")}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Wand2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                      <span className="text-sm font-semibold text-foreground">자동 삽입</span>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Wand2 className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--color-emerald)" }} />
+                      <span className="text-xs sm:text-sm font-semibold text-foreground">자동</span>
                     </div>
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                      AI 생성 이미지를 본문 단락 사이에 자동 배치
-                    </p>
+                    <p className="text-xs hidden sm:block" style={{ color: "var(--muted-foreground)" }}>AI 이미지 자동 배치</p>
                     {autoCount > 0 && (
-                      <span className="text-xs mt-1 inline-block px-2 py-0.5 rounded-full"
+                      <span className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded-full"
                         style={{ background: "oklch(0.696 0.17 162.48/15%)", color: "var(--color-emerald)" }}>
-                        {autoCount}개 삽입됨
+                        {autoCount}개
                       </span>
                     )}
                   </button>
-                  <button
-                    className="rounded-xl p-3 text-left transition-all"
+                  <button className="rounded-xl p-2.5 sm:p-3 text-left transition-all"
                     style={{
                       background: imageMode === "manual" ? "oklch(0.75 0.12 300/15%)" : "var(--background)",
                       border: `2px solid ${imageMode === "manual" ? "oklch(0.75 0.12 300/60%)" : "var(--border)"}`,
                     }}
                     onClick={() => setImageMode("manual")}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <FolderOpen className="w-4 h-4" style={{ color: "oklch(0.75 0.12 300)" }} />
-                      <span className="text-sm font-semibold text-foreground">수동 삽입</span>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <FolderOpen className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.75 0.12 300)" }} />
+                      <span className="text-xs sm:text-sm font-semibold text-foreground">수동</span>
                     </div>
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                      내 이미지를 원하는 위치에 직접 삽입
-                    </p>
+                    <p className="text-xs hidden sm:block" style={{ color: "var(--muted-foreground)" }}>원하는 위치에 삽입</p>
                     {manualCount > 0 && (
-                      <span className="text-xs mt-1 inline-block px-2 py-0.5 rounded-full"
+                      <span className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded-full"
                         style={{ background: "oklch(0.75 0.12 300/15%)", color: "oklch(0.75 0.12 300)" }}>
-                        {manualCount}개 삽입됨
+                        {manualCount}개
                       </span>
                     )}
                   </button>
                 </div>
 
-                {/* 자동 삽입 컨트롤 */}
                 {imageMode === "auto" && (
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
                     <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg flex-1"
                       style={{ background: "oklch(0.696 0.17 162.48/8%)", color: "var(--muted-foreground)", border: "1px solid oklch(0.696 0.17 162.48/20%)" }}>
                       <Info className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--color-emerald)" }} />
-                      {deployImages.length > 0
-                        ? `이미지 생성 페이지에서 ${deployImages.length}개 이미지가 준비되어 있어요`
-                        : "이미지 생성 페이지에서 이미지를 먼저 만들어오세요"}
+                      {deployImages.length > 0 ? `${deployImages.length}개 준비됨` : "이미지 생성 먼저"}
                     </div>
                     {autoInserted ? (
                       <Button size="sm" variant="outline" className="gap-1.5 text-xs shrink-0 border-red-400/50 text-red-400"
                         onClick={handleRemoveAutoImages}>
-                        <X className="w-3.5 h-3.5" /> 자동 이미지 제거
+                        <X className="w-3.5 h-3.5" /> 제거
                       </Button>
                     ) : (
                       <Button size="sm" className="gap-1.5 text-xs shrink-0"
                         style={{ background: "var(--color-emerald)", color: "white" }}
                         onClick={handleAutoInsert}
                         disabled={deployImages.length === 0}>
-                        <Wand2 className="w-3.5 h-3.5" /> 자동 삽입 실행
+                        <Wand2 className="w-3.5 h-3.5" /> 자동 삽입
                       </Button>
                     )}
                   </div>
                 )}
 
-                {/* 수동 삽입 컨트롤 */}
                 {imageMode === "manual" && (
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-                      style={{ background: "oklch(0.75 0.12 300/8%)", color: "var(--muted-foreground)", border: "1px solid oklch(0.75 0.12 300/20%)" }}>
-                      <Info className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.75 0.12 300)" }} />
-                      텍스트 블록 우상단 📷 버튼으로 원하는 위치에 삽입하거나, 아래 방법을 사용하세요
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-all hover:opacity-80"
-                        style={{ background: "oklch(0.75 0.12 300/12%)", border: "1px solid oklch(0.75 0.12 300/30%)", color: "oklch(0.75 0.12 300)" }}
-                        onClick={() => manualFileRef.current?.click()}>
-                        <Upload className="w-3.5 h-3.5" /> 📁 파일 첨부
-                      </button>
-                      <div className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg"
-                        style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/25%)", color: "var(--color-emerald)" }}>
-                        ⌨️ Ctrl+V → 이미지 바로 붙여넣기
-                      </div>
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    <button className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg"
+                      style={{ background: "oklch(0.75 0.12 300/12%)", border: "1px solid oklch(0.75 0.12 300/30%)", color: "oklch(0.75 0.12 300)" }}
+                      onClick={() => manualFileRef.current?.click()}>
+                      <Upload className="w-3.5 h-3.5" /> 파일 첨부
+                    </button>
+                    <div className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg"
+                      style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/25%)", color: "var(--color-emerald)" }}>
+                      ⌨️ Ctrl+V
                     </div>
                   </div>
                 )}
               </div>
 
               {/* 본문 블록 에디터 */}
-              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
+              <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
                   <span className="text-sm font-semibold text-foreground">본문 편집</span>
                   <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
-                    블록 {blocks.length}개
+                    {blocks.length}블록
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={() => addTextBlock()}>
-                    <AlignLeft className="w-3.5 h-3.5" /> 텍스트 추가
+                <div className="flex items-center gap-1.5">
+                  <Button size="sm" variant="outline" className="gap-1 text-xs h-7 px-2" onClick={() => addTextBlock()}>
+                    <AlignLeft className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">텍스트</span>
                   </Button>
                   {imageMode === "manual" && (
-                    <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7"
+                    <Button size="sm" variant="outline" className="gap-1 text-xs h-7 px-2"
                       style={{ borderColor: "oklch(0.75 0.12 300/50%)", color: "oklch(0.75 0.12 300)" }}
                       onClick={() => addManualImageBlock()}>
-                      <Image className="w-3.5 h-3.5" /> 내 이미지
+                      <Image className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">이미지</span>
                     </Button>
                   )}
                 </div>
               </div>
 
-              <div className="p-4 space-y-3">
+              <div className="p-3 sm:p-4 space-y-3">
                 {blocks.map((block, idx) => (
-                  <div key={block.id} className="group/block">
+                  <div key={block.id}>
                     {block.type === "text" ? (
-                      <div className="relative">
+                      <div className="relative group/block">
                         <Textarea
                           value={block.content}
                           onChange={e => updateBlock(block.id, { content: e.target.value })}
-                          placeholder="내용을 입력하세요... (마크다운 지원)"
-                          className="text-sm leading-relaxed resize-none min-h-24"
+                          placeholder="내용 입력..."
+                          className="text-sm leading-relaxed resize-none min-h-20"
                           style={{ background: "var(--background)" }}
                           onInput={e => {
                             const el = e.target as HTMLTextAreaElement;
@@ -611,24 +622,24 @@ export default function DeploymentPage() {
                             el.style.height = el.scrollHeight + "px";
                           }}
                         />
-                        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover/block:opacity-100 transition-opacity">
+                        {/* 블록 액션 버튼 - 모바일 항상 표시 */}
+                        <div className="flex items-center gap-1 mt-1 sm:mt-0 sm:absolute sm:right-2 sm:top-2 sm:opacity-0 sm:group-hover/block:opacity-100 transition-opacity">
                           {imageMode === "manual" && (
                             <button onClick={() => addManualImageBlock(block.id)}
-                              className="w-6 h-6 flex items-center justify-center rounded text-xs"
+                              className="w-7 h-7 flex items-center justify-center rounded text-xs"
                               style={{ background: "oklch(0.75 0.12 300/20%)", color: "oklch(0.75 0.12 300)" }}
-                              title="아래에 내 이미지 삽입">
+                              title="아래에 이미지 삽입">
                               <Image className="w-3.5 h-3.5" />
                             </button>
                           )}
                           <button onClick={() => addTextBlock(block.id)}
-                            className="w-6 h-6 flex items-center justify-center rounded text-xs"
-                            style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}
-                            title="아래에 텍스트 추가">
+                            className="w-7 h-7 flex items-center justify-center rounded text-xs"
+                            style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
                             <Plus className="w-3.5 h-3.5" />
                           </button>
                           {blocks.length > 1 && (
                             <button onClick={() => removeBlock(block.id)}
-                              className="w-6 h-6 flex items-center justify-center rounded"
+                              className="w-7 h-7 flex items-center justify-center rounded"
                               style={{ background: "oklch(0.65 0.22 25/20%)", color: "oklch(0.65 0.22 25)" }}>
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -645,7 +656,7 @@ export default function DeploymentPage() {
                     {idx < blocks.length - 1 && (
                       <div className="flex items-center justify-center my-1">
                         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-                        <span className="mx-2 text-xs opacity-30" style={{ color: "var(--muted-foreground)" }}>블록 {idx + 2}</span>
+                        <span className="mx-2 text-xs opacity-30" style={{ color: "var(--muted-foreground)" }}>{idx + 2}</span>
                         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
                       </div>
                     )}
@@ -655,7 +666,7 @@ export default function DeploymentPage() {
             </div>
 
             {/* 해시태그 */}
-            <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="rounded-xl p-3 sm:p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-2 mb-3">
                 <Hash className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
                 <span className="text-sm font-semibold text-foreground">해시태그</span>
@@ -672,10 +683,10 @@ export default function DeploymentPage() {
               </div>
               <div className="flex gap-2">
                 <Input value={newTag} onChange={e => setNewTag(e.target.value)}
-                  placeholder="#해시태그 입력 후 Enter" className="text-sm h-9"
+                  placeholder="#해시태그 입력" className="text-sm h-9"
                   onKeyDown={e => {
                     if (e.key === "Enter" && newTag.trim()) {
-                      if (hashtags.length >= 8) { toast.error("최대 8개까지 추가 가능해요"); return; }
+                      if (hashtags.length >= 8) { toast.error("최대 8개"); return; }
                       setHashtags(prev => [...prev, `#${newTag.replace("#", "").trim()}`]);
                       setNewTag("");
                     }
@@ -690,102 +701,267 @@ export default function DeploymentPage() {
             </div>
           </div>
 
-          {/* 오른쪽: 발행 설정 */}
-          <div className="space-y-4">
-            {/* 플랫폼 */}
-            <div className="rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-              <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
-                <Globe className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                <span className="text-sm font-semibold text-foreground">발행 플랫폼</span>
-              </div>
-              <div className="p-4 space-y-2">
-                {platforms.length === 0 ? (
-                  <div className="text-center py-4">
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>설정 페이지에서 플랫폼을 먼저 등록해주세요</p>
-                    <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={() => window.location.href = "/settings"}>설정 이동</Button>
-                  </div>
-                ) : (
-                  platforms.map(platform => (
-                    <button key={platform.id}
-                      className="w-full flex items-center justify-between p-3 rounded-xl transition-all"
-                      style={{
-                        background: selectedPlatforms.includes(platform.id) ? "oklch(0.696 0.17 162.48/10%)" : "var(--background)",
-                        border: `1px solid ${selectedPlatforms.includes(platform.id) ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
-                      }}
-                      onClick={() => setSelectedPlatforms(prev =>
-                        prev.includes(platform.id) ? prev.filter(id => id !== platform.id) : [...prev, platform.id]
-                      )}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-                          style={{ background: platform.type === "naver" ? "#03C75A" : platform.type === "wordpress" ? "#21759B" : "oklch(0.6 0.15 220)" }}>
-                          {platform.type === "naver" ? "N" : platform.type === "wordpress" ? "W" : "C"}
-                        </div>
-                        <span className="text-sm text-foreground">{platform.name}</span>
-                      </div>
-                      {selectedPlatforms.includes(platform.id) && <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* 발행 방식 */}
-            <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-2 mb-4">
-                <Clock className="w-4 h-4" style={{ color: "var(--color-amber-brand)" }} />
-                <span className="text-sm font-semibold text-foreground">발행 방식</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <button className="rounded-xl p-3 text-center transition-all"
-                  style={{ background: publishMode === "instant" ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)", border: `2px solid ${publishMode === "instant" ? "oklch(0.696 0.17 162.48/60%)" : "var(--border)"}` }}
-                  onClick={() => setPublishMode("instant")}>
-                  <Zap className="w-5 h-5 mx-auto mb-1" style={{ color: publishMode === "instant" ? "var(--color-emerald)" : "var(--muted-foreground)" }} />
-                  <div className="text-sm font-semibold text-foreground">즉시 발행</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>지금 바로</div>
-                </button>
-                <button className="rounded-xl p-3 text-center transition-all"
-                  style={{ background: publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/15%)" : "var(--background)", border: `2px solid ${publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/60%)" : "var(--border)"}` }}
-                  onClick={() => setPublishMode("scheduled")}>
-                  <Calendar className="w-5 h-5 mx-auto mb-1" style={{ color: publishMode === "scheduled" ? "var(--color-amber-brand)" : "var(--muted-foreground)" }} />
-                  <div className="text-sm font-semibold text-foreground">예약 발행</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>시간 지정</div>
-                </button>
-              </div>
-              {publishMode === "scheduled" && (
-                <div className="space-y-3 p-3 rounded-xl" style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/20%)" }}>
-                  <div>
-                    <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>발행 날짜</label>
-                    <Input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)}
-                      min={new Date().toISOString().slice(0, 10)} className="text-sm h-9" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>발행 시간</label>
-                    <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="text-sm h-9" />
-                  </div>
-                  {scheduleDate && (
-                    <div className="text-xs text-center font-medium py-1 rounded" style={{ background: "oklch(0.769 0.188 70.08/15%)", color: "var(--color-amber-brand)" }}>
-                      📅 {scheduleDate} {scheduleTime} 발행 예정
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 발행 버튼 */}
-            <Button className="w-full h-12 text-base font-semibold gap-2"
-              style={{ background: selectedPlatforms.length === 0 ? "var(--muted)" : publishMode === "instant" ? "var(--color-emerald)" : "var(--color-amber-brand)", color: "white" }}
-              disabled={isPublishing || selectedPlatforms.length === 0}
-              onClick={handlePublish}>
-              {isPublishing ? <><Send className="w-4 h-4 animate-pulse" />발행 중...</> :
-                publishMode === "instant" ? <><Zap className="w-4 h-4" />즉시 발행하기</> :
-                  <><Calendar className="w-4 h-4" />예약 발행 등록</>}
-            </Button>
-            {selectedPlatforms.length === 0 && (
-              <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>위에서 플랫폼을 선택해주세요</p>
-            )}
+          {/* 오른쪽: 발행 설정 (데스크탑만) */}
+          <div className="hidden lg:block space-y-4">
+            <PublishPanel
+              platforms={platforms}
+              selectedPlatforms={selectedPlatforms}
+              setSelectedPlatforms={setSelectedPlatforms}
+              publishMode={publishMode}
+              setPublishMode={setPublishMode}
+              scheduleDate={scheduleDate}
+              setScheduleDate={setScheduleDate}
+              scheduleTime={scheduleTime}
+              setScheduleTime={setScheduleTime}
+              isPublishing={isPublishing}
+              onPublish={handlePublish}
+            />
           </div>
         </div>
       </div>
     </Layout>
+
+    {/* ── 모바일 하단 고정 발행 버튼 ── */}
+    <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden p-3 border-t"
+      style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+      <div className="flex gap-2">
+        <Button className="flex-1 gap-2 h-11"
+          variant="outline"
+          onClick={() => setShowPreview(true)}>
+          <Eye className="w-4 h-4" /> 미리보기
+        </Button>
+        <Button className="flex-1 gap-2 h-11 font-semibold"
+          style={{
+            background: selectedPlatforms.length === 0 ? "var(--muted)" : publishMode === "instant" ? "var(--color-emerald)" : "var(--color-amber-brand)",
+            color: "white",
+          }}
+          disabled={isPublishing || selectedPlatforms.length === 0}
+          onClick={handlePublish}>
+          {isPublishing
+            ? <><Send className="w-4 h-4 animate-pulse" />발행 중...</>
+            : publishMode === "instant"
+              ? <><Zap className="w-4 h-4" />즉시 발행</>
+              : <><Calendar className="w-4 h-4" />예약 발행</>}
+        </Button>
+      </div>
+      {selectedPlatforms.length === 0 && (
+        <p className="text-xs text-center mt-1" style={{ color: "var(--muted-foreground)" }}>
+          발행 설정에서 플랫폼을 선택해주세요
+        </p>
+      )}
+    </div>
+
+    {/* ── 구독자 미리보기 풀스크린 모달 ── */}
+    {showPreview && (
+      <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--background)" }}>
+        {/* 모달 헤더 */}
+        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0"
+          style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ background: "var(--color-emerald)" }} />
+            <span className="text-sm font-semibold text-foreground">구독자 시점 미리보기</span>
+            <span className="text-xs px-2 py-0.5 rounded-full hidden sm:inline"
+              style={{ background: "oklch(0.696 0.17 162.48/10%)", color: "var(--color-emerald)" }}>
+              실제 발행 모습
+            </span>
+          </div>
+          <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent/20"
+            style={{ color: "var(--muted-foreground)" }}
+            onClick={() => setShowPreview(false)}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* 미리보기 본문 */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
+
+            {/* 썸네일 */}
+            {thumbnail && (
+              <div className="rounded-xl overflow-hidden mb-5" style={{ aspectRatio: "16/9" }}>
+                <img src={thumbnail} alt="썸네일" className="w-full h-full object-cover" />
+              </div>
+            )}
+
+            {/* 제목 */}
+            {title && (
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 leading-tight">{title}</h1>
+            )}
+
+            {/* 인사말 */}
+            {greeting && (
+              <div className="rounded-xl p-4 mb-5 text-sm leading-relaxed"
+                style={{ background: "oklch(0.696 0.17 162.48/8%)", border: "1px solid oklch(0.696 0.17 162.48/20%)", color: "var(--foreground)" }}>
+                {greeting}
+              </div>
+            )}
+
+            {/* 본문 블록 (이미지 포함) */}
+            <div className="space-y-4">
+              {blocks.map((block) => {
+                if (block.type === "text") {
+                  return (
+                    <div key={block.id} className="text-sm leading-relaxed">
+                      {renderPreview(block.content)}
+                    </div>
+                  );
+                } else {
+                  return block.src ? (
+                    <div key={block.id} className={`flex ${block.position === "center" ? "justify-center" : block.position === "right" ? "justify-end" : "justify-start"}`}>
+                      <img src={block.src} alt={block.alt}
+                        className="max-w-full rounded-xl object-cover"
+                        style={{ maxHeight: 300 }} />
+                    </div>
+                  ) : null;
+                }
+              })}
+            </div>
+
+            {/* 해시태그 */}
+            {hashtags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-6 pt-5" style={{ borderTop: "1px solid var(--border)" }}>
+                {hashtags.map((tag, i) => (
+                  <span key={i} className="text-sm px-3 py-1 rounded-full"
+                    style={{ background: "oklch(0.696 0.17 162.48/10%)", color: "var(--color-emerald)" }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* 콘텐츠 없을 때 */}
+            {!title && !thumbnail && blocks.every(b => b.type === "text" && !b.content) && (
+              <div className="text-center py-12">
+                <Eye className="w-10 h-10 opacity-20 mx-auto mb-3" style={{ color: "var(--muted-foreground)" }} />
+                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  아직 작성된 내용이 없어요.<br />제목과 본문을 입력하면 여기에 표시됩니다.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
+  );
+}
+
+// ── 발행 패널 (재사용) ────────────────────────────────
+function PublishPanel({
+  platforms, selectedPlatforms, setSelectedPlatforms,
+  publishMode, setPublishMode,
+  scheduleDate, setScheduleDate,
+  scheduleTime, setScheduleTime,
+  isPublishing, onPublish,
+}: {
+  platforms: Platform[];
+  selectedPlatforms: string[];
+  setSelectedPlatforms: React.Dispatch<React.SetStateAction<string[]>>;
+  publishMode: "instant" | "scheduled";
+  setPublishMode: React.Dispatch<React.SetStateAction<"instant" | "scheduled">>;
+  scheduleDate: string;
+  setScheduleDate: React.Dispatch<React.SetStateAction<string>>;
+  scheduleTime: string;
+  setScheduleTime: React.Dispatch<React.SetStateAction<string>>;
+  isPublishing: boolean;
+  onPublish: () => void;
+}) {
+  return (
+    <>
+      {/* 플랫폼 */}
+      <div className="rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
+          <Globe className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+          <span className="text-sm font-semibold text-foreground">발행 플랫폼</span>
+        </div>
+        <div className="p-4 space-y-2">
+          {platforms.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>설정에서 플랫폼을 등록해주세요</p>
+              <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={() => window.location.href = "/settings"}>설정 이동</Button>
+            </div>
+          ) : (
+            platforms.map(platform => (
+              <button key={platform.id}
+                className="w-full flex items-center justify-between p-3 rounded-xl transition-all"
+                style={{
+                  background: selectedPlatforms.includes(platform.id) ? "oklch(0.696 0.17 162.48/10%)" : "var(--background)",
+                  border: `1px solid ${selectedPlatforms.includes(platform.id) ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
+                }}
+                onClick={() => setSelectedPlatforms(prev =>
+                  prev.includes(platform.id) ? prev.filter(id => id !== platform.id) : [...prev, platform.id]
+                )}>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+                    style={{ background: platform.type === "naver" ? "#03C75A" : platform.type === "wordpress" ? "#21759B" : "oklch(0.6 0.15 220)" }}>
+                    {platform.type === "naver" ? "N" : platform.type === "wordpress" ? "W" : "C"}
+                  </div>
+                  <span className="text-sm text-foreground">{platform.name}</span>
+                </div>
+                {selectedPlatforms.includes(platform.id) && <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 발행 방식 */}
+      <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <Clock className="w-4 h-4" style={{ color: "var(--color-amber-brand)" }} />
+          <span className="text-sm font-semibold text-foreground">발행 방식</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <button className="rounded-xl p-3 text-center transition-all"
+            style={{ background: publishMode === "instant" ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)", border: `2px solid ${publishMode === "instant" ? "oklch(0.696 0.17 162.48/60%)" : "var(--border)"}` }}
+            onClick={() => setPublishMode("instant")}>
+            <Zap className="w-5 h-5 mx-auto mb-1" style={{ color: publishMode === "instant" ? "var(--color-emerald)" : "var(--muted-foreground)" }} />
+            <div className="text-sm font-semibold text-foreground">즉시</div>
+            <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>지금 바로</div>
+          </button>
+          <button className="rounded-xl p-3 text-center transition-all"
+            style={{ background: publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/15%)" : "var(--background)", border: `2px solid ${publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/60%)" : "var(--border)"}` }}
+            onClick={() => setPublishMode("scheduled")}>
+            <Calendar className="w-5 h-5 mx-auto mb-1" style={{ color: publishMode === "scheduled" ? "var(--color-amber-brand)" : "var(--muted-foreground)" }} />
+            <div className="text-sm font-semibold text-foreground">예약</div>
+            <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>시간 지정</div>
+          </button>
+        </div>
+        {publishMode === "scheduled" && (
+          <div className="space-y-3 p-3 rounded-xl" style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/20%)" }}>
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>날짜</label>
+              <Input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)}
+                min={new Date().toISOString().slice(0, 10)} className="text-sm h-9" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>시간</label>
+              <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="text-sm h-9" />
+            </div>
+            {scheduleDate && (
+              <div className="text-xs text-center font-medium py-1 rounded"
+                style={{ background: "oklch(0.769 0.188 70.08/15%)", color: "var(--color-amber-brand)" }}>
+                📅 {scheduleDate} {scheduleTime} 발행 예정
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 발행 버튼 */}
+      <Button className="w-full h-12 text-base font-semibold gap-2"
+        style={{ background: selectedPlatforms.length === 0 ? "var(--muted)" : publishMode === "instant" ? "var(--color-emerald)" : "var(--color-amber-brand)", color: "white" }}
+        disabled={isPublishing || selectedPlatforms.length === 0}
+        onClick={onPublish}>
+        {isPublishing
+          ? <><Send className="w-4 h-4 animate-pulse" />발행 중...</>
+          : publishMode === "instant"
+            ? <><Zap className="w-4 h-4" />즉시 발행하기</>
+            : <><Calendar className="w-4 h-4" />예약 발행 등록</>}
+      </Button>
+      {selectedPlatforms.length === 0 && (
+        <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>플랫폼을 선택해주세요</p>
+      )}
+    </>
   );
 }

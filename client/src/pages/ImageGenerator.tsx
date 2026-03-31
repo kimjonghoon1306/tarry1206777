@@ -23,29 +23,53 @@ import { Progress } from "@/components/ui/progress";
 import { getImageProvider, getAPIKey, IMAGE_AI_OPTIONS } from "@/lib/ai-config";
 import { useLocation } from "wouter";
 
-// ── Pollinations 이미지 생성 (ai-client 대신 인라인으로 재정의 - 더 안정적) ──
+// ── 이미지 URL 로드 테스트 ──────────────────────────
+async function testImageUrl(url: string, timeoutMs = 25000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const timer = setTimeout(() => { img.onload = null; img.onerror = null; resolve(false); }, timeoutMs);
+    img.onload = () => { clearTimeout(timer); resolve(true); };
+    img.onerror = () => { clearTimeout(timer); resolve(false); };
+    img.src = url;
+  });
+}
+
+// ── 프롬프트에서 Unsplash 검색 키워드 추출 ──────────
+function extractKeyword(prompt: string): string {
+  const cleaned = prompt
+    .replace(/[,，。、]/g, " ")
+    .split(" ")
+    .filter(w => /^[a-zA-Z0-9]+$/.test(w) && w.length > 2)
+    .slice(0, 3)
+    .join(",");
+  return cleaned || "nature";
+}
+
+// ── 이미지 생성: Pollinations → Unsplash → Picsum 순서로 fallback ──
 async function generatePollinationsUrl(
   prompt: string, width: number, height: number, seed: number
 ): Promise<string> {
   const encoded = encodeURIComponent(prompt);
   const ts = Date.now();
-  // 여러 미러 URL 시도
-  const candidates = [
-    `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&t=${ts}`,
-    `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 7}&t=${ts + 1}`,
-  ];
 
-  for (const url of candidates) {
-    const loaded = await new Promise<boolean>((resolve) => {
-      const img = new window.Image();
-      const timer = setTimeout(() => { img.onload = null; img.onerror = null; resolve(false); }, 45000);
-      img.onload = () => { clearTimeout(timer); resolve(true); };
-      img.onerror = () => { clearTimeout(timer); resolve(false); };
-      img.src = url;
-    });
-    if (loaded) return url;
+  // 1차: Pollinations AI (실제 AI 생성 이미지, 20초 대기)
+  const pollinationsUrls = [
+    `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&t=${ts}`,
+    `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 13}&t=${ts + 1}`,
+  ];
+  for (const url of pollinationsUrls) {
+    const ok = await testImageUrl(url, 20000);
+    if (ok) return url;
   }
-  throw new Error("이미지 생성 실패");
+
+  // 2차: Unsplash Source (키워드 기반 실제 사진, API키 불필요)
+  const keyword = extractKeyword(prompt);
+  const unsplashUrl = `https://source.unsplash.com/${width}x${height}/?${encodeURIComponent(keyword)}&sig=${seed}`;
+  const unsplashOk = await testImageUrl(unsplashUrl, 12000);
+  if (unsplashOk) return unsplashUrl;
+
+  // 3차: Picsum (랜덤 고품질 사진, 항상 동작)
+  return `https://picsum.photos/seed/${seed}/${width}/${height}`;
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
