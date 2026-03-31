@@ -122,20 +122,24 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-sidebar-border">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center glow-emerald"
-            style={{ background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))" }}
-          >
-            <Bot className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="font-bold text-sm text-sidebar-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              BlogAuto Pro
+          <Link href="/">
+            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center glow-emerald"
+                style={{ background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))" }}
+              >
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="font-bold text-sm text-sidebar-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  BlogAuto Pro
+                </div>
+                <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  🏠 홈으로
+                </div>
+              </div>
             </div>
-            <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-              자동화 플랫폼
-            </div>
-          </div>
+          </Link>
           <button
             className="ml-auto lg:hidden text-muted-foreground hover:text-foreground"
             onClick={() => setSidebarOpen(false)}
