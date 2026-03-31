@@ -4,6 +4,7 @@
  */
 
 import { useState } from "react";
+import React from "react";
 import Layout from "@/components/Layout";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
@@ -12,7 +13,7 @@ import {
   Palette, Download, Save, ChevronRight,
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
-  Smartphone, Upload, QrCode, Send,
+  Smartphone, Upload, QrCode, Send, Plus, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,135 @@ function ApiKeyInput({ label, placeholder, storageKey, link }: {
           {saved ? "저장됨" : "저장"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+// ── 다중 플랫폼 섹션 컴포넌트 ──────────────────────
+function PlatformSection({ title, color, logo, type, desc, link, fields }: {
+  title: string; color: string; logo: string; type: string; desc: string; link: string;
+  fields: { label: string; key: string; placeholder: string; secret?: boolean }[];
+}) {
+  const STORAGE_KEY = `platform_${type}_list`;
+  const [accounts, setAccounts] = React.useState<Record<string, string>[]>(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+  });
+  const [showAdd, setShowAdd] = React.useState(false);
+  const [form, setForm] = React.useState<Record<string, string>>({});
+  const [showSecrets, setShowSecrets] = React.useState<Record<string, boolean>>({});
+  const [savedIdx, setSavedIdx] = React.useState<number | null>(null);
+
+  const save = () => {
+    const required = fields.filter(f => !f.secret || f === fields[0]);
+    for (const f of required) {
+      if (!form[f.key]?.trim()) { toast.error(`${f.label}을 입력해주세요`); return; }
+    }
+    const name = form[fields[0].key] || `${title} ${accounts.length + 1}`;
+    const entry = { ...form, _name: name, _type: type };
+    const updated = [...accounts, entry];
+    setAccounts(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    // 배포 플랫폼 목록도 업데이트
+    const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
+    platforms.push({ id: Math.random().toString(36).slice(2), type, name });
+    localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
+    setForm({});
+    setShowAdd(false);
+    toast.success(`${title} 추가됨`);
+  };
+
+  const remove = (idx: number) => {
+    const updated = accounts.filter((_, i) => i !== idx);
+    setAccounts(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    toast.success("삭제됨");
+  };
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+            style={{ background: color }}>{logo}</div>
+          <h3 className="font-semibold text-foreground">{title}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          {link && (
+            <a href={link} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs hover:underline" style={{ color }}>
+              발급받기 <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+          <Button size="sm" className="gap-1.5 text-xs h-7"
+            style={{ background: color, color: "white" }}
+            onClick={() => setShowAdd(v => !v)}>
+            <Plus className="w-3.5 h-3.5" /> 추가
+          </Button>
+        </div>
+      </div>
+      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>{desc}</p>
+
+      {/* 등록된 계정 목록 */}
+      {accounts.length > 0 && (
+        <div className="space-y-2 mb-4">
+          {accounts.map((account, idx) => (
+            <div key={idx} className="flex items-center justify-between p-3 rounded-lg"
+              style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+                <span className="text-sm text-foreground">{account._name || `${title} ${idx + 1}`}</span>
+              </div>
+              <button onClick={() => remove(idx)}
+                className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-500/20 transition-colors"
+                style={{ color: "var(--muted-foreground)" }}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 추가 폼 */}
+      {showAdd && (
+        <div className="space-y-3 p-4 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+          {fields.map(field => (
+            <div key={field.key}>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
+                {field.label}
+              </label>
+              {field.secret ? (
+                <div className="relative">
+                  <Input className="text-sm font-mono pr-10"
+                    type={showSecrets[field.key] ? "text" : "password"}
+                    placeholder={field.placeholder}
+                    value={form[field.key] || ""}
+                    onChange={e => setForm(prev => ({ ...prev, [field.key]: e.target.value }))} />
+                  <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
+                    onClick={() => setShowSecrets(prev => ({ ...prev, [field.key]: !prev[field.key] }))}>
+                    {showSecrets[field.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              ) : (
+                <Input className="text-sm" placeholder={field.placeholder}
+                  value={form[field.key] || ""}
+                  onChange={e => setForm(prev => ({ ...prev, [field.key]: e.target.value }))} />
+              )}
+            </div>
+          ))}
+          <div className="flex gap-2">
+            <Button className="gap-2 flex-1" style={{ background: color, color: "white" }} onClick={save}>
+              <CheckCircle2 className="w-4 h-4" /> 저장
+            </Button>
+            <Button variant="outline" onClick={() => { setShowAdd(false); setForm({}); }}>취소</Button>
+          </div>
+        </div>
+      )}
+
+      {accounts.length === 0 && !showAdd && (
+        <p className="text-xs text-center py-2" style={{ color: "var(--muted-foreground)" }}>
+          추가 버튼을 눌러 {title} 계정을 등록하세요
+        </p>
+      )}
     </div>
   );
 }
@@ -181,6 +311,7 @@ export default function SettingsPage() {
     new Map(
       [CONTENT_AI_OPTIONS.find(o => o.value === contentAI), IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
         .filter(Boolean)
+        .filter(o => o!.keyStorageKey) // API 키 불필요한 항목 제외 (Pollinations 등)
         .map(o => [o!.keyStorageKey, o!])
     ).values()
   );
@@ -327,6 +458,21 @@ export default function SettingsPage() {
           )}
 
           <div className="space-y-4">
+            {/* Pollinations 선택 시 - 키 불필요 안내 */}
+            {imageAI === "pollinations" && requiredKeys.length === 0 && (
+              <div className="rounded-xl px-4 py-3 flex items-center gap-3"
+                style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
+                <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-emerald)" }} />
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-emerald)" }}>
+                    Pollinations AI는 API 키가 필요 없어요! 🎉
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                    바로 이미지 생성 페이지에서 사용 가능합니다.
+                  </p>
+                </div>
+              </div>
+            )}
             {requiredKeys.map((opt) => (
               <ApiKeyInput key={opt.keyStorageKey} label={opt.keyLabel}
                 placeholder={opt.keyPlaceholder} storageKey={opt.keyStorageKey} link={opt.keyLink} />
@@ -381,136 +527,52 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ─── 배포 대상 설정 ─── */}
+        {/* ─── 배포 대상 설정 (다중 추가 가능) ─── */}
         <div className="rounded-xl p-5" style={{ background: "oklch(0.696 0.17 162.48 / 6%)", border: "2px solid oklch(0.696 0.17 162.48 / 25%)" }}>
-          <div className="flex items-center gap-2 mb-1">
-            <Send className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
-            <h3 className="font-semibold text-foreground">배포 대상 설정</h3>
-          </div>
-          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-            작성된 글을 발행할 플랫폼 연결 정보를 입력하세요 (복수 선택 가능)
-          </p>
-        </div>
-
-        {/* 네이버 블로그 배포 설정 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-black text-white" style={{ background: "#03C75A" }}>N</div>
-              <h3 className="font-semibold text-foreground">네이버 블로그 배포 설정</h3>
+              <Send className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
+              <h3 className="font-semibold text-foreground">배포 대상 설정</h3>
             </div>
-            <a href="https://developers.naver.com/apps" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs hover:underline" style={{ color: "#03C75A" }}>
-              앱 등록 <ExternalLink className="w-3 h-3" />
-            </a>
           </div>
-          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            네이버 개발자센터에서 앱 등록 후 블로그 쓰기 권한으로 Access Token 발급
+          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+            각 플랫폼마다 여러 개 추가 가능 · 배포 페이지에서 선택해서 발행
           </p>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>블로그 ID</label>
-              <Input className="text-sm" placeholder="myblog (naver.com/myblog)"
-                value={naverBlogId} onChange={e => setNaverBlogId(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Access Token</label>
-              <div className="relative">
-                <Input className="text-sm font-mono pr-10" type={showNaverBlogToken ? "text" : "password"}
-                  placeholder="네이버 OAuth Access Token"
-                  value={naverBlogToken} onChange={e => setNaverBlogToken(e.target.value)} />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-                  onClick={() => setShowNaverBlogToken(v => !v)}>
-                  {showNaverBlogToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <Button className="gap-2"
-              style={{ background: naverBlogSaved ? "var(--color-emerald)" : "#03C75A", color: "white" }}
-              onClick={handleSaveNaverBlog}>
-              {naverBlogSaved ? <CheckCircle2 className="w-4 h-4" /> : <Key className="w-4 h-4" />}
-              {naverBlogSaved ? "저장됨" : "네이버 블로그 저장"}
-            </Button>
-          </div>
         </div>
 
-        {/* 일반 웹사이트 배포 설정 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-1">
-            <Globe className="w-5 h-5" style={{ color: "oklch(0.6 0.15 220)" }} />
-            <h3 className="font-semibold text-foreground">일반 웹사이트 배포 설정</h3>
-          </div>
-          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            Webhook URL로 발행 — 직접 제작한 웹사이트나 커스텀 CMS에 POST 요청으로 글이 전달됩니다
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Webhook URL</label>
-              <Input className="text-sm" placeholder="https://mysite.com/api/post"
-                value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>인증 키 (선택)</label>
-              <div className="relative">
-                <Input className="text-sm font-mono pr-10" type={showWebhookKey ? "text" : "password"}
-                  placeholder="Authorization 헤더 값 (없으면 생략)"
-                  value={webhookKey} onChange={e => setWebhookKey(e.target.value)} />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-                  onClick={() => setShowWebhookKey(v => !v)}>
-                  {showWebhookKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <Button className="gap-2"
-              style={{ background: webhookSaved ? "var(--color-emerald)" : "oklch(0.6 0.15 220)", color: "white" }}
-              onClick={handleSaveWebhook}>
-              {webhookSaved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-              {webhookSaved ? "저장됨" : "웹사이트 설정 저장"}
-            </Button>
-          </div>
-        </div>
+        {/* 네이버 블로그 */}
+        <PlatformSection
+          title="네이버 블로그" color="#03C75A" logo="N" type="naver"
+          desc="네이버 개발자센터에서 앱 등록 후 블로그 쓰기 권한으로 Access Token 발급"
+          link="https://developers.naver.com/apps"
+          fields={[
+            { label: "블로그 ID", key: "naver_blog_id", placeholder: "myblog (naver.com/myblog)" },
+            { label: "Access Token", key: "naver_blog_access_token", placeholder: "네이버 OAuth Access Token", secret: true },
+          ]}
+        />
 
-        {/* WordPress 발행 설정 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-1">
-            <Newspaper className="w-5 h-5" style={{ color: "#21759B" }} />
-            <h3 className="font-semibold text-foreground">WordPress 발행 설정</h3>
-          </div>
-          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            WordPress 관리자 → 사용자 → 애플리케이션 비밀번호에서 발급
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>사이트 URL</label>
-              <Input className="text-sm" placeholder="https://myblog.com"
-                value={wpUrl} onChange={e => setWpUrl(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>사용자명</label>
-                <Input className="text-sm" placeholder="admin"
-                  value={wpUser} onChange={e => setWpUser(e.target.value)} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>앱 비밀번호</label>
-                <div className="relative">
-                  <Input className="text-sm font-mono pr-10" type={showWpPass ? "text" : "password"}
-                    placeholder="xxxx xxxx xxxx" value={wpPass} onChange={e => setWpPass(e.target.value)} />
-                  <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-                    onClick={() => setShowWpPass(v => !v)}>
-                    {showWpPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <Button className="gap-2"
-              style={{ background: wpSaved ? "var(--color-emerald)" : "#21759B", color: "white" }}
-              onClick={handleSaveWordPress}>
-              {wpSaved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-              {wpSaved ? "저장됨" : "WordPress 설정 저장"}
-            </Button>
-          </div>
-        </div>
+        {/* 일반 웹사이트 */}
+        <PlatformSection
+          title="일반 웹사이트 (커스텀)" color="oklch(0.6 0.15 220)" logo="W" type="custom"
+          desc="직접 제작한 사이트나 CMS에 Webhook으로 글을 전달합니다"
+          link=""
+          fields={[
+            { label: "Webhook URL", key: "webhook_url", placeholder: "https://mysite.com/api/post" },
+            { label: "인증 키 (선택)", key: "webhook_auth_key", placeholder: "Authorization 헤더 값", secret: true },
+          ]}
+        />
+
+        {/* WordPress */}
+        <PlatformSection
+          title="WordPress" color="#21759B" logo="WP" type="wordpress"
+          desc="WordPress 관리자 → 사용자 → 애플리케이션 비밀번호에서 발급"
+          link=""
+          fields={[
+            { label: "사이트 URL", key: "wp_url", placeholder: "https://myblog.com" },
+            { label: "사용자명", key: "wp_username", placeholder: "admin" },
+            { label: "앱 비밀번호", key: "wp_app_password", placeholder: "xxxx xxxx xxxx", secret: true },
+          ]}
+        />
 
         {/* 모바일 설정 동기화 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
