@@ -1,5 +1,5 @@
 // AI 설정 읽기 유틸리티
-export type ContentAIProvider = "gemini" | "claude" | "openai";
+export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
 export type ImageAIProvider = "gemini" | "openai" | "flux";
 
 export function getContentProvider(): ContentAIProvider {
@@ -16,6 +16,7 @@ export function getAPIKey(provider: string): string {
     claude: "claude_api_key",
     openai: "openai_api_key",
     flux: "flux_api_key",
+    groq: "groq_api_key",
   };
   return localStorage.getItem(keyMap[provider] || "") || "";
 }
@@ -33,6 +34,19 @@ export const CONTENT_AI_OPTIONS = [
     keyPlaceholder: "AIza...",
     keyStorageKey: "gemini_api_key",
     keyLink: "https://aistudio.google.com/app/apikey",
+  },
+  {
+    value: "groq" as ContentAIProvider,
+    label: "Groq (Llama 3)",
+    badge: "무료",
+    badgeColor: "var(--color-emerald)",
+    desc: "Groq · 초고속 완전 무료",
+    logo: "L",
+    logoColor: "#F55036",
+    keyLabel: "Groq API Key",
+    keyPlaceholder: "gsk_...",
+    keyStorageKey: "groq_api_key",
+    keyLink: "https://console.groq.com/keys",
   },
   {
     value: "claude" as ContentAIProvider,
