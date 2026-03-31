@@ -13,7 +13,7 @@ import {
   Palette, Download, Save, ChevronRight,
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
-  Smartphone, Upload, QrCode, Send, Plus, Trash2,
+  Smartphone, Upload, QrCode, Send, Plus, Trash2, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import {
   type ContentAIProvider, type ImageAIProvider,
 } from "@/lib/ai-config";
 import { userGet, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings } from "@/lib/user-storage";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LANGUAGES = [
   { code: "ko", label: "한국어", flag: "🇰🇷" },
@@ -217,6 +218,7 @@ function PlatformSection({ title, color, logo, type, desc, link, fields }: {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { user, saveSettings, loadSettings } = useAuth();
   const [contentLang, setContentLang] = useState(
     () => userGet(SETTINGS_KEYS.CONTENT_LANG, "ko")
   );
@@ -255,14 +257,16 @@ export default function SettingsPage() {
   const handleSelectContentAI = (v: ContentAIProvider) => {
     setContentAI(v);
     userSet(SETTINGS_KEYS.CONTENT_AI, v);
-    saveSettingsToServer({ [SETTINGS_KEYS.CONTENT_AI]: v });
+    const s1 = { [SETTINGS_KEYS.CONTENT_AI]: v };
+    saveSettingsToServer(s1); saveSettings(s1);
     toast.success(`글 생성 AI: ${CONTENT_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
   };
 
   const handleSelectImageAI = (v: ImageAIProvider) => {
     setImageAI(v);
     userSet(SETTINGS_KEYS.IMAGE_AI, v);
-    saveSettingsToServer({ [SETTINGS_KEYS.IMAGE_AI]: v });
+    const s2 = { [SETTINGS_KEYS.IMAGE_AI]: v };
+    saveSettingsToServer(s2); saveSettings(s2);
     toast.success(`이미지 생성 AI: ${IMAGE_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
   };
 
@@ -273,9 +277,10 @@ export default function SettingsPage() {
     userSet(SETTINGS_KEYS.NAVER_LICENSE, naverLicense);
     userSet(SETTINGS_KEYS.NAVER_SECRET, naverSecret);
     userSet(SETTINGS_KEYS.NAVER_CUSTOMER, naverCustomer);
-    saveSettingsToServer({ [SETTINGS_KEYS.NAVER_LICENSE]: naverLicense, [SETTINGS_KEYS.NAVER_SECRET]: naverSecret, [SETTINGS_KEYS.NAVER_CUSTOMER]: naverCustomer });
+    const sn = { [SETTINGS_KEYS.NAVER_LICENSE]: naverLicense, [SETTINGS_KEYS.NAVER_SECRET]: naverSecret, [SETTINGS_KEYS.NAVER_CUSTOMER]: naverCustomer };
+    saveSettingsToServer(sn); saveSettings(sn);
     setNaverSaved(true);
-    toast.success("네이버 검색광고 API 저장됨");
+    toast.success("네이버 검색광고 API 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setNaverSaved(false), 3000);
   };
 
@@ -286,9 +291,10 @@ export default function SettingsPage() {
     userSet(SETTINGS_KEYS.WP_URL, wpUrl);
     userSet(SETTINGS_KEYS.WP_USER, wpUser);
     userSet(SETTINGS_KEYS.WP_PASS, wpPass);
-    saveSettingsToServer({ [SETTINGS_KEYS.WP_URL]: wpUrl, [SETTINGS_KEYS.WP_USER]: wpUser, [SETTINGS_KEYS.WP_PASS]: wpPass });
+    const sw = { [SETTINGS_KEYS.WP_URL]: wpUrl, [SETTINGS_KEYS.WP_USER]: wpUser, [SETTINGS_KEYS.WP_PASS]: wpPass };
+    saveSettingsToServer(sw); saveSettings(sw);
     setWpSaved(true);
-    toast.success("WordPress 발행 설정 저장됨");
+    toast.success("WordPress 설정 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setWpSaved(false), 3000);
   };
 
@@ -298,9 +304,10 @@ export default function SettingsPage() {
     }
     userSet(SETTINGS_KEYS.NAVER_BLOG_ID, naverBlogId);
     userSet(SETTINGS_KEYS.NAVER_BLOG_TOKEN, naverBlogToken);
-    saveSettingsToServer({ [SETTINGS_KEYS.NAVER_BLOG_ID]: naverBlogId, [SETTINGS_KEYS.NAVER_BLOG_TOKEN]: naverBlogToken });
+    const snb = { [SETTINGS_KEYS.NAVER_BLOG_ID]: naverBlogId, [SETTINGS_KEYS.NAVER_BLOG_TOKEN]: naverBlogToken };
+    saveSettingsToServer(snb); saveSettings(snb);
     setNaverBlogSaved(true);
-    toast.success("네이버 블로그 배포 설정 저장됨");
+    toast.success("네이버 블로그 설정 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setNaverBlogSaved(false), 3000);
   };
 
@@ -310,9 +317,10 @@ export default function SettingsPage() {
     }
     userSet(SETTINGS_KEYS.WEBHOOK_URL, webhookUrl);
     userSet(SETTINGS_KEYS.WEBHOOK_KEY, webhookKey);
-    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: webhookUrl, [SETTINGS_KEYS.WEBHOOK_KEY]: webhookKey });
+    const shk = { [SETTINGS_KEYS.WEBHOOK_URL]: webhookUrl, [SETTINGS_KEYS.WEBHOOK_KEY]: webhookKey };
+    saveSettingsToServer(shk); saveSettings(shk);
     setWebhookSaved(true);
-    toast.success("웹사이트 배포 설정 저장됨");
+    toast.success("웹사이트 설정 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setWebhookSaved(false), 3000);
   };
 
@@ -562,7 +570,7 @@ export default function SettingsPage() {
 
         {/* 일반 웹사이트 */}
         <PlatformSection
-          title="일반 웹사이트 (커스텀)" color="oklch(0.6 0.15 220)" logo="W" type="custom"
+          title="일반 웹사이트 (커스텀)" color="oklch(0.65 0.28 350)" logo="W" type="custom"
           desc="직접 제작한 사이트나 CMS에 Webhook으로 글을 전달합니다"
           link=""
           fields={[
@@ -583,81 +591,86 @@ export default function SettingsPage() {
           ]}
         />
 
-        {/* 모바일 설정 동기화 */}
+        {/* 모바일 ↔ PC 자동 동기화 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
           <div className="flex items-center gap-2 mb-1">
             <Smartphone className="w-5 h-5" style={{ color: "oklch(0.6 0.15 220)" }} />
-            <h3 className="font-semibold text-foreground">모바일 ↔ PC 설정 동기화</h3>
+            <h3 className="font-semibold text-foreground">모바일 ↔ PC 설정 자동 동기화</h3>
           </div>
           <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            버튼 하나로 모든 API 키를 다른 기기에 복사할 수 있어요.
+            같은 계정으로 로그인하면 모든 설정이 자동으로 동기화됩니다.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* PC → 모바일 */}
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-              <div className="text-sm font-semibold text-foreground">📱 모바일로 보내기</div>
-              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                아래 링크를 복사해서 모바일 브라우저에서 열면 자동 적용돼요
-              </p>
-              <Button className="w-full gap-2 text-sm" style={{ background: "oklch(0.6 0.15 220)", color: "white" }}
-                onClick={() => {
-                  const keys = [
-                    SETTINGS_KEYS.NAVER_LICENSE, SETTINGS_KEYS.NAVER_SECRET, SETTINGS_KEYS.NAVER_CUSTOMER,
-                    SETTINGS_KEYS.GEMINI_KEY, SETTINGS_KEYS.CLAUDE_KEY, SETTINGS_KEYS.OPENAI_KEY,
-                    SETTINGS_KEYS.FLUX_KEY, SETTINGS_KEYS.GROQ_KEY,
-                    SETTINGS_KEYS.WP_URL, SETTINGS_KEYS.WP_USER, SETTINGS_KEYS.WP_PASS,
-                    SETTINGS_KEYS.NAVER_BLOG_ID, SETTINGS_KEYS.NAVER_BLOG_TOKEN,
-                    SETTINGS_KEYS.WEBHOOK_URL, SETTINGS_KEYS.WEBHOOK_KEY,
-                    SETTINGS_KEYS.CONTENT_AI, SETTINGS_KEYS.IMAGE_AI, SETTINGS_KEYS.CONTENT_LANG,
-                  ];
-                  const data: Record<string,string> = {};
-                  keys.forEach(k => { const v = userGet(k); if(v) data[k]=v; });
-                  const code = btoa(JSON.stringify(data));
-                  const url = `${window.location.origin}/settings?sync=${code}`;
-                  navigator.clipboard.writeText(url).then(() =>
-                    toast.success("링크가 복사됐어요! 모바일 브라우저에 붙여넣으세요 📱")
-                  );
-                }}>
-                <Upload className="w-4 h-4" /> 동기화 링크 복사
-              </Button>
-            </div>
 
-            {/* 모바일 → PC (코드 직접 입력) */}
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-              <div className="text-sm font-semibold text-foreground">💻 다른 기기에서 가져오기</div>
-              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                다른 기기에서 복사한 동기화 링크를 붙여넣으세요
+          {user ? (
+            <div className="space-y-3">
+              {/* 로그인 상태 표시 */}
+              <div className="rounded-xl p-4 flex items-center gap-3"
+                style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg font-black text-white"
+                  style={{ background: "var(--color-emerald)" }}>✓</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-emerald)" }}>
+                    자동 동기화 활성화됨
+                  </p>
+                  <p className="text-xs mt-0.5 truncate" style={{ color: "var(--muted-foreground)" }}>
+                    <strong style={{ color: "var(--foreground)" }}>{user.name}</strong> 계정 · 설정 저장 시 서버에 자동 백업
+                  </p>
+                </div>
+              </div>
+
+              {/* 지금 바로 전체 저장 */}
+              <Button className="w-full gap-2 h-11 font-semibold"
+                style={{ background: "oklch(0.6 0.15 220)", color: "white" }}
+                onClick={async () => {
+                  const allData: Record<string,string> = {};
+                  Object.values(SETTINGS_KEYS).forEach(k => {
+                    const v = userGet(k); if (v) allData[k] = v;
+                  });
+                  await saveSettings(allData);
+                  toast.success("✅ 모든 설정이 서버에 저장됐어요! 다른 기기에서 로그인하면 자동 적용됩니다");
+                }}>
+                <Upload className="w-4 h-4" /> 지금 모든 설정 서버에 저장하기
+              </Button>
+
+              {/* 서버에서 불러오기 */}
+              <Button variant="outline" className="w-full gap-2 h-11 font-semibold"
+                onClick={async () => {
+                  const settings = await loadSettings();
+                  if (!settings || Object.keys(settings).length === 0) {
+                    toast.info("서버에 저장된 설정이 없어요. 위 버튼으로 먼저 저장해주세요");
+                    return;
+                  }
+                  Object.entries(settings).forEach(([k,v]) => userSet(k, v as string));
+                  toast.success("✅ 서버에서 최신 설정을 불러왔어요!");
+                  setTimeout(() => window.location.reload(), 1200);
+                }}>
+                <RefreshCw className="w-4 h-4" /> 서버에서 최신 설정 불러오기
+              </Button>
+
+              <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
+                💡 API 키 저장 시 서버에도 자동 백업돼요. 모바일에서 로그인만 하면 자동 적용됩니다.
               </p>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 rounded-lg px-3 py-2 text-xs"
-                  style={{ background: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                  placeholder="동기화 링크 붙여넣기..."
-                  value={importCode}
-                  onChange={e => setImportCode(e.target.value)}
-                />
-                <Button className="shrink-0 gap-1 text-xs" style={{ background: "var(--color-emerald)", color: "white" }}
-                  onClick={() => {
-                    try {
-                      const url = new URL(importCode.trim());
-                      const sync = url.searchParams.get("sync") || "";
-                      if (!sync) throw new Error();
-                      const data = JSON.parse(atob(sync));
-                      Object.entries(data).forEach(([k,v]) => userSet(k, v as string));
-                      // 서버에도 동기화
-                      saveSettingsToServer(data as Record<string,string>);
-                      toast.success("설정이 적용됐어요! 새로고침해주세요 ✅");
-                      setImportCode("");
-                      setTimeout(() => window.location.reload(), 1500);
-                    } catch {
-                      toast.error("올바른 링크가 아니에요");
-                    }
-                  }}>
-                  적용
+            </div>
+          ) : (
+            <div className="rounded-xl p-5 flex items-start gap-4"
+              style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/30%)" }}>
+              <div className="text-2xl">🔒</div>
+              <div>
+                <p className="text-sm font-semibold mb-1" style={{ color: "var(--color-amber-brand)" }}>
+                  로그인하면 자동 동기화
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                  로그인하면 API 키와 모든 설정이 서버에 저장되고,
+                  모바일에서 로그인하면 자동으로 적용돼요. 링크나 코드 입력 불필요!
+                </p>
+                <Button size="sm" className="mt-3 gap-1.5"
+                  style={{ background: "var(--color-amber-brand)", color: "white" }}
+                  onClick={() => window.location.href = "/login"}>
+                  로그인하러 가기
                 </Button>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 테마 설정 */}
