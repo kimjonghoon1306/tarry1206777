@@ -79,13 +79,21 @@ export default function KeywordResearch() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(keywords)); } catch {}
   }, [keywords]);
 
-  // URL q 파라미터 처리 (상단 검색창 연동)
+  // URL q 파라미터 처리 + 상단 검색창 이벤트 수신
   useEffect(() => {
     const q = new URLSearchParams(location.split("?")[1]||"").get("q")||"";
     if (q) { setInputKW(q); doCollect(q); }
+
+    // 상단 검색창 Enter 이벤트 수신
+    const handler = (e: Event) => {
+      const val = (e as CustomEvent).detail;
+      if (val) { setInputKW(val); doCollect(val); }
+    };
+    window.addEventListener("layout-search", handler);
+    return () => window.removeEventListener("layout-search", handler);
   }, []);
 
-  // 3. 모바일/PC API 키 동기화 - URL 파라미터로 공유 코드 처리
+  // 모바일/PC 동기화 코드 처리
   useEffect(() => {
     const sync = new URLSearchParams(location.split("?")[1]||"").get("sync")||"";
     if (sync) {
