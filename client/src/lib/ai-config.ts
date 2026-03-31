@@ -1,6 +1,6 @@
 // AI 설정 읽기 유틸리티
 export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
-export type ImageAIProvider = "gemini" | "openai" | "flux";
+export type ImageAIProvider = "gemini" | "openai" | "flux" | "pollinations";
 
 export function getContentProvider(): ContentAIProvider {
   return (localStorage.getItem("content_ai_provider") as ContentAIProvider) || "gemini";
@@ -17,6 +17,7 @@ export function getAPIKey(provider: string): string {
     openai: "openai_api_key",
     flux: "flux_api_key",
     groq: "groq_api_key",
+    pollinations: "", // API 키 불필요
   };
   return localStorage.getItem(keyMap[provider] || "") || "";
 }
@@ -78,13 +79,26 @@ export const CONTENT_AI_OPTIONS = [
 
 export const IMAGE_AI_OPTIONS = [
   {
+    value: "pollinations" as ImageAIProvider,
+    label: "Pollinations AI",
+    badge: "무료",
+    badgeColor: "var(--color-emerald)",
+    desc: "완전 무료 · API 키 없음",
+    logo: "P",
+    logoColor: "#7C3AED",
+    keyLabel: "",
+    keyPlaceholder: "",
+    keyStorageKey: "",
+    keyLink: "https://pollinations.ai",
+  },
+  {
     value: "flux" as ImageAIProvider,
     label: "Flux Schnell",
     badge: "무료",
     badgeColor: "var(--color-emerald)",
     desc: "fal.ai · 빠른 무료 이미지",
     logo: "F",
-    logoColor: "#7C3AED",
+    logoColor: "#F55036",
     keyLabel: "fal.ai API Key",
     keyPlaceholder: "fal-...",
     keyStorageKey: "flux_api_key",
