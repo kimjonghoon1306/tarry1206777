@@ -3,7 +3,7 @@
  * 라이트박스(이미지 크게 보기) + 로딩 스켈레톤 + 8개 지원 + 전체선택 + 자동 워크플로우
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
@@ -50,6 +50,108 @@ type GalleryItem = {
   id: number; src: string; title: string;
   keyword: string; style: string; size: string; loading: boolean;
 };
+
+// ── 개별 이미지 아이템 (자체 로딩 상태 관리) ──────────
+function GalleryImageItem({
+  img, isSelected, viewMode,
+  onSelect, onLightbox,
+}: {
+  img: GalleryItem;
+  isSelected: boolean;
+  viewMode: "grid" | "list";
+  onSelect: () => void;
+  onLightbox: () => void;
+}) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // src가 바뀌면 로딩 상태 리셋
+  useEffect(() => {
+    setImgLoaded(false);
+    setImgError(false);
+  }, [img.src]);
+
+  if (viewMode === "list") {
+    return (
+      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer relative"
+        style={{ border: `2px solid ${isSelected ? "var(--color-emerald)" : "var(--border)"}`, background: "var(--background)" }}
+        onClick={onLightbox}>
+        {!imgLoaded && !imgError && (
+          <div className="absolute inset-0 flex items-center justify-center animate-pulse" style={{ background: "oklch(0.696 0.17 162.48/8%)" }}>
+            <RefreshCw className="w-5 h-5 animate-spin" style={{ color: "var(--color-emerald)" }} />
+          </div>
+        )}
+        {img.src && (
+          <img src={img.src} alt={img.title} className="w-full h-full object-cover"
+            style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.3s" }}
+            onLoad={() => setImgLoaded(true)}
+            onError={() => setImgError(true)} />
+        )}
+        {imgError && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>실패</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative rounded-xl overflow-hidden group"
+      style={{ aspectRatio: "1", background: "var(--background)", border: `2px solid ${isSelected ? "var(--color-emerald)" : "transparent"}` }}>
+      
+      {/* 로딩 중 (src 없거나 아직 로드 전) */}
+      {(img.loading || (!imgLoaded && !imgError && img.src)) && (
+        <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-2 animate-pulse z-10"
+          style={{ background: "oklch(0.696 0.17 162.48/8%)" }}>
+          <RefreshCw className="w-8 h-8 animate-spin" style={{ color: "var(--color-emerald)" }} />
+          <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+            {img.loading ? "생성 중..." : "불러오는 중..."}
+          </span>
+        </div>
+      )}
+
+      {/* 실제 이미지 */}
+      {img.src && !img.loading && (
+        <img src={img.src} alt={img.title}
+          className="w-full h-full object-cover cursor-pointer transition-all group-hover:scale-105"
+          style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.4s ease" }}
+          onLoad={() => setImgLoaded(true)}
+          onError={() => { setImgError(true); setImgLoaded(false); }}
+          onClick={onLightbox} />
+      )}
+
+      {/* 로드 실패 */}
+      {imgError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+          style={{ background: "oklch(0.65 0.22 25/10%)" }}>
+          <span className="text-xs" style={{ color: "oklch(0.65 0.22 25)" }}>이미지 로드 실패</span>
+          <button className="text-xs px-2 py-1 rounded" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
+            onClick={() => { setImgError(false); setImgLoaded(false); }}>
+            재시도
+          </button>
+        </div>
+      )}
+
+      {/* 이미지 로드 완료 시 오버레이 */}
+      {imgLoaded && (
+        <>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all pointer-events-none flex items-center justify-center">
+            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <button className="absolute top-2 left-2 w-7 h-7 rounded-lg flex items-center justify-center z-10 transition-all"
+            style={{ background: isSelected ? "var(--color-emerald)" : "rgba(0,0,0,0.5)", border: "2px solid rgba(255,255,255,0.8)" }}
+            onClick={(e) => { e.stopPropagation(); onSelect(); }}>
+            {isSelected && <Check className="w-4 h-4 text-white" />}
+          </button>
+          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="text-xs text-white/70">{img.style} · {img.size}</div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function ImageGenerator() {
   const [, navigate] = useLocation();
@@ -320,55 +422,35 @@ export default function ImageGenerator() {
               ) : viewMode === "grid" ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
                   {gallery.map((img) => (
-                    <div key={img.id} className="relative rounded-xl overflow-hidden group"
-                      style={{ aspectRatio: "1", background: "var(--background)", border: `2px solid ${selectedImages.includes(img.id) ? "var(--color-emerald)" : "transparent"}` }}>
-                      {img.loading ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 animate-pulse" style={{ background: "oklch(0.696 0.17 162.48/8%)" }}>
-                          <RefreshCw className="w-8 h-8 animate-spin" style={{ color: "var(--color-emerald)" }} />
-                          <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>생성 중...</span>
-                        </div>
-                      ) : img.src ? (
-                        <>
-                          {/* 이미지 클릭 → 라이트박스 */}
-                          <img src={img.src} alt={img.title} className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
-                            onLoad={() => handleImageLoaded(img.id)} onError={() => handleImageError(img.id)}
-                            onClick={() => { const idx = loadedGallery.findIndex(g => g.id === img.id); if (idx !== -1) setLightboxIndex(idx); }} />
-                          {/* 호버 오버레이 */}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all pointer-events-none flex items-center justify-center">
-                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                          {/* 체크박스 (좌상단) */}
-                          <button className="absolute top-2 left-2 w-7 h-7 rounded-lg flex items-center justify-center z-10 transition-all"
-                            style={{ background: selectedImages.includes(img.id) ? "var(--color-emerald)" : "rgba(0,0,0,0.5)", border: "2px solid rgba(255,255,255,0.8)" }}
-                            onClick={(e) => { e.stopPropagation(); toggleSelect(img.id); }}>
-                            {selectedImages.includes(img.id) && <Check className="w-4 h-4 text-white" />}
-                          </button>
-                          {/* 하단 정보 */}
-                          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <div className="text-xs text-white/70">{img.style} · {img.size}</div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>로드 실패</span>
-                        </div>
-                      )}
-                    </div>
+                    <GalleryImageItem
+                      key={img.id}
+                      img={img}
+                      isSelected={selectedImages.includes(img.id)}
+                      viewMode="grid"
+                      onSelect={() => toggleSelect(img.id)}
+                      onLightbox={() => {
+                        const idx = loadedGallery.findIndex(g => g.id === img.id);
+                        if (idx !== -1) setLightboxIndex(idx);
+                      }}
+                    />
                   ))}
                 </div>
               ) : (
                 <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                   {gallery.map((img) => (
                     <div key={img.id} className="flex items-center gap-4 p-4 hover:bg-accent/20 transition-colors">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
-                        style={{ border: `2px solid ${selectedImages.includes(img.id) ? "var(--color-emerald)" : "var(--border)"}`, background: "var(--background)" }}
-                        onClick={() => { if (!img.loading && img.src) { const idx = loadedGallery.findIndex(g => g.id === img.id); if (idx !== -1) setLightboxIndex(idx); } }}>
-                        {img.loading ? (
-                          <div className="w-full h-full flex items-center justify-center animate-pulse" style={{ background: "oklch(0.696 0.17 162.48/8%)" }}>
-                            <RefreshCw className="w-5 h-5 animate-spin" style={{ color: "var(--color-emerald)" }} />
-                          </div>
-                        ) : img.src ? <img src={img.src} alt={img.title} className="w-full h-full object-cover" /> : null}
-                      </div>
+                      <GalleryImageItem
+                        img={img}
+                        isSelected={selectedImages.includes(img.id)}
+                        viewMode="list"
+                        onSelect={() => toggleSelect(img.id)}
+                        onLightbox={() => {
+                          if (!img.loading && img.src) {
+                            const idx = loadedGallery.findIndex(g => g.id === img.id);
+                            if (idx !== -1) setLightboxIndex(idx);
+                          }
+                        }}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-foreground">{img.title}</div>
                         <div className="flex items-center gap-2 mt-1">
@@ -384,7 +466,13 @@ export default function ImageGenerator() {
                             onClick={() => toggleSelect(img.id)}>
                             {selectedImages.includes(img.id) ? <Check className="w-4 h-4 text-white" /> : <Square className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />}
                           </button>
-                          <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => toast.success("이미지 다운로드 시작")}>
+                          <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => {
+                            const a = document.createElement("a");
+                            a.href = img.src;
+                            a.download = `image-${img.id}.jpg`;
+                            a.target = "_blank";
+                            a.click();
+                          }}>
                             <Download className="w-4 h-4" />
                           </Button>
                         </div>
