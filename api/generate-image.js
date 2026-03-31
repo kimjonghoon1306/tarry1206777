@@ -25,12 +25,18 @@ export default async function handler(req, res) {
 
     // ── Pollinations.ai (완전 무료, API 키 없음) ──────────────
     if (provider === "pollinations") {
-      const encodedPrompt = encodeURIComponent(prompt);
-      const images = Array.from({ length: numImages }, (_, i) => {
+      const images = [];
+      for (let i = 0; i < numImages; i++) {
         const seed = Math.floor(Math.random() * 999999) + i * 1000;
-        return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
-      });
-      return res.json({ type: "url", images });
+        // 서버에서 직접 fetch → base64 반환 (CORS 우회)
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
+        const imgResp = await fetch(url);
+        if (!imgResp.ok) throw new Error(`Pollinations 이미지 생성 실패 (${imgResp.status}). 잠시 후 다시 시도해주세요.`);
+        const buffer = await imgResp.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString("base64");
+        images.push(`data:image/jpeg;base64,${base64}`);
+      }
+      return res.json({ type: "base64", images });
     }
 
     // ── Gemini Imagen ─────────────────────────────────────────
