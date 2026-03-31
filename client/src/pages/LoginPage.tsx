@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { applyServerSettings } from "@/lib/user-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Bot, Eye, EyeOff, ArrowLeft, Mail, KeyRound, X } from "lucide-react";
@@ -150,7 +151,10 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (!userId.trim() || !password) return;
     const ok = await login(userId.trim(), password);
-    if (ok) navigate("/dashboard");
+    if (ok) {
+      await applyServerSettings(); // 서버 설정을 로컬에 적용
+      navigate("/dashboard");
+    }
   };
 
   return (

@@ -22,6 +22,7 @@ import {
   CONTENT_AI_OPTIONS, IMAGE_AI_OPTIONS,
   type ContentAIProvider, type ImageAIProvider,
 } from "@/lib/ai-config";
+import { userGet, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings } from "@/lib/user-storage";
 
 const LANGUAGES = [
   { code: "ko", label: "한국어", flag: "🇰🇷" },
@@ -37,13 +38,15 @@ const LANGUAGES = [
 function ApiKeyInput({ label, placeholder, storageKey, link }: {
   label: string; placeholder: string; storageKey: string; link: string;
 }) {
-  const [value, setValue] = useState(() => localStorage.getItem(storageKey) || "");
+  const [value, setValue] = useState(() => userGet(storageKey));
   const [show, setShow] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
     if (!value.trim()) { toast.error("API 키를 입력해주세요"); return; }
-    localStorage.setItem(storageKey, value.trim());
+    userSet(storageKey, value.trim());
+    // 서버에도 동기화
+    saveSettingsToServer({ [storageKey]: value.trim() });
     setSaved(true);
     toast.success(`${label} 저장됨`);
     setTimeout(() => setSaved(false), 3000);
@@ -215,34 +218,34 @@ function PlatformSection({ title, color, logo, type, desc, link, fields }: {
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [contentLang, setContentLang] = useState(
-    () => localStorage.getItem("content_language") || "ko"
+    () => userGet(SETTINGS_KEYS.CONTENT_LANG, "ko")
   );
   const [contentAI, setContentAI] = useState<ContentAIProvider>(
-    () => (localStorage.getItem("content_ai_provider") as ContentAIProvider) || "gemini"
+    () => (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
   );
   const [imageAI, setImageAI] = useState<ImageAIProvider>(
-    () => (localStorage.getItem("image_ai_provider") as ImageAIProvider) || "flux"
+    () => (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations"
   );
-  const [naverLicense, setNaverLicense] = useState(() => localStorage.getItem("naver_access_license") || "");
-  const [naverSecret, setNaverSecret] = useState(() => localStorage.getItem("naver_secret_key") || "");
-  const [naverCustomer, setNaverCustomer] = useState(() => localStorage.getItem("naver_customer_id") || "");
+  const [naverLicense, setNaverLicense] = useState(() => userGet(SETTINGS_KEYS.NAVER_LICENSE));
+  const [naverSecret, setNaverSecret] = useState(() => userGet(SETTINGS_KEYS.NAVER_SECRET));
+  const [naverCustomer, setNaverCustomer] = useState(() => userGet(SETTINGS_KEYS.NAVER_CUSTOMER));
   const [showNaverSecret, setShowNaverSecret] = useState(false);
   const [naverSaved, setNaverSaved] = useState(false);
-  const [wpUrl, setWpUrl] = useState(() => localStorage.getItem("wp_url") || "");
-  const [wpUser, setWpUser] = useState(() => localStorage.getItem("wp_username") || "");
-  const [wpPass, setWpPass] = useState(() => localStorage.getItem("wp_app_password") || "");
+  const [wpUrl, setWpUrl] = useState(() => userGet(SETTINGS_KEYS.WP_URL));
+  const [wpUser, setWpUser] = useState(() => userGet(SETTINGS_KEYS.WP_USER));
+  const [wpPass, setWpPass] = useState(() => userGet(SETTINGS_KEYS.WP_PASS));
   const [showWpPass, setShowWpPass] = useState(false);
   const [wpSaved, setWpSaved] = useState(false);
 
   // 네이버 블로그 배포
-  const [naverBlogId, setNaverBlogId] = useState(() => localStorage.getItem("naver_blog_id") || "");
-  const [naverBlogToken, setNaverBlogToken] = useState(() => localStorage.getItem("naver_blog_access_token") || "");
+  const [naverBlogId, setNaverBlogId] = useState(() => userGet(SETTINGS_KEYS.NAVER_BLOG_ID));
+  const [naverBlogToken, setNaverBlogToken] = useState(() => userGet(SETTINGS_KEYS.NAVER_BLOG_TOKEN));
   const [showNaverBlogToken, setShowNaverBlogToken] = useState(false);
   const [naverBlogSaved, setNaverBlogSaved] = useState(false);
 
   // 일반 웹사이트 배포
-  const [webhookUrl, setWebhookUrl] = useState(() => localStorage.getItem("webhook_url") || "");
-  const [webhookKey, setWebhookKey] = useState(() => localStorage.getItem("webhook_auth_key") || "");
+  const [webhookUrl, setWebhookUrl] = useState(() => userGet(SETTINGS_KEYS.WEBHOOK_URL));
+  const [webhookKey, setWebhookKey] = useState(() => userGet(SETTINGS_KEYS.WEBHOOK_KEY));
   const [showWebhookKey, setShowWebhookKey] = useState(false);
   const [webhookSaved, setWebhookSaved] = useState(false);
   const [notifications, setNotifications] = useState({
@@ -251,13 +254,15 @@ export default function SettingsPage() {
 
   const handleSelectContentAI = (v: ContentAIProvider) => {
     setContentAI(v);
-    localStorage.setItem("content_ai_provider", v);
+    userSet(SETTINGS_KEYS.CONTENT_AI, v);
+    saveSettingsToServer({ [SETTINGS_KEYS.CONTENT_AI]: v });
     toast.success(`글 생성 AI: ${CONTENT_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
   };
 
   const handleSelectImageAI = (v: ImageAIProvider) => {
     setImageAI(v);
-    localStorage.setItem("image_ai_provider", v);
+    userSet(SETTINGS_KEYS.IMAGE_AI, v);
+    saveSettingsToServer({ [SETTINGS_KEYS.IMAGE_AI]: v });
     toast.success(`이미지 생성 AI: ${IMAGE_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
   };
 
@@ -265,9 +270,10 @@ export default function SettingsPage() {
     if (!naverLicense || !naverSecret || !naverCustomer) {
       toast.error("네이버 API 정보를 모두 입력해주세요"); return;
     }
-    localStorage.setItem("naver_access_license", naverLicense);
-    localStorage.setItem("naver_secret_key", naverSecret);
-    localStorage.setItem("naver_customer_id", naverCustomer);
+    userSet(SETTINGS_KEYS.NAVER_LICENSE, naverLicense);
+    userSet(SETTINGS_KEYS.NAVER_SECRET, naverSecret);
+    userSet(SETTINGS_KEYS.NAVER_CUSTOMER, naverCustomer);
+    saveSettingsToServer({ [SETTINGS_KEYS.NAVER_LICENSE]: naverLicense, [SETTINGS_KEYS.NAVER_SECRET]: naverSecret, [SETTINGS_KEYS.NAVER_CUSTOMER]: naverCustomer });
     setNaverSaved(true);
     toast.success("네이버 검색광고 API 저장됨");
     setTimeout(() => setNaverSaved(false), 3000);
@@ -277,9 +283,10 @@ export default function SettingsPage() {
     if (!wpUrl || !wpUser || !wpPass) {
       toast.error("WordPress 정보를 모두 입력해주세요"); return;
     }
-    localStorage.setItem("wp_url", wpUrl);
-    localStorage.setItem("wp_username", wpUser);
-    localStorage.setItem("wp_app_password", wpPass);
+    userSet(SETTINGS_KEYS.WP_URL, wpUrl);
+    userSet(SETTINGS_KEYS.WP_USER, wpUser);
+    userSet(SETTINGS_KEYS.WP_PASS, wpPass);
+    saveSettingsToServer({ [SETTINGS_KEYS.WP_URL]: wpUrl, [SETTINGS_KEYS.WP_USER]: wpUser, [SETTINGS_KEYS.WP_PASS]: wpPass });
     setWpSaved(true);
     toast.success("WordPress 발행 설정 저장됨");
     setTimeout(() => setWpSaved(false), 3000);
@@ -289,8 +296,9 @@ export default function SettingsPage() {
     if (!naverBlogId || !naverBlogToken) {
       toast.error("네이버 블로그 정보를 모두 입력해주세요"); return;
     }
-    localStorage.setItem("naver_blog_id", naverBlogId);
-    localStorage.setItem("naver_blog_access_token", naverBlogToken);
+    userSet(SETTINGS_KEYS.NAVER_BLOG_ID, naverBlogId);
+    userSet(SETTINGS_KEYS.NAVER_BLOG_TOKEN, naverBlogToken);
+    saveSettingsToServer({ [SETTINGS_KEYS.NAVER_BLOG_ID]: naverBlogId, [SETTINGS_KEYS.NAVER_BLOG_TOKEN]: naverBlogToken });
     setNaverBlogSaved(true);
     toast.success("네이버 블로그 배포 설정 저장됨");
     setTimeout(() => setNaverBlogSaved(false), 3000);
@@ -300,8 +308,9 @@ export default function SettingsPage() {
     if (!webhookUrl) {
       toast.error("Webhook URL을 입력해주세요"); return;
     }
-    localStorage.setItem("webhook_url", webhookUrl);
-    localStorage.setItem("webhook_auth_key", webhookKey);
+    userSet(SETTINGS_KEYS.WEBHOOK_URL, webhookUrl);
+    userSet(SETTINGS_KEYS.WEBHOOK_KEY, webhookKey);
+    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: webhookUrl, [SETTINGS_KEYS.WEBHOOK_KEY]: webhookKey });
     setWebhookSaved(true);
     toast.success("웹사이트 배포 설정 저장됨");
     setTimeout(() => setWebhookSaved(false), 3000);
@@ -696,7 +705,7 @@ export default function SettingsPage() {
                 }}
                 onClick={() => {
                   setContentLang(lang.code);
-                  localStorage.setItem("content_language", lang.code);
+                  userSet(SETTINGS_KEYS.CONTENT_LANG, lang.code);
                   toast.success(`콘텐츠 언어: ${lang.label}`);
                 }}>
                 <span>{lang.flag}</span>

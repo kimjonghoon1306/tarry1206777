@@ -4,6 +4,7 @@
  */
 
 import Layout from "@/components/Layout";
+import { clearUserLocalCache, userGet, SETTINGS_KEYS } from "@/lib/user-storage";
 import { useLocation } from "wouter";
 import {
   User,
@@ -24,35 +25,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-// 연결된 플랫폼 확인 (localStorage 기반)
+// 연결된 플랫폼 확인 (회원별 저장소 기반)
 function getPlatformStatus() {
   return [
     {
       name: "네이버 블로그",
       color: "#03C75A",
       logo: "N",
-      configured: !!(
-        localStorage.getItem("naver_blog_id") &&
-        localStorage.getItem("naver_blog_access_token")
-      ),
+      configured: !!(userGet(SETTINGS_KEYS.NAVER_BLOG_ID) && userGet(SETTINGS_KEYS.NAVER_BLOG_TOKEN)),
       settingsPath: "/settings",
     },
     {
       name: "일반 웹사이트",
       color: "oklch(0.6 0.15 220)",
       logo: "W",
-      configured: !!localStorage.getItem("webhook_url"),
+      configured: !!userGet(SETTINGS_KEYS.WEBHOOK_URL),
       settingsPath: "/settings",
     },
     {
       name: "WordPress",
       color: "#21759B",
       logo: "WP",
-      configured: !!(
-        localStorage.getItem("wp_url") &&
-        localStorage.getItem("wp_username") &&
-        localStorage.getItem("wp_app_password")
-      ),
+      configured: !!(userGet(SETTINGS_KEYS.WP_URL) && userGet(SETTINGS_KEYS.WP_USER) && userGet(SETTINGS_KEYS.WP_PASS)),
       settingsPath: "/settings",
     },
   ];
@@ -246,6 +240,7 @@ export default function MyPage() {
             variant="outline"
             className="gap-2 text-sm"
             onClick={() => {
+              clearUserLocalCache();
               toast.success("로그아웃되었습니다");
               setTimeout(() => (window.location.href = "/"), 1000);
             }}
