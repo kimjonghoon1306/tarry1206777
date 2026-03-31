@@ -15,6 +15,8 @@ import SettingsPage from "./pages/SettingsPage";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import MyPage from "./pages/MyPage";
+import SuperAdminPage from "./pages/SuperAdminPage";
 
 function Router() {
   return (
@@ -27,7 +29,9 @@ function Router() {
       <Route path="/content" component={ContentGenerator} />
       <Route path="/images" component={ImageGenerator} />
       <Route path="/deploy" component={DeploymentPage} />
-      <Route path="/admin" component={AdminPage} />
+      <Route path="/admin" component={MyPage} />
+      <Route path="/mypage" component={MyPage} />
+      <Route path="/superadmin" component={SuperAdminPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
