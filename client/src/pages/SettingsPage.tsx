@@ -602,15 +602,16 @@ export default function SettingsPage() {
               <Button className="w-full gap-2 text-sm" style={{ background: "oklch(0.6 0.15 220)", color: "white" }}
                 onClick={() => {
                   const keys = [
-                    "naver_access_license","naver_secret_key","naver_customer_id",
-                    "gemini_api_key","claude_api_key","openai_api_key","flux_api_key",
-                    "wp_url","wp_username","wp_app_password",
-                    "naver_blog_id","naver_blog_access_token",
-                    "webhook_url","webhook_auth_key",
-                    "content_ai_provider","image_ai_provider","content_language",
+                    SETTINGS_KEYS.NAVER_LICENSE, SETTINGS_KEYS.NAVER_SECRET, SETTINGS_KEYS.NAVER_CUSTOMER,
+                    SETTINGS_KEYS.GEMINI_KEY, SETTINGS_KEYS.CLAUDE_KEY, SETTINGS_KEYS.OPENAI_KEY,
+                    SETTINGS_KEYS.FLUX_KEY, SETTINGS_KEYS.GROQ_KEY,
+                    SETTINGS_KEYS.WP_URL, SETTINGS_KEYS.WP_USER, SETTINGS_KEYS.WP_PASS,
+                    SETTINGS_KEYS.NAVER_BLOG_ID, SETTINGS_KEYS.NAVER_BLOG_TOKEN,
+                    SETTINGS_KEYS.WEBHOOK_URL, SETTINGS_KEYS.WEBHOOK_KEY,
+                    SETTINGS_KEYS.CONTENT_AI, SETTINGS_KEYS.IMAGE_AI, SETTINGS_KEYS.CONTENT_LANG,
                   ];
                   const data: Record<string,string> = {};
-                  keys.forEach(k => { const v = localStorage.getItem(k); if(v) data[k]=v; });
+                  keys.forEach(k => { const v = userGet(k); if(v) data[k]=v; });
                   const code = btoa(JSON.stringify(data));
                   const url = `${window.location.origin}/settings?sync=${code}`;
                   navigator.clipboard.writeText(url).then(() =>
@@ -642,7 +643,9 @@ export default function SettingsPage() {
                       const sync = url.searchParams.get("sync") || "";
                       if (!sync) throw new Error();
                       const data = JSON.parse(atob(sync));
-                      Object.entries(data).forEach(([k,v]) => localStorage.setItem(k, v as string));
+                      Object.entries(data).forEach(([k,v]) => userSet(k, v as string));
+                      // 서버에도 동기화
+                      saveSettingsToServer(data as Record<string,string>);
                       toast.success("설정이 적용됐어요! 새로고침해주세요 ✅");
                       setImportCode("");
                       setTimeout(() => window.location.reload(), 1500);
