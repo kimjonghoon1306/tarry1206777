@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
     if (provider === "gemini") {
       const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -57,7 +57,10 @@ export default async function handler(req, res) {
       );
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(`Gemini 오류: ${err.error?.message || resp.status}`);
+        const msg = err.error?.message || "";
+        if (msg.includes("quota") || msg.includes("rate")) throw new Error("Gemini 무료 할당량 초과. Groq(무료)로 전환하거나 내일 다시 시도하세요.");
+        if (msg.includes("API key")) throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+        throw new Error(`Gemini 오류: ${resp.status}`);
       }
       const data = await resp.json();
       content = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
@@ -78,7 +81,10 @@ export default async function handler(req, res) {
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(`Claude 오류: ${err.error?.message || resp.status}`);
+        const msg = err.error?.message || "";
+        if (msg.includes("credit") || msg.includes("balance")) throw new Error("Claude 크레딧 부족. console.anthropic.com에서 충전해주세요.");
+        if (msg.includes("api_key") || msg.includes("authentication")) throw new Error("Claude API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+        throw new Error(`Claude 오류: ${resp.status}`);
       }
       const data = await resp.json();
       content = data.content?.[0]?.text || "[]";
@@ -98,7 +104,10 @@ export default async function handler(req, res) {
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(`OpenAI 오류: ${err.error?.message || resp.status}`);
+        const msg = err.error?.message || "";
+        if (msg.includes("quota") || msg.includes("billing")) throw new Error("OpenAI 크레딧 부족. platform.openai.com에서 충전해주세요.");
+        if (msg.includes("api_key") || msg.includes("Incorrect")) throw new Error("OpenAI API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+        throw new Error(`OpenAI 오류: ${resp.status}`);
       }
       const data = await resp.json();
       content = data.choices?.[0]?.message?.content || "[]";
