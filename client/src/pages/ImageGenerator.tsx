@@ -173,6 +173,15 @@ export default function ImageGenerator() {
       }));
 
       setGallery(prev => [...newItems, ...prev]);
+
+      // 생성된 이미지 localStorage에 저장 (썸네일 선택용)
+      try {
+        const existing = JSON.parse(localStorage.getItem("blogauto_generated_images") || "[]");
+        const newSrcs = newItems.map(i => i.src);
+        const updated = [...newSrcs, ...existing].slice(0, 20);
+        localStorage.setItem("blogauto_generated_images", JSON.stringify(updated));
+      } catch {}
+
       setProgress(100);
       toast.success(`이미지 ${images.length}개 생성 완료!`, { id: "imggen" });
     } catch (e: any) {
