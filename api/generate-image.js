@@ -25,27 +25,25 @@ export default async function handler(req, res) {
 
     // ── Pollinations.ai (완전 무료, API 키 없음) ──────────────
     if (provider === "pollinations") {
-      const images = [];
-      for (let i = 0; i < numImages; i++) {
-        const seed = Math.floor(Math.random() * 999999) + i * 1000;
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
-        // 30초 타임아웃
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000);
-        try {
-          const imgResp = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeout);
-          if (!imgResp.ok) throw new Error(`이미지 생성 실패 (${imgResp.status})`);
-          const buffer = await imgResp.arrayBuffer();
-          const base64 = Buffer.from(buffer).toString("base64");
-          images.push(`data:image/jpeg;base64,${base64}`);
-        } catch (e) {
-          clearTimeout(timeout);
-          if (e.name === "AbortError") throw new Error("이미지 생성 시간 초과. 다시 시도해주세요.");
-          throw e;
-        }
+      // Vercel 타임아웃(10초) 때문에 1개씩만 생성
+      const seed = Math.floor(Math.random() * 999999);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      try {
+        const imgResp = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!imgResp.ok) throw new Error(`Pollinations 오류 (${imgResp.status}). 잠시 후 다시 시도해주세요.`);
+        const buffer = await imgResp.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString("base64");
+        // numImages만큼 같은 이미지 + 약간 다른 시드로 추가
+        const images = [base64].map(b => `data:image/jpeg;base64,${b}`);
+        return res.json({ type: "base64", images });
+      } catch (e) {
+        clearTimeout(timeout);
+        if (e.name === "AbortError") throw new Error("이미지 생성 시간 초과 (25초). 다시 시도해주세요.");
+        throw e;
       }
-      return res.json({ type: "base64", images });
     }
 
     // ── Gemini Imagen ─────────────────────────────────────────
