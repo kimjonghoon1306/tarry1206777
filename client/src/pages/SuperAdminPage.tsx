@@ -107,7 +107,9 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
               onChange={(e) => setPw(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               className="pr-10"
-              autoFocus
+              autoComplete="new-password"
+              name="bap-admin-secret"
+              data-form-type="other"
             />
             <button
               className="absolute right-3 top-1/2 -translate-y-1/2"
