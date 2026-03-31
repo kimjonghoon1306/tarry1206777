@@ -27,6 +27,7 @@ import {
   Zap,
   TrendingUp,
   Bot,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +54,7 @@ const NAV_ITEMS = [
   { path: "/content", icon: FileText, label: "콘텐츠 생성", labelEn: "Content" },
   { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images" },
   { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy" },
-  { path: "/admin", icon: Shield, label: "관리자", labelEn: "Admin" },
+  { path: "/mypage", icon: User, label: "마이페이지", labelEn: "My Page" },
   { path: "/settings", icon: Settings, label: "설정", labelEn: "Settings" },
 ];
 
@@ -64,7 +65,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, currentLang = "ko", onLangChange }: LayoutProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState(currentLang);
@@ -321,10 +322,20 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                 background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))",
                 color: "white",
               }}
-              onClick={() => toast.info("프로필 설정은 준비 중입니다")}
+              onClick={() => navigate("/mypage")}
             >
               A
             </div>
+
+            {/* 관리자 톱니바퀴 */}
+            <button
+              title="관리자"
+              onClick={() => navigate("/superadmin")}
+              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-accent/20"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
         </header>
 
