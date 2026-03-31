@@ -276,26 +276,10 @@ export async function generateTitles(
   return titles;
 }
 
-// ── Pollinations 이미지 - URL 반환 (CORS 문제 완전 우회) ──
-// crossOrigin + canvas 방식은 Pollinations CORS 헤더 부재로 onerror 발생
-// → img 태그로 로드 확인만 하고 URL 그대로 반환
+// ── Pollinations 이미지 - URL 즉시 반환 (로딩 체크 없음) ──
+// img 로드 확인 과정 자체가 onerror를 유발 → 그냥 URL 바로 반환
+// 브라우저가 <img src={url}> 로 직접 로드할 때는 정상 표시됨
 export async function fetchPollinationsImage(prompt: string, width: number, height: number, seed: number): Promise<string> {
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&cache=false`;
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    // crossOrigin 제거 → CORS 없이 로드 (canvas 변환 안 함)
-    const timer = setTimeout(() => {
-      // 타임아웃시에도 URL 반환 (이미지가 느리게 로드될 수 있음)
-      resolve(url);
-    }, 45000);
-    img.onload = () => {
-      clearTimeout(timer);
-      resolve(url); // URL 그대로 반환 (canvas 변환 없음)
-    };
-    img.onerror = () => {
-      clearTimeout(timer);
-      reject(new Error("Pollinations 이미지 로드 실패. 잠시 후 다시 시도해주세요."));
-    };
-    img.src = url;
-  });
+  return url;
 }
