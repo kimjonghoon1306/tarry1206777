@@ -74,7 +74,12 @@ const STYLES = [
 ];
 
 export default function ImageGenerator() {
-  const [prompt, setPrompt] = useState("서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명, 실사 사진");
+  // URL params에서 자동 프롬프트 (콘텐츠 생성에서 이미지 생성으로 연결)
+  const autoPrompt = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("prompt") || ""
+    : "";
+
+  const [prompt, setPrompt] = useState(autoPrompt || "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명, 실사 사진");
   const [style, setStyle] = useState("realistic");
   const [size, setSize] = useState("1024x1024");
   const [count, setCount] = useState("4");

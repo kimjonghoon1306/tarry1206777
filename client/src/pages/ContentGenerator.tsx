@@ -67,8 +67,8 @@ const RECENT_CONTENTS = [
 
 import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-config";
 import { useLocation } from "wouter";
-
 export default function ContentGenerator() {
+  const [, navigate] = useLocation();
   // window.location.search 사용 - wouter useLocation이 쿼리스트링 안 줄 때 대비
   const params = new URLSearchParams(
     typeof window !== "undefined" ? window.location.search : ""
@@ -275,6 +275,22 @@ export default function ContentGenerator() {
               <Send className="w-4 h-4" />
               배포하기
             </Button>
+            {/* 이미지 생성 연결 버튼 */}
+            {generatedContent && (
+              <Button
+                className="gap-2"
+                style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
+                onClick={() => {
+                  const autoPrompt = title
+                    ? `${title}, ${keyword}, 블로그 대표 이미지, 고품질 사진`
+                    : `${keyword}, 블로그 대표 이미지, 고품질 사진`;
+                  navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
+                }}
+              >
+                <Sparkles className="w-4 h-4" />
+                이미지 생성
+              </Button>
+            )}
           </div>
 
           {/* Progress */}
