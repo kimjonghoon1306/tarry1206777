@@ -55,25 +55,19 @@ ${titleInstruction}
 - 독자에게 실제 도움이 되는 구체적인 정보
 - 숫자, 통계, 팁, 예시 적극 활용`;
 
-  // ── Gemini ──
+  // ── Gemini → Vercel 서버 경유 (CORS 문제로 브라우저 직접 호출 불가) ──
   if (provider === "gemini") {
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: maxTokens },
-        }),
-      }
-    );
+    const resp = await fetch("/api/generate-content", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, apiKey, keyword, title, language, minChars }),
+    });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      throw new Error(parseError("Gemini", resp.status, err.error?.message || ""));
+      throw new Error(err.error || `Gemini 서버 오류 (${resp.status})`);
     }
     const data = await resp.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const content = data.content || "";
     if (!content) throw new Error("Gemini 응답이 비어있습니다. 다시 시도해주세요.");
     return content;
   }
@@ -187,22 +181,21 @@ export async function generateTitles(
 
   let content = "";
 
-  // ── Gemini ──
+  // ── Gemini → Vercel 서버 경유 (CORS 문제) ──
   if (provider === "gemini") {
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-      }
-    );
+    const resp = await fetch("/api/generate-titles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, apiKey, keyword }),
+    });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      throw new Error(parseError("Gemini", resp.status, err.error?.message || ""));
+      throw new Error(err.error || `Gemini 서버 오류 (${resp.status})`);
     }
     const data = await resp.json();
-    content = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+    const titles = data.titles || [];
+    if (titles.length === 0) throw new Error("Gemini 제목 생성 실패.");
+    return titles;
   }
 
   // ── Claude ──
@@ -283,34 +276,21 @@ export async function generateTitles(
   return titles;
 }
 
-// ── Pollinations 이미지 - img 태그로 로드 후 URL 반환 (CORS 우회) ──
+// ── Pollinations 이미지 - URL 반환 (CORS 문제 완전 우회) ──
+// crossOrigin + canvas 방식은 Pollinations CORS 헤더 부재로 onerror 발생
+// → img 태그로 로드 확인만 하고 URL 그대로 반환
 export async function fetchPollinationsImage(prompt: string, width: number, height: number, seed: number): Promise<string> {
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&cache=false`;
   return new Promise((resolve, reject) => {
     const img = new window.Image();
-    img.crossOrigin = "anonymous";
+    // crossOrigin 제거 → CORS 없이 로드 (canvas 변환 안 함)
     const timer = setTimeout(() => {
-      reject(new Error("이미지 로딩 시간 초과 (40초). 다시 시도해주세요."));
-    }, 40000);
+      // 타임아웃시에도 URL 반환 (이미지가 느리게 로드될 수 있음)
+      resolve(url);
+    }, 45000);
     img.onload = () => {
       clearTimeout(timer);
-      try {
-        // canvas로 base64 변환 시도
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || width;
-        canvas.height = img.naturalHeight || height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL("image/jpeg", 0.92));
-        } else {
-          // canvas 실패시 URL 그대로 반환
-          resolve(url);
-        }
-      } catch {
-        // CORS로 canvas 변환 실패해도 URL로 반환 (갤러리에는 보임)
-        resolve(url);
-      }
+      resolve(url); // URL 그대로 반환 (canvas 변환 없음)
     };
     img.onerror = () => {
       clearTimeout(timer);
