@@ -232,17 +232,26 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             style={{ background: "var(--muted)", cursor: "text" }}
             onSubmit={(e) => {
               e.preventDefault();
-              const val = (e.currentTarget.querySelector("input") as HTMLInputElement)?.value?.trim();
-              window.location.href = val ? `/keywords?q=${encodeURIComponent(val)}` : "/keywords";
+              const input = e.currentTarget.querySelector("input") as HTMLInputElement;
+              const val = input?.value?.trim();
+              if (val) {
+                // 이미 keywords 페이지면 이벤트로 전달
+                window.dispatchEvent(new CustomEvent("layout-search", { detail: val }));
+                // keywords 페이지가 아니면 이동
+                if (!window.location.pathname.includes("/keywords")) {
+                  window.location.href = `/keywords?q=${encodeURIComponent(val)}`;
+                }
+                input.value = "";
+              }
             }}
           >
             <Search className="w-4 h-4 flex-shrink-0" style={{ color: "var(--muted-foreground)" }} />
             <input
               className="flex-1 bg-transparent outline-none text-sm"
               style={{ color: "var(--foreground)" }}
-              placeholder="키워드 입력 후 Enter..."
+              placeholder="키워드 입력 후 Enter → 수집..."
             />
-            <span className="ml-auto text-xs opacity-60" style={{ color: "var(--muted-foreground)" }}>⌘K</span>
+            <span className="ml-auto text-xs opacity-60" style={{ color: "var(--muted-foreground)" }}>Enter</span>
           </form>
 
           <div className="ml-auto flex items-center gap-2">
