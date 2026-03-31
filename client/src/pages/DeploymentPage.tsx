@@ -149,6 +149,17 @@ function ImageBlock({ block, onRemove, onChange }: {
         onChange={e => {
           const file = e.target.files?.[0];
           if (!file) return;
+          const reader = new FileReader();
+          reader.onload = ev => onChange({ src: ev.target?.result as string, alt: file.name });
+          reader.readAsDataURL(file);
+        }} />
+      <div className="px-3 pb-2">
+        <Input placeholder="이미지 설명 (alt)" value={block.alt} onChange={e => onChange({ alt: e.target.value })}
+          className="text-xs h-7" />
+      </div>
+    </div>
+  );
+}
 
 // ── 발행 패널 (재사용) ────────────────────────────────
 function PublishPanel({
@@ -267,18 +278,6 @@ function PublishPanel({
         <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>플랫폼을 선택해주세요</p>
       )}
     </>
-  );
-}
-
-          const reader = new FileReader();
-          reader.onload = ev => onChange({ src: ev.target?.result as string, alt: file.name });
-          reader.readAsDataURL(file);
-        }} />
-      <div className="px-3 pb-2">
-        <Input placeholder="이미지 설명 (alt)" value={block.alt} onChange={e => onChange({ alt: e.target.value })}
-          className="text-xs h-7" />
-      </div>
-    </div>
   );
 }
 
