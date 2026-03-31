@@ -136,7 +136,6 @@ export default function ContentGenerator() {
       } catch {}
     }
   }, [generatedContent, keyword, title, hashtags, thumbnailUrl]);
-  }, [generatedContent, keyword, title, hashtags]);
 
   // 썸네일 별도 저장 (base64 분리해서 quota 초과 방지)
   useEffect(() => {
