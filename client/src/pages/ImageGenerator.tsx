@@ -242,7 +242,9 @@ export default function ImageGenerator() {
   const fromContent = !!autoPrompt;
 
   const [prompt, setPrompt] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").prompt || autoPrompt || "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명"; } catch { return autoPrompt || "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명"; }
+    // URL 파라미터(콘텐츠 생성에서 넘어온 키워드)가 있으면 항상 우선 적용
+    if (autoPrompt) return autoPrompt;
+    try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").prompt || "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명"; } catch { return "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명"; }
   });
   const [style, setStyle] = useState(() => {
     try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").style || "realistic"; } catch { return "realistic"; }
@@ -276,6 +278,11 @@ export default function ImageGenerator() {
       localStorage.setItem("imggen_gallery", JSON.stringify(toSave.slice(0, 50)));
     } catch {}
   }, [gallery]);
+
+  // URL 파라미터로 넘어온 경우 prompt 강제 업데이트
+  useEffect(() => {
+    if (autoPrompt) setPrompt(autoPrompt);
+  }, [autoPrompt]);
 
   // 설정 변경시 localStorage 저장
   useEffect(() => {

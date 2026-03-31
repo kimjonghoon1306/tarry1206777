@@ -562,9 +562,16 @@ export default function DeploymentPage() {
   );
 
   const [blocks, setBlocks] = useState<ContentBlock[]>(() => {
+    // 저장된 블록 상태 우선 복원
     const savedBlocks = safeParseJSON<ContentBlock[] | null>("blogauto_deploy_blocks", null);
-    if (Array.isArray(savedBlocks) && savedBlocks.length > 0) return savedBlocks;
-    const content: string = saved?.content || "";
+    if (Array.isArray(savedBlocks) && savedBlocks.length > 0) {
+      // 텍스트 블록이 실제 내용 있는지 확인
+      const hasContent = savedBlocks.some(b => b.type === "text" && (b as TextBlock).content.trim().length > 0);
+      if (hasContent) return savedBlocks;
+    }
+    // localStorage에서 콘텐츠 새로 파싱
+    const freshSaved = safeParseJSON<Record<string, any>>(CONTENT_KEY, {});
+    const content: string = freshSaved?.content || "";
     if (!content) return [{ type: "text", id: uid(), content: "" }];
     return content
       .split("\n\n")
@@ -647,19 +654,26 @@ export default function DeploymentPage() {
   }, []);
 
   // ── autoInsert URL 파라미터 처리 ──
-  useEffect(() => {
+  // blocks가 로드된 후 실행되도록 blocks 의존성 추가
+  const [pendingAutoInsert, setPendingAutoInsert] = useState<{ id: number; src: string; alt?: string }[] | null>(() => {
     const autoInsertParam = new URLSearchParams(window.location.search).get("autoInsert");
     if (autoInsertParam === "true") {
-      const stored = safeParseJSON<{ id: number; src: string; alt?: string }[]>(
-        "blogauto_deploy_images",
-        []
-      );
-      if (stored.length > 0) {
-        setTimeout(() => triggerAutoInsert(stored), 400);
-      }
+      const stored = safeParseJSON<{ id: number; src: string; alt?: string }[]>("blogauto_deploy_images", []);
+      if (stored.length > 0) return stored;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return null;
+  });
+
+  useEffect(() => {
+    if (!pendingAutoInsert) return;
+    // 텍스트 블록이 로드됐을 때만 실행
+    const textBlocks = blocks.filter(b => b.type === "text" && (b as TextBlock).content.trim().length > 0);
+    if (textBlocks.length > 0) {
+      triggerAutoInsert(pendingAutoInsert);
+      setPendingAutoInsert(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks, pendingAutoInsert]);
 
   // ── 블록 조작 함수들 ──
 
