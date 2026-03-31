@@ -18,6 +18,7 @@ import {
   CheckCircle2, Globe, FileText, Zap, Eye,
   Hash, MessageSquare, Upload, Trash2, AlignLeft,
   Wand2, FolderOpen, Info, ChevronDown, ChevronUp,
+  Copy, ExternalLink, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -404,7 +405,15 @@ function PublishPanel({
                     >
                       {platformLabel(platform.type)}
                     </div>
-                    <span className="text-sm text-foreground">{platform.name}</span>
+                    <div>
+                      <span className="text-sm text-foreground">{platform.name}</span>
+                      {platform.type === "naver" && (
+                        <span className="text-xs ml-1.5 px-1.5 py-0.5 rounded"
+                          style={{ background: "oklch(0.769 0.188 70.08/15%)", color: "var(--color-amber-brand)" }}>
+                          복사 방식
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {isSelected && (
                     <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
@@ -855,6 +864,36 @@ export default function DeploymentPage() {
     }
   }
 
+  // ── 네이버 블로그용 복사 (제목 + 본문 + 해시태그) ──
+  function copyForNaver() {
+    const lines: string[] = [];
+    // 제목
+    if (title.trim()) lines.push(title.trim() + "\n");
+    // 인사말
+    if (greeting.trim()) lines.push(greeting.trim() + "\n");
+    // 본문 (마크다운 제거 → 네이버 친화적 텍스트)
+    blocks.forEach(b => {
+      if (b.type === "text") {
+        const clean = b.content
+          .replace(/^#{1,3}\s+/gm, "")   // ## 제목 기호 제거
+          .replace(/\*\*(.*?)\*\*/g, "$1") // **강조** 제거
+          .replace(/\*(.*?)\*/g, "$1");    // *이탤릭* 제거
+        lines.push(clean);
+      } else if (b.type === "image-pair") {
+        lines.push("[이미지]\n[이미지]");
+      } else if (b.type === "image" && b.src) {
+        lines.push("[이미지]");
+      }
+    });
+    // 해시태그
+    if (hashtags.length > 0) lines.push("\n" + hashtags.join(" "));
+
+    const text = lines.join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("✅ 네이버 블로그용으로 복사됐어요! 네이버 블로그 에디터에 붙여넣으세요 📋", { duration: 4000 });
+    });
+  }
+
   // ── Webhook 발행 ──
   async function publishToWebhook() {
     const url = localStorage.getItem("webhook_url");
@@ -889,7 +928,9 @@ export default function DeploymentPage() {
         const platform = platforms.find((p) => p.id === platformId);
         if (!platform) continue;
         if (platform.type === "naver") {
-          toast.info("네이버 블로그 발행은 Naver OAuth 연동 후 사용 가능합니다.");
+          // 네이버는 자동발행 불가 → 복사 방식으로 안내
+          copyForNaver();
+          toast.success("📋 네이버 블로그용 글이 복사됐어요! 네이버 블로그에서 붙여넣기하세요.", { duration: 5000 });
         } else if (platform.type === "wordpress") {
           await publishToWordPress(
             publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null
@@ -971,7 +1012,15 @@ export default function DeploymentPage() {
                 이미지 삽입 · 글 편집 · 발행
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {/* 네이버 블로그 복사 버튼 */}
+              <Button size="sm" className="gap-1.5 h-9"
+                style={{ background: "#03C75A", color: "white" }}
+                onClick={copyForNaver}>
+                <Copy className="w-4 h-4" />
+                <span className="hidden sm:inline">네이버 복사</span>
+                <span className="sm:hidden">N복사</span>
+              </Button>
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowPreview(true)}>
                 <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">구독자 미리보기</span>
@@ -1516,15 +1565,26 @@ export default function DeploymentPage() {
 
       {/* 모바일 하단 고정 버튼 */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-40 lg:hidden p-3 border-t"
+        className="fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t"
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
       >
-        <div className="flex gap-2">
-          <Button className="flex-1 gap-2 h-11" variant="outline" onClick={() => setShowPreview(true)}>
+        {/* 네이버 복사 버튼 - 가장 크게 강조 */}
+        <div className="px-3 pt-2">
+          <button
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
+            style={{ background: "#03C75A", color: "white" }}
+            onClick={copyForNaver}
+          >
+            <Copy className="w-4 h-4" />
+            네이버 블로그 복사하기 📋
+          </button>
+        </div>
+        <div className="flex gap-2 px-3 py-2">
+          <Button className="flex-1 gap-1.5 h-10" variant="outline" onClick={() => setShowPreview(true)}>
             <Eye className="w-4 h-4" /> 미리보기
           </Button>
           <Button
-            className="flex-1 gap-2 h-11 font-semibold"
+            className="flex-1 gap-1.5 h-10 font-semibold"
             style={{ background: publishBtnBg, color: "white" }}
             disabled={isPublishing || selectedPlatforms.length === 0}
             onClick={handlePublish}
@@ -1534,13 +1594,13 @@ export default function DeploymentPage() {
             ) : publishMode === "instant" ? (
               <><Zap className="w-4 h-4" />즉시 발행</>
             ) : (
-              <><Calendar className="w-4 h-4" />예약 발행</>
+              <><Calendar className="w-4 h-4" />예약</>
             )}
           </Button>
         </div>
         {selectedPlatforms.length === 0 && (
-          <p className="text-xs text-center mt-1" style={{ color: "var(--muted-foreground)" }}>
-            발행 설정에서 플랫폼을 선택해주세요
+          <p className="text-xs text-center pb-1" style={{ color: "var(--muted-foreground)" }}>
+            워드프레스/커스텀 발행은 설정에서 플랫폼 등록 필요
           </p>
         )}
       </div>
@@ -1555,7 +1615,14 @@ export default function DeploymentPage() {
           >
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full" style={{ background: "var(--color-emerald)" }} />
-              <span className="text-sm font-semibold text-foreground">구독자 시점 미리보기</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-foreground">구독자 시점 미리보기</span>
+                <button className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-semibold"
+                  style={{ background: "#03C75A", color: "white" }}
+                  onClick={copyForNaver}>
+                  <Copy className="w-3 h-3" /> 네이버 복사
+                </button>
+              </div>
               <span
                 className="text-xs px-2 py-0.5 rounded-full hidden sm:inline"
                 style={{
