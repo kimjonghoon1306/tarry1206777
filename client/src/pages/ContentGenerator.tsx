@@ -234,6 +234,7 @@ export default function ContentGenerator() {
   }
 
   return (
+    <>
     <Layout>
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
 
@@ -630,5 +631,6 @@ export default function ContentGenerator() {
           </div>
         </div>
       )}
+    </>
   );
 }
