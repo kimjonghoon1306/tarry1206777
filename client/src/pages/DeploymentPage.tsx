@@ -20,7 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 type ContentBlock =
   | { type: "text"; id: string; content: string }
-  | { type: "image"; id: string; src: string; alt: string; position: "left" | "center" | "right"; source: "auto" | "manual" };
+  | { type: "image"; id: string; src: string; alt: string; position: "left" | "center" | "right"; source: "auto" | "manual" }
+  | { type: "image-pair"; id: string; images: { src: string; alt: string }[]; source: "auto" };
 
 type Platform = { id: string; type: "naver" | "wordpress" | "custom"; name: string };
 
@@ -40,6 +41,44 @@ function renderPreview(text: string) {
     if (line === "") return <br key={i} />;
     return <p key={i} className="mb-2 text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>{line}</p>;
   });
+}
+
+// ── 2열 이미지 쌍 컴포넌트 ─────────────────────────
+function ImagePairBlock({ block, onRemove }: {
+  block: Extract<ContentBlock, { type: "image-pair" }>;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="relative rounded-xl overflow-hidden"
+      style={{ border: "2px solid oklch(0.696 0.17 162.48/50%)", background: "oklch(0.696 0.17 162.48/5%)" }}>
+      <div className="flex items-center justify-between px-3 py-2 border-b"
+        style={{ borderColor: "oklch(0.696 0.17 162.48/30%)" }}>
+        <div className="flex items-center gap-2 text-xs" style={{ color: "var(--color-emerald)" }}>
+          <Wand2 className="w-3.5 h-3.5" />
+          2열 자동 배치 이미지
+        </div>
+        <button onClick={onRemove} className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20"
+          style={{ color: "var(--muted-foreground)" }}>
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2 p-3">
+        {block.images.map((img, i) => (
+          <div key={i} className="rounded-lg overflow-hidden" style={{ aspectRatio: "1" }}>
+            {img.src ? (
+              <img src={img.src} alt={img.alt} className="w-full h-full object-cover"
+                onError={e => { (e.target as HTMLImageElement).style.opacity = "0.3"; }} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center"
+                style={{ background: "var(--muted)", color: "var(--muted-foreground)", fontSize: 12 }}>
+                이미지 {i + 1}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ── 이미지 블록 컴포넌트 ──────────────────────────────
@@ -110,6 +149,127 @@ function ImageBlock({ block, onRemove, onChange }: {
         onChange={e => {
           const file = e.target.files?.[0];
           if (!file) return;
+
+// ── 발행 패널 (재사용) ────────────────────────────────
+function PublishPanel({
+  platforms, selectedPlatforms, setSelectedPlatforms,
+  publishMode, setPublishMode,
+  scheduleDate, setScheduleDate,
+  scheduleTime, setScheduleTime,
+  isPublishing, onPublish,
+}: {
+  platforms: Platform[];
+  selectedPlatforms: string[];
+  setSelectedPlatforms: React.Dispatch<React.SetStateAction<string[]>>;
+  publishMode: "instant" | "scheduled";
+  setPublishMode: React.Dispatch<React.SetStateAction<"instant" | "scheduled">>;
+  scheduleDate: string;
+  setScheduleDate: React.Dispatch<React.SetStateAction<string>>;
+  scheduleTime: string;
+  setScheduleTime: React.Dispatch<React.SetStateAction<string>>;
+  isPublishing: boolean;
+  onPublish: () => void;
+}) {
+  return (
+    <>
+      {/* 플랫폼 */}
+      <div className="rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
+          <Globe className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+          <span className="text-sm font-semibold text-foreground">발행 플랫폼</span>
+        </div>
+        <div className="p-4 space-y-2">
+          {platforms.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>설정에서 플랫폼을 등록해주세요</p>
+              <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={() => window.location.href = "/settings"}>설정 이동</Button>
+            </div>
+          ) : (
+            platforms.map(platform => (
+              <button key={platform.id}
+                className="w-full flex items-center justify-between p-3 rounded-xl transition-all"
+                style={{
+                  background: selectedPlatforms.includes(platform.id) ? "oklch(0.696 0.17 162.48/10%)" : "var(--background)",
+                  border: `1px solid ${selectedPlatforms.includes(platform.id) ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
+                }}
+                onClick={() => setSelectedPlatforms(prev =>
+                  prev.includes(platform.id) ? prev.filter(id => id !== platform.id) : [...prev, platform.id]
+                )}>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+                    style={{ background: platform.type === "naver" ? "#03C75A" : platform.type === "wordpress" ? "#21759B" : "oklch(0.6 0.15 220)" }}>
+                    {platform.type === "naver" ? "N" : platform.type === "wordpress" ? "W" : "C"}
+                  </div>
+                  <span className="text-sm text-foreground">{platform.name}</span>
+                </div>
+                {selectedPlatforms.includes(platform.id) && <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 발행 방식 */}
+      <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <Clock className="w-4 h-4" style={{ color: "var(--color-amber-brand)" }} />
+          <span className="text-sm font-semibold text-foreground">발행 방식</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <button className="rounded-xl p-3 text-center transition-all"
+            style={{ background: publishMode === "instant" ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)", border: `2px solid ${publishMode === "instant" ? "oklch(0.696 0.17 162.48/60%)" : "var(--border)"}` }}
+            onClick={() => setPublishMode("instant")}>
+            <Zap className="w-5 h-5 mx-auto mb-1" style={{ color: publishMode === "instant" ? "var(--color-emerald)" : "var(--muted-foreground)" }} />
+            <div className="text-sm font-semibold text-foreground">즉시</div>
+            <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>지금 바로</div>
+          </button>
+          <button className="rounded-xl p-3 text-center transition-all"
+            style={{ background: publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/15%)" : "var(--background)", border: `2px solid ${publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/60%)" : "var(--border)"}` }}
+            onClick={() => setPublishMode("scheduled")}>
+            <Calendar className="w-5 h-5 mx-auto mb-1" style={{ color: publishMode === "scheduled" ? "var(--color-amber-brand)" : "var(--muted-foreground)" }} />
+            <div className="text-sm font-semibold text-foreground">예약</div>
+            <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>시간 지정</div>
+          </button>
+        </div>
+        {publishMode === "scheduled" && (
+          <div className="space-y-3 p-3 rounded-xl" style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/20%)" }}>
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>날짜</label>
+              <Input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)}
+                min={new Date().toISOString().slice(0, 10)} className="text-sm h-9" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>시간</label>
+              <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="text-sm h-9" />
+            </div>
+            {scheduleDate && (
+              <div className="text-xs text-center font-medium py-1 rounded"
+                style={{ background: "oklch(0.769 0.188 70.08/15%)", color: "var(--color-amber-brand)" }}>
+                📅 {scheduleDate} {scheduleTime} 발행 예정
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 발행 버튼 */}
+      <Button className="w-full h-12 text-base font-semibold gap-2"
+        style={{ background: selectedPlatforms.length === 0 ? "var(--muted)" : publishMode === "instant" ? "var(--color-emerald)" : "var(--color-amber-brand)", color: "white" }}
+        disabled={isPublishing || selectedPlatforms.length === 0}
+        onClick={onPublish}>
+        {isPublishing
+          ? <><Send className="w-4 h-4 animate-pulse" />발행 중...</>
+          : publishMode === "instant"
+            ? <><Zap className="w-4 h-4" />즉시 발행하기</>
+            : <><Calendar className="w-4 h-4" />예약 발행 등록</>}
+      </Button>
+      {selectedPlatforms.length === 0 && (
+        <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>플랫폼을 선택해주세요</p>
+      )}
+    </>
+  );
+}
+
           const reader = new FileReader();
           reader.onload = ev => onChange({ src: ev.target?.result as string, alt: file.name });
           reader.readAsDataURL(file);
@@ -135,6 +295,21 @@ export default function DeploymentPage() {
   const [autoInserted, setAutoInserted] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  // 블록 상태 자동 저장 (카테고리 이탈해도 유지)
+  useEffect(() => {
+    try {
+      // image-pair의 src가 base64면 제외 (용량)
+      const toSave = blocks.map(b => {
+        if (b.type === "image-pair") {
+          return { ...b, images: b.images.filter(img => !img.src.startsWith("data:")) };
+        }
+        if (b.type === "image" && b.src.startsWith("data:")) return { ...b, src: "" };
+        return b;
+      });
+      localStorage.setItem("blogauto_deploy_blocks", JSON.stringify(toSave));
+    } catch {}
+  }, [blocks]);
+
   // 모바일용 섹션 접기/펼치기
   const [showPublishPanel, setShowPublishPanel] = useState(false);
 
@@ -143,6 +318,11 @@ export default function DeploymentPage() {
   });
 
   const [blocks, setBlocks] = useState<ContentBlock[]>(() => {
+    // 저장된 블록 상태 복원 (이미지 포함)
+    try {
+      const savedBlocks = JSON.parse(localStorage.getItem("blogauto_deploy_blocks") || "null");
+      if (savedBlocks && Array.isArray(savedBlocks) && savedBlocks.length > 0) return savedBlocks;
+    } catch {}
     const content = saved?.content || "";
     if (!content) return [{ type: "text", id: uid(), content: "" }];
     const paragraphs = content.split("\n\n").filter(Boolean);
@@ -200,28 +380,62 @@ export default function DeploymentPage() {
     return () => window.removeEventListener("paste", handlePaste);
   }, []);
 
-  // 자동 이미지 삽입
+  // ── 자동 이미지 삽입 (네이버 블로그 최적: 2열 배치) ──
+  // 규칙: 이미지 2장씩 쌍으로, 홀수 나머지는 단독 → 텍스트 단락 사이 배치
   const handleAutoInsert = () => {
     if (deployImages.length === 0) {
       toast.error("이미지 생성 페이지에서 이미지를 먼저 만들어오세요");
       return;
     }
+    const imgs = deployImages.slice(0, 15);
     const textOnly = blocks.filter(b => b.type === "text" || (b as any).source === "manual") as ContentBlock[];
     const textBlocks = textOnly.filter(b => b.type === "text");
     if (textBlocks.length === 0) { toast.error("본문 텍스트가 없습니다"); return; }
 
-    const result: ContentBlock[] = [];
-    let imgIdx = 0;
-    for (let i = 0; i < textOnly.length; i++) {
-      result.push(textOnly[i]);
-      if (textOnly[i].type === "text" && imgIdx < deployImages.length) {
-        const img = deployImages[imgIdx++];
-        result.push({ type: "image", id: uid(), src: img.src, alt: img.alt || `이미지 ${imgIdx}`, position: "center", source: "auto" });
+    // 이미지를 2장씩 쌍으로 그룹화, 나머지 단독
+    const imageGroups: ContentBlock[] = [];
+    let idx = 0;
+    while (idx < imgs.length) {
+      if (idx + 1 < imgs.length) {
+        // 2열 쌍
+        imageGroups.push({
+          type: "image-pair", id: uid(),
+          images: [
+            { src: imgs[idx].src, alt: imgs[idx].alt || `이미지 ${idx + 1}` },
+            { src: imgs[idx + 1].src, alt: imgs[idx + 1].alt || `이미지 ${idx + 2}` },
+          ],
+          source: "auto",
+        });
+        idx += 2;
+      } else {
+        // 단독 (홀수 마지막)
+        imageGroups.push({
+          type: "image", id: uid(),
+          src: imgs[idx].src, alt: imgs[idx].alt || `이미지 ${idx + 1}`,
+          position: "center", source: "auto",
+        });
+        idx += 1;
       }
     }
+
+    // 텍스트 단락 사이에 이미지 그룹 균등 배치
+    const result: ContentBlock[] = [];
+    let grpIdx = 0;
+    for (let i = 0; i < textOnly.length; i++) {
+      result.push(textOnly[i]);
+      if (textOnly[i].type === "text" && grpIdx < imageGroups.length) {
+        result.push(imageGroups[grpIdx++]);
+      }
+    }
+    while (grpIdx < imageGroups.length) {
+      result.push(imageGroups[grpIdx++]);
+    }
+
     setBlocks(result);
     setAutoInserted(true);
-    toast.success(`이미지 ${Math.min(deployImages.length, textBlocks.length)}개 자동 삽입!`);
+    const pairCount = imageGroups.filter(g => g.type === "image-pair").length;
+    const singleCount = imageGroups.filter(g => g.type === "image").length;
+    toast.success(`이미지 ${imgs.length}개 배치! (2열 ${pairCount}쌍${singleCount > 0 ? ` + 단독 ${singleCount}` : ""})`);
   };
 
   useEffect(() => {
@@ -276,7 +490,11 @@ export default function DeploymentPage() {
     if (greeting.trim()) parts.push(`[인사말]\n${greeting}\n`);
     blocks.forEach(b => {
       if (b.type === "text") parts.push(b.content);
-      else parts.push(`[이미지: ${b.alt || "이미지"} - 정렬: ${b.position}]`);
+      else if (b.type === "image-pair") {
+        parts.push(b.images.map(img => `[이미지: ${img.alt}]`).join("  "));
+      } else {
+        parts.push(`[이미지: ${b.alt || "이미지"} - 정렬: ${b.position}]`);
+      }
     });
     if (hashtags.length > 0) parts.push("\n" + hashtags.join(" "));
     return parts.join("\n\n");
@@ -646,6 +864,11 @@ export default function DeploymentPage() {
                           )}
                         </div>
                       </div>
+                    ) : block.type === "image-pair" ? (
+                      <ImagePairBlock
+                        block={block as Extract<ContentBlock, { type: "image-pair" }>}
+                        onRemove={() => removeBlock(block.id)}
+                      />
                     ) : (
                       <ImageBlock
                         block={block as Extract<ContentBlock, { type: "image" }>}
@@ -805,6 +1028,16 @@ export default function DeploymentPage() {
                       {renderPreview(block.content)}
                     </div>
                   );
+                } else if (block.type === "image-pair") {
+                  return (
+                    <div key={block.id} className="grid grid-cols-2 gap-2">
+                      {block.images.map((img, i) => (
+                        <img key={i} src={img.src} alt={img.alt}
+                          className="w-full rounded-xl object-cover"
+                          style={{ aspectRatio: "1" }} />
+                      ))}
+                    </div>
+                  );
                 } else {
                   return block.src ? (
                     <div key={block.id} className={`flex ${block.position === "center" ? "justify-center" : block.position === "right" ? "justify-end" : "justify-start"}`}>
@@ -842,126 +1075,6 @@ export default function DeploymentPage() {
         </div>
       </div>
     )}
-    </>
-  );
-}
-
-// ── 발행 패널 (재사용) ────────────────────────────────
-function PublishPanel({
-  platforms, selectedPlatforms, setSelectedPlatforms,
-  publishMode, setPublishMode,
-  scheduleDate, setScheduleDate,
-  scheduleTime, setScheduleTime,
-  isPublishing, onPublish,
-}: {
-  platforms: Platform[];
-  selectedPlatforms: string[];
-  setSelectedPlatforms: React.Dispatch<React.SetStateAction<string[]>>;
-  publishMode: "instant" | "scheduled";
-  setPublishMode: React.Dispatch<React.SetStateAction<"instant" | "scheduled">>;
-  scheduleDate: string;
-  setScheduleDate: React.Dispatch<React.SetStateAction<string>>;
-  scheduleTime: string;
-  setScheduleTime: React.Dispatch<React.SetStateAction<string>>;
-  isPublishing: boolean;
-  onPublish: () => void;
-}) {
-  return (
-    <>
-      {/* 플랫폼 */}
-      <div className="rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
-          <Globe className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-          <span className="text-sm font-semibold text-foreground">발행 플랫폼</span>
-        </div>
-        <div className="p-4 space-y-2">
-          {platforms.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>설정에서 플랫폼을 등록해주세요</p>
-              <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={() => window.location.href = "/settings"}>설정 이동</Button>
-            </div>
-          ) : (
-            platforms.map(platform => (
-              <button key={platform.id}
-                className="w-full flex items-center justify-between p-3 rounded-xl transition-all"
-                style={{
-                  background: selectedPlatforms.includes(platform.id) ? "oklch(0.696 0.17 162.48/10%)" : "var(--background)",
-                  border: `1px solid ${selectedPlatforms.includes(platform.id) ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
-                }}
-                onClick={() => setSelectedPlatforms(prev =>
-                  prev.includes(platform.id) ? prev.filter(id => id !== platform.id) : [...prev, platform.id]
-                )}>
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-                    style={{ background: platform.type === "naver" ? "#03C75A" : platform.type === "wordpress" ? "#21759B" : "oklch(0.6 0.15 220)" }}>
-                    {platform.type === "naver" ? "N" : platform.type === "wordpress" ? "W" : "C"}
-                  </div>
-                  <span className="text-sm text-foreground">{platform.name}</span>
-                </div>
-                {selectedPlatforms.includes(platform.id) && <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />}
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* 발행 방식 */}
-      <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-4 h-4" style={{ color: "var(--color-amber-brand)" }} />
-          <span className="text-sm font-semibold text-foreground">발행 방식</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <button className="rounded-xl p-3 text-center transition-all"
-            style={{ background: publishMode === "instant" ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)", border: `2px solid ${publishMode === "instant" ? "oklch(0.696 0.17 162.48/60%)" : "var(--border)"}` }}
-            onClick={() => setPublishMode("instant")}>
-            <Zap className="w-5 h-5 mx-auto mb-1" style={{ color: publishMode === "instant" ? "var(--color-emerald)" : "var(--muted-foreground)" }} />
-            <div className="text-sm font-semibold text-foreground">즉시</div>
-            <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>지금 바로</div>
-          </button>
-          <button className="rounded-xl p-3 text-center transition-all"
-            style={{ background: publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/15%)" : "var(--background)", border: `2px solid ${publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/60%)" : "var(--border)"}` }}
-            onClick={() => setPublishMode("scheduled")}>
-            <Calendar className="w-5 h-5 mx-auto mb-1" style={{ color: publishMode === "scheduled" ? "var(--color-amber-brand)" : "var(--muted-foreground)" }} />
-            <div className="text-sm font-semibold text-foreground">예약</div>
-            <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>시간 지정</div>
-          </button>
-        </div>
-        {publishMode === "scheduled" && (
-          <div className="space-y-3 p-3 rounded-xl" style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/20%)" }}>
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>날짜</label>
-              <Input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)}
-                min={new Date().toISOString().slice(0, 10)} className="text-sm h-9" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>시간</label>
-              <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="text-sm h-9" />
-            </div>
-            {scheduleDate && (
-              <div className="text-xs text-center font-medium py-1 rounded"
-                style={{ background: "oklch(0.769 0.188 70.08/15%)", color: "var(--color-amber-brand)" }}>
-                📅 {scheduleDate} {scheduleTime} 발행 예정
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 발행 버튼 */}
-      <Button className="w-full h-12 text-base font-semibold gap-2"
-        style={{ background: selectedPlatforms.length === 0 ? "var(--muted)" : publishMode === "instant" ? "var(--color-emerald)" : "var(--color-amber-brand)", color: "white" }}
-        disabled={isPublishing || selectedPlatforms.length === 0}
-        onClick={onPublish}>
-        {isPublishing
-          ? <><Send className="w-4 h-4 animate-pulse" />발행 중...</>
-          : publishMode === "instant"
-            ? <><Zap className="w-4 h-4" />즉시 발행하기</>
-            : <><Calendar className="w-4 h-4" />예약 발행 등록</>}
-      </Button>
-      {selectedPlatforms.length === 0 && (
-        <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>플랫폼을 선택해주세요</p>
-      )}
     </>
   );
 }

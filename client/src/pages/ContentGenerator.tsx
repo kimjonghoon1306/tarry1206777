@@ -55,7 +55,13 @@ export default function ContentGenerator() {
   const [activeTab, setActiveTab] = useState<"edit" | "preview" | "blog-preview">("edit");
   const [hashtags, setHashtags] = useState<string[]>(saved?.hashtags || []);
   const [greeting, setGreeting] = useState(() => localStorage.getItem(GREETING_KEY) || "");
-  const [thumbnailUrl, setThumbnailUrl] = useState(saved?.thumbnail || "");
+  const [thumbnailUrl, setThumbnailUrl] = useState(() => {
+    try {
+      const stored = localStorage.getItem("blogauto_thumbnail");
+      if (stored === "__b64__") return sessionStorage.getItem("blogauto_thumbnail_b64") || "";
+      return stored || "";
+    } catch { return ""; }
+  });
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [savedImages, setSavedImages] = useState<string[]>([]);
   const [showFloatingPreview, setShowFloatingPreview] = useState(false);
@@ -125,16 +131,40 @@ export default function ContentGenerator() {
     if (generatedContent || keyword) {
       try {
         localStorage.setItem(CONTENT_KEY, JSON.stringify({
-          keyword, title, content: generatedContent, minChars, hashtags, thumbnail: thumbnailUrl,
+          keyword, title, content: generatedContent, minChars, hashtags,
         }));
       } catch {}
     }
   }, [generatedContent, keyword, title, hashtags, thumbnailUrl]);
+  }, [generatedContent, keyword, title, hashtags]);
+
+  // 썸네일 별도 저장 (base64 분리해서 quota 초과 방지)
+  useEffect(() => {
+    try {
+      if (thumbnailUrl && !thumbnailUrl.startsWith("data:")) {
+        localStorage.setItem("blogauto_thumbnail", thumbnailUrl);
+      } else if (thumbnailUrl && thumbnailUrl.startsWith("data:")) {
+        // base64는 sessionStorage에 (탭 유지동안만)
+        sessionStorage.setItem("blogauto_thumbnail_b64", thumbnailUrl);
+        localStorage.setItem("blogauto_thumbnail", "__b64__");
+      } else {
+        localStorage.removeItem("blogauto_thumbnail");
+        sessionStorage.removeItem("blogauto_thumbnail_b64");
+      }
+    } catch {}
+  }, [thumbnailUrl]);
+
 
   // 인사말 저장
   useEffect(() => {
     try { localStorage.setItem(GREETING_KEY, greeting); } catch {}
   }, [greeting]);
+
+  // 언어 변경시 저장
+  useEffect(() => {
+    try { localStorage.setItem("content_language", selectedLang); } catch {}
+  }, [selectedLang]);
+
 
   // 저장된 이미지 불러오기
   useEffect(() => {
@@ -268,6 +298,12 @@ export default function ContentGenerator() {
                   style={{ color: "oklch(0.65 0.22 25)", borderColor: "oklch(0.65 0.22 25/40%)" }}
                   onClick={handleClear}>
                   <Trash2 className="w-4 h-4" /> 초기화
+                </Button>
+                {/* 구독자 미리보기 - 헤더 버튼 (모바일 접근성) */}
+                <Button size="sm" className="gap-1.5 sm:hidden"
+                  style={{ background: "var(--color-emerald)", color: "white" }}
+                  onClick={() => setShowFloatingPreview(true)}>
+                  <Eye className="w-4 h-4" /> 미리보기
                 </Button>
               </>
             )}
@@ -586,7 +622,7 @@ export default function ContentGenerator() {
       {/* ── 플로팅 미리보기 버튼 ── */}
       {generatedContent && (
         <button
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
+          className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-40 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
           style={{ background: "var(--color-emerald)", color: "white", boxShadow: "0 8px 32px oklch(0.696 0.17 162.48/40%)" }}
           onClick={() => setShowFloatingPreview(true)}>
           <Eye className="w-4 h-4" />

@@ -241,18 +241,46 @@ export default function ImageGenerator() {
   const autoPrompt = params?.get("prompt") || "";
   const fromContent = !!autoPrompt;
 
-  const [prompt, setPrompt] = useState(autoPrompt || "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명");
-  const [style, setStyle] = useState("realistic");
-  const [size, setSize] = useState("1024x1024");
-  const [count, setCount] = useState("4");
+  const [prompt, setPrompt] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").prompt || autoPrompt || "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명"; } catch { return autoPrompt || "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명"; }
+  });
+  const [style, setStyle] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").style || "realistic"; } catch { return "realistic"; }
+  });
+  const [size, setSize] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").size || "1024x1024"; } catch { return "1024x1024"; }
+  });
+  const [count, setCount] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").count || "4"; } catch { return "4"; }
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedImages, setSelectedImages] = useState<number[]>([]);
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [gallery, setGallery] = useState<GalleryItem[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("imggen_gallery") || "[]");
+      // URL 이미지만 복원 (base64는 너무 큼)
+      return saved.filter((g: GalleryItem) => g.src && !g.src.startsWith("data:"));
+    } catch { return []; }
+  });
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showDeployModal, setShowDeployModal] = useState(false);
+
+  // 갤러리 변경시 localStorage 저장 (URL 이미지만)
+  useEffect(() => {
+    try {
+      const toSave = gallery.filter(g => !g.loading && g.src && !g.src.startsWith("data:"));
+      localStorage.setItem("imggen_gallery", JSON.stringify(toSave.slice(0, 50)));
+    } catch {}
+  }, [gallery]);
+
+  // 설정 변경시 localStorage 저장
+  useEffect(() => {
+    try { localStorage.setItem("imggen_state", JSON.stringify({ prompt, style, size, count })); } catch {}
+  }, [prompt, style, size, count]);
 
   const successGallery = gallery.filter(g => !g.loading && g.src);
   const lightboxImg = lightboxIndex !== null ? successGallery[lightboxIndex] ?? null : null;
@@ -487,25 +515,36 @@ export default function ImageGenerator() {
   };
   const toggleSelect = (id: number) => setSelectedImages(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  // ── 배포 페이지로 이동 ────────────────────────────
+  // ── 15개 제한 배포 이동 ───────────────────────────
+  const MAX_DEPLOY = 15;
+
+  const sendToDeploy = (images: GalleryItem[]) => {
+    const final = images.slice(0, MAX_DEPLOY);
+    try {
+      localStorage.setItem("blogauto_deploy_images", JSON.stringify(
+        final.map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
+      ));
+    } catch {
+      localStorage.setItem("blogauto_deploy_images", JSON.stringify(
+        final.filter(i => !i.src.startsWith("data:")).map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
+      ));
+    }
+    toast.success(`이미지 ${final.length}개 배포 페이지로 이동합니다!`);
+    navigate("/deploy?autoInsert=true");
+  };
+
   const goToDeployWithImages = () => {
+    if (loadedCount === 0) { toast.error("이미지를 먼저 생성해주세요"); return; }
     const toSend = selectedImages.length > 0
       ? successGallery.filter(g => selectedImages.includes(g.id))
       : successGallery;
-    if (toSend.length === 0) { toast.error("이미지를 먼저 생성해주세요"); return; }
-    try {
-      localStorage.setItem("blogauto_deploy_images", JSON.stringify(
-        toSend.map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
-      ));
-    } catch {
-      // base64 이미지가 너무 크면 URL만 저장
-      localStorage.setItem("blogauto_deploy_images", JSON.stringify(
-        toSend.filter(i => !i.src.startsWith("data:")).map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
-      ));
+    if (toSend.length <= MAX_DEPLOY) {
+      sendToDeploy(toSend);
+    } else {
+      setShowDeployModal(true);
     }
-    toast.success(`이미지 ${toSend.length}개 → 배포 페이지에서 자동 삽입됩니다!`);
-    navigate("/deploy?autoInsert=true");
   };
+
 
   const isBusy = isGenerating || isRetrying;
 
@@ -588,6 +627,11 @@ export default function ImageGenerator() {
                     <SelectItem value="4">4개</SelectItem>
                     <SelectItem value="6">6개</SelectItem>
                     <SelectItem value="8">8개</SelectItem>
+                    <SelectItem value="10">10개</SelectItem>
+                    <SelectItem value="15">15개 (블로그 최적)</SelectItem>
+                    <SelectItem value="20">20개</SelectItem>
+                    <SelectItem value="30">30개</SelectItem>
+                    <SelectItem value="50">50개</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -850,8 +894,8 @@ export default function ImageGenerator() {
                 onClick={goToDeployWithImages}>
                 <Sparkles className="w-5 h-5" />
                 {selectedImages.length > 0
-                  ? `선택한 ${selectedImages.length}개로 배포 관리 진행`
-                  : `생성된 ${loadedCount}개 모두 배포 관리로 진행`}
+                  ? `선택한 ${selectedImages.length}개로 배포 진행 (15개 제한)`
+                  : `전체 ${loadedCount}개 중 15개 선택 후 배포`}
                 <ArrowRight className="w-5 h-5" />
               </Button>
             )}
@@ -935,6 +979,120 @@ export default function ImageGenerator() {
           </div>
         </div>
       )}
+
+      {/* ── 15개 선택 배포 모달 ── */}
+      {showDeployModal && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "rgba(0,0,0,0.7)" }}>
+          <div className="flex flex-col h-full max-w-2xl mx-auto w-full">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between px-4 py-3 border-b shrink-0"
+              style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+              <div>
+                <h2 className="font-bold text-foreground">배포할 이미지 15개 선택</h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                  네이버 블로그 최적: 15장 · 현재 {selectedImages.length}/15 선택됨
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedImages.length > 0 && selectedImages.length <= 15 && (
+                  <Button className="gap-1.5 h-9"
+                    style={{ background: "var(--color-emerald)", color: "white" }}
+                    onClick={() => {
+                      const toSend = successGallery.filter(g => selectedImages.includes(g.id));
+                      setShowDeployModal(false);
+                      sendToDeploy(toSend);
+                    }}>
+                    <Sparkles className="w-4 h-4" />
+                    {selectedImages.length}개로 배포
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                )}
+                <button className="w-9 h-9 flex items-center justify-center rounded-xl"
+                  style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
+                  onClick={() => setShowDeployModal(false)}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 안내 배너 */}
+            <div className="px-4 py-2 shrink-0"
+              style={{ background: selectedImages.length === 15 ? "oklch(0.696 0.17 162.48/10%)" : selectedImages.length > 15 ? "oklch(0.65 0.22 25/10%)" : "oklch(0.769 0.188 70.08/10%)" }}>
+              <p className="text-xs font-medium text-center"
+                style={{ color: selectedImages.length === 15 ? "var(--color-emerald)" : selectedImages.length > 15 ? "oklch(0.65 0.22 25)" : "var(--color-amber-brand)" }}>
+                {selectedImages.length === 0 && "이미지를 클릭해서 선택하세요 (최대 15개)"}
+                {selectedImages.length > 0 && selectedImages.length < 15 && `${15 - selectedImages.length}개 더 선택 가능`}
+                {selectedImages.length === 15 && "✅ 15개 선택 완료! 위 '배포' 버튼을 눌러주세요"}
+                {selectedImages.length > 15 && `⚠ ${selectedImages.length - 15}개 초과 — 15개까지만 선택 가능합니다`}
+              </p>
+            </div>
+
+            {/* 이미지 그리드 */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {successGallery.map((img, idx) => {
+                  const isSelected = selectedImages.includes(img.id);
+                  const isDisabled = !isSelected && selectedImages.length >= 15;
+                  return (
+                    <div key={img.id}
+                      className="relative rounded-xl overflow-hidden cursor-pointer transition-all"
+                      style={{
+                        aspectRatio: "1",
+                        border: `3px solid ${isSelected ? "var(--color-emerald)" : "transparent"}`,
+                        opacity: isDisabled ? 0.35 : 1,
+                      }}
+                      onClick={() => {
+                        if (isDisabled) { toast.error("최대 15개까지 선택 가능합니다"); return; }
+                        toggleSelect(img.id);
+                      }}>
+                      <img src={img.src} alt={img.title} className="w-full h-full object-cover" />
+                      {/* 선택 번호 표시 */}
+                      {isSelected && (
+                        <div className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white z-10"
+                          style={{ background: "var(--color-emerald)" }}>
+                          {selectedImages.indexOf(img.id) + 1}
+                        </div>
+                      )}
+                      {!isSelected && !isDisabled && (
+                        <div className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full flex items-center justify-center"
+                          style={{ background: "rgba(0,0,0,0.5)", border: "2px solid rgba(255,255,255,0.6)" }}>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 text-center"
+                        style={{ background: "rgba(0,0,0,0.5)" }}>
+                        <span className="text-white/70 text-xs">{idx + 1}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 하단 빠른 선택 */}
+            <div className="px-4 py-3 border-t flex items-center gap-2 flex-wrap shrink-0"
+              style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+              <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>빠른 선택:</span>
+              {[5, 10, 15].map(n => (
+                <button key={n}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                  style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                  onClick={() => {
+                    const first = successGallery.slice(0, n).map(g => g.id);
+                    setSelectedImages(first);
+                  }}>
+                  앞 {n}개
+                </button>
+              ))}
+              <button className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                onClick={() => setSelectedImages([])}>
+                전체 해제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }
