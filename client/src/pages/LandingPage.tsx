@@ -26,6 +26,7 @@ import {
   Clock,
   DollarSign,
   Download,
+  Settings,
 } from "lucide-react";
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/hero-dashboard-bg-4ZxYwSEJt8froqSKC2fNZb.webp";
@@ -119,6 +120,15 @@ export default function LandingPage() {
           >
             시작하기 <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
+          {/* 운영자 전용 톱니바퀴 */}
+          <button
+            title="운영자"
+            onClick={() => navigate("/superadmin")}
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+          >
+            <Settings className="w-4 h-4" />
+          </button>
         </div>
       </nav>
 
