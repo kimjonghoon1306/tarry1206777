@@ -283,16 +283,39 @@ export async function generateTitles(
   return titles;
 }
 
-// ── 이미지 생성 (Pollinations만 클라이언트 직접 - blob 변환) ──
+// ── Pollinations 이미지 - img 태그로 로드 후 URL 반환 (CORS 우회) ──
 export async function fetchPollinationsImage(prompt: string, width: number, height: number, seed: number): Promise<string> {
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Pollinations 오류 (${resp.status})`);
-  const blob = await resp.blob();
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&cache=false`;
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    const timer = setTimeout(() => {
+      reject(new Error("이미지 로딩 시간 초과 (40초). 다시 시도해주세요."));
+    }, 40000);
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        // canvas로 base64 변환 시도
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || width;
+        canvas.height = img.naturalHeight || height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/jpeg", 0.92));
+        } else {
+          // canvas 실패시 URL 그대로 반환
+          resolve(url);
+        }
+      } catch {
+        // CORS로 canvas 변환 실패해도 URL로 반환 (갤러리에는 보임)
+        resolve(url);
+      }
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("Pollinations 이미지 로드 실패. 잠시 후 다시 시도해주세요."));
+    };
+    img.src = url;
   });
 }
