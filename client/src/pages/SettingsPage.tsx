@@ -810,6 +810,56 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* ── 수익 플랫폼 선택 (글/이미지 최적화) ── */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.769 0.188 70.08/30%)" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <DollarSign className="w-5 h-5" style={{ color: "var(--color-amber-brand)" }} />
+            <h3 className="font-semibold text-foreground">수익 플랫폼 최적화</h3>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+            선택한 플랫폼에 맞게 글 스타일과 이미지가 자동 최적화됩니다
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { id: "adsense", label: "Google AdSense", desc: "CPC 최적화 · 클릭 유도형 글", color: "#4285F4", logo: "G",
+                tip: "정보성 키워드 밀도 높게, 광고 친화적 단락" },
+              { id: "adpost", label: "Naver AdPost", desc: "CPM 최적화 · 체류시간 늘리기", color: "#03C75A", logo: "N",
+                tip: "감성적 스토리, 이미지 풍부하게, 공감 유도" },
+              { id: "both", label: "둘 다", desc: "통합 최적화", color: "oklch(0.75 0.12 300)", logo: "★",
+                tip: "균형잡힌 구성으로 양쪽 모두 최적화" },
+            ].map(platform => {
+              const selected = (userGet("selected_ad_platform") || "both") === platform.id;
+              return (
+                <button key={platform.id}
+                  className="rounded-xl p-4 text-left transition-all"
+                  style={{
+                    background: selected ? `${platform.color}15` : "var(--background)",
+                    border: `2px solid ${selected ? platform.color + "80" : "var(--border)"}`,
+                  }}
+                  onClick={() => {
+                    userSet("selected_ad_platform", platform.id);
+                    saveSettingsToServer({ selected_ad_platform: platform.id });
+                    toast.success(`${platform.label} 최적화 모드로 설정됐어요!`);
+                    // 강제 리렌더링
+                    window.dispatchEvent(new Event("storage"));
+                  }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black text-white"
+                      style={{ background: platform.color }}>{platform.logo}</div>
+                    {selected && <CheckCircle2 className="w-4 h-4" style={{ color: platform.color }} />}
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">{platform.label}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{platform.desc}</div>
+                  <div className="text-xs mt-1.5 px-2 py-1 rounded-lg"
+                    style={{ background: `${platform.color}10`, color: platform.color }}>
+                    {platform.tip}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* ─── 배포 대상 설정 (다중 추가 가능) ─── */}
         <div className="rounded-xl p-5" style={{ background: "oklch(0.696 0.17 162.48 / 6%)", border: "2px solid oklch(0.696 0.17 162.48 / 25%)" }}>
           <div className="flex items-center justify-between mb-1">
@@ -823,11 +873,11 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* 네이버 블로그 */}
+        {/* 네이버 블로그 - 자동발행 불가 안내 */}
         <PlatformSection
-          title="네이버 블로그" color="#03C75A" logo="N" type="naver"
-          desc="네이버 개발자센터에서 앱 등록 후 블로그 쓰기 권한으로 Access Token 발급"
-          link="https://developers.naver.com/apps"
+          title="네이버 블로그 (원클릭 복사)" color="#03C75A" logo="N" type="naver"
+          desc="⚠️ 네이버 API 정책상 자동 발행 불가 · 배포 관리에서 '네이버 복사' 버튼으로 원클릭 복사 후 붙여넣기"
+          link=""
           fields={[
             { label: "블로그 ID", key: "naver_blog_id", placeholder: "myblog (naver.com/myblog)" },
             { label: "Access Token", key: "naver_blog_access_token", placeholder: "네이버 OAuth Access Token", secret: true },

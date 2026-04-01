@@ -36,8 +36,15 @@ async function testImageUrl(url: string, timeoutMs = 25000): Promise<boolean> {
 
 // ── 한국어 → 영어 키워드 매핑 ──────────────────────
 const KO_EN_MAP: Record<string, string> = {
-  // ── 부동산/주거 (최우선) ──
-  단기월세: "short term rental apartment modern interior",
+  // ── 부동산/주거 (최우선 - 구체적 이미지) ──
+  단기월세: "modern cozy studio apartment interior, stylish furniture, city view window",
+  주택가이드: "beautiful house exterior real estate, suburban neighborhood, blue sky",
+  주택: "modern house exterior, beautiful garden, real estate property",
+  아파트가이드: "luxury apartment building exterior, modern architecture, city skyline",
+  전월세가이드: "apartment keys contract signing, real estate agent, document",
+  부동산가이드: "real estate property house for sale, agent showing home",
+  임대주택: "apartment complex residential building, modern exterior",
+  원룸가이드: "cozy studio apartment interior, modern minimal design",
   월세: "monthly rent apartment interior room",
   전세: "korean apartment lease contract keys",
   부동산: "real estate apartment building",
@@ -180,16 +187,61 @@ async function generatePollinationsUrl(
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
-  realistic: "photorealistic, 실사 사진, 고품질, 자연스러운 조명, DSLR 촬영",
-  illustration: "디지털 일러스트, flat design, 깔끔한 벡터 스타일, 선명한 색상",
-  infographic: "인포그래픽 디자인, 정보 시각화, 아이콘, 깔끔한 레이아웃, 화이트 배경",
-  product: "제품 사진, 상업용 광고 사진, 화이트 배경, 깔끔한 조명, 고해상도",
+  // 실사 - 최상급 품질
+  realistic: [
+    "ultra realistic photography",
+    "professional DSLR camera shot",
+    "cinematic lighting",
+    "8K ultra high resolution",
+    "perfect composition rule of thirds",
+    "sharp crisp focus",
+    "magazine cover quality",
+    "award winning photograph",
+    "vivid rich colors",
+    "professional retouching",
+  ].join(", "),
+
+  // 광고/상업 - 구매욕 자극
+  commercial: [
+    "luxury commercial advertisement photo",
+    "mouth watering delicious",
+    "desire inducing",
+    "premium brand aesthetic",
+    "soft bokeh background",
+    "golden hour warm lighting",
+    "appetizing fresh vibrant",
+    "lifestyle marketing photo",
+    "high end product photography",
+  ].join(", "),
+
+  // 인테리어/라이프스타일 - 살고싶은 느낌
+  lifestyle: [
+    "cozy lifestyle photography",
+    "warm inviting atmosphere",
+    "modern minimalist interior",
+    "natural window light",
+    "editorial interior design",
+    "pinterest worthy aesthetic",
+    "hygge cozy feeling",
+    "architectural digest quality",
+  ].join(", "),
+
+  // 일러스트 - 감각적
+  illustration: [
+    "modern digital illustration",
+    "vibrant color palette",
+    "trendy flat design",
+    "clean vector style",
+    "instagram aesthetic",
+    "contemporary graphic art",
+  ].join(", "),
 };
+
 const STYLES = [
-  { value: "realistic", label: "실사 사진", desc: "실물처럼 사실적인 이미지" },
-  { value: "illustration", label: "일러스트", desc: "깔끔한 디지털 일러스트" },
-  { value: "infographic", label: "인포그래픽", desc: "정보 전달 중심 디자인" },
-  { value: "product", label: "제품 사진", desc: "상품 홍보용 이미지" },
+  { value: "realistic", label: "📸 실사 사진", desc: "최상급 퀄리티 리얼 사진" },
+  { value: "commercial", label: "✨ 광고/상업", desc: "구매욕 자극하는 매력적 사진" },
+  { value: "lifestyle", label: "🏠 라이프스타일", desc: "살고싶은 인테리어/일상" },
+  { value: "illustration", label: "🎨 일러스트", desc: "감각적인 디지털 아트" },
 ];
 
 const STATS_KEY = "img_stats";
@@ -546,7 +598,9 @@ export default function ImageGenerator() {
     setIsGenerating(true);
     setProgress(0);
     const numImages = parseInt(count) || 1;
-    const fullPrompt = `${prompt.trim()}, ${STYLE_PROMPTS[style] || ""}`;
+    // 키워드 기반 추가 품질 태그
+    const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
+    const fullPrompt = `${prompt.trim()}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
     const [w, h] = (size || "1024x1024").split("x").map(Number);
     const styleLabel = STYLES.find(s => s.value === style)?.label || style;
 
@@ -751,31 +805,55 @@ export default function ImageGenerator() {
               </div>
             </div>
 
-            {/* 생성 버튼 */}
-            <Button className="w-full gap-2"
-              style={{ background: isBusy ? "var(--muted)" : "var(--color-emerald)", color: "white" }}
-              onClick={handleGenerate} disabled={isBusy}>
-              {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-              {isGenerating ? `생성 중... (${Math.round(progress)}%)` : `이미지 ${count}개 생성`}
-            </Button>
+            {/* ── 메인 생성 버튼 (최상급 디자인) ── */}
+            <button
+              className="w-full relative overflow-hidden rounded-2xl font-bold text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                height: 56,
+                background: isBusy
+                  ? "var(--muted)"
+                  : "linear-gradient(135deg, oklch(0.696 0.17 162.48) 0%, oklch(0.6 0.2 180) 100%)",
+                boxShadow: isBusy ? "none" : "0 8px 32px oklch(0.696 0.17 162.48 / 40%), 0 2px 8px oklch(0.696 0.17 162.48 / 20%)",
+              }}
+              onClick={handleGenerate}
+              disabled={isBusy}>
+              {/* 반짝임 효과 */}
+              {!isBusy && (
+                <div className="absolute inset-0 opacity-20"
+                  style={{ background: "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform: "skewX(-20deg) translateX(-100%)", animation: "shimmer 3s infinite" }} />
+              )}
+              <div className="flex items-center justify-center gap-2.5 relative z-10">
+                {isGenerating
+                  ? <><RefreshCw className="w-5 h-5 animate-spin" /><span className="text-base">생성 중... {Math.round(progress)}%</span></>
+                  : <><Wand2 className="w-5 h-5" /><span className="text-base">✨ 이미지 {count}개 생성하기</span></>
+                }
+              </div>
+            </button>
 
             {/* 실패 재시도 버튼 */}
             {failedCount > 0 && !isBusy && (
-              <Button className="w-full gap-2" variant="outline"
-                style={{ borderColor: "oklch(0.769 0.188 70.08/60%)", color: "var(--color-amber-brand)" }}
+              <button
+                className="w-full rounded-2xl font-semibold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
+                style={{
+                  height: 44,
+                  background: "oklch(0.769 0.188 70.08/10%)",
+                  border: "1.5px solid oklch(0.769 0.188 70.08/50%)",
+                  color: "var(--color-amber-brand)",
+                }}
                 onClick={handleRetryAll}>
                 <RotateCcw className="w-4 h-4" />
-                실패 {failedCount}개 전체 재시도
-              </Button>
+                실패 {failedCount}개 재시도
+              </button>
             )}
 
-            {/* 재시도 중 표시 */}
+            {/* 재시도 중 */}
             {isRetrying && (
-              <Button className="w-full gap-2" disabled
-                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+              <button disabled
+                className="w-full rounded-2xl font-semibold flex items-center justify-center gap-2"
+                style={{ height: 44, background: "var(--muted)", color: "var(--muted-foreground)" }}>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                재시도 중... ({Math.round(progress)}%)
-              </Button>
+                재시도 중... {Math.round(progress)}%
+              </button>
             )}
 
             {/* 진행률 */}
