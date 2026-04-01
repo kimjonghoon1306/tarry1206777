@@ -96,6 +96,13 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
   const [show, setShow] = useState(false);
   const [shake, setShake] = useState(false);
 
+  // 현재 언어
+  const langMap: Record<string, string> = {
+    ko: "🇰🇷 한국어", en: "🇺🇸 English", ja: "🇯🇵 日本語", zh: "🇨🇳 中文",
+    es: "🇪🇸 Español", fr: "🇫🇷 Français", de: "🇩🇪 Deutsch", pt: "🇧🇷 Português",
+  };
+  const currentLang = langMap[localStorage.getItem("content_language") || "ko"] || "🇰🇷 한국어";
+
   const handleSubmit = () => {
     if (verifyAdmin(pw)) {
       sessionStorage.setItem(SESSION_KEY, getStoredHash());
@@ -109,32 +116,57 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className={`w-full max-w-sm rounded-2xl p-8 ${shake ? "animate-bounce" : ""}`}
-        style={{ background: "var(--card)", border: "2px solid var(--border)" }}>
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: "oklch(0.696 0.17 162.48 / 15%)", border: "1px solid oklch(0.696 0.17 162.48 / 30%)" }}>
-            <Lock className="w-8 h-8" style={{ color: "var(--color-emerald)" }} />
-          </div>
-          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>관리자 인증</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>운영자 전용 영역입니다</p>
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* 상단 네비 */}
+      <div className="flex items-center justify-between px-4 py-3 border-b"
+        style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+        <button
+          className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
+          style={{ color: "var(--foreground)" }}
+          onClick={() => window.location.href = "/"}>
+          <Home className="w-4 h-4" />
+          홈으로
+        </button>
+        <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg"
+          style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+          <Globe className="w-3.5 h-3.5" />
+          {currentLang}
         </div>
-        <div className="space-y-4">
-          <div className="relative">
-            <Input type={show ? "text" : "password"} placeholder="비밀번호 입력"
-              value={pw} onChange={e => setPw(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSubmit()}
-              className="pr-10" autoComplete="new-password" />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2"
+      </div>
+
+      {/* 로그인 카드 */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className={`w-full max-w-sm rounded-2xl p-8 ${shake ? "animate-bounce" : ""}`}
+          style={{ background: "var(--card)", border: "2px solid var(--border)" }}>
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: "oklch(0.696 0.17 162.48 / 15%)", border: "1px solid oklch(0.696 0.17 162.48 / 30%)" }}>
+              <Lock className="w-8 h-8" style={{ color: "var(--color-emerald)" }} />
+            </div>
+            <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>관리자 인증</h1>
+            <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>운영자 전용 영역입니다</p>
+          </div>
+          <div className="space-y-4">
+            <div className="relative">
+              <Input type={show ? "text" : "password"} placeholder="비밀번호 입력"
+                value={pw} onChange={e => setPw(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                className="pr-10" autoComplete="new-password" />
+              <button className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: "var(--muted-foreground)" }}
+                onClick={() => setShow(v => !v)}>
+                {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <Button className="w-full gap-2 h-11" style={{ background: "var(--color-emerald)", color: "white" }} onClick={handleSubmit}>
+              <Shield className="w-4 h-4" /> 접속하기
+            </Button>
+            <button className="w-full text-sm text-center hover:underline"
               style={{ color: "var(--muted-foreground)" }}
-              onClick={() => setShow(v => !v)}>
-              {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              onClick={() => window.location.href = "/dashboard"}>
+              대시보드로 이동
             </button>
           </div>
-          <Button className="w-full gap-2" style={{ background: "var(--color-emerald)", color: "white" }} onClick={handleSubmit}>
-            <Shield className="w-4 h-4" /> 접속하기
-          </Button>
         </div>
       </div>
     </div>
