@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import React from "react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
@@ -18,7 +19,7 @@ import {
   CheckCircle2, Globe, FileText, Zap, Eye,
   Hash, MessageSquare, Upload, Trash2, AlignLeft,
   Wand2, FolderOpen, Info, ChevronDown, ChevronUp,
-  Copy, ExternalLink, Smartphone,
+  Copy, ExternalLink, Smartphone, ShoppingCart, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -343,15 +344,17 @@ function PublishPanel({
     );
   }
 
-  const platformBg = (type: Platform["type"]) => {
+  const platformBg = (type: string) => {
     if (type === "naver") return "#03C75A";
     if (type === "wordpress") return "#21759B";
-    return "oklch(0.6 0.15 220)";
+    if (type === "tistory") return "#FF6300";
+    return "oklch(0.65 0.28 350)";
   };
 
-  const platformLabel = (type: Platform["type"]) => {
+  const platformLabel = (type: string) => {
     if (type === "naver") return "N";
-    if (type === "wordpress") return "W";
+    if (type === "wordpress") return "WP";
+    if (type === "tistory") return "T";
     return "C";
   };
 
@@ -600,6 +603,8 @@ export default function DeploymentPage() {
       defaults.push({ id: uid(), type: "wordpress", name: "WordPress" });
     if (localStorage.getItem("webhook_url"))
       defaults.push({ id: uid(), type: "custom", name: "커스텀 사이트" });
+    if (localStorage.getItem("tistory_access_token"))
+      defaults.push({ id: uid(), type: "tistory" as any, name: "티스토리" });
     return defaults;
   });
 
@@ -864,6 +869,99 @@ export default function DeploymentPage() {
     }
   }
 
+  // ── 쿠팡파트너스 링크 자동 삽입 ──────────────────
+  const [coupangLinks, setCoupangLinks] = React.useState<{name:string;url:string;price:string}[]>([]);
+  const [coupangLoading, setCoupangLoading] = React.useState(false);
+
+  const fetchCoupangLinks = async () => {
+    const accessKey = localStorage.getItem("coupang_access_key");
+    const secretKey = localStorage.getItem("coupang_secret_key");
+    if (!accessKey || !secretKey) {
+      toast.error("설정에서 쿠팡파트너스 API 키를 먼저 입력해주세요");
+      return;
+    }
+    if (!keyword && !title) { toast.error("키워드나 제목이 없습니다"); return; }
+    setCoupangLoading(true);
+    try {
+      const searchKeyword = keyword || title;
+      const resp = await fetch("/api/coupang", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "search", accessKey, secretKey, keyword: searchKeyword, limit: 3 }),
+      });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error);
+      setCoupangLinks(data.products.map((p: any) => ({
+        name: p.productName.slice(0, 40),
+        url: p.affiliateUrl,
+        price: p.productPrice ? `₩${Number(p.productPrice).toLocaleString()}` : "",
+      })));
+      toast.success(`✅ 쿠팡 상품 ${data.products.length}개 불러왔어요!`);
+    } catch (e: any) {
+      toast.error("쿠팡 검색 실패: " + e.message);
+    } finally { setCoupangLoading(false); }
+  };
+
+  const insertCoupangLinks = () => {
+    if (coupangLinks.length === 0) { toast.error("먼저 상품을 검색해주세요"); return; }
+    const linkBlock = coupangLinks.map(p =>
+      `🛒 [${p.name}${p.price ? ` - ${p.price}` : ""}](${p.url})`
+    ).join("
+");
+    const coupangText = `
+
+---
+📦 **추천 상품**
+${linkBlock}
+*(이 글에는 파트너스 링크가 포함되어 있습니다)*
+---
+`;
+    setBlocks(prev => [...prev, { type: "text" as const, id: uid(), content: coupangText }]);
+    toast.success("✅ 쿠팡 링크가 본문 끝에 추가됐어요!");
+    setCoupangLinks([]);
+  };
+
+  // ── 티스토리 발행 ──────────────────────────────────
+  async function publishToTistory(scheduledAt: string | null) {
+    const accessToken = localStorage.getItem("tistory_access_token");
+    const blogName = localStorage.getItem("tistory_blog_name");
+    if (!accessToken || !blogName) throw new Error("설정에서 티스토리 Access Token과 블로그를 먼저 등록해주세요");
+
+    const htmlContent = blocks.map(b => {
+      if (b.type === "text") {
+        return b.content
+          .replace(/^### (.+)/gm, "<h3>$1</h3>")
+          .replace(/^## (.+)/gm, "<h2>$1</h2>")
+          .replace(/^# (.+)/gm, "<h1>$1</h1>")
+          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          .replace(/
+/g, "<br>");
+      } else if (b.type === "image-pair") {
+        return `<div style="display:flex;gap:8px">${b.images.map(img => `<img src="${img.src}" style="width:50%;border-radius:8px">`).join("")}</div>`;
+      } else if (b.type === "image" && b.src) {
+        return `<p style="text-align:center"><img src="${b.src}" style="max-width:100%;border-radius:8px"></p>`;
+      }
+      return "";
+    }).join("<br><br>");
+
+    const resp = await fetch("/api/tistory", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "publish",
+        accessToken,
+        blogName,
+        title,
+        content: htmlContent,
+        tags: hashtags.map(t => t.replace("#", "")).join(","),
+        scheduledAt,
+      }),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error);
+    toast.success(`✅ 티스토리 발행 완료! ${data.url}`);
+  }
+
   // ── 네이버 블로그용 복사 (제목 + 본문 + 해시태그) ──
   function copyForNaver() {
     const lines: string[] = [];
@@ -931,6 +1029,10 @@ export default function DeploymentPage() {
           // 네이버는 자동발행 불가 → 복사 방식으로 안내
           copyForNaver();
           toast.success("📋 네이버 블로그용 글이 복사됐어요! 네이버 블로그에서 붙여넣기하세요.", { duration: 5000 });
+        } else if (platform.type === "tistory") {
+          await publishToTistory(
+            publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null
+          );
         } else if (platform.type === "wordpress") {
           await publishToWordPress(
             publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null
@@ -1013,6 +1115,19 @@ export default function DeploymentPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
+              {/* 쿠팡파트너스 링크 버튼 */}
+              {localStorage.getItem("coupang_access_key") && (
+                <Button size="sm" className="gap-1.5 h-9"
+                  style={{ background: "#C00F0C", color: "white" }}
+                  onClick={fetchCoupangLinks}
+                  disabled={coupangLoading}>
+                  {coupangLoading
+                    ? <RefreshCw className="w-4 h-4 animate-spin" />
+                    : <ShoppingCart className="w-4 h-4" />}
+                  <span className="hidden sm:inline">쿠팡 링크</span>
+                  <span className="sm:hidden">쿠팡</span>
+                </Button>
+              )}
               {/* 네이버 블로그 복사 버튼 */}
               <Button size="sm" className="gap-1.5 h-9"
                 style={{ background: "#03C75A", color: "white" }}
@@ -1215,6 +1330,40 @@ export default function DeploymentPage() {
                   className="text-sm min-h-14 resize-none"
                 />
               </div>
+
+              {/* 쿠팡 상품 미리보기 */}
+              {coupangLinks.length > 0 && (
+                <div className="rounded-xl p-4" style={{ background: "oklch(0.65 0.22 25/8%)", border: "2px solid #C00F0C40" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="w-4 h-4" style={{ color: "#C00F0C" }} />
+                      <span className="text-sm font-semibold text-foreground">쿠팡 추천 상품 ({coupangLinks.length}개)</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" className="text-xs gap-1.5 h-8"
+                        style={{ background: "#C00F0C", color: "white" }}
+                        onClick={insertCoupangLinks}>
+                        <Plus className="w-3 h-3" /> 본문에 삽입
+                      </Button>
+                      <button className="w-7 h-7 flex items-center justify-center rounded"
+                        style={{ color: "var(--muted-foreground)" }}
+                        onClick={() => setCoupangLinks([])}>
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {coupangLinks.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs p-2 rounded-lg"
+                        style={{ background: "var(--background)" }}>
+                        <ShoppingCart className="w-3 h-3 shrink-0" style={{ color: "#C00F0C" }} />
+                        <span className="flex-1 truncate text-foreground">{p.name}</span>
+                        {p.price && <span style={{ color: "#C00F0C", fontWeight: 600 }}>{p.price}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 이미지 삽입 모드 */}
               <div
