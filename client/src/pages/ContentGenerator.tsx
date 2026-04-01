@@ -24,6 +24,62 @@ import { useLocation } from "wouter";
 
 const CONTENT_KEY = "blogauto_content";
 const GREETING_KEY = "blogauto_greeting";
+const STYLE_KEY = "blogauto_writing_style";
+
+// ── 글쓰기 스타일 프리셋 ──────────────────────────
+const WRITING_STYLES = [
+  {
+    id: "blog",
+    label: "📝 블로그 친근체",
+    desc: "친근하고 읽기 쉬운 블로그 말투",
+    prompt: "친근하고 자연스러운 블로그 말투로 작성해줘. 독자에게 말을 거는 듯한 느낌으로, 어렵지 않은 단어를 사용하고 공감대를 형성해줘. 마크다운 기호(**, ##, - 등)는 절대 사용하지 말고 일반 텍스트로만 작성해줘.",
+  },
+  {
+    id: "formal",
+    label: "📰 정보성 격식체",
+    desc: "신뢰감 있는 정보 전달형",
+    prompt: "신뢰감 있고 전문적인 정보 전달 문체로 작성해줘. 객관적인 사실을 바탕으로 독자에게 유용한 정보를 제공해줘. 마크다운 기호(**, ##, - 등)는 절대 사용하지 말고 일반 텍스트로만 작성해줘.",
+  },
+  {
+    id: "sns",
+    label: "📱 SNS 감성체",
+    desc: "짧고 감각적인 SNS 스타일",
+    prompt: "짧고 감각적인 SNS 스타일로 작성해줘. 이모지를 적절히 활용하고, 읽기 쉽게 단락을 짧게 끊어줘. 공감과 감성을 자극하는 문체로 작성해줘. 마크다운 기호(**, ##)는 사용하지 말아줘.",
+  },
+  {
+    id: "news",
+    label: "🗞️ 뉴스 기사체",
+    desc: "객관적이고 사실적인 기사 형식",
+    prompt: "뉴스 기사처럼 객관적이고 사실적으로 작성해줘. 핵심 정보를 앞에 배치하고(역피라미드 구조), 인용과 수치를 적극 활용해줘. 마크다운 기호(**, ##, - 등)는 절대 사용하지 말고 일반 텍스트로만 작성해줘.",
+  },
+  {
+    id: "story",
+    label: "✨ 스토리텔링체",
+    desc: "흥미로운 이야기 형식",
+    prompt: "흥미진진한 스토리텔링 형식으로 작성해줘. 독자가 몰입할 수 있도록 서사 구조를 활용하고, 구체적인 사례와 예시를 들어줘. 마크다운 기호(**, ##, - 등)는 절대 사용하지 말고 일반 텍스트로만 작성해줘.",
+  },
+  {
+    id: "custom",
+    label: "✏️ 직접 입력",
+    desc: "나만의 프롬프트 직접 작성",
+    prompt: "",
+  },
+];
+
+// ── 마크다운 → 일반 텍스트 변환 ─────────────────
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, "")        // ## 제목 제거
+    .replace(/\*\*(.*?)\*\*/g, "$1")     // **강조** 제거
+    .replace(/\*(.*?)\*/g, "$1")         // *이탤릭* 제거
+    .replace(/^[-*]\s+/gm, "")           // - 목록 제거
+    .replace(/^\d+\.\s+/gm, "")          // 1. 번호 목록 제거
+    .replace(/^>\s+/gm, "")              // > 인용 제거
+    .replace(/`{1,3}[^`]*`{1,3}/g, "")  // 코드블록 제거
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // 링크 제거
+    .replace(/---+/g, "")                // 구분선 제거
+    .trim();
+}
 
 function loadSaved() {
   try {
@@ -47,6 +103,9 @@ export default function ContentGenerator() {
   const [keyword, setKeyword] = useState(prefilledKeyword || saved?.keyword || "");
   const [title, setTitle] = useState(prefilledTitle || saved?.title || "");
   const [selectedLang, setSelectedLang] = useState(() => localStorage.getItem("content_language") || "ko");
+  const [selectedStyle, setSelectedStyle] = useState(() => localStorage.getItem(STYLE_KEY) || "blog");
+  const [customPrompt, setCustomPrompt] = useState(() => localStorage.getItem("blogauto_custom_prompt") || "");
+  const [showStylePicker, setShowStylePicker] = useState(false);
   const [minChars, setMinChars] = useState(saved?.minChars || "1500");
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -164,6 +223,14 @@ export default function ContentGenerator() {
     try { localStorage.setItem("content_language", selectedLang); } catch {}
   }, [selectedLang]);
 
+  useEffect(() => {
+    try { localStorage.setItem(STYLE_KEY, selectedStyle); } catch {}
+  }, [selectedStyle]);
+
+  useEffect(() => {
+    try { localStorage.setItem("blogauto_custom_prompt", customPrompt); } catch {}
+  }, [customPrompt]);
+
 
   // 저장된 이미지 불러오기
   useEffect(() => {
@@ -203,11 +270,18 @@ export default function ContentGenerator() {
     }, 600);
 
     try {
+      // 스타일 프롬프트 적용
+      const styleObj = WRITING_STYLES.find(s => s.id === selectedStyle);
+      const stylePrompt = selectedStyle === "custom"
+        ? customPrompt
+        : (styleObj?.prompt || "");
+
       const content = await generateContent(
         provider, apiKey, keyword,
         title.trim() || undefined,
         selectedLang,
-        parseInt(minChars)
+        parseInt(minChars),
+        stylePrompt
       );
       clearInterval(interval);
 
@@ -349,6 +423,37 @@ export default function ContentGenerator() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* ── 글쓰기 스타일 선택 ── */}
+          <div className="mt-3">
+            <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>
+              글쓰기 스타일
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {WRITING_STYLES.map(style => (
+                <button key={style.id}
+                  className="rounded-xl px-3 py-2.5 text-left transition-all"
+                  style={{
+                    background: selectedStyle === style.id ? "oklch(0.696 0.17 162.48/12%)" : "var(--background)",
+                    border: `1px solid ${selectedStyle === style.id ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
+                  }}
+                  onClick={() => setSelectedStyle(style.id)}>
+                  <div className="text-xs font-semibold text-foreground">{style.label}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{style.desc}</div>
+                </button>
+              ))}
+            </div>
+            {/* 직접 입력 프롬프트 */}
+            {selectedStyle === "custom" && (
+              <textarea
+                className="w-full mt-2 rounded-xl px-3 py-2.5 text-sm resize-none"
+                style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", minHeight: 80 }}
+                placeholder="예: 20대 직장인에게 친근하게, 유머를 섞어서, 마크다운 없이 일반 텍스트로 작성해줘..."
+                value={customPrompt}
+                onChange={e => setCustomPrompt(e.target.value)}
+              />
+            )}
           </div>
 
           {/* 글 제목 */}
