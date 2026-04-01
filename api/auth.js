@@ -206,5 +206,88 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
+  // ── 발행 글 저장 ──────────────────────────────────
+  if (action === "savePost") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
+    const { post } = body;
+    if (!post) return res.json({ ok: false, error: "post 데이터 필요" });
+
+    const u = await getUser(uid);
+    if (!u.posts) u.posts = [];
+
+    // 동일 title이면 업데이트, 없으면 추가
+    const idx = u.posts.findIndex(p => p.id === post.id);
+    const entry = {
+      id: post.id || Date.now().toString(),
+      title: post.title || "제목 없음",
+      keyword: post.keyword || "",
+      platform: post.platform || "네이버",
+      status: post.status || "published",
+      views: post.views || 0,
+      clicks: post.clicks || 0,
+      createdAt: post.createdAt || new Date().toISOString(),
+      hashtags: post.hashtags || [],
+    };
+
+    if (idx >= 0) u.posts[idx] = entry;
+    else u.posts.unshift(entry); // 최신 글을 앞에
+
+    // 최대 100개 유지
+    u.posts = u.posts.slice(0, 100);
+    await setUser(uid, u);
+    return res.json({ ok: true, post: entry });
+  }
+
+  // ── 발행 글 목록 불러오기 ──────────────────────────
+  if (action === "loadPosts") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
+    const u = await getUser(uid);
+    return res.json({ ok: true, posts: u?.posts || [] });
+  }
+
+  // ── 발행 글 삭제 ──────────────────────────────────
+  if (action === "deletePost") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
+    const { postId } = body;
+    const u = await getUser(uid);
+    if (!u.posts) return res.json({ ok: true });
+    u.posts = u.posts.filter(p => p.id !== postId);
+    await setUser(uid, u);
+    return res.json({ ok: true });
+  }
+
+  // ── 통계 저장 (방문자/클릭/수익) ──────────────────
+  if (action === "saveStats") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
+    const { date, views, clicks, revenue } = body;
+    const u = await getUser(uid);
+    if (!u.stats) u.stats = {};
+    u.stats[date || new Date().toISOString().slice(0, 10)] = { views: views || 0, clicks: clicks || 0, revenue: revenue || 0 };
+    // 최근 30일만 유지
+    const keys = Object.keys(u.stats).sort().slice(-30);
+    const trimmed = {};
+    keys.forEach(k => { trimmed[k] = u.stats[k]; });
+    u.stats = trimmed;
+    await setUser(uid, u);
+    return res.json({ ok: true });
+  }
+
+  // ── 통계 불러오기 ──────────────────────────────────
+  if (action === "loadStats") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
+    const u = await getUser(uid);
+    return res.json({ ok: true, stats: u?.stats || {} });
+  }
+
   return res.json({ ok: false, error: "알 수 없는 요청" });
 }
