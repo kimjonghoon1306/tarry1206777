@@ -29,7 +29,8 @@ export async function generateContent(
   keyword: string,
   title: string | undefined,
   language: string,
-  minChars: number
+  minChars: number,
+  stylePrompt: string = ""
 ): Promise<string> {
 
   const langMap: Record<string, string> = {
@@ -42,7 +43,12 @@ export async function generateContent(
     ? `글 제목은 반드시 "${title}" 으로 시작해줘.`
     : `글 제목은 키워드 "${keyword}"를 포함한 클릭률 높은 제목으로 만들어줘.`;
 
-  const prompt = `다음 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글을 ${langLabel}로 작성해줘.\n\n키워드: "${keyword}"\n${titleInstruction}\n\n조건:\n- 반드시 ${minChars}자 이상 작성 (이 조건이 가장 중요!)\n- 마크다운 형식 사용 (# 제목, ## 소제목, **강조**, - 목록)\n- 구성: 제목 → 서론(흥미 유발) → 본문(소제목 5개 이상) → 결론 → 마무리 문장\n- SEO 최적화: 키워드 자연스럽게 5회 이상 포함\n- 독자에게 실제 도움이 되는 구체적인 정보\n- 숫자, 통계, 팁, 예시 적극 활용`;
+  // 스타일 프롬프트 적용 여부
+  const styleInstruction = stylePrompt
+    ? `\n\n[글쓰기 스타일 지침]\n${stylePrompt}`
+    : "\n- 마크다운 형식 사용 (# 제목, ## 소제목, **강조**, - 목록)";
+
+  const prompt = `다음 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글을 ${langLabel}로 작성해줘.\n\n키워드: "${keyword}"\n${titleInstruction}\n\n조건:\n- 반드시 ${minChars}자 이상 작성 (이 조건이 가장 중요!)${stylePrompt ? "" : "\n- 마크다운 형식 사용 (# 제목, ## 소제목, **강조**, - 목록)"}\n- 구성: 제목 → 서론(흥미 유발) → 본문(소제목 5개 이상) → 결론 → 마무리 문장\n- SEO 최적화: 키워드 자연스럽게 5회 이상 포함\n- 독자에게 실제 도움이 되는 구체적인 정보\n- 숫자, 통계, 팁, 예시 적극 활용${styleInstruction}`;
 
   // ── Gemini → Vercel 서버 경유 (CORS 문제로 브라우저 직접 호출 불가) ──
   if (provider === "gemini") {
