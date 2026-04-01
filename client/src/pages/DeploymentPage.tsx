@@ -904,20 +904,21 @@ export default function DeploymentPage() {
 
   const insertCoupangLinks = () => {
     if (coupangLinks.length === 0) { toast.error("먼저 상품을 검색해주세요"); return; }
-    const linkBlock = coupangLinks.map(p =>
-      `🛒 [${p.name}${p.price ? ` - ${p.price}` : ""}](${p.url})`
-    ).join("
-");
-    const coupangText = `
-
----
-📦 **추천 상품**
-${linkBlock}
-*(이 글에는 파트너스 링크가 포함되어 있습니다)*
----
-`;
+    const lines = coupangLinks.map(p => {
+      const price = p.price ? " - " + p.price : "";
+      return "[상품] " + p.name + price + " : " + p.url;
+    });
+    const coupangText = [
+      "",
+      "---",
+      "[추천 상품]",
+      ...lines,
+      "(이 글에는 파트너스 링크가 포함되어 있습니다)",
+      "---",
+      "",
+    ].join("\n");
     setBlocks(prev => [...prev, { type: "text" as const, id: uid(), content: coupangText }]);
-    toast.success("✅ 쿠팡 링크가 본문 끝에 추가됐어요!");
+    toast.success("쿠팡 링크가 본문 끝에 추가됐어요!");
     setCoupangLinks([]);
   };
 
