@@ -169,7 +169,8 @@ export default function ContentGenerator() {
   useEffect(() => {
     try {
       const imgs = JSON.parse(localStorage.getItem("blogauto_generated_images") || "[]");
-      setSavedImages(imgs);
+      // 빈 src나 깨진 이미지 필터링
+      setSavedImages(imgs.filter((src: string) => src && src.length > 10));
     } catch {}
   }, [showImagePicker]);
 
@@ -486,7 +487,8 @@ export default function ContentGenerator() {
                   {/* 썸네일 */}
                   {thumbnailUrl ? (
                     <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                      <img src={thumbnailUrl} alt="썸네일" className="w-full h-full object-cover" />
+                      <img src={thumbnailUrl} alt="썸네일" className="w-full h-full object-cover"
+                        onError={() => setThumbnailUrl("")} />
                       <button className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
                         style={{ background: "rgba(0,0,0,0.6)" }}
                         onClick={() => setThumbnailUrl("")}>
@@ -585,7 +587,8 @@ export default function ContentGenerator() {
                       className="relative rounded-lg overflow-hidden transition-all"
                       style={{ aspectRatio: "1", border: `2px solid ${thumbnailUrl === src ? "var(--color-emerald)" : "transparent"}` }}
                       onClick={() => { setThumbnailUrl(src); toast.success("썸네일이 선택되었습니다!"); }}>
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      {src && <img src={src} alt="" className="w-full h-full object-cover"
+                        onError={e => { const el = (e.target as HTMLImageElement).closest("button") as HTMLElement; if(el) el.style.display="none"; }} />}
                       {thumbnailUrl === src && (
                         <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.3)" }}>
                           <CheckCircle2 className="w-6 h-6 text-white" />

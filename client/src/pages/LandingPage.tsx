@@ -120,12 +120,12 @@ export default function LandingPage() {
           >
             시작하기 <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
-          {/* 운영자 전용 톱니바퀴 */}
+          {/* 운영자 전용 톱니바퀴 - 다크/라이트 모두 보이도록 */}
           <button
             title="운영자"
             onClick={() => navigate("/superadmin")}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.35)" }}
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+            style={{ color: "var(--muted-foreground)", background: "var(--card)", border: "1px solid var(--border)" }}
           >
             <Settings className="w-4 h-4" />
           </button>
