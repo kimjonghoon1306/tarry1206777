@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { provider, apiKey, keyword, title, language = "ko", minChars = 1500 } = req.body;
+  const { provider, apiKey, keyword, title, language = "ko", minChars = 1500, stylePrompt = "", adPlatform = "" } = req.body;
   if (!provider || !apiKey || !keyword) {
     return res.status(400).json({ error: "필수 파라미터 누락" });
   }
@@ -25,19 +25,50 @@ export default async function handler(req, res) {
     ? `글 제목은 반드시 "${title}" 으로 시작해줘.`
     : `글 제목은 키워드 "${keyword}"를 포함한 클릭률 높은 제목으로 만들어줘.`;
 
-  const prompt = `다음 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글을 ${langLabel}로 작성해줘.
+  // 수익 플랫폼별 최적화 지침
+  const adGuide = adPlatform === "adsense"
+    ? "구글 애드센스 CPC 최적화: 클릭 유도 문구, 정보성 키워드 밀도 높게, 광고 친화적 단락 구성"
+    : adPlatform === "adpost"
+    ? "네이버 애드포스트 CPM 최적화: 체류 시간 늘리는 스토리 구성, 감성적 공감 유도, 이미지 설명 풍부하게"
+    : "애드센스/애드포스트 통합 최적화";
+
+  // 스타일 지침
+  const styleGuide = stylePrompt
+    ? `
+
+[글쓰기 스타일]
+${stylePrompt}`
+    : "";
+
+  const prompt = `당신은 ${langLabel} 블로그로 월 300만원 이상 수익을 내는 전문 블로거입니다.
+아래 키워드로 독자가 처음부터 끝까지 읽고 싶은 글을 써주세요.
 
 키워드: "${keyword}"
 ${titleInstruction}
+수익 최적화: ${adGuide}
 
-조건:
-- 반드시 ${targetChars}자 이상 작성 (이 조건이 가장 중요!)
-- 마크다운 형식 사용 (# 제목, ## 소제목, **강조**, - 목록)
-- 구성: 제목 → 서론(흥미 유발) → 본문(소제목 5개 이상) → 결론 → 마무리 문장
-- SEO 최적화: 키워드 자연스럽게 5회 이상 포함
-- 독자에게 실제 도움이 되는 구체적인 정보
-- 숫자, 통계, 팁, 예시 적극 활용
-- 글이 짧아지면 내용을 더 추가해서 반드시 ${targetChars}자를 채워줘`;
+[필수 작성 원칙]
+① 사람이 쓴 것처럼 자연스럽게
+   - 1인칭 경험담: "저도 처음엔 몰랐는데요", "솔직히 말씀드리면", "직접 해봤더니"
+   - 독자에게 말 걸기: "혹시 이런 경험 있으신가요?", "아마 많이 궁금하셨을 텐데"
+   - 감탄/공감: "이게 진짜 신기했던 게", "저도 처음에 이거 보고 놀랐어요"
+② 구체적인 정보 (막연한 표현 금지)
+   - "좋다" → "3주 써보니 확실히 달라졌어요"
+   - 실제 가격, 수치, 기간 포함
+   - 단계별 방법 구체적으로
+③ 읽고 싶은 구조
+   - 짧은 문장과 긴 문장을 섞어 리듬감
+   - 결론을 먼저 말하고 이유 설명
+   - 중간중간 독자 참여 유도
+
+[형식 규칙]
+- 반드시 ${targetChars}자 이상 (가장 중요!)
+- 마크다운 기호 절대 금지 (**, ##, --, __ 등)
+- 순수 텍스트로만 작성
+- 자연스러운 단락 구분
+- SEO: 키워드 자연스럽게 7회 이상 포함
+- 마지막 문단: 독자 행동 유도 (댓글, 공유, 북마크)
+- 글자수 미달 시 실제 사례, 팁, Q&A 추가해서 반드시 채울 것${styleGuide}`;
 
   try {
 
