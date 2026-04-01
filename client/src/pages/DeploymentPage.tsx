@@ -601,7 +601,8 @@ export default function DeploymentPage() {
       defaults.push({ id: uid(), type: "naver", name: "네이버 블로그" });
     if (localStorage.getItem("wp_url"))
       defaults.push({ id: uid(), type: "wordpress", name: "WordPress" });
-    if (localStorage.getItem("webhook_url"))
+    if (localStorage.getItem("webhook_url") ||
+       (JSON.parse(localStorage.getItem("platform_custom_list") || "[]").length > 0))
       defaults.push({ id: uid(), type: "custom", name: "커스텀 사이트" });
     if (localStorage.getItem("tistory_access_token"))
       defaults.push({ id: uid(), type: "tistory" as any, name: "티스토리" });
@@ -994,9 +995,22 @@ export default function DeploymentPage() {
 
   // ── Webhook 발행 ──
   async function publishToWebhook() {
-    const url = localStorage.getItem("webhook_url");
-    const key = localStorage.getItem("webhook_auth_key");
-    if (!url) throw new Error("Webhook URL이 없습니다.");
+    // 1. 직접 저장된 webhook_url 확인
+    let url = localStorage.getItem("webhook_url");
+    let key = localStorage.getItem("webhook_auth_key");
+
+    // 2. PlatformSection으로 저장된 경우 (platform_custom_list)
+    if (!url) {
+      try {
+        const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+        if (customList.length > 0) {
+          url = customList[0]["webhook_url"] || customList[0]["url"] || "";
+          key = customList[0]["webhook_auth_key"] || customList[0]["auth_key"] || "";
+        }
+      } catch {}
+    }
+
+    if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트 URL을 입력해주세요.");
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (key) headers["Authorization"] = key;
     const resp = await fetch(url, {
