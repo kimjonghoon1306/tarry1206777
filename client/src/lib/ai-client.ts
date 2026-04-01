@@ -80,10 +80,11 @@ ${titleInstruction}
 
   // ── Gemini → Vercel 서버 경유 (CORS 문제로 브라우저 직접 호출 불가) ──
   if (provider === "gemini") {
+    const adPlatform = localStorage.getItem("selected_ad_platform") || "";
     const resp = await fetch("/api/generate-content", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, apiKey, keyword, title, language, minChars }),
+      body: JSON.stringify({ provider, apiKey, keyword, title, language, minChars, stylePrompt, adPlatform }),
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
