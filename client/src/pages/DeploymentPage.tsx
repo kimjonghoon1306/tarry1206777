@@ -1041,10 +1041,35 @@ export default function DeploymentPage() {
           await publishToWebhook();
         }
       }
+      // 서버에 발행 글 저장 (대시보드 실시간 연동)
+      const token = localStorage.getItem("ba_token");
+      if (token) {
+        const postData = {
+          id: Date.now().toString(),
+          title,
+          keyword: localStorage.getItem("blogauto_content") ? JSON.parse(localStorage.getItem("blogauto_content") || "{}").keyword || "" : "",
+          platform: selectedPlatforms.map(id => platforms.find(p => p.id === id)?.name || "").filter(Boolean).join(", "),
+          status: publishMode === "instant" ? "published" : "scheduled",
+          views: 0,
+          clicks: 0,
+          hashtags,
+          createdAt: new Date().toISOString(),
+        };
+        fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ action: "savePost", post: postData }),
+        }).catch(() => {});
+
+        // 발행 카운트 증가
+        const cnt = parseInt(localStorage.getItem("blogauto_publish_count") || "0");
+        localStorage.setItem("blogauto_publish_count", String(cnt + 1));
+      }
+
       toast.success(
         publishMode === "instant"
-          ? "발행 완료! 🎉"
-          : `${scheduleDate} ${scheduleTime}에 예약됨 📅`,
+          ? "발행 완료! 대시보드에서 실시간 확인하세요"
+          : `${scheduleDate} ${scheduleTime}에 예약됨`,
         { id: "publish" }
       );
     } catch (e: unknown) {
