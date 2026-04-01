@@ -199,19 +199,19 @@ export default function LandingPage() {
           </div>
 
           {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-6 mt-12">
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-12">
             {[
-              { text: "애드센스 연동", ok: true },
-              { text: "애드포스트 연동", ok: true },
-              { text: "워드프레스 자동배포", ok: true },
-              { text: "네이버 블로그 복사배포", ok: false },
+              { text: "애드센스 최적화 키워드", ok: true },
+              { text: "애드포스트 최적화 키워드", ok: true },
+              { text: "워드프레스 자동 배포", ok: true },
+              { text: "커스텀 사이트 Webhook 배포", ok: true },
+              { text: "네이버 블로그 원클릭 복사", ok: true },
               { text: "8개국 언어 지원", ok: true },
             ].map((item) => (
-              <div key={item.text} className="flex items-center gap-1.5 text-sm text-white/70">
-                <CheckCircle2 className="w-4 h-4" style={{ color: item.ok ? "var(--color-emerald)" : "oklch(0.769 0.188 70.08)" }} />
-                <span style={{ color: item.ok ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.5)" }}>
-                  {item.text}{!item.ok && " ⚠"}
-                </span>
+              <div key={item.text} className="flex items-center gap-1.5 text-sm"
+                style={{ color: "rgba(255,255,255,0.8)" }}>
+                <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+                {item.text}
               </div>
             ))}
           </div>
@@ -307,18 +307,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Ad Platform Section */}
+      {/* 수익화 전략 섹션 */}
       <section className="py-20 px-6" style={{ background: "var(--card)", borderTop: "1px solid var(--border)" }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2
-              className="text-3xl lg:text-4xl font-black mb-4 text-foreground"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              수익 플랫폼 선택
+            <h2 className="text-3xl lg:text-4xl font-black mb-4 text-foreground"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              수익화 전략
             </h2>
             <p style={{ color: "var(--muted-foreground)" }}>
-              애드센스와 애드포스트 중 원하는 플랫폼을 선택하거나 동시에 활용하세요
+              네이버 검색광고 API 기반으로 고수익 키워드를 자동 선별합니다
             </p>
           </div>
 
@@ -333,17 +331,21 @@ export default function LandingPage() {
                   <div className="font-bold text-foreground">Google AdSense</div>
                   <div className="text-xs px-2 py-0.5 rounded-full inline-block mt-0.5 font-semibold"
                     style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-                    ✓ 키워드 연동
+                    CPC 최적화 키워드 수집
                   </div>
                 </div>
               </div>
               <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
-                전 세계 최대 광고 네트워크. 글로벌 트래픽 수익화에 최적화
+                CPC(클릭당 단가)가 높은 키워드를 자동 선별해 애드센스 수익을 극대화합니다
               </p>
               <div className="space-y-2">
-                {["CPC 기반 수익", "글로벌 광고주", "자동 최적화", "키워드 수집 연동"].map(f => (
+                {[
+                  "클릭당 단가(CPC) 높은 키워드 자동 선별",
+                  "글로벌 트래픽 유입 최적화",
+                  "워드프레스·커스텀사이트에 자동 발행",
+                ].map(f => (
                   <div key={f} className="flex items-center gap-2 text-sm text-foreground">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-emerald)" }} />
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "#4285F4" }} />
                     {f}
                   </div>
                 ))}
@@ -360,17 +362,21 @@ export default function LandingPage() {
                   <div className="font-bold text-foreground">Naver AdPost</div>
                   <div className="text-xs px-2 py-0.5 rounded-full inline-block mt-0.5 font-semibold"
                     style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-                    ✓ 키워드 연동
+                    CPM 최적화 키워드 수집
                   </div>
                 </div>
               </div>
               <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
-                국내 최대 포털 네이버의 블로그 광고. 한국 트래픽 수익화에 최적
+                네이버 검색광고 API로 조회수·클릭량 높은 키워드를 수집해 애드포스트 수익을 높입니다
               </p>
               <div className="space-y-2">
-                {["CPM 기반 수익", "국내 광고주", "네이버 키워드 수집"].map(f => (
+                {[
+                  "네이버 검색광고 API 기반 키워드 수집",
+                  "국내 트래픽 최적화 키워드 자동 추천",
+                  "네이버 블로그 원클릭 복사 배포",
+                ].map(f => (
                   <div key={f} className="flex items-center gap-2 text-sm text-foreground">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "var(--color-emerald)" }} />
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "#03C75A" }} />
                     {f}
                   </div>
                 ))}
@@ -381,72 +387,115 @@ export default function LandingPage() {
       </section>
 
       {/* 배포 플랫폼 섹션 */}
-      <section className="py-20 px-6" style={{ background: "var(--card)", borderTop: "1px solid var(--border)" }}>
+      <section className="py-20 px-6" style={{ background: "var(--background)", borderTop: "1px solid var(--border)" }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-black mb-4 text-foreground"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              배포 플랫폼 지원 현황
+              멀티 플랫폼 배포
             </h2>
             <p style={{ color: "var(--muted-foreground)" }}>
-              자동 배포와 복사 배포를 구분해서 확인하세요
+              글 한 편으로 여러 플랫폼에 동시 배포해 수익을 극대화하세요
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* 워드프레스 - 자동 */}
-            <div className="rounded-2xl p-5"
-              style={{ background: "var(--background)", border: "2px solid oklch(0.696 0.17 162.48/40%)" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white"
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+            {/* 워드프레스 */}
+            <div className="rounded-2xl p-6 feature-card relative overflow-hidden"
+              style={{ background: "var(--card)", border: "2px solid oklch(0.696 0.17 162.48/50%)" }}>
+              <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10"
+                style={{ background: "var(--color-emerald)" }} />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-white text-sm"
                   style={{ background: "#21759B" }}>WP</div>
                 <div>
-                  <div className="font-bold text-foreground text-sm">WordPress</div>
-                  <div className="text-xs px-2 py-0.5 rounded-full font-semibold inline-block"
+                  <div className="font-bold text-foreground">WordPress</div>
+                  <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block"
                     style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-                    ✓ 완전 자동 배포
+                    ⚡ 완전 자동 발행
                   </div>
                 </div>
               </div>
-              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                글·이미지·해시태그 자동 발행. 예약 발행 지원
+              <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                REST API 연동으로 글·이미지·태그·카테고리까지 클릭 한 번에 자동 발행
               </p>
+              <div className="space-y-1.5">
+                {["즉시 발행 / 예약 발행", "이미지 자동 첨부", "해시태그 자동 등록"].map(f => (
+                  <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "var(--foreground)" }}>
+                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-emerald)" }} />
+                    {f}
+                  </div>
+                ))}
+              </div>
             </div>
-            {/* 커스텀 웹사이트 - 자동 */}
-            <div className="rounded-2xl p-5"
-              style={{ background: "var(--background)", border: "2px solid oklch(0.696 0.17 162.48/40%)" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white"
-                  style={{ background: "oklch(0.6 0.15 220)" }}>W</div>
+
+            {/* 커스텀 웹사이트 */}
+            <div className="rounded-2xl p-6 feature-card relative overflow-hidden"
+              style={{ background: "var(--card)", border: "2px solid oklch(0.696 0.17 162.48/50%)" }}>
+              <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10"
+                style={{ background: "oklch(0.6 0.15 220)" }} />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-white text-sm"
+                  style={{ background: "oklch(0.65 0.28 350)" }}>C</div>
                 <div>
-                  <div className="font-bold text-foreground text-sm">커스텀 웹사이트</div>
-                  <div className="text-xs px-2 py-0.5 rounded-full font-semibold inline-block"
+                  <div className="font-bold text-foreground">커스텀 사이트</div>
+                  <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block"
                     style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-                    ✓ Webhook 자동 배포
+                    ⚡ Webhook 자동 발행
                   </div>
                 </div>
               </div>
-              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                Webhook URL 등록으로 자체 사이트·CMS에 자동 전송
+              <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                직접 만든 사이트나 어떤 CMS든 Webhook URL만 등록하면 자동으로 글이 전송됩니다
               </p>
+              <div className="space-y-1.5">
+                {["모든 CMS·플랫폼 호환", "인증키 보안 지원", "JSON 데이터 자동 전송"].map(f => (
+                  <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "var(--foreground)" }}>
+                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-emerald)" }} />
+                    {f}
+                  </div>
+                ))}
+              </div>
             </div>
-            {/* 네이버 블로그 - 복사 */}
-            <div className="rounded-2xl p-5"
-              style={{ background: "var(--background)", border: "2px solid oklch(0.769 0.188 70.08/40%)" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white"
+
+            {/* 네이버 블로그 */}
+            <div className="rounded-2xl p-6 feature-card relative overflow-hidden"
+              style={{ background: "var(--card)", border: "2px solid oklch(0.769 0.188 70.08/50%)" }}>
+              <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10"
+                style={{ background: "var(--color-amber-brand)" }} />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-white text-sm"
                   style={{ background: "#03C75A" }}>N</div>
                 <div>
-                  <div className="font-bold text-foreground text-sm">네이버 블로그</div>
-                  <div className="text-xs px-2 py-0.5 rounded-full font-semibold inline-block"
+                  <div className="font-bold text-foreground">네이버 블로그</div>
+                  <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block"
                     style={{ background: "oklch(0.769 0.188 70.08/20%)", color: "var(--color-amber-brand)" }}>
-                    ⚠ 복사 배포 (클릭 1회)
+                    📋 원클릭 복사 발행
                   </div>
                 </div>
               </div>
-              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                네이버 API 정책상 자동 발행 불가. 원클릭 복사 후 붙여넣기
+              <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                네이버 정책상 자동 발행은 불가하지만, 버튼 하나로 글·이미지·해시태그를 복사해 바로 붙여넣기
               </p>
+              <div className="space-y-1.5">
+                {["마크다운 → 네이버 형식 자동 변환", "해시태그 포함 복사", "이미지 배치 안내 포함"].map(f => (
+                  <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "var(--foreground)" }}>
+                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-amber-brand)" }} />
+                    {f}
+                  </div>
+                ))}
+              </div>
             </div>
+
+          </div>
+
+          {/* 추가 예정 */}
+          <div className="mt-6 rounded-2xl p-5 text-center"
+            style={{ background: "var(--card)", border: "1px dashed var(--border)" }}>
+            <p className="text-sm font-semibold text-foreground mb-1">🚀 곧 추가 예정</p>
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+              티스토리 자동 배포 · 구글 Search Console 색인 요청 · 텔레그램 발행 알림
+            </p>
           </div>
         </div>
       </section>
