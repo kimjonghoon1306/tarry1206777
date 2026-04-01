@@ -43,12 +43,40 @@ export async function generateContent(
     ? `글 제목은 반드시 "${title}" 으로 시작해줘.`
     : `글 제목은 키워드 "${keyword}"를 포함한 클릭률 높은 제목으로 만들어줘.`;
 
-  // 스타일 프롬프트 적용 여부
+  // 스타일 지침
   const styleInstruction = stylePrompt
     ? `\n\n[글쓰기 스타일 지침]\n${stylePrompt}`
-    : "\n- 마크다운 형식 사용 (# 제목, ## 소제목, **강조**, - 목록)";
+    : "";
 
-  const prompt = `다음 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글을 ${langLabel}로 작성해줘.\n\n키워드: "${keyword}"\n${titleInstruction}\n\n조건:\n- 반드시 ${minChars}자 이상 작성 (이 조건이 가장 중요!)${stylePrompt ? "" : "\n- 마크다운 형식 사용 (# 제목, ## 소제목, **강조**, - 목록)"}\n- 구성: 제목 → 서론(흥미 유발) → 본문(소제목 5개 이상) → 결론 → 마무리 문장\n- SEO 최적화: 키워드 자연스럽게 5회 이상 포함\n- 독자에게 실제 도움이 되는 구체적인 정보\n- 숫자, 통계, 팁, 예시 적극 활용${styleInstruction}`;
+  // ── 사람처럼 쓰는 고품질 프롬프트 ──
+  const prompt = `당신은 ${langLabel} 블로그에서 월 100만원 이상 애드센스 수익을 내는 전문 블로거입니다.
+아래 키워드로 독자가 끝까지 읽고 싶은 블로그 글을 써주세요.
+
+키워드: "${keyword}"
+${titleInstruction}
+
+[핵심 작성 원칙]
+1. 사람이 직접 경험한 것처럼 1인칭 시점으로 써줘
+   - "저도 처음에는 몰랐는데요...", "솔직히 말하면..."
+   - "지난달에 직접 해봤더니", "주변 지인한테 물어봤더니" 같은 표현 사용
+2. 독자에게 말 걸기
+   - "혹시 이런 경험 있으세요?", "아마 많이들 궁금하실 텐데요"
+   - "이거 진짜 중요해서 다시 강조할게요"
+3. 자연스러운 문체 (AI 티 안 나게)
+   - 짧은 문장과 긴 문장을 섞어서 리듬감 있게
+   - 구어체 표현 적극 활용
+   - 소제목 없이 자연스럽게 흘러가는 글
+4. 구체적인 정보
+   - 실제 사용 가능한 팁, 방법, 가격, 수치 포함
+   - 막연한 표현 금지 ("좋습니다" → "3주 써보니 확실히 달랐어요")
+
+[형식]
+- 반드시 ${minChars}자 이상 (가장 중요)
+- 마크다운 기호 절대 사용 금지 (**, ##, -- 등)
+- 일반 텍스트로만 작성
+- 단락 사이 자연스러운 줄바꿈
+- SEO: 키워드를 자연스럽게 5회 이상 포함
+- 마지막에 독자 행동 유도 문구 포함${styleInstruction}`;
 
   // ── Gemini → Vercel 서버 경유 (CORS 문제로 브라우저 직접 호출 불가) ──
   if (provider === "gemini") {
@@ -152,7 +180,19 @@ export async function generateTitles(
   keyword: string
 ): Promise<string[]> {
 
-  const prompt = `"${keyword}" 키워드로 애드센스/애드포스트 수익에 최적화된 블로그 글 제목 10개를 생성해줘.\n조건:\n- 클릭률(CTR)이 높은 제목\n- 숫자 포함 (TOP 10, 5가지, 2026 등)\n- 궁금증 유발 또는 정보성 제목\n- 한국어\n- 반드시 JSON 배열로만 응답 (다른 텍스트 없이): ["제목1", "제목2", ...]`;
+  const prompt = `"${keyword}" 키워드로 독자가 클릭하지 않을 수 없는 블로그 제목 10개를 만들어줘.
+
+조건:
+- 클릭률(CTR) 극대화: 궁금증, 이득, 감정 자극
+- 다양한 패턴 믹스:
+  * 숫자형: "월 100만원 버는 방법 5가지"
+  * 경험형: "직접 써봤더니 달랐던 ${keyword} 후기"
+  * 충격형: "아무도 알려주지 않는 ${keyword} 진실"
+  * 비교형: "${keyword} 잘못 알고 있었던 것들"
+  * 질문형: "${keyword} 해도 될까요? 직접 알아봤습니다"
+- 2026년 최신 느낌 포함
+- 한국어로 작성
+- 반드시 JSON 배열로만 응답: ["제목1", "제목2", ...]`;
 
   function extractTitles(text: string): string[] {
     try {
@@ -268,15 +308,32 @@ export async function generateTitles(
 // ── Pollinations 이미지 ──────────────────────────────
 // URL 생성 후 실제 로딩될 때까지 기다림 (타임아웃: 60초)
 // crossOrigin 없이 일반 img 태그처럼 로드 → CORS 우회
+// ── 이미지 품질 극대화 프롬프트 생성 ──────────────
+export function enhanceImagePrompt(basePrompt: string): string {
+  const qualityTags = [
+    "ultra realistic photography",
+    "professional DSLR camera",
+    "8K resolution",
+    "perfect composition",
+    "cinematic lighting",
+    "sharp focus",
+    "magazine quality",
+    "award winning photo",
+    "--no blur, --no watermark, --no text",
+  ].join(", ");
+  return `${basePrompt}, ${qualityTags}`;
+}
+
 export async function fetchPollinationsImage(
   prompt: string,
   width: number,
   height: number,
   seed: number
 ): Promise<string> {
-  // 타임스탬프로 캐시 방지 + 매번 다른 이미지
   const ts = Date.now();
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&cache=false&t=${ts}`;
+  // 품질 극대화 프롬프트 적용
+  const enhancedPrompt = enhanceImagePrompt(prompt);
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true&cache=false&t=${ts}`;
 
   // img 태그를 DOM 외부에서 생성해 실제 로드 확인
   return new Promise((resolve, reject) => {
