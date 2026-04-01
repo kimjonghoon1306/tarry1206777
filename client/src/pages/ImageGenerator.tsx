@@ -34,41 +34,82 @@ async function testImageUrl(url: string, timeoutMs = 25000): Promise<boolean> {
   });
 }
 
-// ── 프롬프트에서 Unsplash 검색 키워드 추출 ──────────
+// ── 한국어 → 영어 키워드 매핑 ──────────────────────
+const KO_EN_MAP: Record<string, string> = {
+  // 음식/맛집
+  맛집: "restaurant food", 음식: "food", 요리: "cooking", 카페: "cafe coffee",
+  빵: "bread bakery", 디저트: "dessert", 케이크: "cake", 커피: "coffee",
+  // 여행
+  여행: "travel", 관광: "tourism", 호텔: "hotel", 해외: "travel abroad",
+  제주: "jeju island nature", 서울: "seoul city", 부산: "busan ocean",
+  // 건강/뷰티
+  건강: "health wellness", 다이어트: "diet fitness", 운동: "exercise gym",
+  뷰티: "beauty makeup", 피부: "skincare beauty", 헤어: "hair salon",
+  // 육아/가족
+  육아: "parenting baby", 아이: "children family", 임신: "pregnancy",
+  // 인테리어/생활
+  인테리어: "interior design home", 집: "home house", 청소: "cleaning home",
+  // 재테크/경제
+  재테크: "investment finance", 주식: "stock market", 부동산: "real estate",
+  돈: "money finance", 절약: "saving money",
+  // IT/기술
+  AI: "artificial intelligence technology", 앱: "mobile app technology",
+  // 반려동물
+  강아지: "dog puppy", 고양이: "cat kitten", 반려동물: "pet animal",
+  // 패션
+  패션: "fashion style", 옷: "fashion clothing", 쇼핑: "shopping",
+  // 교육
+  공부: "study education", 학원: "education learning", 영어: "english study",
+  // 자연
+  꽃: "flowers nature", 식물: "plant garden", 바다: "ocean sea beach",
+  산: "mountain hiking nature", 숲: "forest nature",
+};
+
+// ── 프롬프트에서 영어 검색 키워드 추출 (한국어 지원) ──
 function extractKeyword(prompt: string): string {
-  const cleaned = prompt
+  // 1. 한국어 키워드 매핑 먼저 시도
+  for (const [ko, en] of Object.entries(KO_EN_MAP)) {
+    if (prompt.includes(ko)) return en;
+  }
+  // 2. 프롬프트에서 영어 단어 추출
+  const englishWords = prompt
     .replace(/[,，。、]/g, " ")
     .split(" ")
     .filter(w => /^[a-zA-Z0-9]+$/.test(w) && w.length > 2)
     .slice(0, 3)
     .join(",");
-  return cleaned || "nature";
+  if (englishWords) return englishWords;
+  // 3. 프롬프트 전체를 번역 키워드로 (기본값)
+  return "lifestyle blog";
 }
 
-// ── 이미지 생성: Pollinations → Unsplash → Picsum 순서로 fallback ──
+// ── 이미지 생성: Pollinations 우선, fallback은 키워드 기반 ──
 async function generatePollinationsUrl(
   prompt: string, width: number, height: number, seed: number
 ): Promise<string> {
   const encoded = encodeURIComponent(prompt);
   const ts = Date.now();
 
-  // 1차: Pollinations AI (실제 AI 생성 이미지, 20초 대기)
-  const pollinationsUrls = [
-    `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&t=${ts}`,
-    `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 13}&t=${ts + 1}`,
-  ];
-  for (const url of pollinationsUrls) {
-    const ok = await testImageUrl(url, 20000);
+  // 1차: Pollinations AI - 3번 시도 (타임아웃 늘림)
+  const seeds = [seed, seed + 7, seed + 13];
+  for (const s of seeds) {
+    const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${s}&model=flux&t=${ts + s}`;
+    const ok = await testImageUrl(url, 25000);
     if (ok) return url;
   }
 
-  // 2차: Unsplash Source (키워드 기반 실제 사진, API키 불필요)
+  // 2차: Unsplash - 키워드 매핑으로 관련 이미지
   const keyword = extractKeyword(prompt);
   const unsplashUrl = `https://source.unsplash.com/${width}x${height}/?${encodeURIComponent(keyword)}&sig=${seed}`;
-  const unsplashOk = await testImageUrl(unsplashUrl, 12000);
+  const unsplashOk = await testImageUrl(unsplashUrl, 10000);
   if (unsplashOk) return unsplashUrl;
 
-  // 3차: Picsum (랜덤 고품질 사진, 항상 동작)
+  // 3차: Pollinations 다른 모델 시도
+  const altUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 99}&model=turbo&t=${ts + 99}`;
+  const altOk = await testImageUrl(altUrl, 15000);
+  if (altOk) return altUrl;
+
+  // 4차: Picsum (완전 랜덤 - 최후 수단)
   return `https://picsum.photos/seed/${seed}/${width}/${height}`;
 }
 
