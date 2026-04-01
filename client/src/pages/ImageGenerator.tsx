@@ -36,33 +36,99 @@ async function testImageUrl(url: string, timeoutMs = 25000): Promise<boolean> {
 
 // ── 한국어 → 영어 키워드 매핑 ──────────────────────
 const KO_EN_MAP: Record<string, string> = {
-  // 음식/맛집
-  맛집: "restaurant food", 음식: "food", 요리: "cooking", 카페: "cafe coffee",
-  빵: "bread bakery", 디저트: "dessert", 케이크: "cake", 커피: "coffee",
-  // 여행
-  여행: "travel", 관광: "tourism", 호텔: "hotel", 해외: "travel abroad",
-  제주: "jeju island nature", 서울: "seoul city", 부산: "busan ocean",
-  // 건강/뷰티
-  건강: "health wellness", 다이어트: "diet fitness", 운동: "exercise gym",
-  뷰티: "beauty makeup", 피부: "skincare beauty", 헤어: "hair salon",
-  // 육아/가족
-  육아: "parenting baby", 아이: "children family", 임신: "pregnancy",
-  // 인테리어/생활
-  인테리어: "interior design home", 집: "home house", 청소: "cleaning home",
-  // 재테크/경제
-  재테크: "investment finance", 주식: "stock market", 부동산: "real estate",
-  돈: "money finance", 절약: "saving money",
-  // IT/기술
-  AI: "artificial intelligence technology", 앱: "mobile app technology",
-  // 반려동물
-  강아지: "dog puppy", 고양이: "cat kitten", 반려동물: "pet animal",
-  // 패션
-  패션: "fashion style", 옷: "fashion clothing", 쇼핑: "shopping",
-  // 교육
-  공부: "study education", 학원: "education learning", 영어: "english study",
-  // 자연
-  꽃: "flowers nature", 식물: "plant garden", 바다: "ocean sea beach",
-  산: "mountain hiking nature", 숲: "forest nature",
+  // ── 부동산/주거 (최우선) ──
+  단기월세: "short term rental apartment modern interior",
+  월세: "monthly rent apartment interior room",
+  전세: "korean apartment lease contract keys",
+  부동산: "real estate apartment building",
+  아파트: "apartment building modern exterior",
+  원룸: "studio apartment interior cozy",
+  오피스텔: "officetel apartment interior modern",
+  빌라: "villa house exterior residential",
+  주택: "house exterior residential neighborhood",
+  임대: "rental apartment property",
+  분양: "new apartment complex building",
+  인테리어: "interior design home modern",
+  리모델링: "home renovation interior remodel",
+  이사: "moving boxes new home",
+  전월세: "apartment rental contract keys",
+  집: "home house interior cozy",
+  방: "bedroom interior modern",
+  // ── 음식/맛집 ──
+  맛집: "restaurant food delicious dining",
+  음식: "food dish delicious",
+  요리: "cooking kitchen food",
+  카페: "cafe coffee cozy interior",
+  빵: "bread bakery fresh",
+  디저트: "dessert sweet food",
+  케이크: "cake dessert celebration",
+  커피: "coffee cup cafe",
+  치킨: "fried chicken food korean",
+  피자: "pizza food italian",
+  라면: "ramen noodle korean food",
+  삼겹살: "korean bbq pork grill",
+  // ── 여행 ──
+  여행: "travel destination scenic view",
+  관광: "tourism sightseeing landmark",
+  호텔: "hotel luxury room interior",
+  해외: "international travel airport",
+  제주: "jeju island scenic nature korea",
+  서울: "seoul city skyline korea",
+  부산: "busan beach ocean korea",
+  캠핑: "camping outdoor tent nature",
+  // ── 건강/뷰티 ──
+  건강: "health wellness lifestyle",
+  다이어트: "diet fitness healthy food",
+  운동: "exercise gym fitness workout",
+  뷰티: "beauty makeup cosmetics",
+  피부: "skincare beauty face",
+  헤어: "hair salon styling",
+  // ── 재테크/경제 ──
+  재테크: "investment finance money growth",
+  주식: "stock market trading chart",
+  코인: "cryptocurrency bitcoin digital",
+  돈: "money finance wealth",
+  절약: "saving money budget",
+  대출: "loan bank finance document",
+  금리: "interest rate finance bank",
+  // ── IT/기술 ──
+  AI: "artificial intelligence technology futuristic",
+  앱: "mobile app smartphone technology",
+  스마트폰: "smartphone mobile technology",
+  유튜브: "youtube video content creator",
+  블로그: "blog writing laptop desk",
+  // ── 생활/육아 ──
+  육아: "parenting baby family",
+  아이: "children kids family happy",
+  임신: "pregnancy maternity",
+  청소: "cleaning home organize",
+  // ── 교육 ──
+  공부: "study books education desk",
+  학원: "education learning classroom",
+  영어: "english learning study book",
+  취업: "job interview office career",
+  // ── 자동차 ──
+  자동차: "car automobile driving",
+  중고차: "used car dealership",
+  전기차: "electric vehicle car modern",
+  // ── 반려동물 ──
+  강아지: "dog puppy cute pet",
+  고양이: "cat kitten cute pet",
+  반려동물: "pet animal companion",
+  // ── 패션/쇼핑 ──
+  패션: "fashion style clothing",
+  쇼핑: "shopping mall retail",
+  // ── 자연 ──
+  꽃: "flowers colorful nature bloom",
+  바다: "ocean sea beach waves",
+  산: "mountain hiking trail nature",
+  숲: "forest trees nature green",
+  // ── 기타 생활정보 ──
+  정부지원: "government support document official",
+  지원금: "financial support benefit government",
+  보험: "insurance document protection",
+  세금: "tax document finance accounting",
+  연말정산: "tax return document finance",
 };
 
 // ── 프롬프트에서 영어 검색 키워드 추출 (한국어 지원) ──
