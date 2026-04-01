@@ -935,8 +935,7 @@ export default function DeploymentPage() {
           .replace(/^## (.+)/gm, "<h2>$1</h2>")
           .replace(/^# (.+)/gm, "<h1>$1</h1>")
           .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-          .replace(/
-/g, "<br>");
+          .replace(/\n/g, "<br>");
       } else if (b.type === "image-pair") {
         return `<div style="display:flex;gap:8px">${b.images.map(img => `<img src="${img.src}" style="width:50%;border-radius:8px">`).join("")}</div>`;
       } else if (b.type === "image" && b.src) {
