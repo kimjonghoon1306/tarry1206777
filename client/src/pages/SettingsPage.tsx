@@ -14,6 +14,7 @@ import {
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
   Smartphone, Upload, QrCode, Send, Plus, Trash2, RefreshCw,
+  ShoppingCart, Link,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +82,244 @@ function ApiKeyInput({ label, placeholder, storageKey, link }: {
           {saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Key className="w-3.5 h-3.5" />}
           {saved ? "저장됨" : "저장"}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+
+// ── 티스토리 연동 섹션 ──────────────────────────────
+function TistorySection() {
+  const [clientId, setClientId] = React.useState(() => userGet("tistory_client_id"));
+  const [clientSecret, setClientSecret] = React.useState(() => userGet("tistory_client_secret"));
+  const [accessToken, setAccessToken] = React.useState(() => userGet("tistory_access_token"));
+  const [blogName, setBlogName] = React.useState(() => userGet("tistory_blog_name"));
+  const [blogs, setBlogs] = React.useState<{name:string;title:string;url:string}[]>([]);
+  const [showSecret, setShowSecret] = React.useState(false);
+  const [showToken, setShowToken] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSave = () => {
+    if (!clientId || !clientSecret) { toast.error("Client ID와 Secret을 입력해주세요"); return; }
+    userSet("tistory_client_id", clientId);
+    userSet("tistory_client_secret", clientSecret);
+    if (accessToken) userSet("tistory_access_token", accessToken);
+    if (blogName) userSet("tistory_blog_name", blogName);
+    saveSettingsToServer({ tistory_client_id: clientId, tistory_client_secret: clientSecret, tistory_access_token: accessToken, tistory_blog_name: blogName });
+    toast.success("✅ 티스토리 설정 저장됨");
+  };
+
+  const handleGetToken = () => {
+    if (!clientId) { toast.error("Client ID를 먼저 입력해주세요"); return; }
+    const redirectUri = `${window.location.origin}/settings?tistory_callback=1`;
+    const url = `https://www.tistory.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
+    window.open(url, "_blank", "width=600,height=700");
+    toast.info("팝업에서 티스토리 로그인 후 code를 복사해서 아래에 붙여넣으세요");
+  };
+
+  const handleGetBlogList = async () => {
+    if (!accessToken) { toast.error("Access Token을 먼저 입력해주세요"); return; }
+    setLoading(true);
+    try {
+      const resp = await fetch("/api/tistory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "getBlogInfo", accessToken }),
+      });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error);
+      setBlogs(data.blogs);
+      toast.success(`블로그 ${data.blogs.length}개 불러왔어요!`);
+    } catch (e: any) {
+      toast.error("블로그 조회 실패: " + e.message);
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+            style={{ background: "#FF6300" }}>T</div>
+          <h3 className="font-semibold text-foreground">티스토리</h3>
+          <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
+            ⚡ 자동 발행
+          </span>
+        </div>
+        <a href="https://www.tistory.com/guide/api/manage/register" target="_blank" rel="noopener noreferrer"
+          className="text-xs flex items-center gap-1 hover:underline" style={{ color: "#FF6300" }}>
+          앱 등록 <ExternalLink className="w-3 h-3" />
+        </a>
+      </div>
+      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+        티스토리 → 관리 → 앱 등록 → Client ID, Secret 발급 후 입력
+      </p>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client ID</label>
+          <Input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="티스토리 앱 Client ID" className="text-sm font-mono" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client Secret</label>
+          <div className="relative">
+            <Input type={showSecret ? "text" : "password"} value={clientSecret} onChange={e => setClientSecret(e.target.value)}
+              placeholder="Client Secret" className="text-sm font-mono pr-10" />
+            <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
+              onClick={() => setShowSecret(v => !v)}>
+              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Access Token</label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Input type={showToken ? "text" : "password"} value={accessToken} onChange={e => setAccessToken(e.target.value)}
+                placeholder="OAuth Access Token" className="text-sm font-mono pr-10" />
+              <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
+                onClick={() => setShowToken(v => !v)}>
+                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={handleGetToken}>
+              토큰 발급
+            </Button>
+          </div>
+        </div>
+        {blogs.length > 0 && (
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>블로그 선택</label>
+            <div className="space-y-1.5">
+              {blogs.map(b => (
+                <button key={b.name}
+                  className="w-full flex items-center justify-between p-2.5 rounded-lg text-sm transition-all"
+                  style={{
+                    background: blogName === b.name ? "oklch(0.696 0.17 162.48/10%)" : "var(--background)",
+                    border: `1px solid ${blogName === b.name ? "oklch(0.696 0.17 162.48/40%)" : "var(--border)"}`,
+                  }}
+                  onClick={() => { setBlogName(b.name); userSet("tistory_blog_name", b.name); }}>
+                  <span className="text-foreground">{b.title}</span>
+                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{b.url}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Button className="gap-2" style={{ background: "#FF6300", color: "white" }} onClick={handleSave}>
+            <Key className="w-4 h-4" /> 저장
+          </Button>
+          {accessToken && (
+            <Button variant="outline" className="gap-2 text-xs" onClick={handleGetBlogList} disabled={loading}>
+              {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              블로그 목록
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 쿠팡파트너스 섹션 ────────────────────────────────
+function CoupangSection() {
+  const [accessKey, setAccessKey] = React.useState(() => userGet("coupang_access_key"));
+  const [secretKey, setSecretKey] = React.useState(() => userGet("coupang_secret_key"));
+  const [subId, setSubId] = React.useState(() => userGet("coupang_sub_id"));
+  const [showSecret, setShowSecret] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+  const [testResult, setTestResult] = React.useState<string>("");
+  const [testing, setTesting] = React.useState(false);
+
+  const handleSave = () => {
+    if (!accessKey || !secretKey) { toast.error("Access Key와 Secret Key를 입력해주세요"); return; }
+    userSet("coupang_access_key", accessKey);
+    userSet("coupang_secret_key", secretKey);
+    if (subId) userSet("coupang_sub_id", subId);
+    saveSettingsToServer({ coupang_access_key: accessKey, coupang_secret_key: secretKey, coupang_sub_id: subId });
+    setSaved(true);
+    toast.success("✅ 쿠팡파트너스 설정 저장됨! 배포 페이지에서 자동 링크 삽입이 활성화됩니다");
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleTest = async () => {
+    if (!accessKey || !secretKey) { toast.error("키를 먼저 저장해주세요"); return; }
+    setTesting(true);
+    setTestResult("");
+    try {
+      const resp = await fetch("/api/coupang", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "search", accessKey, secretKey, keyword: "노트북", limit: 1 }),
+      });
+      const data = await resp.json();
+      if (data.ok && data.products?.length > 0) {
+        setTestResult(`✅ 연결 성공! "${data.products[0].productName.slice(0, 30)}..." 상품 검색됨`);
+      } else {
+        setTestResult("❌ " + (data.error || "상품 없음"));
+      }
+    } catch (e: any) {
+      setTestResult("❌ " + e.message);
+    } finally { setTesting(false); }
+  };
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+            style={{ background: "#C00F0C" }}>CP</div>
+          <h3 className="font-semibold text-foreground">쿠팡파트너스</h3>
+          <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: "oklch(0.769 0.188 70.08/20%)", color: "var(--color-amber-brand)" }}>
+            💰 자동 링크 삽입
+          </span>
+        </div>
+        <a href="https://partners.coupang.com" target="_blank" rel="noopener noreferrer"
+          className="text-xs flex items-center gap-1 hover:underline" style={{ color: "#C00F0C" }}>
+          파트너스 가입 <ExternalLink className="w-3 h-3" />
+        </a>
+      </div>
+      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+        쿠팡파트너스 → 계정관리 → API 설정에서 Access/Secret Key 발급
+        글 발행 시 키워드 관련 쿠팡 상품 링크가 자동 삽입됩니다
+      </p>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Access Key</label>
+          <Input value={accessKey} onChange={e => setAccessKey(e.target.value)} placeholder="쿠팡파트너스 Access Key" className="text-sm font-mono" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Secret Key</label>
+          <div className="relative">
+            <Input type={showSecret ? "text" : "password"} value={secretKey} onChange={e => setSecretKey(e.target.value)}
+              placeholder="Secret Key" className="text-sm font-mono pr-10" />
+            <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
+              onClick={() => setShowSecret(v => !v)}>
+              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Sub ID (선택)</label>
+          <Input value={subId} onChange={e => setSubId(e.target.value)} placeholder="수익 추적용 서브 ID" className="text-sm" />
+        </div>
+        {testResult && (
+          <div className="rounded-lg px-3 py-2 text-xs" style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}>
+            {testResult}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Button className="gap-2" style={{ background: saved ? "var(--color-emerald)" : "#C00F0C", color: "white" }} onClick={handleSave}>
+            {saved ? <CheckCircle2 className="w-4 h-4" /> : <Key className="w-4 h-4" />}
+            {saved ? "저장됨" : "저장"}
+          </Button>
+          <Button variant="outline" className="gap-2 text-xs" onClick={handleTest} disabled={testing}>
+            {testing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShoppingCart className="w-3.5 h-3.5" />}
+            연결 테스트
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -617,6 +856,12 @@ export default function SettingsPage() {
             { label: "앱 비밀번호", key: "wp_app_password", placeholder: "xxxx xxxx xxxx", secret: true },
           ]}
         />
+
+        {/* 티스토리 */}
+        <TistorySection />
+
+        {/* 쿠팡파트너스 */}
+        <CoupangSection />
 
         {/* 모바일 ↔ PC 자동 동기화 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
