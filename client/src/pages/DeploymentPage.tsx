@@ -1011,20 +1011,34 @@ export default function DeploymentPage() {
     }
 
     if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트 URL을 입력해주세요.");
+    // CORS 우회: Vercel 서버를 프록시로 사용
+    const payload = {
+      title,
+      content: buildFinalContent(),
+      hashtags,
+      scheduledAt: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
+    };
+
+    // 1차 시도: Vercel API 프록시 경유
+    try {
+      const proxyResp = await fetch("/api/webhook-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, key, payload }),
+      });
+      if (proxyResp.ok) return;
+      // 프록시 없으면 직접 시도
+    } catch {}
+
+    // 2차 시도: 직접 호출 (CORS 허용된 경우)
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (key) headers["Authorization"] = key;
     const resp = await fetch(url, {
       method: "POST",
       headers,
-      body: JSON.stringify({
-        title,
-        content: buildFinalContent(),
-        hashtags,
-        scheduledAt:
-          publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
-      }),
+      body: JSON.stringify(payload),
     });
-    if (!resp.ok) throw new Error("Webhook 전송 실패");
+    if (!resp.ok) throw new Error(`Webhook 전송 실패 (${resp.status}): ${url} 서버가 POST 요청을 허용하는지 확인해주세요`);
   }
 
   // ── 발행 핸들러 ──
