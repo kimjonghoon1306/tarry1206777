@@ -12,7 +12,7 @@ import {
   Shield, Key, Activity, Database, Cpu, HardDrive,
   Wifi, RefreshCw, Eye, EyeOff, Copy, Plus, Lock,
   Zap, Settings, CheckCircle2, Image, Upload, X,
-  Globe, Link, Trash2, ExternalLink,
+  Globe, Link, Trash2, ExternalLink, Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
