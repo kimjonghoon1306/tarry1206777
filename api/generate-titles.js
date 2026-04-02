@@ -100,7 +100,14 @@ export default async function handler(req, res) {
       const data = await resp.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
       const titles = extractTitles(text);
-      if (titles.length === 0) throw new Error("Gemini 제목 생성 실패. 다시 시도해주세요.");
+      if (titles.length === 0) {
+        // 파싱 실패 시 텍스트를 줄 단위로 강제 분리
+        const fallbackTitles = text.split("\n")
+          .map(l => l.replace(/^[\d\s\-\*\.\)]+/, "").replace(/^["']|["']$/g, "").trim())
+          .filter(l => l.length > 5 && l.length < 120);
+        if (fallbackTitles.length > 0) return res.json({ titles: fallbackTitles.slice(0, 10) });
+        throw new Error("Gemini 제목 생성 실패. 다시 시도해주세요.");
+      }
       return res.json({ titles });
     }
 
