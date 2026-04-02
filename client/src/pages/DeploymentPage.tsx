@@ -833,29 +833,25 @@ export default function DeploymentPage() {
   // ── 콘텐츠 빌드 ──
   function buildHtmlContent(): string {
     const parts: string[] = [];
-    blocks.forEach((b) => {
+    blocks.forEach((b: any) => {
       if (b.type === "text") {
-        const html = b.content
-          .split(/
+        const paras = b.content.split("
 
-+/)
-          .map((p: string) => p.trim())
-          .filter((p: string) => p)
-          .map((p: string) => `<p>${p.replace(/
-/g, '<br>')}</p>`)
-          .join('');
+").filter((p: string) => p.trim());
+        const html = paras.map((p: string) => "<p>" + p.replace(/
+/g, "<br>") + "</p>").join("");
         parts.push(html);
       } else if (b.type === "image-pair") {
         b.images.forEach((img: any) => {
-          if (img.url) parts.push(`<figure><img src="${img.url}" alt="${img.alt || ''}" style="max-width:100%;border-radius:12px;margin:16px 0"></figure>`);
+          if (img.url) parts.push("<figure><img src=\"" + img.url + "\" alt=\"" + (img.alt || "") + "\" style=\"max-width:100%;border-radius:12px;margin:16px 0\"></figure>");
         });
       } else if (b.type === "image") {
-        if (b.url) parts.push(`<figure><img src="${b.url}" alt="${b.alt || ''}" style="max-width:100%;border-radius:12px;margin:16px 0"></figure>`);
+        if (b.url) parts.push("<figure><img src=\"" + b.url + "\" alt=\"" + (b.alt || "") + "\" style=\"max-width:100%;border-radius:12px;margin:16px 0\"></figure>");
       }
     });
-    if (hashtags.length > 0) parts.push(`<p style="margin-top:24px;color:#666">${hashtags.join(' ')}</p>`);
-    return parts.join('
-');
+    if (hashtags.length > 0) parts.push("<p style=\"margin-top:24px;color:#666\">" + hashtags.join(" ") + "</p>");
+    return parts.join("
+");
   }
 
   function buildFinalContent(): string {
