@@ -1,3 +1,4 @@
+// BlogAuto Pro - webhook-proxy v3.1
 /**
  * api/webhook-proxy.js
  * 브라우저 CORS 우회용 Webhook 프록시
@@ -11,12 +12,24 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { url, key, payload } = req.body;
+  const { url, key, authHeader = 'Authorization', payload } = req.body;
   if (!url) return res.status(400).json({ error: "url 필요" });
 
   try {
     const headers = { "Content-Type": "application/json" };
-    if (key) headers["Authorization"] = key;
+
+    // 인증 헤더 방식에 따라 다르게 적용
+    if (key && authHeader && authHeader !== "none") {
+      if (authHeader === "Authorization") {
+        // Bearer 토큰인지 일반 키인지 자동 판단
+        headers["Authorization"] = key.startsWith("Bearer ") ? key : `Bearer ${key}`;
+      } else {
+        headers[authHeader] = key;
+      }
+    } else if (key) {
+      // 기본값: Authorization
+      headers["Authorization"] = key.startsWith("Bearer ") ? key : key;
+    }
 
     const resp = await fetch(url, {
       method: "POST",
