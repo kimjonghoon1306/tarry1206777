@@ -1,3 +1,4 @@
+// BlogAuto Pro - SettingsPage v3.1
 /**
  * BlogAuto Pro - Settings Page
  * AI 툴 선택 + API 키 관리 + 발행 설정
@@ -14,7 +15,7 @@ import {
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
   Smartphone, Upload, QrCode, Send, Plus, Trash2, RefreshCw,
- ShoppingCart, Link, DollarSign,
+  ShoppingCart, Link, DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -325,10 +326,190 @@ function CoupangSection() {
   );
 }
 
+
+// ── 커스텀 웹사이트 Webhook 섹션 (인증 방식 선택) ──
+const AUTH_HEADER_OPTIONS = [
+  { value: "Authorization", label: "Authorization", example: "Bearer {키} 또는 {키}" },
+  { value: "X-API-Key", label: "X-API-Key", example: "API 키 직접 입력" },
+  { value: "X-Auth-Token", label: "X-Auth-Token", example: "토큰 직접 입력" },
+  { value: "X-Custom-Auth", label: "X-Custom-Auth", example: "커스텀 인증" },
+  { value: "none", label: "인증 없음", example: "공개 API" },
+];
+
+function CustomWebhookSection() {
+  const [accounts, setAccounts] = React.useState<Record<string, string>[]>(() => {
+    try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
+  });
+  const [showAdd, setShowAdd] = React.useState(false);
+  const [url, setUrl] = React.useState("");
+  const [authHeader, setAuthHeader] = React.useState("Authorization");
+  const [authKey, setAuthKey] = React.useState("");
+  const [showKey, setShowKey] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+
+  const handleSave = () => {
+    if (!url.trim()) { toast.error("Webhook URL을 입력해주세요"); return; }
+    const entry = {
+      _name: url.replace("https://", "").split("/")[0],
+      _type: "custom",
+      webhook_url: url.trim(),
+      webhook_auth_header: authHeader,
+      webhook_auth_key: authKey.trim(),
+    };
+    const updated = [...accounts, entry];
+    setAccounts(updated);
+    localStorage.setItem("platform_custom_list", JSON.stringify(updated));
+    // 기존 키도 저장 (호환성)
+    userSet(SETTINGS_KEYS.WEBHOOK_URL, url.trim());
+    userSet(SETTINGS_KEYS.WEBHOOK_KEY, authKey.trim());
+    userSet("webhook_auth_header", authHeader);
+    // 배포 플랫폼 목록 업데이트
+    const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
+    platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
+    localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
+    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey });
+    setSaved(true);
+    setShowAdd(false);
+    setUrl(""); setAuthKey(""); setAuthHeader("Authorization");
+    toast.success("✅ 웹사이트 등록됐어요!");
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const remove = (idx: number) => {
+    const updated = accounts.filter((_, i) => i !== idx);
+    setAccounts(updated);
+    localStorage.setItem("platform_custom_list", JSON.stringify(updated));
+    toast.success("삭제됐어요");
+  };
+
+  const selectedAuth = AUTH_HEADER_OPTIONS.find(o => o.value === authHeader);
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+            style={{ background: "oklch(0.65 0.28 350)" }}>W</div>
+          <h3 className="font-semibold text-foreground">일반 웹사이트 (커스텀)</h3>
+        </div>
+        <Button size="sm" className="gap-1.5 text-xs h-7"
+          style={{ background: "oklch(0.65 0.28 350)", color: "white" }}
+          onClick={() => setShowAdd(v => !v)}>
+          <Plus className="w-3.5 h-3.5" /> 추가
+        </Button>
+      </div>
+      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+        직접 제작한 사이트나 CMS에 Webhook으로 글을 자동 전달합니다
+      </p>
+
+      {/* 등록된 사이트 목록 */}
+      {accounts.length > 0 && (
+        <div className="space-y-2 mb-4">
+          {accounts.map((acc, idx) => (
+            <div key={idx} className="flex items-center justify-between p-3 rounded-lg"
+              style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: "var(--color-emerald)" }} />
+                <div className="min-w-0">
+                  <p className="text-sm text-foreground truncate">{acc._name}</p>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    헤더: {acc.webhook_auth_header || "Authorization"}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => remove(idx)}
+                className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-500/20"
+                style={{ color: "var(--muted-foreground)" }}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 추가 폼 */}
+      {showAdd && (
+        <div className="space-y-3 p-4 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+          {/* Webhook URL */}
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
+              Webhook URL
+            </label>
+            <Input value={url} onChange={e => setUrl(e.target.value)}
+              placeholder="https://mysite.com/api/posts" className="text-sm" />
+          </div>
+
+          {/* 인증 헤더 선택 */}
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
+              인증 헤더 방식
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {AUTH_HEADER_OPTIONS.map(opt => (
+                <button key={opt.value}
+                  className="rounded-lg px-3 py-2 text-left transition-all"
+                  style={{
+                    background: authHeader === opt.value ? "oklch(0.696 0.17 162.48/12%)" : "var(--card)",
+                    border: `1px solid ${authHeader === opt.value ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
+                  }}
+                  onClick={() => setAuthHeader(opt.value)}>
+                  <p className="text-xs font-semibold text-foreground">{opt.label}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.example}</p>
+                </button>
+              ))}
+            </div>
+            {authHeader !== "none" && (
+              <div className="mt-2 px-3 py-2 rounded-lg text-xs"
+                style={{ background: "oklch(0.696 0.17 162.48/8%)", color: "var(--color-emerald)" }}>
+                전송 형식: <code>{authHeader}: {authHeader === "Authorization" ? "Bearer {인증키}" : "{인증키}"}</code>
+              </div>
+            )}
+          </div>
+
+          {/* 인증 키 */}
+          {authHeader !== "none" && (
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
+                인증 키 값
+              </label>
+              <div className="relative">
+                <Input type={showKey ? "text" : "password"} value={authKey}
+                  onChange={e => setAuthKey(e.target.value)}
+                  placeholder={selectedAuth?.example || "인증 키 입력"}
+                  className="text-sm font-mono pr-10" />
+                <button className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--muted-foreground)" }}
+                  onClick={() => setShowKey(v => !v)}>
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button className="gap-2 flex-1"
+              style={{ background: saved ? "var(--color-emerald)" : "oklch(0.65 0.28 350)", color: "white" }}
+              onClick={handleSave}>
+              <CheckCircle2 className="w-4 h-4" /> 저장
+            </Button>
+            <Button variant="outline" onClick={() => { setShowAdd(false); setUrl(""); setAuthKey(""); }}>취소</Button>
+          </div>
+        </div>
+      )}
+
+      {accounts.length === 0 && !showAdd && (
+        <p className="text-xs text-center py-2" style={{ color: "var(--muted-foreground)" }}>
+          추가 버튼을 눌러 웹사이트를 등록하세요
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── 다중 플랫폼 섹션 컴포넌트 ──────────────────────
 function PlatformSection({ title, color, logo, type, desc, link, fields }: {
   title: string; color: string; logo: string; type: string; desc: string; link: string;
-  fields: { label: string; key: string; placeholder: string; secret?: boolean }[];
+  fields: { label: string; key: string; placeholder: string; secret?: boolean; isAuthHeader?: boolean }[];
 }) {
   const STORAGE_KEY = `platform_${type}_list`;
   const [accounts, setAccounts] = React.useState<Record<string, string>[]>(() => {
@@ -885,15 +1066,8 @@ export default function SettingsPage() {
         />
 
         {/* 일반 웹사이트 */}
-        <PlatformSection
-          title="일반 웹사이트 (커스텀)" color="oklch(0.65 0.28 350)" logo="W" type="custom"
-          desc="직접 제작한 사이트나 CMS에 Webhook으로 글을 전달합니다"
-          link=""
-          fields={[
-            { label: "Webhook URL", key: "webhook_url", placeholder: "https://mysite.com/api/post" },
-            { label: "인증 키 (선택)", key: "webhook_auth_key", placeholder: "Authorization 헤더 값", secret: true },
-          ]}
-        />
+        {/* 커스텀 웹사이트 - 인증 방식 선택 포함 */}
+        <CustomWebhookSection />
 
         {/* WordPress */}
         <PlatformSection
