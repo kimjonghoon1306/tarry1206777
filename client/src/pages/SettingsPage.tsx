@@ -24,7 +24,7 @@ import {
   CONTENT_AI_OPTIONS, IMAGE_AI_OPTIONS,
   type ContentAIProvider, type ImageAIProvider,
 } from "@/lib/ai-config";
-import { userGet, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings } from "@/lib/user-storage";
+import { userGet, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings, loadSettingsFromServer } from "@/lib/user-storage";
 
 const LANGUAGES = [
   { code: "ko", label: "한국어", flag: "🇰🇷" },
@@ -44,10 +44,22 @@ function ApiKeyInput({ label, placeholder, storageKey, link }: {
   const [show, setShow] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // 로그인 직후 서버에서 키 로드 - useState 초기값이 빈값일 때 서버에서 재시도
+  React.useEffect(() => {
+    if (!value) {
+      loadSettingsFromServer().then(settings => {
+        if (settings && settings[storageKey]) {
+          const serverVal = settings[storageKey];
+          userSet(storageKey, serverVal);
+          setValue(serverVal);
+        }
+      });
+    }
+  }, []);
+
   const handleSave = () => {
     if (!value.trim()) { toast.error("API 키를 입력해주세요"); return; }
     userSet(storageKey, value.trim());
-    // 서버에도 동기화
     saveSettingsToServer({ [storageKey]: value.trim() });
     setSaved(true);
     toast.success(`${label} 저장됨`);
