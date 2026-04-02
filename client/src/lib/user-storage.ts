@@ -1,46 +1,75 @@
 /**
- * user-storage.ts
- * 회원별 설정 저장/불러오기 유틸
- * - localStorage 키에 userId prefix 붙여 회원별 완전 분리
- * - 기존 키(구형) fallback 지원 → 이미 저장된 API 키 그대로 읽힘
+ * user-storage.ts v3.0
+ * ─────────────────────────────────────────────────────
+ * [핵심 변경]
+ * - userGet() 구형 공용 키 fallback 완전 제거
+ *   → 관리자가 저장한 공용 키를 일반 회원이 절대 읽을 수 없음
+ * - 회원 설정은 오직 u:{userId}:{key} 네임스페이스에만 존재
+ * - 로그인 시 서버에서 해당 유저 설정만 가져와서 적용
+ * ─────────────────────────────────────────────────────
  */
 
 export function getCurrentUserId(): string {
   try {
-    const user = JSON.parse(localStorage.getItem("ba_user") || "{}");
-    return user?.id || "guest";
-  } catch { return "guest"; }
+    const token = localStorage.getItem("ba_token");
+    if (!token || token.trim() === "") return "guest";
+    const raw = localStorage.getItem("ba_user");
+    if (!raw) return "guest";
+    const user = JSON.parse(raw);
+    if (user && typeof user.id === "string" && user.id.trim() !== "") {
+      return user.id.trim();
+    }
+    return "guest";
+  } catch {
+    return "guest";
+  }
+}
+
+export function getCurrentUserRole(): string {
+  try {
+    const raw = localStorage.getItem("ba_user");
+    if (!raw) return "guest";
+    const user = JSON.parse(raw);
+    return user?.role || "user";
+  } catch {
+    return "user";
+  }
 }
 
 export function getCurrentToken(): string {
   return localStorage.getItem("ba_token") || "";
 }
 
-function userKey(key: string): string {
-  return `u:${getCurrentUserId()}:${key}`;
+export function isLoggedIn(): boolean {
+  return getCurrentUserId() !== "guest";
 }
 
-// 저장
+export function isAdminUser(): boolean {
+  return getCurrentUserId() === "admin" || getCurrentUserRole() === "admin";
+}
+
+// ── 저장 ─────────────────────────────────────────────
 export function userSet(key: string, value: string): void {
-  localStorage.setItem(userKey(key), value);
-  // 구형 키도 같이 저장 (다른 컴포넌트 호환)
-  localStorage.setItem(key, value);
+  const uid = getCurrentUserId();
+  // 오직 네임스페이스 키에만 저장 - 공용 키에는 절대 쓰지 않음
+  localStorage.setItem(`u:${uid}:${key}`, value);
 }
 
-// 불러오기 - 신형 키 우선, 없으면 구형 키 fallback
+// ── 불러오기 ─────────────────────────────────────────
+// 공용 키 fallback 완전 제거 - 오직 자기 네임스페이스만 읽음
 export function userGet(key: string, fallback = ""): string {
-  return localStorage.getItem(userKey(key))
-    || localStorage.getItem(key)  // 기존에 저장된 키 fallback
-    || fallback;
+  const uid = getCurrentUserId();
+  const value = localStorage.getItem(`u:${uid}:${key}`);
+  return value !== null ? value : fallback;
 }
 
-// 삭제
+// ── 삭제 ─────────────────────────────────────────────
 export function userDel(key: string): void {
-  localStorage.removeItem(userKey(key));
-  localStorage.removeItem(key);
+  const uid = getCurrentUserId();
+  localStorage.removeItem(`u:${uid}:${key}`);
 }
 
-// 서버에 전체 설정 저장
+// ── 서버에 설정 저장 ──────────────────────────────────
 export async function saveSettingsToServer(settings: Record<string, string>): Promise<boolean> {
   const token = getCurrentToken();
   if (!token) return false;
@@ -55,7 +84,7 @@ export async function saveSettingsToServer(settings: Record<string, string>): Pr
   } catch { return false; }
 }
 
-// 서버에서 설정 불러오기
+// ── 서버에서 설정 불러오기 ────────────────────────────
 export async function loadSettingsFromServer(): Promise<Record<string, string> | null> {
   const token = getCurrentToken();
   if (!token) return null;
@@ -71,22 +100,24 @@ export async function loadSettingsFromServer(): Promise<Record<string, string> |
   } catch { return null; }
 }
 
-// 로그인 시: 서버 설정을 로컬에 적용
+// ── 로그인 후: 서버 설정을 해당 유저 네임스페이스에 적용 ──
 export async function applyServerSettings(): Promise<void> {
   const serverSettings = await loadSettingsFromServer();
   if (!serverSettings) return;
   const uid = getCurrentUserId();
+  if (uid === "guest") return;
   for (const [key, value] of Object.entries(serverSettings)) {
     if (typeof value === "string") {
+      // 오직 자기 네임스페이스에만 저장
       localStorage.setItem(`u:${uid}:${key}`, value);
-      localStorage.setItem(key, value); // 구형 호환
     }
   }
 }
 
-// 로그아웃 시: 현재 유저 로컬 캐시 제거
+// ── 로그아웃: 현재 유저 로컬 캐시 전체 삭제 ─────────────
 export function clearUserLocalCache(): void {
   const uid = getCurrentUserId();
+  if (uid === "guest") return;
   const prefix = `u:${uid}:`;
   const toRemove: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -96,7 +127,7 @@ export function clearUserLocalCache(): void {
   toRemove.forEach(k => localStorage.removeItem(k));
 }
 
-// 설정 키 상수
+// ── 설정 키 상수 ─────────────────────────────────────
 export const SETTINGS_KEYS = {
   CONTENT_AI:       "content_ai_provider",
   IMAGE_AI:         "image_ai_provider",
