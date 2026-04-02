@@ -1037,12 +1037,17 @@ export default function DeploymentPage() {
     if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트를 등록해주세요.");
     // CORS 우회: Vercel 서버를 프록시로 사용
     const thumbnailUrl = localStorage.getItem("blogauto_thumbnail") || "";
+    const tagStr = hashtags.map((t: string) => t.replace("#", "")).join(", ");
+    const slugBase = title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").slice(0, 80);
     const payload = {
       title,
       content: buildHtmlContent(),
-      content_text: buildFinalContent(),
       thumbnail: thumbnailUrl,
-      hashtags,
+      tags: tagStr,
+      slug: slugBase,
+      excerpt: buildFinalContent().slice(0, 160),
+      status: publishMode === "scheduled" ? "scheduled" : "published",
+      publish_at: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
       scheduledAt: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
     };
 
