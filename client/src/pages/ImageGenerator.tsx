@@ -173,6 +173,33 @@ function extractKeyword(prompt: string): string {
   return "korean lifestyle blog beautiful photography";
 }
 
+// ── HuggingFace FLUX.1 Schnell 이미지 생성 ──────────────
+async function generateHuggingFaceImage(
+  prompt: string, width: number, height: number, apiKey: string
+): Promise<string | null> {
+  try {
+    const resp = await fetch(
+      "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: { width, height, num_inference_steps: 4 },
+        }),
+      }
+    );
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
+}
+
 // ── 이미지 생성: Pollinations 우선, fallback은 키워드 기반 ──
 async function generatePollinationsUrl(
   prompt: string, width: number, height: number, seed: number
@@ -511,6 +538,53 @@ export default function ImageGenerator() {
   ) => {
     const provider = getImageProvider();
     const startTime = Date.now();
+
+    if (provider === "huggingface") {
+      const apiKey = getAPIKey("huggingface");
+      if (!apiKey) { toast.error("설정에서 Hugging Face API 키를 입력해주세요"); return 0; }
+      const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
+      if (!existingIds) {
+        setGallery(prev => [
+          ...placeholderIds.map(id => ({
+            id, src: "", title: `${prompt.slice(0, 20)}...`,
+            keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
+            loading: true,
+            _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999),
+          })),
+          ...prev,
+        ]);
+        setSelectedImages([]);
+      } else {
+        setGallery(prev => prev.map(item =>
+          existingIds.includes(item.id) ? { ...item, src: "", loading: true } : item
+        ));
+      }
+      let successCount = 0;
+      for (let i = 0; i < numImages; i++) {
+        const pid = placeholderIds[i];
+        try {
+          const src = await generateHuggingFaceImage(fullPrompt, w, h, apiKey);
+          if (src) {
+            setGallery(prev => prev.map(item =>
+              item.id === pid ? { ...item, src, loading: false } : item
+            ));
+            successCount++;
+          } else {
+            // fallback to pollinations
+            const seed = Math.floor(Math.random() * 999999) + i * 1000;
+            const fallback = await generatePollinationsUrl(fullPrompt, w, h, seed);
+            setGallery(prev => prev.map(item =>
+              item.id === pid ? { ...item, src: fallback, loading: false } : item
+            ));
+            successCount++;
+          }
+        } catch {
+          setGallery(prev => prev.filter(item => item.id !== pid));
+        }
+      }
+      toast.success(`이미지 ${successCount}개 생성 완료! (FLUX.1 Schnell)`, { id: "imggen" });
+      return successCount;
+    }
 
     if (provider === "pollinations") {
       const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);

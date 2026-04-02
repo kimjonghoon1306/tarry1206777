@@ -867,32 +867,62 @@ export default function SettingsPage() {
             <Wand2 className="w-5 h-5" style={{ color: "oklch(0.75 0.12 300)" }} />
             <h3 className="font-semibold text-foreground">이미지 생성 AI 선택</h3>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {IMAGE_AI_OPTIONS.map((opt) => (
-              <button key={opt.value}
-                className="rounded-xl p-4 text-left transition-all"
-                style={{
-                  background: imageAI === opt.value ? "oklch(0.75 0.12 300 / 12%)" : "var(--background)",
-                  border: `2px solid ${imageAI === opt.value ? "oklch(0.75 0.12 300 / 60%)" : "var(--border)"}`,
-                }}
-                onClick={() => handleSelectImageAI(opt.value)}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black text-white"
-                    style={{ background: opt.logoColor }}>{opt.logo}</div>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                    style={{ background: opt.badge === "무료" ? "oklch(0.696 0.17 162.48 / 20%)" : "oklch(0.769 0.188 70.08 / 20%)", color: opt.badge === "무료" ? "var(--color-emerald)" : "var(--color-amber-brand)" }}>
-                    {opt.badge}
-                  </span>
-                </div>
-                <div className="text-sm font-semibold text-foreground">{opt.label}</div>
-                <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</div>
-                {imageAI === opt.value && (
-                  <div className="mt-2 flex items-center gap-1 text-xs" style={{ color: "oklch(0.75 0.12 300)" }}>
-                    <CheckCircle2 className="w-3.5 h-3.5" /> 선택됨
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {IMAGE_AI_OPTIONS.map((opt: any) => {
+              const selected = imageAI === opt.value;
+              return (
+                <button key={opt.value}
+                  className="rounded-2xl p-4 text-left transition-all relative overflow-hidden"
+                  style={{
+                    background: selected ? `${opt.logoColor}18` : "var(--background)",
+                    border: `2px solid ${selected ? opt.logoColor + "80" : "var(--border)"}`,
+                    boxShadow: selected ? `0 0 20px ${opt.logoColor}20` : "none",
+                  }}
+                  onClick={() => handleSelectImageAI(opt.value)}>
+
+                  {/* 상단: 로고 + 배지 + 선택됨 */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-white"
+                        style={{ background: opt.logoColor }}>{opt.logo}</div>
+                      <div>
+                        <div className="text-sm font-bold text-foreground">{opt.label}</div>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                          style={{
+                            background: opt.badgeColor + "25",
+                            color: opt.badgeColor,
+                          }}>
+                          {opt.badge}
+                        </span>
+                      </div>
+                    </div>
+                    {selected && (
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                        style={{ background: opt.logoColor }}>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </button>
-            ))}
+
+                  {/* 설명 */}
+                  <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</p>
+
+                  {/* 장단점 */}
+                  {opt.pros && (
+                    <div className="space-y-1">
+                      <div className="flex items-start gap-1.5">
+                        <span className="text-xs mt-0.5" style={{ color: "var(--color-emerald)" }}>✓</span>
+                        <span className="text-xs" style={{ color: "var(--color-emerald)" }}>{opt.pros}</span>
+                      </div>
+                      <div className="flex items-start gap-1.5">
+                        <span className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.22 25)" }}>✗</span>
+                        <span className="text-xs" style={{ color: "oklch(0.65 0.22 25)" }}>{opt.cons}</span>
+                      </div>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
