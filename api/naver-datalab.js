@@ -1,6 +1,7 @@
-// BlogAuto Pro - naver-datalab v1.0
+// BlogAuto Pro - naver-datalab v1.1
 // 네이버 데이터랩 검색어 트렌드 API
 // 디바이스(PC/모바일), 성별(남/녀), 연령대별 분석
+// v1.1: 병렬 10요청 → 순차 처리로 Rate Limit 오류 수정
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -33,6 +34,11 @@ export default async function handler(req, res) {
     "X-Naver-Client-Secret": clientSecret,
   };
 
+  // 네이버 API rate limit 우회: 요청 사이 딜레이
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async function fetchTrend(device, gender, ages) {
     const bodyObj = {
       startDate: start,
@@ -51,7 +57,10 @@ export default async function handler(req, res) {
     });
     if (!resp.ok) {
       const text = await resp.text();
-      throw new Error(`데이터랩 API 오류 (${resp.status}): ${text.slice(0, 100)}`);
+      const status = resp.status;
+      if (status === 429) throw new Error("네이버 데이터랩 API 요청 한도 초과. 잠시 후 다시 시도해주세요.");
+      if (status === 401) throw new Error("네이버 Client ID 또는 Secret이 잘못되었습니다. 설정을 확인해주세요.");
+      throw new Error(`데이터랩 API 오류 (${status}): ${text.slice(0, 100)}`);
     }
     const data = await resp.json();
     return data.results?.[0]?.data || [];

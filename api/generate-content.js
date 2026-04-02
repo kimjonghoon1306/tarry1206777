@@ -154,13 +154,13 @@ ${stylePrompt}`
 
   const prompt = `당신은 대한민국 최고의 블로그 작가입니다. 수백만 독자를 보유한 파워블로거로서 친구에게 카톡 보내듯, 엄마가 딸한테 알려주듯, 기자가 르포 기사 쓰듯 — 상황에 맞게 가장 자연스럽고 생생한 글을 씁니다.
 
-키워드: "\${keyword}"
-\${titleInstruction}
-언어: \${langLabel}
-목표 글자수: \${targetChars}자 이상
-수익 최적화: \${adGuide}
+키워드: "${keyword}"
+${titleInstruction}
+언어: ${langLabel}
+목표 글자수: ${targetChars}자 이상
+수익 최적화: ${adGuide}
 
-\${categoryGuide}
+${categoryGuide}
 
 [모든 카테고리 공통 필수 원칙]
 ① 절대 AI 티 나지 않게
@@ -185,20 +185,20 @@ ${stylePrompt}`
    - 마무리: 독자 행동 유도 (댓글, 공유, 저장)
 
 [형식 규칙 - 반드시 준수]
-- 반드시 \${targetChars}자 이상 작성 (이게 제일 중요!)
+- 반드시 ${targetChars}자 이상 작성 (이게 제일 중요!)
 - 마크다운 기호 절대 금지 (**, ##, --, __, - 등)
 - 순수 텍스트만 사용
 - 자연스러운 단락 구분 (2~4문장마다 줄바꿈)
 - SEO: 키워드 자연스럽게 7회 이상 포함
 - 절대 한자, 중국어, 일본어, 베트남어 등 외국 문자 사용 금지
-- 오직 한글, 영어, 숫자만 사용\${styleGuide}`;
+- 오직 한글, 영어, 숫자만 사용${styleGuide}`;
 
   try {
 
     // ── Gemini ────────────────────────────────────────────
     if (provider === "gemini") {
       const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
