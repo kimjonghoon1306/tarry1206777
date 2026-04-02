@@ -103,9 +103,36 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
   };
   const currentLang = langMap[localStorage.getItem("content_language") || "ko"] || "🇰🇷 한국어";
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (verifyAdmin(pw)) {
       sessionStorage.setItem(SESSION_KEY, getStoredHash());
+      // admin 계정으로 자동 로그인 → ba_token, ba_user 설정
+      try {
+        const r = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "login", userId: "admin", password: pw }),
+        });
+        const d = await r.json();
+        if (d.ok) {
+          localStorage.setItem("ba_token", d.token);
+          localStorage.setItem("ba_user", JSON.stringify(d.user));
+          // 서버 설정 로드
+          const sr = await fetch("/api/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${d.token}` },
+            body: JSON.stringify({ action: "loadSettings" }),
+          });
+          const sd = await sr.json();
+          if (sd.ok && sd.settings) {
+            Object.entries(sd.settings).forEach(([k, v]) => {
+              if (typeof v === "string") {
+                localStorage.setItem(`u:admin:${k}`, v);
+              }
+            });
+          }
+        }
+      } catch {}
       onAuth();
     } else {
       setShake(true);
@@ -702,10 +729,30 @@ function AdminDashboard() {
                   <h3 className="font-semibold text-foreground">API 키 관리</h3>
                 </div>
                 <Button size="sm" variant="outline" className="gap-2"
-                  onClick={() => toast.info("API 키 추가 기능은 준비 중입니다")}>
-                  <Plus className="w-4 h-4" /> 키 추가
+                  onClick={() => window.location.href = "/login?redirect=/settings"}>
+                  <Settings className="w-4 h-4" /> 설정 페이지에서 관리
                 </Button>
               </div>
+              <div className="p-5 rounded-xl m-4" style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/30%)" }}>
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">🔑</div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1" style={{ color: "var(--color-amber-brand)" }}>
+                      API 키는 설정 페이지에서 관리합니다
+                    </p>
+                    <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>
+                      보안을 위해 API 키는 각 계정별로 분리 저장됩니다.<br />
+                      관리자 계정(admin)으로 로그인 후 설정 페이지에서 입력하세요.
+                    </p>
+                    <Button size="sm" className="gap-2"
+                      style={{ background: "var(--color-emerald)", color: "white" }}
+                      onClick={() => window.location.href = "/login"}>
+                      <Key className="w-4 h-4" /> admin 계정으로 로그인 → 설정
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="pb-2">
               <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                 {apiKeys.map(apiKey => (
                   <div key={apiKey.id} className="p-4">
@@ -745,6 +792,7 @@ function AdminDashboard() {
                     )}
                   </div>
                 ))}
+              </div>
               </div>
             </div>
 
