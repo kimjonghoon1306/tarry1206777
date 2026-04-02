@@ -540,7 +540,10 @@ export default function ImageGenerator() {
     const startTime = Date.now();
 
     if (provider === "huggingface") {
-      const apiKey = getAPIKey("huggingface");
+      const apiKey = getAPIKey("huggingface")
+        || localStorage.getItem("u:guest:huggingface_api_key")
+        || localStorage.getItem("huggingface_api_key")
+        || "";
       if (!apiKey) { toast.error("설정에서 Hugging Face API 키를 입력해주세요"); return 0; }
       const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
       if (!existingIds) {
