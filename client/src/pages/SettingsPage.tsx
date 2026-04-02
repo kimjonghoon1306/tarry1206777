@@ -706,6 +706,10 @@ export default function SettingsPage() {
   const [naverBlogSaved, setNaverBlogSaved] = useState(false);
 
   // 일반 웹사이트 배포
+  const [datalabId, setDatalabId] = useState(() => userGet(SETTINGS_KEYS.DATALAB_ID || "naver_datalab_client_id"));
+  const [datalabSecret, setDatalabSecret] = useState(() => userGet(SETTINGS_KEYS.DATALAB_SECRET || "naver_datalab_client_secret"));
+  const [datalabSaved, setDatalabSaved] = useState(false);
+  const [showDatalabSecret, setShowDatalabSecret] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState(() => userGet(SETTINGS_KEYS.WEBHOOK_URL));
   const [webhookKey, setWebhookKey] = useState(() => userGet(SETTINGS_KEYS.WEBHOOK_KEY));
   const [showWebhookKey, setShowWebhookKey] = useState(false);
@@ -728,6 +732,16 @@ export default function SettingsPage() {
     const s2 = { [SETTINGS_KEYS.IMAGE_AI]: v };
     saveSettingsToServer(s2); saveAllToServer(s2);
     toast.success(`이미지 생성 AI: ${IMAGE_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
+  };
+
+  const handleSaveDatalab = () => {
+    if (!datalabId || !datalabSecret) { toast.error("Client ID와 Secret을 모두 입력해주세요"); return; }
+    userSet("naver_datalab_client_id", datalabId);
+    userSet("naver_datalab_client_secret", datalabSecret);
+    saveSettingsToServer({ naver_datalab_client_id: datalabId, naver_datalab_client_secret: datalabSecret });
+    setDatalabSaved(true);
+    toast.success("네이버 데이터랩 API 저장됨 ✅");
+    setTimeout(() => setDatalabSaved(false), 3000);
   };
 
   const handleSaveNaver = () => {
@@ -1030,6 +1044,48 @@ export default function SettingsPage() {
               onClick={handleSaveNaver}>
               {naverSaved ? <CheckCircle2 className="w-4 h-4" /> : <Key className="w-4 h-4" />}
               {naverSaved ? "저장됨" : "네이버 API 저장"}
+            </Button>
+          </div>
+        </div>
+
+        {/* 네이버 데이터랩 API */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5" style={{ color: "oklch(0.75 0.18 200)" }} />
+              <h3 className="font-semibold text-foreground">네이버 데이터랩 API</h3>
+            </div>
+            <a href="https://developers.naver.com/apps/#/register" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs hover:underline"
+              style={{ color: "oklch(0.75 0.18 200)" }}>
+              발급받기 <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+            키워드 디바이스·성별·연령 분석용 · 네이버 개발자센터에서 앱 등록 후 발급
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client ID</label>
+              <Input className="text-sm font-mono" placeholder="네이버 Client ID"
+                value={datalabId} onChange={e => setDatalabId(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client Secret</label>
+              <div className="relative">
+                <Input className="text-sm font-mono pr-10" type={showDatalabSecret ? "text" : "password"}
+                  placeholder="Client Secret" value={datalabSecret} onChange={e => setDatalabSecret(e.target.value)} />
+                <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
+                  onClick={() => setShowDatalabSecret(v => !v)}>
+                  {showDatalabSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <Button className="gap-2"
+              style={{ background: datalabSaved ? "var(--color-emerald)" : "oklch(0.75 0.18 200)", color: "white" }}
+              onClick={handleSaveDatalab}>
+              {datalabSaved ? <CheckCircle2 className="w-4 h-4" /> : <Key className="w-4 h-4" />}
+              {datalabSaved ? "저장됨" : "데이터랩 API 저장"}
             </Button>
           </div>
         </div>

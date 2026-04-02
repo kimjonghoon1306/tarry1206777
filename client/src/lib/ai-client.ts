@@ -5,6 +5,18 @@
  * Vercel 서버 경유 없음 → Gemini 등 서버IP 차단 문제 완전 해결
  */
 
+// ── 한자/외국문자 강제 제거 ──────────────────────────────
+function removeNonKorean(text: string): string {
+  // 한자(CJK), 일본어, 베트남어 특수문자 제거 후 자연스럽게 연결
+  return text
+    .replace(/[一-鿿㐀-䶿 0-⩭F]/g, "") // 한자
+    .replace(/[぀-ゟ゠-ヿ]/g, "") // 일본어 히라가나/가타카나
+    .replace(/[̀-ͯḀ-ỿ]/g, (c) => // 베트남어 발음기호
+      c.normalize("NFD").replace(/[̀-ͯ]/g, ""))
+    .replace(/\s{2,}/g, " ") // 연속 공백 정리
+    .trim();
+}
+
 // ── 공통 에러 파싱 ────────────────────────────────────
 function parseError(provider: string, status: number, msg: string): string {
   const m = msg.toLowerCase();
@@ -135,7 +147,7 @@ ${categoryGuide}
     const data = await resp.json();
     const content = data.content?.[0]?.text || "";
     if (!content) throw new Error("Claude 응답이 비어있습니다. 다시 시도해주세요.");
-    return content;
+    return removeNonKorean(content);
   }
 
   // ── OpenAI ──
@@ -159,36 +171,30 @@ ${categoryGuide}
     const data = await resp.json();
     const content = data.choices?.[0]?.message?.content || "";
     if (!content) throw new Error("OpenAI 응답이 비어있습니다. 다시 시도해주세요.");
-    return content;
+    return removeNonKorean(content);
   }
 
-  // ── Groq ──
+  // ── Groq → Vercel 서버 경유 (브라우저 CORS 불안정 문제 해결) ──
   if (provider === "groq") {
-    const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const adPlatform = localStorage.getItem("selected_ad_platform") || "";
+    const resp = await fetch("/api/generate-content", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: Math.min(maxTokens, 8000),
-        temperature: 0.7,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, apiKey, keyword, title, language, minChars, stylePrompt, adPlatform }),
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      throw new Error(parseError("Groq", resp.status, err.error?.message || ""));
+      throw new Error(err.error || `Groq 서버 오류 (${resp.status})`);
     }
     const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content || "";
-    if (!content) throw new Error("Groq 응답이 비어있습니다. 다시 시도해주세요.");
+    const content = data.content || "";
+    if (!content) throw new Error("Groq 응답이 비어있습니다. API 키를 확인해주세요.");
     return content;
   }
 
   throw new Error(`지원하지 않는 AI: ${provider}`);
 }
+
 
 // ── 제목 생성 ─────────────────────────────────────────
 export async function generateTitles(
@@ -303,27 +309,21 @@ export async function generateTitles(
     content = data.choices?.[0]?.message?.content || "[]";
   }
 
-  // ── Groq ──
+  // ── Groq → Vercel 서버 경유 ──
   else if (provider === "groq") {
-    const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const resp = await fetch("/api/generate-titles", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 1000,
-        temperature: 0.8,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, apiKey, keyword }),
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      throw new Error(parseError("Groq", resp.status, err.error?.message || ""));
+      throw new Error(err.error || `Groq 서버 오류 (${resp.status})`);
     }
     const data = await resp.json();
-    content = data.choices?.[0]?.message?.content || "[]";
+    const titles = data.titles || [];
+    if (titles.length === 0) throw new Error("Groq 제목 생성 실패. API 키를 확인해주세요.");
+    return titles;
   }
 
   else {

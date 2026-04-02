@@ -173,32 +173,6 @@ function extractKeyword(prompt: string): string {
   return "korean lifestyle blog beautiful photography";
 }
 
-// ── HuggingFace FLUX.1 Schnell 이미지 생성 ──────────────
-async function generateHuggingFaceImage(
-  prompt: string, width: number, height: number, apiKey: string
-): Promise<string | null> {
-  try {
-    const resp = await fetch(
-      "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: { width, height, num_inference_steps: 4 },
-        }),
-      }
-    );
-    if (!resp.ok) return null;
-    const blob = await resp.blob();
-    return URL.createObjectURL(blob);
-  } catch {
-    return null;
-  }
-}
 
 // ── 이미지 생성: Pollinations 우선, fallback은 키워드 기반 ──
 async function generatePollinationsUrl(
@@ -539,66 +513,7 @@ export default function ImageGenerator() {
     const provider = getImageProvider();
     const startTime = Date.now();
 
-    if (provider === "huggingface") {
-      const apiKey = getAPIKey("huggingface")
-        || localStorage.getItem("u:guest:huggingface_api_key")
-        || localStorage.getItem("huggingface_api_key")
-        || "";
-      if (!apiKey) { toast.error("설정에서 Hugging Face API 키를 입력해주세요"); return 0; }
-      const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
-      if (!existingIds) {
-        setGallery(prev => [
-          ...placeholderIds.map(id => ({
-            id, src: "", title: `${prompt.slice(0, 20)}...`,
-            keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
-            loading: true,
-            _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999),
-          })),
-          ...prev,
-        ]);
-        setSelectedImages([]);
-      } else {
-        setGallery(prev => prev.map(item =>
-          existingIds.includes(item.id) ? { ...item, src: "", loading: true } : item
-        ));
-      }
-      // 서버 경유로 변경 (브라우저 CORS 문제 해결)
-      const hfInterval = setInterval(() => setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 15), 800);
-      try {
-        const resp = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: "huggingface", apiKey, prompt: fullPrompt, size: `${w}x${h}`, count: numImages }),
-        });
-        clearInterval(hfInterval);
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          throw new Error(err.error || "HuggingFace 오류");
-        }
-        const data = await resp.json();
-        const hfImages: string[] = data.images || [];
-        if (hfImages.length === 0) throw new Error("이미지 생성 결과 없음");
-        setGallery(prev => [
-          ...hfImages.map((src, i) => ({
-            id: Date.now() + i, src,
-            title: `${fullPrompt.slice(0, 20)}...`,
-            keyword: fullPrompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false,
-          })),
-          ...prev,
-        ]);
-        setSelectedImages([]);
-        setProgress(100);
-        toast.success(`✅ ${hfImages.length}개 생성 완료! (FLUX.1 Schnell)`, { id: "imggen" });
-        return hfImages.length;
-      } catch (e: any) {
-        clearInterval(hfInterval);
-        setGallery(prev => prev.filter(item => !placeholderIds.includes(item.id)));
-        toast.error(`이미지 생성 실패: ${e.message}`, { id: "imggen" });
-        return 0;
-      }
-    }
-
-    if (provider === "pollinations") {
+if (provider === "pollinations") {
       const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
 
       if (!existingIds) {
@@ -744,7 +659,10 @@ export default function ImageGenerator() {
   const handleGenerate = async () => {
     const provider = getImageProvider();
     const apiKey = getAPIKey(provider);
-    if (provider !== "pollinations" && !apiKey) { toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`); return; }
+    if (provider !== "pollinations" && !apiKey) { 
+      toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`); 
+      return; 
+    }
     if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
 
     setIsGenerating(true);

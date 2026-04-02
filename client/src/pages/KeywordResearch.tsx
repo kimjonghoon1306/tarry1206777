@@ -6,11 +6,12 @@ import {
   Search, TrendingUp, TrendingDown, RefreshCw,
   Download, Star, StarOff, Zap, ArrowUpDown,
   Sparkles, ArrowRight, X, Trash2, Bot, CheckCircle2, AlertTriangle,
+  Monitor, Smartphone, Users, BarChart2, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { getContentProvider, getAPIKey } from "@/lib/ai-config";
 import { userGet, SETTINGS_KEYS } from "@/lib/user-storage";
 
@@ -56,6 +57,226 @@ const CHART = [
 const STORAGE_KEY = "blogauto_keywords";
 const TITLES_KEY = "blogauto_titles";
 const SELKW_KEY = "blogauto_selkw";
+
+// ── 데이터랩 컴포넌트 ──────────────────────────────────
+function DataLabPanel() {
+  const [keyword, setKeyword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
+
+  const analyze = async () => {
+    const kw = keyword.trim();
+    if (!kw) { setError("키워드를 입력해주세요"); return; }
+    const clientId = userGet("naver_datalab_client_id");
+    const clientSecret = userGet("naver_datalab_client_secret");
+    if (!clientId || !clientSecret) {
+      setError("설정 페이지에서 네이버 데이터랩 Client ID/Secret을 입력해주세요");
+      return;
+    }
+    setLoading(true); setError(""); setData(null);
+    try {
+      const resp = await fetch("/api/naver-datalab", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId, clientSecret, keyword: kw }),
+      });
+      const d = await resp.json();
+      if (!d.ok) throw new Error(d.error);
+      setData(d);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const DEVICE_COLORS = ["#6366f1", "#22d3ee"];
+  const GENDER_COLORS = ["#3b82f6", "#f472b6"];
+  const AGE_COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#fbbf24", "#f87171"];
+
+  const ageData = data ? Object.entries(data.ages).map(([name, value]) => ({ name, value })) : [];
+  const deviceData = data ? [
+    { name: "모바일", value: data.device.mobile },
+    { name: "PC", value: data.device.pc },
+  ] : [];
+  const genderData = data ? [
+    { name: "여성", value: data.gender.female },
+    { name: "남성", value: data.gender.male },
+  ] : [];
+
+  return (
+    <div className="rounded-xl p-4 sm:p-5 space-y-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      {/* 헤더 */}
+      <div className="flex items-center gap-2">
+        <Activity className="w-5 h-5" style={{ color: "oklch(0.75 0.18 200)" }} />
+        <h3 className="font-bold text-foreground">네이버 데이터랩 분석</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.75 0.18 200/15%)", color: "oklch(0.75 0.18 200)" }}>
+          디바이스 · 성별 · 연령
+        </span>
+      </div>
+
+      {/* 검색 */}
+      <div className="flex gap-2">
+        <input
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && analyze()}
+          placeholder="분석할 키워드 입력 (예: 다이어트)"
+          className="flex-1 h-10 px-3 rounded-lg text-sm text-foreground"
+          style={{ background: "var(--background)", border: "1px solid var(--border)" }}
+        />
+        <button
+          onClick={analyze}
+          disabled={loading}
+          className="h-10 px-4 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-opacity disabled:opacity-50"
+          style={{ background: "oklch(0.75 0.18 200)", color: "white" }}
+        >
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+          {loading ? "분석 중..." : "분석"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "oklch(0.65 0.22 25/10%)", color: "oklch(0.65 0.22 25)", border: "1px solid oklch(0.65 0.22 25/30%)" }}>
+          {error}
+        </div>
+      )}
+
+      {data && (
+        <div className="space-y-5">
+          {/* 요약 카드 */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl p-3 text-center" style={{ background: "oklch(0.75 0.18 200/10%)", border: "1px solid oklch(0.75 0.18 200/30%)" }}>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Smartphone className="w-3.5 h-3.5" style={{ color: "oklch(0.75 0.18 200)" }} />
+                <span className="text-xs font-semibold" style={{ color: "oklch(0.75 0.18 200)" }}>모바일</span>
+              </div>
+              <div className="text-2xl font-black" style={{ color: "oklch(0.75 0.18 200)", fontFamily: "'Space Grotesk',sans-serif" }}>
+                {data.device.mobile}%
+              </div>
+            </div>
+            <div className="rounded-xl p-3 text-center" style={{ background: "oklch(0.7 0.18 330/10%)", border: "1px solid oklch(0.7 0.18 330/30%)" }}>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Users className="w-3.5 h-3.5" style={{ color: "oklch(0.7 0.18 330)" }} />
+                <span className="text-xs font-semibold" style={{ color: "oklch(0.7 0.18 330)" }}>
+                  {data.gender.female >= data.gender.male ? "여성" : "남성"} 우세
+                </span>
+              </div>
+              <div className="text-2xl font-black" style={{ color: "oklch(0.7 0.18 330)", fontFamily: "'Space Grotesk',sans-serif" }}>
+                {Math.max(data.gender.female, data.gender.male)}%
+              </div>
+            </div>
+            <div className="rounded-xl p-3 text-center" style={{ background: "oklch(0.696 0.17 162/10%)", border: "1px solid oklch(0.696 0.17 162/30%)" }}>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <BarChart2 className="w-3.5 h-3.5" style={{ color: "var(--color-emerald)" }} />
+                <span className="text-xs font-semibold" style={{ color: "var(--color-emerald)" }}>주 연령</span>
+              </div>
+              <div className="text-2xl font-black" style={{ color: "var(--color-emerald)", fontFamily: "'Space Grotesk',sans-serif" }}>
+                {Object.entries(data.ages).sort((a: any, b: any) => b[1] - a[1])[0]?.[0]}
+              </div>
+            </div>
+          </div>
+
+          {/* 차트 3개 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* 디바이스 */}
+            <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Monitor className="w-4 h-4" style={{ color: DEVICE_COLORS[0] }} />
+                <span className="text-xs font-bold text-foreground">디바이스</span>
+              </div>
+              <ResponsiveContainer width="100%" height={140}>
+                <PieChart>
+                  <Pie data={deviceData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
+                    {deviceData.map((_, i) => <Cell key={i} fill={DEVICE_COLORS[i]} />)}
+                  </Pie>
+                  <Tooltip formatter={(v) => `${v}%`} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex justify-center gap-3 mt-1">
+                {deviceData.map((d, i) => (
+                  <div key={i} className="flex items-center gap-1 text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: DEVICE_COLORS[i] }} />
+                    <span style={{ color: "var(--muted-foreground)" }}>{d.name} {d.value}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 성별 */}
+            <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Users className="w-4 h-4" style={{ color: GENDER_COLORS[0] }} />
+                <span className="text-xs font-bold text-foreground">성별</span>
+              </div>
+              <ResponsiveContainer width="100%" height={140}>
+                <PieChart>
+                  <Pie data={genderData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
+                    {genderData.map((_, i) => <Cell key={i} fill={GENDER_COLORS[i]} />)}
+                  </Pie>
+                  <Tooltip formatter={(v) => `${v}%`} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex justify-center gap-3 mt-1">
+                {genderData.map((d, i) => (
+                  <div key={i} className="flex items-center gap-1 text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: GENDER_COLORS[i] }} />
+                    <span style={{ color: "var(--muted-foreground)" }}>{d.name} {d.value}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 연령대 */}
+            <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <BarChart2 className="w-4 h-4" style={{ color: AGE_COLORS[2] }} />
+                <span className="text-xs font-bold text-foreground">연령대</span>
+              </div>
+              <ResponsiveContainer width="100%" height={140}>
+                <BarChart data={ageData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {ageData.map((_, i) => <Cell key={i} fill={AGE_COLORS[i % AGE_COLORS.length]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* 트렌드 라인 */}
+          {data.trend && data.trend.length > 0 && (
+            <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <TrendingUp className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+                <span className="text-xs font-bold text-foreground">검색 트렌드 ({data.keyword})</span>
+              </div>
+              <ResponsiveContainer width="100%" height={120}>
+                <LineChart data={data.trend.map((d: any) => ({ date: d.period.slice(5), ratio: d.ratio }))}>
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="ratio" stroke="var(--color-emerald)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!data && !loading && !error && (
+        <div className="py-8 text-center">
+          <Activity className="w-10 h-10 mx-auto mb-3 opacity-20" style={{ color: "oklch(0.75 0.18 200)" }} />
+          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>키워드를 입력하고 분석 버튼을 눌러주세요</p>
+          <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>설정에서 네이버 데이터랩 Client ID/Secret을 먼저 입력하세요</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function KeywordResearch() {
   const [location, navigate] = useLocation();
@@ -655,6 +876,9 @@ export default function KeywordResearch() {
             )}
           </div>
         </div>
+
+        {/* ── 데이터랩 분석 섹션 ── */}
+        <DataLabPanel />
 
       </div>
     </Layout>

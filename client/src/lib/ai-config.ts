@@ -1,7 +1,7 @@
 import { userGet, SETTINGS_KEYS } from "./user-storage";
 
 export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
-export type ImageAIProvider = "gemini" | "openai" | "flux" | "pollinations" | "huggingface";
+export type ImageAIProvider = "gemini" | "openai" | "flux" | "pollinations";
 
 export function getContentProvider(): ContentAIProvider {
   return (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
@@ -19,7 +19,7 @@ export function getAPIKey(provider: string): string {
     flux:        SETTINGS_KEYS.FLUX_KEY,
     groq:        SETTINGS_KEYS.GROQ_KEY,
     pollinations: "",
-    huggingface: userGet(SETTINGS_KEYS.HUGGING_KEY) || "",
+    huggingface: SETTINGS_KEYS.HUGGING_KEY,
   };
   const k = keyMap[provider];
   return k ? userGet(k) : "";
@@ -85,19 +85,7 @@ export const IMAGE_AI_OPTIONS = [
     keyLabel: "", keyPlaceholder: "", keyStorageKey: "",
     keyLink: "https://pollinations.ai",
   },
-  {
-    value: "huggingface" as ImageAIProvider,
-    label: "FLUX.1 Schnell",
-    badge: "무료 고품질",
-    badgeColor: "oklch(0.75 0.18 200)",
-    desc: "Hugging Face · 무료지만 퀄리티가 좋다",
-    pros: "FLUX 최신 모델 · 선명하고 사실적",
-    cons: "API 키 필요 · 분당 요청 제한",
-    logo: "HF", logoColor: "#FF6B35",
-    keyLabel: "Hugging Face API Key", keyPlaceholder: "hf_...",
-    keyStorageKey: SETTINGS_KEYS.HUGGING_KEY,
-    keyLink: "https://huggingface.co/settings/tokens",
-  },
+
   {
     value: "gemini" as ImageAIProvider,
     label: "Gemini Flash",

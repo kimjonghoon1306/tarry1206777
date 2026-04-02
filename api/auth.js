@@ -1,7 +1,11 @@
-// BlogAuto Pro - auth v3.1
+// BlogAuto Pro - auth v4.0
 /**
- * BlogAuto Pro - Auth API
- * Vercel KV 기반 영구 저장소
+ * [수정 내용]
+ * 1. saveSettings / loadSettings - 토큰 기반으로 user:userId에 완전 분리 저장
+ * 2. saveAdminGlobalSettings / loadAdminGlobalSettings 추가
+ *    - 관리자가 저장한 설정은 admin:global_settings 키에 별도 보관
+ *    - 일반 회원 loadSettings에서 절대 노출 안됨
+ * 3. 관리자(admin role) 여부 검증 로직 추가
  */
 
 const KV_URL = process.env.KV_REST_API_URL;
@@ -41,7 +45,6 @@ async function kvDel(key) {
   } catch {}
 }
 
-// 메모리 fallback (KV 없을 때)
 const _mem = {};
 
 async function getUser(userId) {
@@ -87,6 +90,15 @@ async function initAdmin() {
   }
 }
 
+// 토큰으로 유저 role 확인
+async function getUserRole(token) {
+  if (!token) return null;
+  const uid = await getSession(token);
+  if (!uid) return null;
+  const u = await getUser(uid);
+  return { uid, role: u?.profile?.role || "user" };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
@@ -107,10 +119,10 @@ export default async function handler(req, res) {
     if (!email?.trim()) return res.json({ ok: false, error: "이메일을 입력해주세요" });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ ok: false, error: "올바른 이메일 형식이 아니에요" });
     if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(password)) return res.json({ ok: false, error: "비밀번호는 영문 대소문자+숫자 포함 6자 이상이어야 해요" });
+    if (userId.trim() === "admin") return res.json({ ok: false, error: "사용할 수 없는 아이디입니다" });
 
     const existing = await getUser(userId);
     if (existing) return res.json({ ok: false, error: "이미 사용 중인 아이디예요" });
-
     const emailOwner = await getUserIdByEmail(email);
     if (emailOwner) return res.json({ ok: false, error: "이미 사용 중인 이메일이에요" });
 
@@ -120,7 +132,6 @@ export default async function handler(req, res) {
     };
     await setUser(userId, userData);
     await setEmailIndex(email, userId);
-
     const tk = mkToken();
     await setSession(tk, userId);
     return res.json({ ok: true, token: tk, user: { id: userId, ...userData.profile } });
@@ -155,13 +166,11 @@ export default async function handler(req, res) {
     if (!userId?.trim() || !email?.trim()) return res.json({ ok: false, error: "아이디와 이메일을 모두 입력해주세요" });
     const u = await getUser(userId);
     if (!u || u.profile.email !== email.trim()) return res.json({ ok: false, error: "아이디 또는 이메일 정보가 올바르지 않아요" });
-
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     const tempPw = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
     u.password = b64(tempPw);
     u.tempPassword = true;
     await setUser(userId, u);
-    console.log(`[임시 비밀번호] ${userId} → ${tempPw}`);
     return res.json({ ok: true, message: "임시 비밀번호가 발급되었습니다", tempPw });
   }
 
@@ -180,24 +189,52 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // 설정 저장
+  // ── 회원별 설정 저장 (일반 회원 + admin 각자 분리) ──────────
   if (action === "saveSettings") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
     if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
     const u = await getUser(uid);
-    u.settings = body.settings;
+    if (!u.settings) u.settings = {};
+    // 기존 설정에 병합 (전체 덮어쓰기가 아닌 merge)
+    u.settings = { ...u.settings, ...body.settings };
     await setUser(uid, u);
     return res.json({ ok: true });
   }
 
-  // 설정 불러오기
+  // ── 회원별 설정 불러오기 ─────────────────────────────────────
   if (action === "loadSettings") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
     if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
     const u = await getUser(uid);
+    // 반드시 해당 유저 settings만 반환 - 다른 유저 설정 절대 안 섞임
     return res.json({ ok: true, settings: u?.settings || {} });
+  }
+
+  // ── 관리자 전용: 글로벌 설정 저장 ───────────────────────────
+  // SuperAdminPage에서만 호출 - 일반 회원에게 절대 노출 안됨
+  if (action === "saveAdminGlobalSettings") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") {
+      return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+    }
+    // admin:global 키에 별도 저장 - user:admin 과도 분리
+    _mem["admin:global_settings"] = body.settings;
+    await kvSet("admin:global_settings", body.settings);
+    return res.json({ ok: true });
+  }
+
+  // ── 관리자 전용: 글로벌 설정 불러오기 ───────────────────────
+  if (action === "loadAdminGlobalSettings") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") {
+      return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+    }
+    const gs = await kvGet("admin:global_settings") || _mem["admin:global_settings"] || {};
+    return res.json({ ok: true, settings: gs });
   }
 
   // 로그아웃
@@ -207,18 +244,15 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // ── 발행 글 저장 ──────────────────────────────────
+  // 발행 글 저장
   if (action === "savePost") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
     if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
     const { post } = body;
     if (!post) return res.json({ ok: false, error: "post 데이터 필요" });
-
     const u = await getUser(uid);
     if (!u.posts) u.posts = [];
-
-    // 동일 title이면 업데이트, 없으면 추가
     const idx = u.posts.findIndex(p => p.id === post.id);
     const entry = {
       id: post.id || Date.now().toString(),
@@ -231,17 +265,14 @@ export default async function handler(req, res) {
       createdAt: post.createdAt || new Date().toISOString(),
       hashtags: post.hashtags || [],
     };
-
     if (idx >= 0) u.posts[idx] = entry;
-    else u.posts.unshift(entry); // 최신 글을 앞에
-
-    // 최대 100개 유지
+    else u.posts.unshift(entry);
     u.posts = u.posts.slice(0, 100);
     await setUser(uid, u);
     return res.json({ ok: true, post: entry });
   }
 
-  // ── 발행 글 목록 불러오기 ──────────────────────────
+  // 발행 글 목록 불러오기
   if (action === "loadPosts") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
@@ -250,7 +281,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, posts: u?.posts || [] });
   }
 
-  // ── 발행 글 삭제 ──────────────────────────────────
+  // 발행 글 삭제
   if (action === "deletePost") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
@@ -263,7 +294,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // ── 통계 저장 (방문자/클릭/수익) ──────────────────
+  // 통계 저장
   if (action === "saveStats") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
@@ -272,7 +303,6 @@ export default async function handler(req, res) {
     const u = await getUser(uid);
     if (!u.stats) u.stats = {};
     u.stats[date || new Date().toISOString().slice(0, 10)] = { views: views || 0, clicks: clicks || 0, revenue: revenue || 0 };
-    // 최근 30일만 유지
     const keys = Object.keys(u.stats).sort().slice(-30);
     const trimmed = {};
     keys.forEach(k => { trimmed[k] = u.stats[k]; });
@@ -281,7 +311,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // ── 통계 불러오기 ──────────────────────────────────
+  // 통계 불러오기
   if (action === "loadStats") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);

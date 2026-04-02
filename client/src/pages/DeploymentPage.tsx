@@ -836,17 +836,36 @@ export default function DeploymentPage() {
     blocks.forEach((b: any) => {
       if (b.type === "text") {
         const paras = b.content.split("\n\n").filter((p: string) => p.trim());
-        const html = paras.map((p: string) => "<p>" + p.split("\n").join("<br>") + "</p>").join("");
+        const html = paras.map((p: string) => "<p style=\"line-height:1.8;margin:0 0 16px 0\">" + p.split("\n").join("<br>") + "</p>").join("");
         parts.push(html);
       } else if (b.type === "image-pair") {
-        b.images.forEach((img: any) => {
-          if (img.url) parts.push("<figure><img src=\"" + img.url + "\" alt=\"" + (img.alt || "") + "\" style=\"max-width:100%;border-radius:12px;margin:16px 0\"></figure>");
-        });
+        // image-pair: src 필드 사용 (url 아님)
+        const validImgs = b.images.filter((img: any) => img.src && img.src.trim() !== "");
+        if (validImgs.length > 0) {
+          const imgHtml = validImgs.map((img: any) =>
+            `<figure style="display:inline-block;width:${validImgs.length > 1 ? "48%" : "100%"};margin:4px 1%;vertical-align:top">` +
+            `<img src="${img.src}" alt="${img.alt || ""}" style="width:100%;border-radius:12px;display:block">` +
+            (img.alt ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:4px">${img.alt}</figcaption>` : "") +
+            `</figure>`
+          ).join("");
+          parts.push(`<div style="margin:16px 0;line-height:0">${imgHtml}</div>`);
+        }
       } else if (b.type === "image") {
-        if (b.url) parts.push("<figure><img src=\"" + b.url + "\" alt=\"" + (b.alt || "") + "\" style=\"max-width:100%;border-radius:12px;margin:16px 0\"></figure>");
+        // 단일 이미지: src 필드 사용 (url 아님)
+        const imgSrc = b.src || b.url || "";
+        if (imgSrc) {
+          parts.push(
+            `<figure style="margin:16px 0;text-align:center">` +
+            `<img src="${imgSrc}" alt="${b.alt || ""}" style="max-width:100%;border-radius:12px;display:block;margin:0 auto">` +
+            (b.alt ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:4px">${b.alt}</figcaption>` : "") +
+            `</figure>`
+          );
+        }
       }
     });
-    if (hashtags.length > 0) parts.push("<p style=\"margin-top:24px;color:#666\">" + hashtags.join(" ") + "</p>");
+    if (hashtags.length > 0) {
+      parts.push(`<p style="margin-top:24px;color:#888;font-size:14px">${hashtags.join(" ")}</p>`);
+    }
     return parts.join("\n");
   }
 
@@ -871,7 +890,7 @@ export default function DeploymentPage() {
     if (!wpUrl || !wpUser || !wpPass) throw new Error("WordPress 설정이 없습니다.");
     const postData: Record<string, unknown> = {
       title,
-      content: buildFinalContent(),
+      content: buildHtmlContent(),
       status: scheduledAt ? "future" : "publish",
       tags: hashtags.map((t) => t.replace("#", "")),
     };
