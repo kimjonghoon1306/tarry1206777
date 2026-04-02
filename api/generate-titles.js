@@ -59,7 +59,7 @@ export default async function handler(req, res) {
     // ── Gemini ──────────────────────────────────────────────
     if (provider === "gemini") {
       const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -122,7 +122,14 @@ export default async function handler(req, res) {
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(`Groq 오류 (${resp.status}): ${err.error?.message || ""}`);
+        const msg = (err.error?.message || "").toLowerCase();
+        if (resp.status === 429 || msg.includes("rate_limit") || msg.includes("quota")) {
+          throw new Error("Groq 일일 토큰 한도 초과. 내일 자동 초기화됩니다. Gemini(무료)로 전환해보세요.");
+        }
+        if (resp.status === 401 || msg.includes("invalid") || msg.includes("api key")) {
+          throw new Error("Groq API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+        }
+        throw new Error(`Groq 오류 (${resp.status}): ${err.error?.message || "알 수 없는 오류"}`);
       }
       const data = await resp.json();
       const titles = extractTitles(data.choices?.[0]?.message?.content || "[]");

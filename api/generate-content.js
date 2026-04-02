@@ -199,7 +199,7 @@ ${stylePrompt}`
     // ── Gemini ────────────────────────────────────────────
     if (provider === "gemini") {
       const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -218,6 +218,8 @@ ${stylePrompt}`
         }
         if (msg.includes("api key") || msg.includes("api_key") || status === 400) throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
         if (status === 403) throw new Error("Gemini API 키 권한 없음. Google AI Studio에서 키를 확인해주세요.");
+        // 500은 보통 프롬프트가 너무 길거나 안전 필터에 걸린 경우
+        if (status === 500) throw new Error("Gemini 내부 오류. 키워드를 짧게 바꾸거나 잠시 후 다시 시도해주세요.");
         throw new Error(`Gemini 오류 (${status}): ${err.error?.message || "알 수 없는 오류"}`);
       }
       const data = await resp.json();
@@ -304,6 +306,7 @@ ${stylePrompt}`
     return res.status(400).json({ error: "지원하지 않는 AI입니다" });
 
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    console.error("[generate-content] error:", e.message);
+    return res.status(500).json({ error: e.message || "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
   }
 }
