@@ -1,3 +1,4 @@
+// BlogAuto Pro - ImageGenerator v3.1
 /**
  * BlogAuto Pro - Image Generator Page
  * ✅ 실패 이미지 전체 재시도
@@ -52,7 +53,6 @@ const KO_EN_MAP: Record<string, string> = {
   원룸: "studio apartment interior cozy",
   오피스텔: "officetel apartment interior modern",
   빌라: "villa house exterior residential",
-  주택: "house exterior residential neighborhood",
   임대: "rental apartment property",
   분양: "new apartment complex building",
   인테리어: "interior design home modern",
