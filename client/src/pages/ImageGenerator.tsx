@@ -540,45 +540,50 @@ export default function ImageGenerator() {
     const startTime = Date.now();
 
     if (provider === "huggingface") {
-      const apiKey = getAPIKey("huggingface")
-        || localStorage.getItem("u:guest:huggingface_api_key")
-        || localStorage.getItem("huggingface_api_key")
-        || "";
+      const apiKey = getAPIKey("huggingface") || "";
       if (!apiKey) { toast.error("설정에서 Hugging Face API 키를 입력해주세요"); return 0; }
-      const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
-      if (!existingIds) {
+      // 서버 경유로 변경 (브라우저 CORS 문제 해결)
+      const interval = setInterval(() => setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 15), 800);
+      try {
+        const resp = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: "huggingface", apiKey, prompt: fullPrompt, size: `${w}x${h}`, count: numImages }),
+        });
+        clearInterval(interval);
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || "HuggingFace 오류");
+        }
+        const data = await resp.json();
+        const images: string[] = data.images || [];
+        if (images.length === 0) throw new Error("이미지 생성 결과 없음");
         setGallery(prev => [
-          ...placeholderIds.map(id => ({
-            id, src: "", title: `${prompt.slice(0, 20)}...`,
-            keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
-            loading: true,
-            _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999),
+          ...images.map((src, i) => ({
+            id: Date.now() + i, src,
+            title: `${fullPrompt.slice(0, 20)}...`,
+            keyword: fullPrompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false,
           })),
           ...prev,
         ]);
         setSelectedImages([]);
-      } else {
-        setGallery(prev => prev.map(item =>
-          existingIds.includes(item.id) ? { ...item, src: "", loading: true } : item
-        ));
+        toast.success(`✅ ${images.length}개 생성 완료! (FLUX.1 Schnell)`, { id: "imggen" });
+        return images.length;
+      } catch (e: any) {
+        clearInterval(interval);
+        toast.error(`이미지 생성 실패: ${e.message}`, { id: "imggen" });
+        return 0;
       }
-      let successCount = 0;
-      for (let i = 0; i < numImages; i++) {
-        const pid = placeholderIds[i];
-        try {
-          const src = await generateHuggingFaceImage(fullPrompt, w, h, apiKey);
-          if (src) {
-            setGallery(prev => prev.map(item =>
-              item.id === pid ? { ...item, src, loading: false } : item
-            ));
-            successCount++;
-          } else {
-            // fallback to pollinations
-            const seed = Math.floor(Math.random() * 999999) + i * 1000;
-            const fallback = await generatePollinationsUrl(fullPrompt, w, h, seed);
-            setGallery(prev => prev.map(item =>
-              item.id === pid ? { ...item, src: fallback, loading: false } : item
-            ));
+      const successCount = 0;
+      if (false) {
+        const pid = 0;
+        if (false) {
+          // fallback to pollinations
+          const seed = Math.floor(Math.random() * 999999);
+          const fallback = await generatePollinationsUrl(fullPrompt, w, h, seed);
+          setGallery(prev => prev.map(item =>
+            item.id === pid ? { ...item, src: fallback, loading: false } : item
+          ));
             successCount++;
           }
         } catch {
@@ -733,9 +738,14 @@ export default function ImageGenerator() {
   };
 
   const handleGenerate = async () => {
+    // 매번 호출 시점에 fresh하게 읽기 (캐시 문제 방지)
     const provider = getImageProvider();
     const apiKey = getAPIKey(provider);
-    if (provider !== "pollinations" && !apiKey) { toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`); return; }
+    const aiLabel = IMAGE_AI_OPTIONS.find(o => o.value === provider)?.label || provider;
+    if (provider !== "pollinations" && !apiKey) { 
+      toast.error(`설정에서 ${aiLabel} API 키를 입력해주세요`); 
+      return; 
+    }
     if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
 
     setIsGenerating(true);
