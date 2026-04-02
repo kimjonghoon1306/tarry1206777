@@ -30,7 +30,8 @@ export function userSet(key: string, value: string): void {
 // 불러오기 - 신형 키 우선, 없으면 구형 키 fallback
 export function userGet(key: string, fallback = ""): string {
   return localStorage.getItem(userKey(key))
-    || localStorage.getItem(key)  // 기존에 저장된 키 fallback
+    || localStorage.getItem(`u:guest:${key}`)  // guest 계정 fallback
+    || localStorage.getItem(key)
     || fallback;
 }
 
