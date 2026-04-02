@@ -28,7 +28,6 @@ export default async function handler(req, res) {
   const targetChars = parseInt(minChars) || 1500;
 
   // max_tokens 글자수에 맞게 조정 (한국어 기준 1자 ≈ 1.5토큰)
-  // Gemini Flash 최대 8192, Groq 최대 8000 → 안전하게 8000으로 상한
   const maxTokens = Math.min(8000, Math.max(4000, Math.ceil(targetChars * 2)));
 
   // 제목 지정 여부에 따라 프롬프트 다르게
@@ -153,7 +152,7 @@ ${stylePrompt}`
 - 독자 공감 포인트 중간중간 삽입`;
   }
 
-  const prompt = \`당신은 대한민국 최고의 블로그 작가입니다. 수백만 독자를 보유한 파워블로거로서 친구에게 카톡 보내듯, 엄마가 딸한테 알려주듯, 기자가 르포 기사 쓰듯 — 상황에 맞게 가장 자연스럽고 생생한 글을 씁니다.
+  const prompt = `당신은 대한민국 최고의 블로그 작가입니다. 수백만 독자를 보유한 파워블로거로서 친구에게 카톡 보내듯, 엄마가 딸한테 알려주듯, 기자가 르포 기사 쓰듯 — 상황에 맞게 가장 자연스럽고 생생한 글을 씁니다.
 
 키워드: "\${keyword}"
 \${titleInstruction}
@@ -192,7 +191,7 @@ ${stylePrompt}`
 - 자연스러운 단락 구분 (2~4문장마다 줄바꿈)
 - SEO: 키워드 자연스럽게 7회 이상 포함
 - 절대 한자, 중국어, 일본어, 베트남어 등 외국 문자 사용 금지
-- 오직 한글, 영어, 숫자만 사용\${styleGuide}\`;
+- 오직 한글, 영어, 숫자만 사용\${styleGuide}`;
 
   try {
 
@@ -218,8 +217,6 @@ ${stylePrompt}`
         }
         if (msg.includes("api key") || msg.includes("api_key") || status === 400) throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
         if (status === 403) throw new Error("Gemini API 키 권한 없음. Google AI Studio에서 키를 확인해주세요.");
-        // 500은 보통 프롬프트가 너무 길거나 안전 필터에 걸린 경우
-        if (status === 500) throw new Error("Gemini 내부 오류. 키워드를 짧게 바꾸거나 잠시 후 다시 시도해주세요.");
         throw new Error(`Gemini 오류 (${status}): ${err.error?.message || "알 수 없는 오류"}`);
       }
       const data = await resp.json();
@@ -306,7 +303,6 @@ ${stylePrompt}`
     return res.status(400).json({ error: "지원하지 않는 AI입니다" });
 
   } catch (e) {
-    console.error("[generate-content] error:", e.message);
-    return res.status(500).json({ error: e.message || "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
+    return res.status(500).json({ error: e.message });
   }
 }
