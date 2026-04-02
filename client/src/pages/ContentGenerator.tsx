@@ -1,3 +1,4 @@
+// BlogAuto Pro - ContentGenerator v3.1
 /**
  * BlogAuto Pro - Content Generator Page
  * 글 작성, 인사말, 해시태그, 이미지 연동, 썸네일 선택, 미리보기
@@ -596,7 +597,7 @@ export default function ContentGenerator() {
                         onError={() => setThumbnailUrl("")} />
                       <button className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
                         style={{ background: "rgba(0,0,0,0.6)" }}
-                        onClick={() => setThumbnailUrl("")}>
+                        onClick={() => { setThumbnailUrl(""); setShowImagePicker(true); }}>
                         <X className="w-4 h-4 text-white" />
                       </button>
                     </div>
@@ -685,58 +686,18 @@ export default function ContentGenerator() {
                   </Button>
                 </div>
               </div>
-              {/* 현재 선택된 썸네일 표시 + 변경/삭제 */}
-              {thumbnailUrl && (
-                <div className="p-3 border-b" style={{ borderColor: "var(--border)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0" style={{ border: "2px solid var(--color-emerald)" }}>
-                      <img src={thumbnailUrl} alt="현재 썸네일" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold" style={{ color: "var(--color-emerald)" }}>✓ 썸네일 선택됨</p>
-                      <div className="flex gap-2 mt-1.5">
-                        <button className="text-xs px-2.5 py-1 rounded-lg font-medium"
-                          style={{ background: "oklch(0.75 0.12 300/15%)", color: "oklch(0.75 0.12 300)" }}
-                          onClick={() => fileInputRef.current?.click()}>
-                          변경
-                        </button>
-                        <button className="text-xs px-2.5 py-1 rounded-lg font-medium"
-                          style={{ background: "oklch(0.65 0.22 25/15%)", color: "oklch(0.65 0.22 25)" }}
-                          onClick={() => {
-                            setThumbnailUrl("");
-                            localStorage.removeItem("blogauto_thumbnail");
-                            sessionStorage.removeItem("blogauto_thumbnail_b64");
-                            toast.success("썸네일이 삭제됐어요");
-                          }}>
-                          삭제
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
               {savedImages.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2 p-3">
+                <div className="grid grid-cols-2 gap-2 p-3">
                   {savedImages.slice(0, 6).map((src, i) => (
                     <button key={i}
                       className="relative rounded-lg overflow-hidden transition-all"
-                      style={{ aspectRatio: "1", border: `2px solid ${thumbnailUrl === src ? "var(--color-emerald)" : "var(--border)"}` }}
-                      onClick={() => {
-                        if (thumbnailUrl === src) {
-                          // 이미 선택된 거 누르면 해제
-                          setThumbnailUrl("");
-                          localStorage.removeItem("blogauto_thumbnail");
-                          toast.success("썸네일 선택 해제됐어요");
-                        } else {
-                          setThumbnailUrl(src);
-                          toast.success("썸네일이 선택되었습니다!");
-                        }
-                      }}>
+                      style={{ aspectRatio: "1", border: `2px solid ${thumbnailUrl === src ? "var(--color-emerald)" : "transparent"}` }}
+                      onClick={() => { setThumbnailUrl(src); toast.success("썸네일이 선택되었습니다!"); }}>
                       {src && <img src={src} alt="" className="w-full h-full object-cover"
                         onError={e => { const el = (e.target as HTMLImageElement).closest("button") as HTMLElement; if(el) el.style.display="none"; }} />}
                       {thumbnailUrl === src && (
-                        <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.4)" }}>
-                          <CheckCircle2 className="w-5 h-5 text-white" />
+                        <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.3)" }}>
+                          <CheckCircle2 className="w-6 h-6 text-white" />
                         </div>
                       )}
                     </button>

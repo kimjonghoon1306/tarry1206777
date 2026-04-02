@@ -1,3 +1,4 @@
+// BlogAuto Pro - Dashboard v3.1
 /**
  * BlogAuto Pro - Dashboard Page
  * ✅ 실제 localStorage 데이터 연동

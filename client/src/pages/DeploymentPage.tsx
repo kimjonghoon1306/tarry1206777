@@ -1,3 +1,4 @@
+// BlogAuto Pro - DeploymentPage v3.1
 /**
  * DeploymentPage.tsx — BlogAuto Pro
  * 완전 재작성 버전 (구조적 오류 없음)
@@ -995,22 +996,26 @@ export default function DeploymentPage() {
 
   // ── Webhook 발행 ──
   async function publishToWebhook() {
-    // 1. 직접 저장된 webhook_url 확인
-    let url = localStorage.getItem("webhook_url");
-    let key = localStorage.getItem("webhook_auth_key");
+    // 1. platform_custom_list 우선 (신규 방식)
+    let url = "";
+    let key = "";
+    let authHeader = "Authorization";
 
-    // 2. PlatformSection으로 저장된 경우 (platform_custom_list)
-    if (!url) {
-      try {
-        const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
-        if (customList.length > 0) {
-          url = customList[0]["webhook_url"] || customList[0]["url"] || "";
-          key = customList[0]["webhook_auth_key"] || customList[0]["auth_key"] || "";
-        }
-      } catch {}
-    }
+    try {
+      const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+      if (customList.length > 0) {
+        url = customList[0]["webhook_url"] || "";
+        key = customList[0]["webhook_auth_key"] || "";
+        authHeader = customList[0]["webhook_auth_header"] || "Authorization";
+      }
+    } catch {}
 
-    if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트 URL을 입력해주세요.");
+    // 2. 기존 방식 fallback
+    if (!url) url = localStorage.getItem("webhook_url") || "";
+    if (!key) key = localStorage.getItem("webhook_auth_key") || "";
+    if (authHeader === "Authorization") authHeader = localStorage.getItem("webhook_auth_header") || "Authorization";
+
+    if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트를 등록해주세요.");
     // CORS 우회: Vercel 서버를 프록시로 사용
     const payload = {
       title,
@@ -1024,7 +1029,7 @@ export default function DeploymentPage() {
       const proxyResp = await fetch("/api/webhook-proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, key, payload }),
+        body: JSON.stringify({ url, key, authHeader, payload }),
       });
       if (proxyResp.ok) return;
       // 프록시 없으면 직접 시도
@@ -1032,7 +1037,13 @@ export default function DeploymentPage() {
 
     // 2차 시도: 직접 호출 (CORS 허용된 경우)
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (key) headers["Authorization"] = key;
+    if (key && authHeader !== "none") {
+      if (authHeader === "Authorization") {
+        headers["Authorization"] = key.startsWith("Bearer ") ? key : key;
+      } else {
+        headers[authHeader] = key;
+      }
+    }
     const resp = await fetch(url, {
       method: "POST",
       headers,

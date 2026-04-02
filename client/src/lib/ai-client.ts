@@ -1,3 +1,4 @@
+// BlogAuto Pro - ai-client v3.1
 /**
  * ai-client.ts
  * 클라이언트(브라우저)에서 직접 AI API 호출

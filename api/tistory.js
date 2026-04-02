@@ -1,3 +1,4 @@
+// BlogAuto Pro - tistory v3.1
 /**
  * api/tistory.js
  * 티스토리 OAuth + 글 발행 API

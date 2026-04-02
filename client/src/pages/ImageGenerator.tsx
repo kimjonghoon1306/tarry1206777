@@ -58,7 +58,7 @@ const KO_EN_MAP: Record<string, string> = {
   인테리어: "interior design home modern",
   리모델링: "home renovation interior remodel",
   이사: "moving boxes new home",
-  전월세: "apartment rental contract keys",
+  전월세: "apartment keys rental contract signing, real estate agent handshake",
   집: "home house interior cozy",
   방: "bedroom interior modern",
   // ── 음식/맛집 ──

@@ -1,3 +1,4 @@
+// BlogAuto Pro - LandingPage v3.1
 /**
  * BlogAuto Pro - Landing Page
  * Design: Modern Professional Dark SaaS

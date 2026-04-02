@@ -1,3 +1,4 @@
+// BlogAuto Pro - coupang v3.1
 /**
  * api/coupang.js
  * 쿠팡파트너스 상품 검색 + 링크 자동 생성

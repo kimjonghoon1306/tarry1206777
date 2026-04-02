@@ -1,3 +1,4 @@
+// BlogAuto Pro - auth v3.1
 /**
  * BlogAuto Pro - Auth API
  * Vercel KV 기반 영구 저장소
