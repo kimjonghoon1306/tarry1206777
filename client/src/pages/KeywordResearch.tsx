@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getContentProvider, getAPIKey } from "@/lib/ai-config";
+import { userGet, SETTINGS_KEYS } from "@/lib/user-storage";
 
 // 대형 키워드 풀 - 다양한 카테고리
 const POOLS: Record<string, string[]> = {
@@ -226,9 +227,9 @@ export default function KeywordResearch() {
 
   async function doCollect(query?: string) {
     const kw = (query ?? inputKW).trim();
-    const accessLicense = localStorage.getItem("naver_access_license");
-    const secretKey = localStorage.getItem("naver_secret_key");
-    const customerId = localStorage.getItem("naver_customer_id");
+    const accessLicense = userGet(SETTINGS_KEYS.NAVER_LICENSE);
+    const secretKey = userGet(SETTINGS_KEYS.NAVER_SECRET);
+    const customerId = userGet(SETTINGS_KEYS.NAVER_CUSTOMER);
 
     // 네이버 API 없으면 AI로 키워드 추천
     if (!accessLicense || !secretKey || !customerId) {
