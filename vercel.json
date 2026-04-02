@@ -53,8 +53,5 @@
     "api/coupang.js": {
       "maxDuration": 15
     }
-  },
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "dist",
-  "installCommand": "pnpm install"
+  }
 }
