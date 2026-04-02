@@ -105,6 +105,45 @@ export default async function handler(req, res) {
       return res.json({ type: "url", images: (data.images || []).map(i => i.url) });
     }
 
+    // ── HuggingFace FLUX.1 Schnell ───────────────────────────────────────
+    if (provider === "huggingface") {
+      const images = [];
+      for (let i = 0; i < numImages; i++) {
+        const resp = await fetch(
+          "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              inputs: prompt,
+              parameters: { width, height, num_inference_steps: 4 },
+            }),
+          }
+        );
+        if (!resp.ok) {
+          const text = await resp.text().catch(() => "");
+          if (resp.status === 401 || resp.status === 403) {
+            throw new Error("HuggingFace API 키가 잘못되었거나 Inference 권한이 없습니다. 토큰 권한을 확인해주세요.");
+          }
+          if (resp.status === 429) {
+            throw new Error("HuggingFace 요청 한도 초과. 잠시 후 다시 시도해주세요.");
+          }
+          if (resp.status === 503) {
+            throw new Error("HuggingFace 모델 로딩 중입니다. 20초 후 다시 시도해주세요.");
+          }
+          throw new Error(`HuggingFace 오류 (${resp.status}): ${text.slice(0, 100)}`);
+        }
+        const blob = await resp.arrayBuffer();
+        const base64 = Buffer.from(blob).toString("base64");
+        images.push(`data:image/jpeg;base64,${base64}`);
+      }
+      if (images.length === 0) throw new Error("HuggingFace 이미지 생성 실패");
+      return res.json({ type: "base64", images });
+    }
+
     return res.status(400).json({ error: "지원하지 않는 이미지 AI입니다" });
 
   } catch (e) {
