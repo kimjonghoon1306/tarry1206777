@@ -1,25 +1,57 @@
 {
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/assets/(.*\\.([0-9a-f]{8,})\\.(js|css|woff2?))",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
       ]
     },
     {
       "source": "/",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/generate-content.js": {
+      "maxDuration": 60
+    },
+    "api/generate-titles.js": {
+      "maxDuration": 30
+    },
+    "api/webhook-proxy.js": {
+      "maxDuration": 30
+    },
+    "api/auth.js": {
+      "maxDuration": 10
+    },
+    "api/tistory.js": {
+      "maxDuration": 15
+    },
+    "api/coupang.js": {
+      "maxDuration": 15
+    }
+  }
 }
