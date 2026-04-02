@@ -642,6 +642,7 @@ export default function SettingsPage() {
     try { return JSON.parse(localStorage.getItem("ba_user") || "null"); } catch { return null; }
   });
   const token = localStorage.getItem("ba_token") || "";
+  const [adPlatform, setAdPlatform] = React.useState(() => userGet("selected_ad_platform") || "both");
 
   const saveAllToServer = async (settings: Record<string,string>) => {
     if (!token) return;
@@ -1009,7 +1010,7 @@ export default function SettingsPage() {
               { id: "both", label: "둘 다", desc: "통합 최적화", color: "oklch(0.75 0.12 300)", logo: "★",
                 tip: "균형잡힌 구성으로 양쪽 모두 최적화" },
             ].map(platform => {
-              const selected = (userGet("selected_ad_platform") || "both") === platform.id;
+              const selected = adPlatform === platform.id;
               return (
                 <button key={platform.id}
                   className="rounded-xl p-4 text-left transition-all"
@@ -1019,10 +1020,9 @@ export default function SettingsPage() {
                   }}
                   onClick={() => {
                     userSet("selected_ad_platform", platform.id);
+                    setAdPlatform(platform.id);
                     saveSettingsToServer({ selected_ad_platform: platform.id });
                     toast.success(`${platform.label} 최적화 모드로 설정됐어요!`);
-                    // 강제 리렌더링
-                    window.dispatchEvent(new Event("storage"));
                   }}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black text-white"

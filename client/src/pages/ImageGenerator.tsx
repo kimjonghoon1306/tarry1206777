@@ -35,10 +35,10 @@ async function testImageUrl(url: string, timeoutMs = 25000): Promise<boolean> {
   });
 }
 
-// ── 한국어 → 영어 키워드 매핑 ──────────────────────
+// ── 한국어 → 영어 키워드 매핑 (확장판) ──────────────────────
 const KO_EN_MAP: Record<string, string> = {
-  // ── 부동산/주거 (최우선 - 구체적 이미지) ──
-  단기월세: "modern cozy studio apartment interior, stylish furniture, city view window",
+  // ── 부동산/주거 ──
+  단기월세: "modern cozy studio apartment interior, stylish furniture, city view",
   주택가이드: "beautiful house exterior real estate, suburban neighborhood, blue sky",
   주택: "modern house exterior, beautiful garden, real estate property",
   아파트가이드: "luxury apartment building exterior, modern architecture, city skyline",
@@ -46,114 +46,131 @@ const KO_EN_MAP: Record<string, string> = {
   부동산가이드: "real estate property house for sale, agent showing home",
   임대주택: "apartment complex residential building, modern exterior",
   원룸가이드: "cozy studio apartment interior, modern minimal design",
-  월세: "monthly rent apartment interior room",
-  전세: "korean apartment lease contract keys",
-  부동산: "real estate apartment building",
-  아파트: "apartment building modern exterior",
-  원룸: "studio apartment interior cozy",
-  오피스텔: "officetel apartment interior modern",
-  빌라: "villa house exterior residential",
-  임대: "rental apartment property",
-  분양: "new apartment complex building",
-  인테리어: "interior design home modern",
-  리모델링: "home renovation interior remodel",
-  이사: "moving boxes new home",
+  월세: "monthly rent apartment interior room", 전세: "korean apartment lease contract keys",
+  부동산: "real estate apartment building", 아파트: "apartment building modern exterior",
+  원룸: "studio apartment interior cozy", 오피스텔: "officetel apartment interior modern",
+  빌라: "villa house exterior residential", 임대: "rental apartment property",
+  분양: "new apartment complex building", 인테리어: "interior design home modern beautiful",
+  리모델링: "home renovation interior remodel", 이사: "moving boxes new home fresh start",
   전월세: "apartment keys rental contract signing, real estate agent handshake",
-  집: "home house interior cozy",
-  방: "bedroom interior modern",
+  집: "home house interior cozy warm", 방: "bedroom interior modern clean",
   // ── 음식/맛집 ──
-  맛집: "restaurant food delicious dining",
-  음식: "food dish delicious",
-  요리: "cooking kitchen food",
-  카페: "cafe coffee cozy interior",
-  빵: "bread bakery fresh",
-  디저트: "dessert sweet food",
-  케이크: "cake dessert celebration",
-  커피: "coffee cup cafe",
-  치킨: "fried chicken food korean",
-  피자: "pizza food italian",
-  라면: "ramen noodle korean food",
-  삼겹살: "korean bbq pork grill",
+  맛집: "delicious food restaurant dining ambiance korean cuisine",
+  음식: "delicious food dish gourmet plating", 요리: "cooking kitchen chef food preparation",
+  카페: "cozy cafe coffee shop interior warm lighting", 빵: "fresh bread bakery artisan loaf",
+  디저트: "dessert sweet cake pastry beautiful", 케이크: "celebration cake dessert beautiful",
+  커피: "coffee latte art cup cafe morning", 치킨: "crispy fried chicken korean food",
+  피자: "pizza italian food restaurant", 라면: "ramen noodle bowl korean hot",
+  삼겹살: "korean bbq pork belly grill smoke", 회: "sashimi japanese fresh fish seafood",
+  초밥: "sushi japanese restaurant fresh", 파스타: "pasta italian food restaurant",
+  브런치: "brunch cafe food table morning light", 술집: "bar drinks night atmosphere",
+  포차: "korean pojangmacha street food night", 와인: "wine glass red white elegant bottle vineyard",
+  맥주: "beer pub glass cold refreshing", 막걸리: "korean traditional rice wine makgeolli",
+  소주: "korean soju drink glass bottle", 칵테일: "cocktail bar drink colorful",
+  스테이크: "steak beef grill restaurant fine dining", 햄버거: "hamburger burger fast food",
+  샐러드: "salad healthy fresh vegetables colorful", 김치: "kimchi korean fermented food",
   // ── 여행 ──
-  여행: "travel destination scenic view",
-  관광: "tourism sightseeing landmark",
-  호텔: "hotel luxury room interior",
-  해외: "international travel airport",
-  제주: "jeju island scenic nature korea",
-  서울: "seoul city skyline korea",
-  부산: "busan beach ocean korea",
-  캠핑: "camping outdoor tent nature",
-  // ── 건강/뷰티 ──
-  건강: "health wellness lifestyle",
-  다이어트: "diet fitness healthy food",
-  운동: "exercise gym fitness workout",
-  뷰티: "beauty makeup cosmetics",
-  피부: "skincare beauty face",
-  헤어: "hair salon styling",
-  // ── 재테크/경제 ──
-  재테크: "investment finance money growth",
-  주식: "stock market trading chart",
-  코인: "cryptocurrency bitcoin digital",
-  돈: "money finance wealth",
-  절약: "saving money budget",
-  대출: "loan bank finance document",
-  금리: "interest rate finance bank",
+  여행: "travel destination scenic beautiful landscape", 관광: "tourism sightseeing famous landmark",
+  호텔: "luxury hotel room interior elegant", 숙소: "accommodation cozy room interior",
+  해외여행: "international travel airplane airport passport", 국내여행: "domestic travel korea scenic",
+  제주: "jeju island scenic ocean cliffs korea", 서울: "seoul city skyline modern korea",
+  부산: "busan beach ocean sunset korea", 강원: "gangwon mountains nature korea",
+  제주도: "jeju island beach volcanic landscape", 경주: "gyeongju historic temple korea",
+  전주: "jeonju hanok village traditional korea", 여수: "yeosu ocean night view korea",
+  속초: "sokcho beach mountains east sea korea", 캠핑: "camping outdoor tent campfire nature",
+  글램핑: "glamping luxury tent outdoor", 펜션: "pension guesthouse cozy countryside",
+  리조트: "resort pool luxury tropical", 해변: "beach ocean waves sand summer",
+  산: "mountain hiking trail scenic peak", 계곡: "valley stream nature cool water",
+  // ── 건강/뷰티/다이어트 ──
+  건강: "health wellness lifestyle happy", 다이어트: "diet fitness healthy body lifestyle",
+  운동: "exercise gym fitness workout energy", 헬스: "gym fitness equipment workout",
+  요가: "yoga meditation mindfulness peace", 필라테스: "pilates exercise flexibility",
+  뷰티: "beauty makeup cosmetics glamour", 피부: "skincare face beauty glow",
+  헤어: "hair salon styling beauty", 메이크업: "makeup beauty cosmetics tutorial",
+  스킨케어: "skincare routine beauty products", 탈모: "hair care treatment head",
+  영양제: "supplements vitamins health capsules", 다이어트식단: "healthy diet food meal plan",
+  // ── 재테크/경제/금융 ──
+  재테크: "investment finance money growth chart", 주식: "stock market trading chart finance",
+  코인: "cryptocurrency bitcoin blockchain digital", 돈: "money finance wealth success",
+  절약: "saving money budget frugal lifestyle", 대출: "loan bank finance document",
+  부업: "side job income work laptop", ETF: "ETF investment portfolio finance chart",
+  펀드: "fund investment finance portfolio", 청약: "apartment application subscription korea",
+  연금: "pension retirement savings future", 보험: "insurance protection document family",
+  세금: "tax document finance accounting", 경제: "economy finance business growth",
   // ── IT/기술 ──
-  AI: "artificial intelligence technology futuristic",
-  앱: "mobile app smartphone technology",
-  스마트폰: "smartphone mobile technology",
-  유튜브: "youtube video content creator",
-  블로그: "blog writing laptop desk",
-  // ── 생활/육아 ──
-  육아: "parenting baby family",
-  아이: "children kids family happy",
-  임신: "pregnancy maternity",
-  청소: "cleaning home organize",
-  // ── 교육 ──
-  공부: "study books education desk",
-  학원: "education learning classroom",
-  영어: "english learning study book",
-  취업: "job interview office career",
-  // ── 자동차 ──
-  자동차: "car automobile driving",
-  중고차: "used car dealership",
-  전기차: "electric vehicle car modern",
+  AI: "artificial intelligence technology futuristic robot", 챗GPT: "chatgpt AI chat interface laptop",
+  인공지능: "artificial intelligence technology digital", 앱: "mobile app smartphone technology ui",
+  스마트폰: "smartphone mobile technology hands", 노트북: "laptop computer work desk",
+  컴퓨터: "computer desktop technology setup", 유튜브: "youtube video content creator studio",
+  블로그: "blog writing laptop desk workspace", 소셜미디어: "social media phone scrolling",
+  게임: "gaming controller screen setup", 코딩: "coding programming laptop dark screen",
+  // ── 생활/육아/교육 ──
+  육아: "parenting baby family happy home", 아이: "children kids playing happy family",
+  임신: "pregnancy maternity mother baby bump", 출산: "newborn baby hospital family joy",
+  청소: "cleaning home organize sparkle", 정리: "organizing home storage neat",
+  공부: "study books education desk focused", 영어: "english learning books study",
+  취업: "job interview office career professional", 자격증: "certificate diploma education",
+  대학생: "college student campus study life", 취준생: "job seeker resume laptop study",
+  // ── 자동차/교통 ──
+  자동차: "car automobile driving road", 중고차: "used car dealership lot",
+  전기차: "electric vehicle car charging modern", 오토바이: "motorcycle bike road adventure",
   // ── 반려동물 ──
-  강아지: "dog puppy cute pet",
-  고양이: "cat kitten cute pet",
-  반려동물: "pet animal companion",
+  강아지: "dog puppy cute pet happy", 고양이: "cat kitten cute pet indoor",
+  반려동물: "pet animal companion home love", 햄스터: "hamster small pet cute",
   // ── 패션/쇼핑 ──
-  패션: "fashion style clothing",
-  쇼핑: "shopping mall retail",
-  // ── 자연 ──
-  꽃: "flowers colorful nature bloom",
-  바다: "ocean sea beach waves",
-  산: "mountain hiking trail nature",
-  숲: "forest trees nature green",
+  패션: "fashion style clothing outfit trendy", 쇼핑: "shopping retail store bags",
+  명품: "luxury brand fashion handbag", 코디: "outfit coordination fashion style",
+  // ── 자연/계절 ──
+  꽃: "flowers colorful nature bloom spring", 바다: "ocean sea beach waves sunset",
+  숲: "forest trees nature green peaceful", 봄: "spring flowers bloom nature",
+  여름: "summer beach ocean sun vacation", 가을: "autumn fall leaves colorful",
+  겨울: "winter snow cold white landscape",
   // ── 기타 생활정보 ──
-  정부지원: "government support document official",
-  지원금: "financial support benefit government",
-  보험: "insurance document protection",
-  세금: "tax document finance accounting",
-  연말정산: "tax return document finance",
+  정부지원: "government support official document", 지원금: "financial support benefit",
+  연말정산: "tax return document finance", 결혼: "wedding ceremony couple love",
+  이혼: "divorce legal document court", 취미: "hobby leisure activity relaxation",
+  독서: "reading books library peaceful", 음악: "music concert instrument play",
+  영화: "movie cinema film popcorn", 드라마: "korean drama tv entertainment",
+  // ── 비즈니스 ──
+  창업: "startup business entrepreneur office", 마케팅: "marketing digital strategy",
+  sns마케팅: "social media marketing content strategy", 부업: "side business income work",
 };
 
-// ── 프롬프트에서 영어 검색 키워드 추출 (한국어 지원) ──
+
+
+// ── 프롬프트에서 영어 검색 키워드 추출 (한국어 지원 강화) ──
 function extractKeyword(prompt: string): string {
-  // 1. 한국어 키워드 매핑 먼저 시도
+  // 1. 정확히 일치하는 한국어 키워드 매핑
   for (const [ko, en] of Object.entries(KO_EN_MAP)) {
     if (prompt.includes(ko)) return en;
   }
-  // 2. 프롬프트에서 영어 단어 추출
+  // 2. 부분 일치 시도 (2글자 이상)
+  const sorted = Object.keys(KO_EN_MAP).sort((a, b) => b.length - a.length);
+  for (const ko of sorted) {
+    if (ko.length >= 2 && prompt.includes(ko)) return KO_EN_MAP[ko];
+  }
+  // 3. 카테고리 자동 감지
+  const p = prompt.toLowerCase();
+  if (/맛집|음식|카페|식당|요리|레스토랑|먹|맛있/.test(p)) return "delicious food restaurant dining korean cuisine";
+  if (/여행|관광|호텔|숙소|비행기|공항/.test(p)) return "travel destination scenic beautiful landscape";
+  if (/건강|운동|다이어트|헬스|요가|필라테스/.test(p)) return "health fitness wellness lifestyle workout";
+  if (/주식|코인|재테크|투자|돈|금융/.test(p)) return "investment finance money growth success";
+  if (/강아지|고양이|반려/.test(p)) return "cute pet dog cat companion home";
+  if (/패션|옷|코디|스타일/.test(p)) return "fashion style clothing trendy outfit";
+  if (/아이|육아|아기|임신/.test(p)) return "family parenting baby children happy";
+  if (/it|앱|ai|컴퓨터|스마트폰/.test(p)) return "technology digital innovation smartphone";
+  if (/결혼|웨딩|신혼/.test(p)) return "wedding ceremony couple love celebration";
+  if (/꽃|자연|봄|여름|가을|겨울/.test(p)) return "beautiful nature flowers seasons landscape";
+  // 4. 영어 단어 추출
   const englishWords = prompt
     .replace(/[,，。、]/g, " ")
     .split(" ")
     .filter(w => /^[a-zA-Z0-9]+$/.test(w) && w.length > 2)
-    .slice(0, 3)
-    .join(",");
-  if (englishWords) return englishWords;
-  // 3. 프롬프트 전체를 번역 키워드로 (기본값)
-  return "lifestyle blog";
+    .slice(0, 4)
+    .join(" ");
+  if (englishWords) return englishWords + " lifestyle blog photography";
+  // 5. 기본값
+  return "korean lifestyle blog beautiful photography";
 }
 
 // ── 이미지 생성: Pollinations 우선, fallback은 키워드 기반 ──
@@ -589,6 +606,56 @@ export default function ImageGenerator() {
   };
 
   // ── 신규 생성 ──────────────────────────────────────
+  // 한국어 → 영어 이미지 프롬프트 자동 변환
+  const autoTranslatePrompt = async (koreanPrompt: string): Promise<string> => {
+    const hasKorean = /[가-힣]/.test(koreanPrompt);
+    if (!hasKorean) return koreanPrompt;
+
+    // 1. KO_EN_MAP에서 먼저 찾기
+    for (const [ko, en] of Object.entries(KO_EN_MAP)) {
+      if (koreanPrompt.includes(ko)) {
+        return `${en}, ${koreanPrompt.replace(/[가-힣]/g, "").trim()}`.trim();
+      }
+    }
+
+    // 2. AI로 자동 변환 (Gemini 또는 Claude 사용)
+    const aiProvider = getContentProvider();
+    const aiKey = getAPIKey(aiProvider);
+    if (!aiKey) return koreanPrompt; // AI 키 없으면 원문 그대로
+
+    try {
+      const translatePrompt = `다음 한국어 키워드/문장을 Stable Diffusion 이미지 생성에 최적화된 영어 프롬프트로 변환해줘.
+키워드: "${koreanPrompt}"
+규칙:
+- 이미지에 실제로 나타날 시각적 요소만 영어로
+- 분위기, 색감, 조명, 구도 포함
+- 20단어 이내
+- 다른 설명 없이 영어 프롬프트만 출력`;
+
+      if (aiProvider === "gemini") {
+        const resp = await fetch("/api/generate-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: "gemini", apiKey: aiKey, keyword: translatePrompt, language: "en", minChars: 10, stylePrompt: "translate only, no explanation" }),
+        });
+        const data = await resp.json();
+        const translated = (data.content || "").trim().split("
+")[0].replace(/['"]/g, "").trim();
+        if (translated && translated.length > 3) return translated;
+      }
+    } catch {}
+
+    // 3. 간단 카테고리 매핑으로 폴백
+    const p = koreanPrompt;
+    if (/맛집|음식|카페|요리|먹/.test(p)) return `${koreanPrompt} food restaurant delicious dining photography`;
+    if (/여행|관광|호텔/.test(p)) return `${koreanPrompt} travel destination scenic beautiful`;
+    if (/운동|헬스|다이어트/.test(p)) return `${koreanPrompt} fitness workout healthy lifestyle`;
+    if (/아이|육아|아기/.test(p)) return `${koreanPrompt} family children happy home`;
+    if (/패션|옷|코디/.test(p)) return `${koreanPrompt} fashion style outfit trendy`;
+    if (/IT|앱|AI|기술/.test(p)) return `${koreanPrompt} technology digital modern`;
+    return `${koreanPrompt} lifestyle photography beautiful high quality`;
+  };
+
   const handleGenerate = async () => {
     const provider = getImageProvider();
     const apiKey = getAPIKey(provider);
@@ -598,9 +665,11 @@ export default function ImageGenerator() {
     setIsGenerating(true);
     setProgress(0);
     const numImages = parseInt(count) || 1;
-    // 키워드 기반 추가 품질 태그
+
+    // 한국어 자동 번역
+    const translatedPrompt = await autoTranslatePrompt(prompt.trim());
     const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
-    const fullPrompt = `${prompt.trim()}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
+    const fullPrompt = `${translatedPrompt}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
     const [w, h] = (size || "1024x1024").split("x").map(Number);
     const styleLabel = STYLES.find(s => s.value === style)?.label || style;
 
