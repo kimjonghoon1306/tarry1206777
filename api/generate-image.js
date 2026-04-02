@@ -52,7 +52,7 @@ export default async function handler(req, res) {
           const msg = (err.error?.message || "").toLowerCase();
           const status = resp.status;
           if (status === 429 || msg.includes("quota") || msg.includes("rate") || msg.includes("limit") || msg.includes("exhausted") || msg.includes("resource_exhausted")) {
-            throw new Error("Gemini 무료 요청 한도 초과. 잠시 후 다시 시도하거나 Pollinations(무료)로 전환해보세요.");
+            throw new Error("Gemini 이미지 한도 초과 (하루 500개). 내일 초기화되거나 Pollinations(무료)로 전환해보세요.");
           }
           if (msg.includes("api key") || msg.includes("api_key") || status === 400) throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
           if (status === 403) throw new Error("Gemini API 키 권한 없음. Google AI Studio에서 키를 확인해주세요.");

@@ -42,15 +42,32 @@ export default async function handler(req, res) {
 - 오직 한글, 영어, 숫자만 사용`;
 
   function extractTitles(text) {
+    if (!text) return [];
     try {
       const clean = text.replace(/```json|```/gi, "").trim();
+      // 1. JSON 배열 파싱 시도
       const match = clean.match(/\[[\s\S]*\]/);
       if (match) {
         const parsed = JSON.parse(match[0]);
-        if (Array.isArray(parsed)) return parsed.filter(t => typeof t === "string");
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(t => typeof t === "string" && t.length > 3).slice(0, 10);
+        }
       }
-      const parsed = JSON.parse(clean);
-      if (Array.isArray(parsed)) return parsed.filter(t => typeof t === "string");
+      // 2. JSON 직접 파싱
+      try {
+        const parsed = JSON.parse(clean);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(t => typeof t === "string" && t.length > 3).slice(0, 10);
+        }
+      } catch {}
+      // 3. 줄바꿈 기반 파싱
+      const lines = clean.split("\n")
+        .map(l => l.replace(/^[\d]+[\).\s]+|^[-*•\s]+/, "").replace(/^[\s"'""'']+|[\s"'""'']+$/g, "").trim())
+        .filter(l => l.length > 5 && l.length < 120 && !l.startsWith("{") && !l.startsWith("["));
+      if (lines.length >= 2) return lines.slice(0, 10);
+      // 4. 쌍따옴표로 감싼 제목 추출
+      const quoted = [...clean.matchAll(/"([^"]{5,100})"/g)].map(m => m[1]);
+      if (quoted.length >= 2) return quoted.slice(0, 10);
     } catch {}
     return [];
   }
