@@ -28,7 +28,8 @@ export default async function handler(req, res) {
   const targetChars = parseInt(minChars) || 1500;
 
   // max_tokens 글자수에 맞게 조정 (한국어 기준 1자 ≈ 1.5토큰)
-  const maxTokens = Math.max(4000, Math.ceil(targetChars * 2));
+  // Gemini Flash 최대 8192, Groq 최대 8000 → 안전하게 8000으로 상한
+  const maxTokens = Math.min(8000, Math.max(4000, Math.ceil(targetChars * 2)));
 
   // 제목 지정 여부에 따라 프롬프트 다르게
   const titleInstruction = title
@@ -204,7 +205,7 @@ ${stylePrompt}`
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: maxTokens },
+            generationConfig: { maxOutputTokens: Math.min(maxTokens, 8192) },
           }),
         }
       );
