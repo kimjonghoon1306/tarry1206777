@@ -729,7 +729,7 @@ function AdminDashboard() {
                   <h3 className="font-semibold text-foreground">API 키 관리</h3>
                 </div>
                 <Button size="sm" variant="outline" className="gap-2"
-                  onClick={() => window.location.href = "/login?redirect=/settings"}>
+                  onClick={() => window.location.href = "/settings"}>
                   <Settings className="w-4 h-4" /> 설정 페이지에서 관리
                 </Button>
               </div>
@@ -746,8 +746,8 @@ function AdminDashboard() {
                     </p>
                     <Button size="sm" className="gap-2"
                       style={{ background: "var(--color-emerald)", color: "white" }}
-                      onClick={() => window.location.href = "/login"}>
-                      <Key className="w-4 h-4" /> admin 계정으로 로그인 → 설정
+                      onClick={() => window.location.href = "/superadmin"}>
+                      <Key className="w-4 h-4" /> SuperAdmin 비밀번호 입력 → 설정
                     </Button>
                   </div>
                 </div>
