@@ -30,6 +30,15 @@ function getRandomKeywords(count = 15): string[] {
   return [...all].sort(() => Math.random() - 0.5).slice(0, count);
 }
 
+// 황금 키워드 점수 계산 (경쟁 낮음 + 적당한 검색량 + 높은 클릭률)
+function calcGoldScore(kw: { volume: number; competition: string; cpc: number; clicks: number }): number {
+  const compScore = kw.competition === "낮음" ? 100 : kw.competition === "중" ? 50 : 10;
+  const volScore = kw.volume >= 1000 && kw.volume <= 50000 ? 100 : kw.volume < 1000 ? 30 : 60;
+  const ctrScore = kw.volume > 0 ? Math.min(100, (kw.clicks / kw.volume) * 1000) : 0;
+  const cpcScore = Math.min(100, kw.cpc / 10);
+  return Math.round(compScore * 0.4 + volScore * 0.3 + ctrScore * 0.2 + cpcScore * 0.1);
+}
+
 type KW = {
   id: number; keyword: string; volume: number; clicks: number;
   cpc: number; trend: "up"|"down"; competition: string;
@@ -69,7 +78,7 @@ export default function KeywordResearch() {
     } catch { return INIT; }
   });
 
-  const [sort, setSort] = useState<"volume"|"hard"|"easy">("volume");
+  const [sort, setSort] = useState<"volume"|"hard"|"easy"|"gold">("gold");
   const [selKW, setSelKW] = useState<string|null>(() => localStorage.getItem(SELKW_KEY) || null);
   const [titles, setTitles] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(TITLES_KEY) || "[]"); } catch { return []; }
@@ -125,6 +134,7 @@ export default function KeywordResearch() {
     if (a.starred !== b.starred) return a.starred ? -1 : 1;
     if (sort==="hard") return sc(b.competition)-sc(a.competition);
     if (sort==="easy") return (sc(a.competition)*1e6+b.volume)-(sc(b.competition)*1e6+a.volume);
+    if (sort==="gold") return calcGoldScore(b)-calcGoldScore(a);
     return b.volume-a.volume;
   });
 
@@ -134,8 +144,8 @@ export default function KeywordResearch() {
 
   const categories = ["전체", ...Array.from(new Set(keywords.map(k => k.category)))];
 
-  const sortLabel = sort==="volume"?"검색량순":sort==="hard"?"어려운순":"가능성순";
-  const sortColor = sort==="volume"?"var(--muted-foreground)":sort==="hard"?"oklch(0.65 0.22 25)":"var(--color-emerald)";
+  const sortLabel = sort==="gold"?"🏆 황금키워드":sort==="volume"?"검색량순":sort==="hard"?"어려운순":"가능성순";
+  const sortColor = sort==="gold"?"oklch(0.769 0.188 70.08)":sort==="volume"?"var(--muted-foreground)":sort==="hard"?"oklch(0.65 0.22 25)":"var(--color-emerald)";
 
   function toggleStar(id: number) {
     setKeywords(prev => prev.map(k => k.id===id ? {...k, starred:!k.starred} : k));
@@ -462,7 +472,7 @@ export default function KeywordResearch() {
             </div>
             <Button variant="outline" size="sm" className="shrink-0 gap-1.5 text-xs"
               style={{color:sortColor,borderColor:sortColor}}
-              onClick={()=>setSort(s=>s==="volume"?"hard":s==="hard"?"easy":"volume")}>
+              onClick={()=>setSort(s=>s==="gold"?"volume":s==="volume"?"hard":s==="hard"?"easy":"gold")}>
               <ArrowUpDown className="w-3.5 h-3.5"/>{sortLabel}
             </Button>
           </div>

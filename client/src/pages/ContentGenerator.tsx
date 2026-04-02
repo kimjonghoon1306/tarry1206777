@@ -26,6 +26,24 @@ import { useLocation } from "wouter";
 const CONTENT_KEY = "blogauto_content";
 const GREETING_KEY = "blogauto_greeting";
 const STYLE_KEY = "blogauto_writing_style";
+const PERSONA_KEY = "blogauto_persona";
+
+// ── 페르소나 (화자/독자 스타일) ──────────────────
+const PERSONA_STYLES = [
+  { id: "none", label: "🙂 기본", color: "#888", prompt: "" },
+  { id: "young_woman", label: "👩 20대 여성", color: "oklch(0.75 0.18 340)", prompt: "20대 여성이 친한 친구에게 카톡 보내듯 친근하고 감성적으로 작성해줘. 이모지 적절히 사용하고, 공감과 감성을 자극하는 표현을 써줘. '~했어요', '~더라고요', '~거든요' 말투로." },
+  { id: "young_man", label: "👨 20대 남성", color: "oklch(0.65 0.18 230)", prompt: "20대 남성이 친구에게 솔직하게 말하듯 써줘. 직접적이고 핵심만 짚는 문체로, 유머와 현실적인 조언을 섞어서 작성해줘. '~했어요', '~임', '~거든요' 자연스럽게 써줘." },
+  { id: "middle_woman", label: "👩‍🦳 40대 여성", color: "oklch(0.7 0.15 30)", prompt: "40대 주부나 직장맘이 또래 친구에게 진심으로 알려주듯 따뜻하고 실용적으로 써줘. 경험에서 우러나온 조언과 공감을 담아줘. '~해요', '~하더라고요', '~이에요' 말투로." },
+  { id: "middle_man", label: "👨‍🦳 40대 남성", color: "oklch(0.55 0.15 200)", prompt: "40대 직장인 남성이 후배에게 조언해주듯 신뢰감 있고 경험 기반으로 써줘. 핵심 정보를 명확하게 전달하되 딱딱하지 않게. '~합니다', '~했어요', '~거든요' 섞어서." },
+  { id: "elder", label: "👴👵 어르신", color: "oklch(0.6 0.12 60)", prompt: "60대 이상 어르신이 손녀/손자에게 이야기해주듯 천천히, 쉬운 단어로 따뜻하게 써줘. 어려운 말은 쓰지 말고, 경험에서 우러나온 지혜와 따뜻함을 담아줘." },
+  { id: "child_girl", label: "👧 여자아이", color: "oklch(0.8 0.18 350)", prompt: "초등학생 여자아이가 일기 쓰듯 귀엽고 순수하게 써줘. 짧은 문장으로 솔직하게, 신나고 즐거운 감정을 담아줘. 어른스러운 표현은 쓰지 말고 아이답게." },
+  { id: "child_boy", label: "👦 남자아이", color: "oklch(0.7 0.18 220)", prompt: "초등학생 남자아이가 친구에게 신나서 말하듯 써줘. 짧고 활기차게, 모험심과 호기심을 담아서. 어른스러운 표현 없이 아이답게 솔직하게." },
+  { id: "reporter", label: "📰 기자", color: "oklch(0.4 0.1 220)", prompt: "신문 기자가 심층 취재 기사 쓰듯 객관적이고 사실 기반으로 써줘. 핵심 정보를 앞에 배치(역피라미드), 인용과 수치 적극 활용, 신뢰감 있는 문체로. 독자가 정확한 정보를 얻을 수 있게." },
+  { id: "teacher", label: "👨‍🏫 선생님", color: "oklch(0.6 0.15 150)", prompt: "친절한 선생님이 학생에게 설명해주듯 차근차근, 이해하기 쉽게 써줘. 단계별로 설명하고, 어려운 개념은 쉬운 예시로 풀어서. '이렇게 하면 돼요', '이건 이런 뜻이에요' 식으로." },
+  { id: "expert", label: "🎓 전문가", color: "oklch(0.5 0.12 270)", prompt: "해당 분야 전문가가 신뢰감 있게 써줘. 전문 지식을 쉬운 말로 풀어서, 근거와 데이터를 적극 활용하고, 독자가 실제로 적용할 수 있는 실용적 조언을 담아줘." },
+  { id: "mom", label: "👩‍👧 엄마", color: "oklch(0.75 0.15 20)", prompt: "자상한 엄마가 아이에게 설명해주듯 따뜻하고 걱정 어린 마음으로 써줘. 안전과 건강을 먼저 생각하고, 실용적인 조언과 함께 따뜻한 격려를 담아줘." },
+  { id: "dad", label: "👨‍👦 아빠", color: "oklch(0.5 0.12 230)", prompt: "듬직한 아빠가 가족에게 알려주듯 든든하고 실용적으로 써줘. 핵심을 짚고, 경험에서 우러나온 현실적 조언을 담아줘. 가끔 유머도 섞어서 친근하게." },
+];
 
 // ── 글쓰기 스타일 프리셋 ──────────────────────────
 const WRITING_STYLES = [
@@ -105,6 +123,8 @@ export default function ContentGenerator() {
   const [title, setTitle] = useState(prefilledTitle || saved?.title || "");
   const [selectedLang, setSelectedLang] = useState(() => localStorage.getItem("content_language") || "ko");
   const [selectedStyle, setSelectedStyle] = useState(() => localStorage.getItem(STYLE_KEY) || "blog");
+  const [selectedPersona, setSelectedPersona] = useState(() => localStorage.getItem(PERSONA_KEY) || "none");
+  const [showPersonaPicker, setShowPersonaPicker] = useState(false);
   const [customPrompt, setCustomPrompt] = useState(() => localStorage.getItem("blogauto_custom_prompt") || "");
   const [showStylePicker, setShowStylePicker] = useState(false);
   const [minChars, setMinChars] = useState(saved?.minChars || "1500");
@@ -229,6 +249,10 @@ export default function ContentGenerator() {
   }, [selectedStyle]);
 
   useEffect(() => {
+    try { localStorage.setItem(PERSONA_KEY, selectedPersona); } catch {}
+  }, [selectedPersona]);
+
+  useEffect(() => {
     try { localStorage.setItem("blogauto_custom_prompt", customPrompt); } catch {}
   }, [customPrompt]);
 
@@ -271,11 +295,12 @@ export default function ContentGenerator() {
     }, 600);
 
     try {
-      // 스타일 프롬프트 적용
+      // 스타일 + 페르소나 프롬프트 합치기
       const styleObj = WRITING_STYLES.find(s => s.id === selectedStyle);
-      const stylePrompt = selectedStyle === "custom"
-        ? customPrompt
-        : (styleObj?.prompt || "");
+      const personaObj = PERSONA_STYLES.find(p => p.id === selectedPersona);
+      const baseStyle = selectedStyle === "custom" ? customPrompt : (styleObj?.prompt || "");
+      const personaPrompt = personaObj?.id !== "none" ? (personaObj?.prompt || "") : "";
+      const stylePrompt = [baseStyle, personaPrompt].filter(Boolean).join("\n\n");
 
       const content = await generateContent(
         provider, apiKey, keyword,
@@ -455,6 +480,28 @@ export default function ContentGenerator() {
                 onChange={e => setCustomPrompt(e.target.value)}
               />
             )}
+          </div>
+
+          {/* ── 페르소나 선택 ── */}
+          <div className="mt-3">
+            <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>
+              화자 페르소나 (누구의 목소리로 쓸까요?)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PERSONA_STYLES.map(p => (
+                <button key={p.id}
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold transition-all"
+                  style={{
+                    background: selectedPersona === p.id ? p.color : "var(--background)",
+                    color: selectedPersona === p.id ? "white" : "var(--foreground)",
+                    border: `1px solid ${selectedPersona === p.id ? p.color : "var(--border)"}`,
+                    opacity: selectedPersona === p.id ? 1 : 0.75,
+                  }}
+                  onClick={() => setSelectedPersona(p.id)}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* 글 제목 */}
