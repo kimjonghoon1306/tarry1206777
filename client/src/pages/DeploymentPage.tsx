@@ -835,11 +835,8 @@ export default function DeploymentPage() {
     const parts: string[] = [];
     blocks.forEach((b: any) => {
       if (b.type === "text") {
-        const paras = b.content.split("
-
-").filter((p: string) => p.trim());
-        const html = paras.map((p: string) => "<p>" + p.replace(/
-/g, "<br>") + "</p>").join("");
+        const paras = b.content.split("\n\n").filter((p: string) => p.trim());
+        const html = paras.map((p: string) => "<p>" + p.split("\n").join("<br>") + "</p>").join("");
         parts.push(html);
       } else if (b.type === "image-pair") {
         b.images.forEach((img: any) => {
@@ -850,8 +847,7 @@ export default function DeploymentPage() {
       }
     });
     if (hashtags.length > 0) parts.push("<p style=\"margin-top:24px;color:#666\">" + hashtags.join(" ") + "</p>");
-    return parts.join("
-");
+    return parts.join("\n");
   }
 
   function buildFinalContent(): string {
