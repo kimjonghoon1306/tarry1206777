@@ -45,14 +45,7 @@ type KW = {
   category: string; starred: boolean;
 };
 
-const INIT: KW[] = [
-  {id:1,keyword:"맛집 추천 2026",volume:89400,clicks:2340,cpc:450,trend:"up",competition:"중",category:"음식",starred:true},
-  {id:2,keyword:"제주도 여행 코스",volume:72100,clicks:1980,cpc:380,trend:"up",competition:"높음",category:"여행",starred:true},
-  {id:3,keyword:"직장인 재테크",volume:65800,clicks:1870,cpc:890,trend:"up",competition:"높음",category:"금융",starred:false},
-  {id:4,keyword:"다이어트 식단표",volume:58200,clicks:1560,cpc:320,trend:"down",competition:"중",category:"건강",starred:false},
-  {id:5,keyword:"인테리어 소품 추천",volume:49100,clicks:1340,cpc:560,trend:"up",competition:"낮음",category:"인테리어",starred:false},
-  {id:6,keyword:"강아지 훈련 방법",volume:43700,clicks:1120,cpc:290,trend:"up",competition:"낮음",category:"반려동물",starred:false},
-];
+const INIT: KW[] = [];
 
 const CHART = [
   {name:"음식",volume:89400},{name:"여행",volume:72100},{name:"금융",volume:65800},
@@ -637,9 +630,26 @@ export default function KeywordResearch() {
               );
             })}
             {filtered.length === 0 && (
-              <div className="py-12 text-center" style={{color:"var(--muted-foreground)"}}>
-                <Bot className="w-8 h-8 mx-auto mb-2 opacity-30"/>
-                <p className="text-sm">키워드를 수집해주세요</p>
+              <div className="py-12 text-center">
+                <div className="inline-flex flex-col items-center gap-4 max-w-xs mx-auto">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{ background: "oklch(0.696 0.17 162.48/12%)" }}>
+                    <Sparkles className="w-8 h-8" style={{ color: "var(--color-emerald)" }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground mb-1">키워드가 없어요!</p>
+                    <p className="text-xs leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                      위 검색창에 키워드를 입력하고<br/>
+                      <span className="font-semibold" style={{ color: "var(--color-emerald)" }}>수집하기</span>를 누르거나<br/>
+                      <span className="font-semibold" style={{ color: "oklch(0.769 0.188 70.08)" }}>🏆 황금키워드</span> 버튼을 눌러보세요
+                    </p>
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    <span className="px-3 py-1.5 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/15%)", color: "var(--color-emerald)" }}>
+                      💡 예: 맛집, 다이어트, 여행
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
