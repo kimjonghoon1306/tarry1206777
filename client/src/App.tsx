@@ -22,9 +22,10 @@ import AdminPage from "./pages/AdminPage";
 function PrivateRoute({ component: Component }: { component: React.ComponentType }) {
   const [, navigate] = useLocation();
   const isLoggedIn = !!localStorage.getItem("ba_token");
+  // SuperAdmin 비밀번호 게이트 통과한 경우도 허용
+  const isSuperAdmin = !!sessionStorage.getItem("bap_admin_auth");
 
-  if (!isLoggedIn) {
-    // 현재 경로를 redirect 파라미터로 넘겨서 로그인 후 돌아오게
+  if (!isLoggedIn && !isSuperAdmin) {
     const currentPath = window.location.pathname;
     setTimeout(() => navigate(`/login?redirect=${encodeURIComponent(currentPath)}`), 0);
     return null;
