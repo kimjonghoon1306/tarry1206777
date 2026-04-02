@@ -133,7 +133,7 @@ const KO_EN_MAP: Record<string, string> = {
   영화: "movie cinema film popcorn", 드라마: "korean drama tv entertainment",
   // ── 비즈니스 ──
   창업: "startup business entrepreneur office", 마케팅: "marketing digital strategy",
-  sns마케팅: "social media marketing content strategy", 부업: "side business income work",
+  sns마케팅: "social media marketing content strategy",
 };
 
 
@@ -639,8 +639,7 @@ export default function ImageGenerator() {
           body: JSON.stringify({ provider: "gemini", apiKey: aiKey, keyword: translatePrompt, language: "en", minChars: 10, stylePrompt: "translate only, no explanation" }),
         });
         const data = await resp.json();
-        const translated = (data.content || "").trim().split("
-")[0].replace(/['"]/g, "").trim();
+        const translated = (data.content || "").trim().split("\n")[0].replace(/['"]/g, "").trim();
         if (translated && translated.length > 3) return translated;
       }
     } catch {}
