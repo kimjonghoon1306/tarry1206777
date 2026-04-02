@@ -106,6 +106,7 @@ export const SETTINGS_KEYS = {
   CLAUDE_KEY:       "claude_api_key",
   GROQ_KEY:         "groq_api_key",
   FLUX_KEY:         "flux_api_key",
+  HUGGING_KEY:      "huggingface_api_key",
   NAVER_LICENSE:    "naver_access_license",
   NAVER_SECRET:     "naver_secret_key",
   NAVER_CUSTOMER:   "naver_customer_id",
