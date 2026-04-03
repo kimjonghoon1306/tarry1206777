@@ -381,37 +381,49 @@ export default function ContentGenerator() {
             <p className="text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>AI가 {minChars}자 이상의 SEO 최적화 글을 자동 작성합니다</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {generatedContent && (
-              <>
-                {/* 이미지 생성으로 이동 버튼 */}
-                <Button size="sm" className="gap-1.5"
-                  style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
-                  onClick={() => {
-                    // 키워드와 제목만 전달 - 한글 노이즈 제거
-                    const autoPrompt = title ? `${keyword} ${title}` : keyword;
-                    navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
-                  }}>
-                  <Image className="w-4 h-4" /> 이미지 생성
-                </Button>
-                {/* 블로그 미리보기 */}
-                <Button size="sm" variant="outline" className="gap-1.5"
-                  onClick={() => setActiveTab("blog-preview")}>
-                  <Eye className="w-4 h-4" /> 블로그 미리보기
-                </Button>
-                {/* 초기화 */}
-                <Button size="sm" variant="outline" className="gap-1.5"
-                  style={{ color: "oklch(0.65 0.22 25)", borderColor: "oklch(0.65 0.22 25/40%)" }}
-                  onClick={handleClear}>
-                  <Trash2 className="w-4 h-4" /> 초기화
-                </Button>
-                {/* 구독자 미리보기 - 헤더 버튼 (모바일 접근성) */}
-                <Button size="sm" className="gap-1.5 sm:hidden"
-                  style={{ background: "var(--color-emerald)", color: "white" }}
-                  onClick={() => setShowFloatingPreview(true)}>
-                  <Eye className="w-4 h-4" /> 미리보기
-                </Button>
-              </>
-            )}
+            {/* 이미지 생성으로 이동 버튼 */}
+            <Button size="sm" className="gap-1.5"
+              style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
+              onClick={() => {
+                const autoPrompt = title ? `${keyword} ${title}`.trim() : keyword.trim();
+                if (!autoPrompt) {
+                  toast.info("먼저 키워드나 제목을 입력해주세요!");
+                  return;
+                }
+                navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
+              }}>
+              <Image className="w-4 h-4" /> 이미지 생성
+            </Button>
+            {/* 블로그 미리보기 - 항상 표시 */}
+            <Button size="sm" className="gap-1.5"
+              style={{ background: "oklch(0.72 0.18 350)", color: "white" }}
+              onClick={() => {
+                if (!generatedContent?.trim()) {
+                  toast.info("먼저 글을 생성해주세요!");
+                  return;
+                }
+                setActiveTab("blog-preview");
+              }}>
+              <Eye className="w-4 h-4" /> 블로그 미리보기
+            </Button>
+            {/* 초기화 */}
+            <Button size="sm" variant="outline" className="gap-1.5"
+              style={{ color: "oklch(0.65 0.22 25)", borderColor: "oklch(0.65 0.22 25/40%)" }}
+              onClick={handleClear}>
+              <Trash2 className="w-4 h-4" /> 초기화
+            </Button>
+            {/* 구독자 미리보기 - 헤더 버튼 (모바일 접근성) */}
+            <Button size="sm" className="gap-1.5 sm:hidden"
+              style={{ background: "oklch(0.72 0.18 350)", color: "white" }}
+              onClick={() => {
+                if (!generatedContent?.trim()) {
+                  toast.info("먼저 글을 생성해주세요!");
+                  return;
+                }
+                setShowFloatingPreview(true);
+              }}>
+              <Eye className="w-4 h-4" /> 미리보기
+            </Button>
             <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm"
               style={{ background: "oklch(0.696 0.17 162.48 / 10%)", color: "var(--color-emerald)" }}>
               <Bot className="w-4 h-4" /> AI 엔진 활성
@@ -828,3 +840,4 @@ export default function ContentGenerator() {
     </>
   );
 }
+//fix
