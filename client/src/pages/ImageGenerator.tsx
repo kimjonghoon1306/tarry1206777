@@ -330,6 +330,11 @@ function GalleryCard({
             }}
           />
         )}
+      </div>
+    );
+  }
+
+  return (
     <div
       className="relative rounded-xl overflow-hidden group"
       style={{
