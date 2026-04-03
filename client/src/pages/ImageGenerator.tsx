@@ -21,7 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { getImageProvider, getAPIKey, IMAGE_AI_OPTIONS } from "@/lib/ai-config";
+import { getImageProvider, getContentProvider, getAPIKey, IMAGE_AI_OPTIONS } from "@/lib/ai-config";
 import { useLocation } from "wouter";
 
 // ── 이미지 URL 로드 테스트 ──────────────────────────
@@ -322,7 +322,7 @@ function GalleryCard({
                 target.dataset.retries = String(retries + 1);
                 setTimeout(() => {
                   const seed = Math.floor(Math.random() * 999999);
-                  target.src = generatePollinationsUrl(img._prompt || "", img._w || 1024, img._h || 1024, seed);
+                  target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
                 }, 3000 * (retries + 1));
               } else {
                 setStatus("error");
@@ -384,7 +384,7 @@ function GalleryCard({
               target.dataset.retries = String(retries + 1);
               setTimeout(() => {
                 const seed = Math.floor(Math.random() * 999999);
-                target.src = generatePollinationsUrl(img._prompt || "", img._w || 1024, img._h || 1024, seed);
+                target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
               }, 3000 * (retries + 1));
             } else {
               setStatus("error");
@@ -683,34 +683,36 @@ if (provider === "pollinations") {
   };
 
 
-  const handleGenerate = async () => {
-    const provider = getImageProvider();
-    const apiKey = getAPIKey(provider);
-    if (provider !== "pollinations" && !apiKey) {
-      toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`);
-      return;
-    }
-    if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
+  
+const handleGenerate = async () => {
+  const provider = getImageProvider();
+  const apiKey = getAPIKey(provider);
+  if (provider !== "pollinations" && !apiKey) {
+    toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`);
+    return;
+  }
+  if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
 
-    setIsGenerating(true);
-    setProgress(0);
-    const numImages = parseInt(count) || 1;
+  setIsGenerating(true);
+  setProgress(0);
+  const numImages = parseInt(count) || 1;
 
-    try {
-      const translatedPrompt = await autoTranslatePrompt(prompt.trim());
-      const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
-      const fullPrompt = `${translatedPrompt}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
-      const [w, h] = (size || "1024x1024").split("x").map(Number);
-      const styleLabel = STYLES.find(s => s.value === style)?.label || style;
+  try {
+    const translatedPrompt = await autoTranslatePrompt(prompt.trim());
+    const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
+    const fullPrompt = `${translatedPrompt}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
+    const [w, h] = (size || "1024x1024").split("x").map(Number);
+    const styleLabel = STYLES.find(s => s.value === style)?.label || style;
 
-      toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
-      await generateImages(numImages, fullPrompt, w || 1024, h || 1024, styleLabel, size);
-    } catch (e: any) {
-      toast.error(`생성 실패: ${e?.message || "알 수 없는 오류"}`, { id: "imggen" });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+    toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
+    await generateImages(numImages, fullPrompt, w || 1024, h || 1024, styleLabel, size);
+  } catch (e: any) {
+    toast.error(e?.message || "이미지 생성 중 오류가 발생했습니다.", { id: "imggen" });
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
 
   // ── 실패 항목 전체 재시도 ─────────────────────────
   const handleRetryAll = async () => {
