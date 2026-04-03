@@ -68,8 +68,8 @@ function DataLabPanel() {
   const analyze = async () => {
     const kw = keyword.trim();
     if (!kw) { setError("키워드를 입력해주세요"); return; }
-    let clientId = userGet("naver_datalab_client_id");
-    let clientSecret = userGet("naver_datalab_client_secret");
+    let clientId = userGet(SETTINGS_KEYS.DATALAB_ID) || localStorage.getItem(SETTINGS_KEYS.DATALAB_ID) || localStorage.getItem("naver_datalab_client_id") || "";
+    let clientSecret = userGet(SETTINGS_KEYS.DATALAB_SECRET) || localStorage.getItem(SETTINGS_KEYS.DATALAB_SECRET) || localStorage.getItem("naver_datalab_client_secret") || "";
     // 키 없으면 서버 설정 + admin 설정 sync 후 재시도
     if (!clientId || !clientSecret) {
       // 일반 유저 서버 설정 먼저 시도
@@ -92,8 +92,8 @@ function DataLabPanel() {
         }
       } catch {}
       await syncAdminSettingsToLocal();
-      clientId = userGet("naver_datalab_client_id");
-      clientSecret = userGet("naver_datalab_client_secret");
+      clientId = userGet(SETTINGS_KEYS.DATALAB_ID) || localStorage.getItem(SETTINGS_KEYS.DATALAB_ID) || localStorage.getItem("naver_datalab_client_id") || "";
+      clientSecret = userGet(SETTINGS_KEYS.DATALAB_SECRET) || localStorage.getItem(SETTINGS_KEYS.DATALAB_SECRET) || localStorage.getItem("naver_datalab_client_secret") || "";
     }
     if (!clientId || !clientSecret) {
       setError("설정 페이지에서 네이버 데이터랩 Client ID/Secret을 입력해주세요");
