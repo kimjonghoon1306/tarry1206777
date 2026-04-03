@@ -1001,7 +1001,12 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
                 onChange={e => setPw(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
                 className="h-12 pr-12 text-base"
-                autoComplete="current-password"
+                name="blogauto-admin-passcode"
+                autoComplete="new-password"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                inputMode="text"
               />
               <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1" style={{ color: "var(--muted-foreground)" }} onClick={() => setShow(v => !v)}>
                 {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -1035,3 +1040,4 @@ export default function SuperAdminPage() {
   if (!authed) return <AdminGate onAuth={() => setAuthed(true)} />;
   return <AdminDashboard />;
 }
+//fix
