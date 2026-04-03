@@ -21,7 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { getImageProvider, getContentProvider, getAPIKey, IMAGE_AI_OPTIONS } from "@/lib/ai-config";
+import { getImageProvider, getAPIKey, IMAGE_AI_OPTIONS } from "@/lib/ai-config";
 import { useLocation } from "wouter";
 
 // ── 이미지 URL 로드 테스트 ──────────────────────────
@@ -683,21 +683,20 @@ if (provider === "pollinations") {
   };
 
 
-  
-const handleGenerate = async () => {
-  const provider = getImageProvider();
-  const apiKey = getAPIKey(provider);
-  if (provider !== "pollinations" && !apiKey) {
-    toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`);
-    return;
-  }
-  if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
+  const handleGenerate = async () => {
+    const provider = getImageProvider();
+    const apiKey = getAPIKey(provider);
+    if (provider !== "pollinations" && !apiKey) { 
+      toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`); 
+      return; 
+    }
+    if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
 
-  setIsGenerating(true);
-  setProgress(0);
-  const numImages = parseInt(count) || 1;
+    setIsGenerating(true);
+    setProgress(0);
+    const numImages = parseInt(count) || 1;
 
-  try {
+    // 한국어 자동 번역
     const translatedPrompt = await autoTranslatePrompt(prompt.trim());
     const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
     const fullPrompt = `${translatedPrompt}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
@@ -706,13 +705,8 @@ const handleGenerate = async () => {
 
     toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
     await generateImages(numImages, fullPrompt, w || 1024, h || 1024, styleLabel, size);
-  } catch (e: any) {
-    toast.error(e?.message || "이미지 생성 중 오류가 발생했습니다.", { id: "imggen" });
-  } finally {
     setIsGenerating(false);
-  }
-};
-
+  };
 
   // ── 실패 항목 전체 재시도 ─────────────────────────
   const handleRetryAll = async () => {
@@ -946,19 +940,25 @@ const handleGenerate = async () => {
               </div>
             </button>
 
-            {/* 실패 재시도 버튼 */}
-            {failedCount > 0 && !isBusy && (
+            {/* 실패 재시도 버튼 - 항상 표시 */}
+            {!isBusy && (
               <button
                 className="w-full rounded-2xl font-semibold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
                 style={{
                   height: 44,
-                  background: "oklch(0.769 0.188 70.08/10%)",
-                  border: "1.5px solid oklch(0.769 0.188 70.08/50%)",
-                  color: "var(--color-amber-brand)",
+                  background: "oklch(0.72 0.18 350)",
+                  border: "1.5px solid oklch(0.72 0.18 350/65%)",
+                  color: "white",
                 }}
-                onClick={handleRetryAll}>
+                onClick={() => {
+                  if (failedCount <= 0) {
+                    toast.info("재시도할 실패 이미지가 없습니다");
+                    return;
+                  }
+                  handleRetryAll();
+                }}>
                 <RotateCcw className="w-4 h-4" />
-                실패 {failedCount}개 재시도
+                {failedCount > 0 ? `전체 재시도 (${failedCount}개)` : '전체 재시도'}
               </button>
             )}
 
@@ -1006,21 +1006,27 @@ const handleGenerate = async () => {
           <div className="lg:col-span-2 space-y-3">
 
             {/* 실패 알림 배너 */}
-            {failedCount > 0 && !isBusy && (
-              <div className="rounded-xl px-4 py-3 flex items-center justify-between gap-3"
-                style={{ background: "oklch(0.65 0.22 25/8%)", border: "1px solid oklch(0.65 0.22 25/30%)" }}>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold" style={{ color: "oklch(0.65 0.22 25)" }}>
-                    ⚠ {failedCount}개 이미지 로드 실패
+            {!isBusy && (
+              <div className="rounded-xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap"
+                style={{ background: failedCount > 0 ? "oklch(0.65 0.22 25/8%)" : "oklch(0.72 0.18 350/8%)", border: failedCount > 0 ? "1px solid oklch(0.65 0.22 25/30%)" : "1px solid oklch(0.72 0.18 350/30%)" }}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold" style={{ color: failedCount > 0 ? "oklch(0.65 0.22 25)" : "oklch(0.72 0.18 350)" }}>
+                    {failedCount > 0 ? `⚠ ${failedCount}개 이미지 로드 실패` : '전체 재시도 버튼이 항상 표시됩니다'}
                   </span>
                   <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                    Pollinations 서버가 불안정할 수 있어요
+                    {failedCount > 0 ? '로드 실패 이미지를 한 번에 다시 시도할 수 있어요' : '실패 항목이 생기면 한 번에 다시 불러올 수 있어요'}
                   </span>
                 </div>
                 <button
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
-                  style={{ background: "var(--color-emerald)", color: "white" }}
-                  onClick={handleRetryAll}>
+                  style={{ background: "oklch(0.72 0.18 350)", color: "white" }}
+                  onClick={() => {
+                    if (failedCount <= 0) {
+                      toast.info("재시도할 실패 이미지가 없습니다");
+                      return;
+                    }
+                    handleRetryAll();
+                  }}>
                   <RotateCcw className="w-3.5 h-3.5" /> 전체 재시도
                 </button>
               </div>
