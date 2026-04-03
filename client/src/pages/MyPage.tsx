@@ -66,7 +66,8 @@ export default function MyPage() {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6 max-w-3xl">
+      <div className="p-6"><div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
+        <div className="space-y-6 min-w-0">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -249,7 +250,46 @@ export default function MyPage() {
             로그아웃
           </Button>
         </div>
-      </div>
+        </div>
+
+        <aside className="hidden xl:block">
+          <div className="sticky top-6 space-y-4">
+            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg, oklch(0.696 0.17 162.48/12%), oklch(0.769 0.188 70.08/12%))", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+                <h3 className="font-semibold text-foreground">오늘의 작업 흐름</h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: "AI 세팅 확인", value: "완료" },
+                  { label: "이미지 생성 점검", value: "진행 중" },
+                  { label: "배포 플랫폼 연결", value: `${connectedCount}/${platforms.length}` },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-xl p-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                    <div className="text-xs mb-1" style={{ color: "var(--muted-foreground)" }}>{item.label}</div>
+                    <div className="text-sm font-semibold text-foreground">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <h3 className="font-semibold text-foreground mb-3">빠른 이동</h3>
+              <div className="space-y-2">
+                {[
+                  ["키워드 수집", "/keywords"],
+                  ["이미지 생성", "/images"],
+                  ["설정", "/settings"],
+                ].map(([label, path]) => (
+                  <button key={String(label)} onClick={() => navigate(String(path))} className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all hover:translate-x-0.5" style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div></div>
     </Layout>
   );
 }
