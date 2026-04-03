@@ -395,6 +395,7 @@ export default function ContentGenerator() {
                 </Button>
                 {/* 블로그 미리보기 */}
                 <Button size="sm" variant="outline" className="gap-1.5"
+                  style={{ background: "oklch(0.75 0.12 300/12%)", color: "oklch(0.75 0.12 300)", borderColor: "oklch(0.75 0.12 300/40%)" }}
                   onClick={() => setActiveTab("blog-preview")}>
                   <Eye className="w-4 h-4" /> 블로그 미리보기
                 </Button>
