@@ -207,37 +207,66 @@ ${categoryGuide}
 
   try {
 
-    // ── Gemini ────────────────────────────────────────────
+    // ── Gemini (모델 자동 폴백 체인) ──────────────────────────
+    // 429 발생 시 같은 모델 재시도 대신 → 더 한도 넉넉한 모델로 즉시 전환
     if (provider === "gemini") {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              maxOutputTokens: Math.min(maxTokens, 8192),
-              thinkingConfig: { thinkingBudget: 0 },
-            },
-          }),
+      // 폴백 체인: 2.0-flash → 1.5-flash → 1.5-flash-8b (가장 한도 넉넉)
+      const GEMINI_MODELS = [
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+      ];
+
+      let lastError = null;
+      for (const model of GEMINI_MODELS) {
+        try {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { maxOutputTokens: Math.min(maxTokens, 8192) },
+              }),
+            }
+          );
+
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            const msg = (err.error?.message || "").toLowerCase();
+            const status = resp.status;
+
+            // API 키 오류 → 즉시 중단
+            if (msg.includes("api key") || msg.includes("api_key") || status === 403) {
+              throw new Error("FATAL:Gemini API 키가 잘못되었거나 권한이 없습니다. 설정에서 확인해주세요.");
+            }
+
+            // 429 → 다음 모델로 자동 전환 (continue)
+            if (status === 429 || msg.includes("quota") || msg.includes("resource_exhausted") || msg.includes("rate")) {
+              lastError = `${model} 한도 초과 → 다음 모델 시도`;
+              continue; // 폴백 체인 다음으로
+            }
+
+            lastError = `Gemini 오류 (${status}): ${err.error?.message || ""}`;
+            continue;
+          }
+
+          const data = await resp.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (!text) { lastError = `${model} 빈 응답`; continue; }
+
+          return res.json({ content: removeNonKorean(text) });
+
+        } catch (e) {
+          if (e.message?.startsWith("FATAL:")) throw new Error(e.message.replace("FATAL:", ""));
+          lastError = e.message;
+          continue;
         }
-      );
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        const msg = (err.error?.message || "").toLowerCase();
-        const status = resp.status;
-        if (status === 429 || msg.includes("quota") || msg.includes("resource_exhausted") || msg.includes("rate limit")) {
-          throw new Error("Gemini 요청 한도 초과 (분당 또는 일일). 1분 후 다시 시도하거나 Groq으로 전환해보세요.");
-        }
-        if (msg.includes("api key") || msg.includes("api_key") || status === 400) throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
-        if (status === 403) throw new Error("Gemini API 키 권한 없음. Google AI Studio에서 키를 확인해주세요.");
-        throw new Error(`Gemini 오류 (${status}): ${err.error?.message || "알 수 없는 오류"}`);
       }
-      const data = await resp.json();
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      if (!content) throw new Error("Gemini 응답이 비어있습니다. 잠시 후 다시 시도해주세요.");
-      return res.json({ content: removeNonKorean(content) });
+
+      // 모든 모델 실패
+      throw new Error(`Gemini 모든 모델(${GEMINI_MODELS.length}개) 한도 초과. 설정에서 Groq(무료·빠름)으로 전환하거나 1분 후 다시 시도해주세요.`);
     }
 
     // ── Claude ────────────────────────────────────────────

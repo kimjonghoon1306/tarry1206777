@@ -37,12 +37,12 @@ Examples:
   const userMsg = `Korean blog topic: "${topic}"\n\nConvert to English image prompt:`;
 
   try {
-    // Gemini
+    // Gemini - 폴백 체인
     if (provider === "gemini") {
-      const MAX_RETRIES = 2;
-      for (let i = 0; i < MAX_RETRIES; i++) {
+      const MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+      for (const model of MODELS) {
         const resp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -56,18 +56,15 @@ Examples:
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
           const status = resp.status;
-          if (status === 429 && i < MAX_RETRIES - 1) {
-            await new Promise(r => setTimeout(r, 10000));
-            continue;
-          }
+          if (status === 429 || (err.error?.message || "").toLowerCase().includes("quota")) continue;
           throw new Error(`Gemini 오류 (${status}): ${err.error?.message || ""}`);
         }
         const data = await resp.json();
         const text = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim()
           .replace(/[가-힣]/g, "").replace(/^["']|["']$/g, "").trim();
         if (text && text.length > 5) return res.json({ ok: true, prompt: text });
-        throw new Error("빈 응답");
       }
+      throw new Error("Gemini 모든 모델 한도 초과");
     }
 
     // Groq

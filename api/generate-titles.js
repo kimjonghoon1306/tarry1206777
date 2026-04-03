@@ -75,45 +75,60 @@ export default async function handler(req, res) {
   try {
     // ── Gemini ──────────────────────────────────────────────
     if (provider === "gemini") {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              maxOutputTokens: 1000,
-              thinkingConfig: { thinkingBudget: 0 },
-            },
-          }),
-        }
-      );
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        const msg = (err.error?.message || "").toLowerCase();
-        const status = resp.status;
-        if (status === 429 || msg.includes("quota") || msg.includes("rate") || msg.includes("exhausted")) {
-          throw new Error("Gemini 요청 한도 초과. 잠시 후 다시 시도하거나 Groq으로 전환해보세요.");
-        }
-        if (msg.includes("api key") || status === 400) throw new Error("Gemini API 키가 잘못되었습니다.");
-        if (status === 403) throw new Error("Gemini API 키 권한 없음.");
-        throw new Error(`Gemini 오류 (${status}): ${err.error?.message || "알 수 없는 오류"}`);
-      }
-      const data = await resp.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const titles = extractTitles(text);
-      if (titles.length === 0) {
-        // 파싱 실패 시 텍스트를 줄 단위로 강제 분리
-        const fallbackTitles = text.split("\n")
-          .map(l => l.replace(/^[\d\s\-\*\.\)]+/, "").replace(/^["']|["']$/g, "").trim())
-          .filter(l => l.length > 5 && l.length < 120);
-        if (fallbackTitles.length > 0) return res.json({ titles: fallbackTitles.slice(0, 10) });
-        throw new Error("Gemini 제목 생성 실패. 다시 시도해주세요.");
-      }
-      return res.json({ titles });
-    }
+      // 폴백 체인: 429 시 더 한도 넉넉한 모델로 즉시 전환
+      const GEMINI_MODELS = [
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+      ];
 
+      let lastErr = null;
+      for (const model of GEMINI_MODELS) {
+        try {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { maxOutputTokens: 1000 },
+              }),
+            }
+          );
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            const msg = (err.error?.message || "").toLowerCase();
+            const status = resp.status;
+            if (msg.includes("api key") || msg.includes("api_key") || status === 403) {
+              throw new Error("FATAL:Gemini API 키가 잘못되었거나 권한이 없습니다.");
+            }
+            if (status === 429 || msg.includes("quota") || msg.includes("rate") || msg.includes("exhausted")) {
+              lastErr = `${model} 한도 초과`;
+              continue;
+            }
+            lastErr = `Gemini 오류 (${status})`;
+            continue;
+          }
+          const data = await resp.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          const titles = extractTitles(text);
+          if (titles.length > 0) return res.json({ titles });
+          // 파싱 실패 시 줄 단위 폴백
+          const fallback = text.split("\n")
+            .map(l => l.replace(/^[\d\s\-\*\.\)]+/, "").replace(/^["\']/,"").replace(/["\'\s]+$/,"").trim())
+            .filter(l => l.length > 5 && l.length < 120);
+          if (fallback.length > 0) return res.json({ titles: fallback.slice(0, 10) });
+          lastErr = `${model} 빈 응답`;
+          continue;
+        } catch (e) {
+          if (e.message?.startsWith("FATAL:")) throw new Error(e.message.replace("FATAL:", ""));
+          lastErr = e.message;
+          continue;
+        }
+      }
+      throw new Error(`Gemini 모든 모델 한도 초과. 설정에서 Groq(무료)으로 전환하거나 잠시 후 다시 시도해주세요.`);
+    }
     // ── OpenAI ──────────────────────────────────────────────
     if (provider === "openai") {
       const resp = await fetch("https://api.openai.com/v1/chat/completions", {
