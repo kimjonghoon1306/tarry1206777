@@ -179,9 +179,7 @@ function extractKeyword(prompt: string): string {
 function generatePollinationsUrl(
   prompt: string, width: number, height: number, seed: number
 ): string {
-  const encoded = encodeURIComponent(prompt);
-  // t= 캐시버스터 제거 → 브라우저 캐시 활용
-  return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+  return `/api/generate-image?mode=proxy&prompt=${encodeURIComponent(prompt)}&width=${width}&height=${height}&seed=${seed}&t=${Date.now()}`;
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
@@ -264,6 +262,8 @@ type GalleryItem = {
   style: string;
   size: string;
   loading: boolean;
+  loadError?: boolean;
+  _loaded?: boolean;
   // 재시도를 위한 원본 정보 저장
   _prompt?: string;
   _w?: number;
@@ -273,7 +273,7 @@ type GalleryItem = {
 
 // ── 개별 이미지 카드 ──────────────────────────────────
 function GalleryCard({
-  img, isSelected, viewMode, onSelect, onLightbox, onRetry,
+  img, isSelected, viewMode, onSelect, onLightbox, onRetry, onLoadSuccess, onLoadFail,
 }: {
   img: GalleryItem;
   isSelected: boolean;
@@ -281,14 +281,16 @@ function GalleryCard({
   onSelect: () => void;
   onLightbox: () => void;
   onRetry: () => void;
+  onLoadSuccess: () => void;
+  onLoadFail: () => void;
 }) {
   const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "loading" : "error");
 
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
-    if (!img.src) { setStatus("error"); return; }
-    setStatus("loading"); // 새 src → img 태그가 onLoad 후 ok로 전환
-  }, [img.src, img.loading]);
+    if (img.loadError || !img.src) { setStatus("error"); return; }
+    setStatus("loading");
+  }, [img.src, img.loading, img.loadError]);
 
   if (viewMode === "list") {
     return (
@@ -314,7 +316,7 @@ function GalleryCard({
             alt={img.title}
             className="w-full h-full object-cover"
             style={{ opacity: status === "ok" ? 1 : 0, transition: "opacity 0.3s" }}
-            onLoad={() => setStatus("ok")}
+            onLoad={() => { setStatus("ok"); onLoadSuccess(); }}
             onError={(e) => {
               const target = e.currentTarget as HTMLImageElement;
               const retries = Number(target.dataset.retries || 0);
@@ -322,10 +324,11 @@ function GalleryCard({
                 target.dataset.retries = String(retries + 1);
                 setTimeout(() => {
                   const seed = Math.floor(Math.random() * 999999);
-                  target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+                  target.src = generatePollinationsUrl(img._prompt || "", img._w || 1024, img._h || 1024, seed);
                 }, 3000 * (retries + 1));
               } else {
                 setStatus("error");
+                onLoadFail();
               }
             }}
           />
@@ -376,7 +379,7 @@ function GalleryCard({
           alt={img.title}
           className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
           style={{ opacity: status === "ok" ? 1 : 0, transition: "opacity 0.4s ease" }}
-          onLoad={() => setStatus("ok")}
+          onLoad={() => { setStatus("ok"); onLoadSuccess(); }}
           onError={(e) => {
             const target = e.currentTarget as HTMLImageElement;
             const retries = Number(target.dataset.retries || 0);
@@ -384,7 +387,7 @@ function GalleryCard({
               target.dataset.retries = String(retries + 1);
               setTimeout(() => {
                 const seed = Math.floor(Math.random() * 999999);
-                target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+                target.src = generatePollinationsUrl(img._prompt || "", img._w || 1024, img._h || 1024, seed);
               }, 3000 * (retries + 1));
             } else {
               setStatus("error");
@@ -445,7 +448,7 @@ export default function ImageGenerator() {
     try {
       const saved = JSON.parse(localStorage.getItem("imggen_gallery") || "[]");
       // URL 이미지만 복원 (base64는 너무 큼)
-      return saved.filter((g: GalleryItem) => g.src && !g.src.startsWith("data:"));
+      return saved.filter((g: GalleryItem) => g.src && !g.src.startsWith("data:")).map((g: GalleryItem) => ({ ...g, loading: false, loadError: false, _loaded: false }));
     } catch { return []; }
   });
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -475,8 +478,16 @@ export default function ImageGenerator() {
   const loadedCount = successGallery.length;
   const loadingCount = gallery.filter(g => g.loading).length;
   // 실패한 항목: src 없고 loading도 아닌 것
-  const failedItems = gallery.filter(g => !g.loading && !g.src);
+  const failedItems = gallery.filter(g => !g.loading && (g.loadError || !g.src));
   const failedCount = failedItems.length;
+
+  const markImageLoaded = (id: number) => {
+    setGallery(prev => prev.map(item => item.id === id ? { ...item, _loaded: true, loadError: false, loading: false } : item));
+  };
+
+  const markImageFailed = (id: number) => {
+    setGallery(prev => prev.map(item => item.id === id ? { ...item, _loaded: false, loadError: true, loading: false } : item));
+  };
 
   // 키보드 단축키
   useEffect(() => {
@@ -527,6 +538,8 @@ if (provider === "pollinations") {
             id, src: "", title: `${prompt.slice(0, 20)}...`,
             keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
             loading: true,
+            loadError: false,
+            _loaded: false,
             _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999),
           })),
           ...prev,
@@ -535,7 +548,7 @@ if (provider === "pollinations") {
       } else {
         // 재시도: 기존 아이템을 loading 상태로 복원
         setGallery(prev => prev.map(item =>
-          existingIds.includes(item.id) ? { ...item, src: "", loading: true } : item
+          existingIds.includes(item.id) ? { ...item, src: "", loading: true, loadError: false, _loaded: false } : item
         ));
       }
 
@@ -548,7 +561,7 @@ if (provider === "pollinations") {
         const seed = Math.floor(Math.random() * 999999) + idx * 1000;
         newSeeds[idx] = seed;
         const src = generatePollinationsUrl(fullPrompt, w, h, seed);
-        return { ...item, src, loading: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed };
+        return { ...item, src, loading: false, loadError: false, _loaded: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed };
       }));
       setProgress(100);
 
@@ -568,7 +581,7 @@ if (provider === "pollinations") {
               if (!failedIds.includes(item.id)) return item;
               const seed = Math.floor(Math.random() * 999999) + attempt * 7777;
               const src = generatePollinationsUrl(fullPrompt, w, h, seed);
-              return { ...item, src, loading: false, _seed: seed };
+              return { ...item, src, loading: false, loadError: false, _loaded: false, _seed: seed };
             });
           });
           await new Promise(r => setTimeout(r, 8000)); // 재시도 간격 8초
@@ -606,7 +619,7 @@ if (provider === "pollinations") {
           return u;
         });
         setGallery(prev => [
-          ...images.map((src, i) => ({ id: Date.now() + i, src, title: `${prompt.slice(0, 20)}...`, keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false })),
+          ...images.map((src, i) => ({ id: Date.now() + i, src, title: `${prompt.slice(0, 20)}...`, keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false, loadError: false, _loaded: false })),
           ...prev,
         ]);
         setProgress(100);
@@ -717,7 +730,7 @@ if (provider === "pollinations") {
 
   // ── 실패 항목 전체 재시도 ─────────────────────────
   const handleRetryAll = async () => {
-    const failed = gallery.filter(g => !g.loading && !g.src && g._prompt);
+    const failed = gallery.filter(g => !g.loading && (g.loadError || !g.src) && g._prompt);
     if (failed.length === 0) { toast.info("재시도할 실패 이미지가 없어요"); return; }
 
     setIsRetrying(true);
@@ -726,7 +739,7 @@ if (provider === "pollinations") {
 
     // 실패 항목을 loading 상태로 복원
     setGallery(prev => prev.map(item =>
-      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "" } : item
+      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "", loadError: false, _loaded: false } : item
     ));
 
     let successCount = 0;
@@ -740,12 +753,12 @@ if (provider === "pollinations") {
           item._h || 1024,
           seed
         );
-        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, _seed: seed } : g));
+        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, loadError: false, _loaded: false, _seed: seed } : g));
         successCount++;
         setProgress(Math.round(((i + 1) / failed.length) * 100));
         toast.loading(`재시도 ${i + 1}/${failed.length} 완료`, { id: "imggen" });
       } catch {
-        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, loading: false, src: "" } : g));
+        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, loading: false, src: "", loadError: true, _loaded: false } : g));
       }
     }
 
@@ -763,14 +776,14 @@ if (provider === "pollinations") {
     const item = gallery.find(g => g.id === id);
     if (!item || !item._prompt) return;
 
-    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "" } : g));
+    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "", loadError: false, _loaded: false } : g));
     const seed = Math.floor(Math.random() * 999999) + Date.now();
     try {
       const src = await generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, _seed: seed } : g));
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, loadError: false, _loaded: false, _seed: seed } : g));
       toast.success("이미지 복구 완료!");
     } catch {
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "" } : g));
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "", loadError: true, _loaded: false } : g));
       toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
     }
   };
@@ -953,9 +966,10 @@ if (provider === "pollinations") {
                 className="w-full rounded-2xl font-semibold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
                 style={{
                   height: 44,
-                  background: "oklch(0.769 0.188 70.08/10%)",
-                  border: "1.5px solid oklch(0.769 0.188 70.08/50%)",
-                  color: "var(--color-amber-brand)",
+                  background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)",
+                  border: "1.5px solid rgba(236,72,153,0.45)",
+                  color: "white",
+                  boxShadow: "0 8px 24px rgba(236,72,153,0.24)",
                 }}
                 onClick={handleRetryAll}>
                 <RotateCcw className="w-4 h-4" />
@@ -1020,7 +1034,7 @@ if (provider === "pollinations") {
                 </div>
                 <button
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
-                  style={{ background: "var(--color-emerald)", color: "white" }}
+                  style={{ background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)", color: "white", boxShadow: "0 8px 24px rgba(236,72,153,0.24)" }}
                   onClick={handleRetryAll}>
                   <RotateCcw className="w-3.5 h-3.5" /> 전체 재시도
                 </button>
@@ -1127,6 +1141,8 @@ if (provider === "pollinations") {
                         if (idx !== -1) setLightboxIndex(idx);
                       }}
                       onRetry={() => handleRetrySingle(img.id)}
+                      onLoadSuccess={() => markImageLoaded(img.id)}
+                      onLoadFail={() => markImageFailed(img.id)}
                     />
                   ))}
                 </div>
@@ -1144,6 +1160,8 @@ if (provider === "pollinations") {
                           if (idx !== -1) setLightboxIndex(idx);
                         }}
                         onRetry={() => handleRetrySingle(img.id)}
+                        onLoadSuccess={() => markImageLoaded(img.id)}
+                        onLoadFail={() => markImageFailed(img.id)}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-foreground">{img.title}</div>
@@ -1154,7 +1172,7 @@ if (provider === "pollinations") {
                           </span>
                           <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{img.size}</span>
                           {img.loading && <span className="text-xs" style={{ color: "var(--color-amber-brand)" }}>생성 중...</span>}
-                          {!img.loading && !img.src && (
+                          {!img.loading && (img.loadError || !img.src) && (
                             <span className="text-xs" style={{ color: "oklch(0.65 0.22 25)" }}>로드 실패</span>
                           )}
                         </div>
