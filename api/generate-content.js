@@ -214,8 +214,8 @@ ${categoryGuide}
       const GEMINI_MODELS = [
         "gemini-2.0-flash",
         "gemini-2.0-flash-lite",
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
+        "gemini-2.0-flash-exp",
+        "gemini-exp-1206",
         "gemini-2.5-flash-preview-04-17",
       ];
 
@@ -246,11 +246,12 @@ ${categoryGuide}
 
             // 429/503 → 다음 모델로 자동 전환 (continue)
             if (
-              status === 429 || status === 503 ||
+              status === 429 || status === 503 || status === 404 ||
               msg.includes("quota") || msg.includes("resource_exhausted") ||
               msg.includes("rate") || msg.includes("too many") ||
               msg.includes("overloaded") || msg.includes("limit") ||
-              msg.includes("exhausted")
+              msg.includes("exhausted") || msg.includes("not found") ||
+              msg.includes("deprecated") || msg.includes("unavailable")
             ) {
               lastError = `${model} 한도 초과 → 다음 모델 시도`;
               continue; // 폴백 체인 다음으로
