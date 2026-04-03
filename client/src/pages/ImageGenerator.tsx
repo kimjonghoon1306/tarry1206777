@@ -179,9 +179,7 @@ function extractKeyword(prompt: string): string {
 function generatePollinationsUrl(
   prompt: string, width: number, height: number, seed: number
 ): string {
-  const encoded = encodeURIComponent(prompt);
-  // t= 캐시버스터 제거 → 브라우저 캐시 활용
-  return `/api/generate-image?mode=proxy&prompt=${encoded}&width=${width}&height=${height}&seed=${seed}&t=${Date.now()}`;
+  return `/api/generate-image?mode=proxy&prompt=${encodeURIComponent(prompt)}&width=${width}&height=${height}&seed=${seed}&t=${Date.now()}`;
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
@@ -259,7 +257,6 @@ type ImgStatus = "loading" | "ok" | "error";
 type GalleryItem = {
   id: number;
   src: string;
-  failed?: boolean;
   title: string;
   keyword: string;
   style: string;
@@ -274,7 +271,7 @@ type GalleryItem = {
 
 // ── 개별 이미지 카드 ──────────────────────────────────
 function GalleryCard({
-  img, isSelected, viewMode, onSelect, onLightbox, onRetry, onFail,
+  img, isSelected, viewMode, onSelect, onLightbox, onRetry,
 }: {
   img: GalleryItem;
   isSelected: boolean;
@@ -282,7 +279,6 @@ function GalleryCard({
   onSelect: () => void;
   onLightbox: () => void;
   onRetry: () => void;
-  onFail: () => void;
 }) {
   const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "loading" : "error");
 
@@ -324,7 +320,7 @@ function GalleryCard({
                 target.dataset.retries = String(retries + 1);
                 setTimeout(() => {
                   const seed = Math.floor(Math.random() * 999999);
-                  target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+                  target.src = generatePollinationsUrl(img._prompt || "", img._w || 1024, img._h || 1024, seed);
                 }, 3000 * (retries + 1));
               } else {
                 setStatus("error");
@@ -390,7 +386,6 @@ function GalleryCard({
               }, 3000 * (retries + 1));
             } else {
               setStatus("error");
-              onFail();
             }
           }}
           onClick={status === "ok" ? onLightbox : undefined}
@@ -478,7 +473,7 @@ export default function ImageGenerator() {
   const loadedCount = successGallery.length;
   const loadingCount = gallery.filter(g => g.loading).length;
   // 실패한 항목: src 없고 loading도 아닌 것
-  const failedItems = gallery.filter(g => !g.loading && (!g.src || g.failed));
+  const failedItems = gallery.filter(g => !g.loading && !g.src);
   const failedCount = failedItems.length;
 
   // 키보드 단축키
@@ -720,7 +715,7 @@ if (provider === "pollinations") {
 
   // ── 실패 항목 전체 재시도 ─────────────────────────
   const handleRetryAll = async () => {
-    const failed = gallery.filter(g => !g.loading && (g.failed || !g.src) && g._prompt);
+    const failed = gallery.filter(g => !g.loading && !g.src && g._prompt);
     if (failed.length === 0) { toast.info("재시도할 실패 이미지가 없어요"); return; }
 
     setIsRetrying(true);
@@ -729,7 +724,7 @@ if (provider === "pollinations") {
 
     // 실패 항목을 loading 상태로 복원
     setGallery(prev => prev.map(item =>
-      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "", failed: false } : item
+      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "" } : item
     ));
 
     let successCount = 0;
@@ -743,12 +738,12 @@ if (provider === "pollinations") {
           item._h || 1024,
           seed
         );
-        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, failed: false, _seed: seed } : g));
+        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, _seed: seed } : g));
         successCount++;
         setProgress(Math.round(((i + 1) / failed.length) * 100));
         toast.loading(`재시도 ${i + 1}/${failed.length} 완료`, { id: "imggen" });
       } catch {
-        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, loading: false, src: "", failed: true } : g));
+        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, loading: false, src: "" } : g));
       }
     }
 
@@ -770,10 +765,10 @@ if (provider === "pollinations") {
     const seed = Math.floor(Math.random() * 999999) + Date.now();
     try {
       const src = await generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, failed: false, _seed: seed } : g));
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, _seed: seed } : g));
       toast.success("이미지 복구 완료!");
     } catch {
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "", failed: true } : g));
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "" } : g));
       toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
     }
   };
@@ -1023,7 +1018,7 @@ if (provider === "pollinations") {
                 </div>
                 <button
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
-                  style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
+                  style={{ background: "var(--color-emerald)", color: "white" }}
                   onClick={handleRetryAll}>
                   <RotateCcw className="w-3.5 h-3.5" /> 전체 재시도
                 </button>
@@ -1130,7 +1125,6 @@ if (provider === "pollinations") {
                         if (idx !== -1) setLightboxIndex(idx);
                       }}
                       onRetry={() => handleRetrySingle(img.id)}
-                      onFail={() => setGallery(prev => prev.map(g => g.id === img.id ? { ...g, failed: true, src: "" } : g))}
                     />
                   ))}
                 </div>
@@ -1148,7 +1142,6 @@ if (provider === "pollinations") {
                           if (idx !== -1) setLightboxIndex(idx);
                         }}
                         onRetry={() => handleRetrySingle(img.id)}
-                        onFail={() => setGallery(prev => prev.map(g => g.id === img.id ? { ...g, failed: true, src: "" } : g))}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-foreground">{img.title}</div>
