@@ -112,22 +112,49 @@ ${categoryGuide}
 - 절대 한자, 중국어, 일본어, 베트남어 등 외국 문자 금지
 - 오직 한글, 영어, 숫자만 사용${styleInstruction}`
 
-  // ── Gemini → Vercel 서버 경유 (CORS 문제로 브라우저 직접 호출 불가) ──
+  // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
-    const adPlatform = localStorage.getItem("selected_ad_platform") || "";
-    const resp = await fetch("/api/generate-content", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, apiKey, keyword, title, language, minChars, stylePrompt, adPlatform }),
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error || `Gemini 서버 오류 (${resp.status})`);
+    const GEMINI_MODELS = [
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-2.5-flash-preview-04-17",
+    ];
+    const maxTok = Math.min(8192, Math.max(4000, Math.ceil(minChars * 2)));
+    let lastErr = "";
+    for (const model of GEMINI_MODELS) {
+      try {
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { maxOutputTokens: maxTok },
+            }),
+          }
+        );
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = (err.error?.message || "").toLowerCase();
+          const status = resp.status;
+          if (status === 401 || status === 403 || msg.includes("api key") || msg.includes("api_key")) {
+            throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+          }
+          lastErr = `${model} 오류(${status})`;
+          continue;
+        }
+        const data = await resp.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        if (!text) { lastErr = `${model} 빈 응답`; continue; }
+        return removeNonKorean(text);
+      } catch (e: any) {
+        if (e.message?.includes("API 키")) throw e;
+        lastErr = e.message;
+        continue;
+      }
     }
-    const data = await resp.json();
-    const content = data.content || "";
-    if (!content) throw new Error("Gemini 응답이 비어있습니다. 다시 시도해주세요.");
-    return content;
+    throw new Error(`Gemini 글 생성 실패: ${lastErr}`);
   }
 
   // ── Claude ──
@@ -253,20 +280,51 @@ export async function generateTitles(
   let content = "";
 
   // ── Gemini → Vercel 서버 경유 (CORS 문제) ──
+  // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
-    const resp = await fetch("/api/generate-titles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, apiKey, keyword }),
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error || `Gemini 서버 오류 (${resp.status})`);
+    const GEMINI_MODELS = [
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-2.5-flash-preview-04-17",
+    ];
+    let lastErr = "";
+    for (const model of GEMINI_MODELS) {
+      try {
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { maxOutputTokens: 1000 },
+            }),
+          }
+        );
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = (err.error?.message || "").toLowerCase();
+          const status = resp.status;
+          if (status === 401 || status === 403 || msg.includes("api key") || msg.includes("api_key")) {
+            throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+          }
+          lastErr = `${model} 오류(${status})`;
+          continue;
+        }
+        const data = await resp.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        if (!text) { lastErr = `${model} 빈 응답`; continue; }
+        const titles = extractTitles(text);
+        if (titles.length > 0) return titles;
+        lastErr = `${model} 파싱 실패`;
+        continue;
+      } catch (e: any) {
+        if (e.message?.includes("API 키")) throw e;
+        lastErr = e.message;
+        continue;
+      }
     }
-    const data = await resp.json();
-    const titles = data.titles || [];
-    if (titles.length === 0) throw new Error("Gemini 제목 생성 실패.");
-    return titles;
+    throw new Error(`Gemini 제목 생성 실패: ${lastErr}`);
   }
 
   // ── Claude ──
