@@ -25,12 +25,13 @@ import { getImageProvider, getAPIKey, IMAGE_AI_OPTIONS } from "@/lib/ai-config";
 import { useLocation } from "wouter";
 
 // ── 이미지 URL 로드 테스트 ──────────────────────────
-async function testImageUrl(url: string, timeoutMs = 25000): Promise<boolean> {
+async function testImageUrl(url: string, timeoutMs = 12000): Promise<boolean> {
   return new Promise((resolve) => {
     const img = new window.Image();
-    const timer = setTimeout(() => { img.onload = null; img.onerror = null; resolve(false); }, timeoutMs);
-    img.onload = () => { clearTimeout(timer); resolve(true); };
-    img.onerror = () => { clearTimeout(timer); resolve(false); };
+    const done = (ok: boolean) => { clearTimeout(timer); img.onload = null; img.onerror = null; img.src = ""; resolve(ok); };
+    const timer = setTimeout(() => done(false), timeoutMs);
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
     img.src = url;
   });
 }
@@ -173,61 +174,14 @@ function extractKeyword(prompt: string): string {
   return "korean lifestyle blog beautiful photography";
 }
 
-// ── HuggingFace FLUX.1 Schnell 이미지 생성 ──────────────
-async function generateHuggingFaceImage(
-  prompt: string, width: number, height: number, apiKey: string
-): Promise<string | null> {
-  try {
-    const resp = await fetch(
-      "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: { width, height, num_inference_steps: 4 },
-        }),
-      }
-    );
-    if (!resp.ok) return null;
-    const blob = await resp.blob();
-    return URL.createObjectURL(blob);
-  } catch {
-    return null;
-  }
-}
 
-// ── 이미지 생성: Pollinations 우선, fallback은 키워드 기반 ──
-async function generatePollinationsUrl(
+// ── 이미지 생성: Pollinations URL 즉시 반환 (img 태그가 직접 로드) ──
+function generatePollinationsUrl(
   prompt: string, width: number, height: number, seed: number
-): Promise<string> {
+): string {
   const encoded = encodeURIComponent(prompt);
-  const ts = Date.now();
-
-  // 1차: Pollinations AI - 3번 시도 (타임아웃 늘림)
-  const seeds = [seed, seed + 7, seed + 13];
-  for (const s of seeds) {
-    const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${s}&model=flux&t=${ts + s}`;
-    const ok = await testImageUrl(url, 25000);
-    if (ok) return url;
-  }
-
-  // 2차: Unsplash - 키워드 매핑으로 관련 이미지
-  const keyword = extractKeyword(prompt);
-  const unsplashUrl = `https://source.unsplash.com/${width}x${height}/?${encodeURIComponent(keyword)}&sig=${seed}`;
-  const unsplashOk = await testImageUrl(unsplashUrl, 10000);
-  if (unsplashOk) return unsplashUrl;
-
-  // 3차: Pollinations 다른 모델 시도
-  const altUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 99}&model=turbo&t=${ts + 99}`;
-  const altOk = await testImageUrl(altUrl, 15000);
-  if (altOk) return altUrl;
-
-  // 4차: Picsum (완전 랜덤 - 최후 수단)
-  return `https://picsum.photos/seed/${seed}/${width}/${height}`;
+  // t= 캐시버스터 제거 → 브라우저 캐시 활용
+  return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true`;
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
@@ -333,7 +287,7 @@ function GalleryCard({
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
     if (!img.src) { setStatus("error"); return; }
-    setStatus("loading"); // 새 src → 다시 로딩 시도
+    setStatus("loading"); // 새 src → img 태그가 onLoad 후 ok로 전환
   }, [img.src, img.loading]);
 
   if (viewMode === "list") {
@@ -539,54 +493,7 @@ export default function ImageGenerator() {
     const provider = getImageProvider();
     const startTime = Date.now();
 
-    if (provider === "huggingface") {
-      const apiKey = getAPIKey("huggingface") || "";
-      if (!apiKey) { toast.error("설정에서 Hugging Face API 키를 입력해주세요"); return 0; }
-      const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
-      if (!existingIds) {
-        setGallery(prev => [
-          ...placeholderIds.map(id => ({
-            id, src: "", title: `${prompt.slice(0, 20)}...`,
-            keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
-            loading: true,
-            _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999),
-          })),
-          ...prev,
-        ]);
-        setSelectedImages([]);
-      } else {
-        setGallery(prev => prev.map(item =>
-          existingIds.includes(item.id) ? { ...item, src: "", loading: true } : item
-        ));
-      }
-      let successCount = 0;
-      for (let i = 0; i < numImages; i++) {
-        const pid = placeholderIds[i];
-        try {
-          const src = await generateHuggingFaceImage(fullPrompt, w, h, apiKey);
-          if (src) {
-            setGallery(prev => prev.map(item =>
-              item.id === pid ? { ...item, src, loading: false } : item
-            ));
-            successCount++;
-          } else {
-            // fallback to pollinations
-            const seed = Math.floor(Math.random() * 999999) + i * 1000;
-            const fallback = await generatePollinationsUrl(fullPrompt, w, h, seed);
-            setGallery(prev => prev.map(item =>
-              item.id === pid ? { ...item, src: fallback, loading: false } : item
-            ));
-            successCount++;
-          }
-        } catch {
-          setGallery(prev => prev.filter(item => item.id !== pid));
-        }
-      }
-      toast.success(`이미지 ${successCount}개 생성 완료! (FLUX.1 Schnell)`, { id: "imggen" });
-      return successCount;
-    }
-
-    if (provider === "pollinations") {
+if (provider === "pollinations") {
       const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
 
       if (!existingIds) {
@@ -608,27 +515,16 @@ export default function ImageGenerator() {
         ));
       }
 
-      let successCount = 0;
-      for (let i = 0; i < numImages; i++) {
-        const pid = placeholderIds[i];
-        const seed = Math.floor(Math.random() * 999999) + i * 1000;
-        try {
-          const src = await generatePollinationsUrl(fullPrompt, w, h, seed);
-          setGallery(prev => prev.map(item =>
-            item.id === pid
-              ? { ...item, src, loading: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed }
-              : item
-          ));
-          successCount++;
-          setProgress(Math.round(((i + 1) / numImages) * 100));
-          toast.loading(`${i + 1}/${numImages}번째 완료 ✓`, { id: "imggen" });
-        } catch {
-          // src="" loading=false → 실패 상태
-          setGallery(prev => prev.map(item =>
-            item.id === pid ? { ...item, src: "", loading: false } : item
-          ));
-        }
-      }
+      // URL 즉시 생성 후 한번에 갤러리 업데이트 (img 태그가 직접 로드)
+      const successCount = numImages;
+      setGallery(prev => prev.map(item => {
+        const idx = placeholderIds.indexOf(item.id);
+        if (idx === -1) return item;
+        const seed = Math.floor(Math.random() * 999999) + idx * 1000;
+        const src = generatePollinationsUrl(fullPrompt, w, h, seed);
+        return { ...item, src, loading: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed };
+      }));
+      setProgress(100);
 
       const elapsed = (Date.now() - startTime) / 1000;
       setStats(prev => {
@@ -637,11 +533,7 @@ export default function ImageGenerator() {
         return u;
       });
 
-      if (successCount === 0) {
-        toast.error("모든 이미지 생성 실패. Pollinations 서버 상태를 확인해주세요.", { id: "imggen" });
-      } else {
-        toast.success(`✅ ${successCount}개 완성! ${numImages - successCount > 0 ? `(${numImages - successCount}개 실패)` : ""}`, { id: "imggen" });
-      }
+      toast.success(`✅ ${successCount}개 이미지 생성 시작! 잠시 기다려주세요.`, { id: "imggen" });
       return successCount;
     } else {
       // 다른 API provider
@@ -681,58 +573,74 @@ export default function ImageGenerator() {
 
   // ── 신규 생성 ──────────────────────────────────────
   // 한국어 → 영어 이미지 프롬프트 자동 변환
+  // ── 한국어 → 영어 이미지 프롬프트 자동 변환 ──────────────
+  // 전용 translate-prompt API 사용 → 어떤 주제든 정확하게 변환
   const autoTranslatePrompt = async (koreanPrompt: string): Promise<string> => {
-    const hasKorean = /[가-힣]/.test(koreanPrompt);
-    if (!hasKorean) return koreanPrompt;
+    const p = koreanPrompt.trim();
 
-    // 1. KO_EN_MAP에서 먼저 찾기
+    // 이미 영문이면 그대로
+    if (!/[가-힣]/.test(p)) {
+      return `${p}, professional photography, 8K ultra realistic`;
+    }
+
+    // ── Step 1: 전용 번역 API (어떤 주제든 정확) ───────────
+    const aiProvider = getContentProvider();
+    const aiKey = getAPIKey(aiProvider);
+    if (aiKey) {
+      try {
+        const resp = await fetch("/api/translate-prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: p }),
+        });
+        const data = await resp.json();
+        if (data.ok && data.prompt && data.prompt.length > 5) {
+          return `${data.prompt}, professional photography, 8K ultra realistic`;
+        }
+      } catch {}
+    }
+
+    // ── Step 2: KO_EN_MAP 매핑 ───────────────────────────
     for (const [ko, en] of Object.entries(KO_EN_MAP)) {
-      if (koreanPrompt.includes(ko)) {
-        return `${en}, ${koreanPrompt.replace(/[가-힣]/g, "").trim()}`.trim();
+      if (p.includes(ko)) {
+        return `${en}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
       }
     }
 
-    // 2. AI로 자동 변환 (Gemini 또는 Claude 사용)
-    const aiProvider = getContentProvider();
-    const aiKey = getAPIKey(aiProvider);
-    if (!aiKey) return koreanPrompt; // AI 키 없으면 원문 그대로
+    // ── Step 3: 카테고리 폴백 ──────────────────────────────
+    if (/절약|저축|재테크|투자|사회초년생|직장인|월급|금융|경제/.test(p))
+      return "young Korean professional saving money, coins wallet desk, warm optimistic lighting, lifestyle photography, 8K";
+    if (/맛집|음식|카페|식당|요리|커피|치킨|스테이크|라면/.test(p))
+      return "delicious Korean food photography, beautiful plating, restaurant setting, warm lighting, 8K";
+    if (/여행|관광|제주|부산|호텔|해외/.test(p))
+      return "beautiful travel destination landscape, scenic view, golden hour lighting, professional photography, 8K";
+    if (/다이어트|운동|헬스|요가|건강|피트니스/.test(p))
+      return "healthy active lifestyle, fitness motivation, natural lighting, energetic atmosphere, 8K";
+    if (/패션|뷰티|스킨케어|메이크업|옷/.test(p))
+      return "fashion lifestyle photography, stylish aesthetic, professional editorial, beautiful lighting, 8K";
+    if (/육아|아이|아기|가족/.test(p))
+      return "happy family moments, children playing, warm home atmosphere, joyful lifestyle photography, 8K";
+    if (/IT|앱|AI|테크|컴퓨터|블로그/.test(p))
+      return "modern technology workspace, sleek laptop setup, clean desk, professional tech photography, 8K";
+    if (/취업|공부|학생|수능/.test(p))
+      return "Korean student studying, bright desk workspace, hopeful atmosphere, professional photography, 8K";
+    if (/강아지|고양이|반려동물/.test(p))
+      return "adorable pet animal portrait, natural lighting, cute expression, bokeh background, pet photography, 8K";
+    if (/인테리어|집|거실|홈/.test(p))
+      return "modern interior design, cozy living room, minimalist aesthetic, natural light, architectural photography, 8K";
 
-    try {
-      const translatePrompt = `다음 한국어 키워드/문장을 Stable Diffusion 이미지 생성에 최적화된 영어 프롬프트로 변환해줘.
-키워드: "${koreanPrompt}"
-규칙:
-- 이미지에 실제로 나타날 시각적 요소만 영어로
-- 분위기, 색감, 조명, 구도 포함
-- 20단어 이내
-- 다른 설명 없이 영어 프롬프트만 출력`;
-
-      if (aiProvider === "gemini") {
-        const resp = await fetch("/api/generate-content", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: "gemini", apiKey: aiKey, keyword: translatePrompt, language: "en", minChars: 10, stylePrompt: "translate only, no explanation" }),
-        });
-        const data = await resp.json();
-        const translated = (data.content || "").trim().split("\n")[0].replace(/['"]/g, "").trim();
-        if (translated && translated.length > 3) return translated;
-      }
-    } catch {}
-
-    // 3. 간단 카테고리 매핑으로 폴백
-    const p = koreanPrompt;
-    if (/맛집|음식|카페|요리|먹/.test(p)) return `${koreanPrompt} food restaurant delicious dining photography`;
-    if (/여행|관광|호텔/.test(p)) return `${koreanPrompt} travel destination scenic beautiful`;
-    if (/운동|헬스|다이어트/.test(p)) return `${koreanPrompt} fitness workout healthy lifestyle`;
-    if (/아이|육아|아기/.test(p)) return `${koreanPrompt} family children happy home`;
-    if (/패션|옷|코디/.test(p)) return `${koreanPrompt} fashion style outfit trendy`;
-    if (/IT|앱|AI|기술/.test(p)) return `${koreanPrompt} technology digital modern`;
-    return `${koreanPrompt} lifestyle photography beautiful high quality`;
+    // 완전 최후 수단
+    return "modern Korean lifestyle blog photography, professional quality, natural lighting, vivid colors, 8K";
   };
+
 
   const handleGenerate = async () => {
     const provider = getImageProvider();
     const apiKey = getAPIKey(provider);
-    if (provider !== "pollinations" && !apiKey) { toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`); return; }
+    if (provider !== "pollinations" && !apiKey) { 
+      toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`); 
+      return; 
+    }
     if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
 
     setIsGenerating(true);
@@ -894,9 +802,20 @@ export default function ImageGenerator() {
           <div className="lg:col-span-1 rounded-xl p-5 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
             <h3 className="font-semibold text-foreground">이미지 설정</h3>
             <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>프롬프트</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>프롬프트</label>
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/15%)", color: "var(--color-emerald)" }}>
+                  {/[가-힣]/.test(prompt) ? "한글 → 자동 영문 변환" : "영문 직접 입력"}
+                </span>
+              </div>
               <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)}
-                placeholder="생성할 이미지를 상세히 설명하세요..." className="text-sm min-h-24 resize-none" />
+                placeholder="키워드 또는 영문 프롬프트 입력&#10;예) 사회초년생 절약&#10;또는) young professional saving money, desk, warm lighting"
+                className="text-sm min-h-28 resize-none" />
+              {/[가-힣]/.test(prompt) && (
+                <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: "var(--muted-foreground)" }}>
+                  💡 한글 입력 시 AI가 자동으로 영문 이미지 프롬프트로 변환해요
+                </p>
+              )}
             </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>이미지 스타일</label>

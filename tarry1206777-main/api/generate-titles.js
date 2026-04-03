@@ -1,5 +1,15 @@
-// BlogAuto Pro - generate-titles v1.0
-// Gemini CORS 우회용 제목 생성 API
+// BlogAuto Pro - generate-titles v2.0
+// 한자/외국문자 강제 제거 + Gemini 폴백 체인 강화
+function cleanTitles(titles) {
+  return titles.map(t =>
+    t
+      .replace(/[一-鿿㐀-䶿]/g, "")      // 한자
+      .replace(/[぀-ゟ゠-ヿ]/g, "")      // 일본어
+      .replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s.,!?;:()\-'"'""\[\]%@#&+=/\\~`|<>{}^_$*]/g, "")
+      .trim()
+  ).filter(t => t.length > 3);
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -42,49 +52,104 @@ export default async function handler(req, res) {
 - 오직 한글, 영어, 숫자만 사용`;
 
   function extractTitles(text) {
+    if (!text) return [];
     try {
       const clean = text.replace(/```json|```/gi, "").trim();
       const match = clean.match(/\[[\s\S]*\]/);
       if (match) {
         const parsed = JSON.parse(match[0]);
-        if (Array.isArray(parsed)) return parsed.filter(t => typeof t === "string");
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return cleanTitles(parsed.filter(t => typeof t === "string" && t.length > 3).slice(0, 10));
+        }
       }
-      const parsed = JSON.parse(clean);
-      if (Array.isArray(parsed)) return parsed.filter(t => typeof t === "string");
+      try {
+        const parsed = JSON.parse(clean);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return cleanTitles(parsed.filter(t => typeof t === "string" && t.length > 3).slice(0, 10));
+        }
+      } catch {}
+      const lines = clean.split("\n")
+        .map(l => l.replace(/^[\d]+[\).\s]+|^[-*•\s]+/, "").replace(/^[\s"'"「」『』]+|[\s"'"「」『』]+$/g, "").trim())
+        .filter(l => l.length > 5 && l.length < 120 && !l.startsWith("{") && !l.startsWith("["));
+      if (lines.length >= 2) return cleanTitles(lines.slice(0, 10));
+      const quoted = [...clean.matchAll(/"([^"]{5,100})"/g)].map(m => m[1]);
+      if (quoted.length >= 2) return cleanTitles(quoted.slice(0, 10));
     } catch {}
     return [];
+  }
+
+  function isQuotaError(status, msg) {
+    return (
+      status === 429 || status === 503 ||
+      msg.includes("quota") || msg.includes("rate") ||
+      msg.includes("exhausted") || msg.includes("resource_exhausted") ||
+      msg.includes("too many") || msg.includes("overloaded") ||
+      msg.includes("limit") || msg.includes("capacity")
+    );
   }
 
   try {
     // ── Gemini ──────────────────────────────────────────────
     if (provider === "gemini") {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 1000 },
-          }),
+      const GEMINI_MODELS = [
+        "gemini-2.5-flash-preview-04-17",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+      ];
+
+      let lastErr = null;
+      for (const model of GEMINI_MODELS) {
+        try {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { maxOutputTokens: 1000 },
+              }),
+            }
+          );
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            const msg = (err.error?.message || "").toLowerCase();
+            const status = resp.status;
+            if (msg.includes("api key") || msg.includes("api_key") || status === 403) {
+              throw new Error("FATAL:Gemini API 키가 잘못되었거나 권한이 없습니다.");
+            }
+            if (isQuotaError(status, msg)) {
+              lastErr = `${model} 한도 초과`;
+              continue;
+            }
+            lastErr = `Gemini 오류 (${status})`;
+            continue;
+          }
+          const data = await resp.json();
+          // 200 OK지만 candidates가 없거나 finishReason이 이상한 경우 다음 모델로
+          const candidate = data.candidates?.[0];
+          if (!candidate) { lastErr = `${model} 빈 응답`; continue; }
+          const finishReason = candidate.finishReason || "";
+          if (finishReason === "RECITATION" || finishReason === "SAFETY") { lastErr = `${model} 필터`; continue; }
+          const text = candidate.content?.parts?.[0]?.text || "";
+          if (!text) { lastErr = `${model} 빈 텍스트`; continue; }
+          const titles = extractTitles(text);
+          if (titles.length > 0) return res.json({ titles });
+          const fallback = text.split("\n")
+            .map(l => l.replace(/^[\d\s\-\*\.\)]+/, "").replace(/^["\']/,"").replace(/["\'\s]+$/,"").trim())
+            .filter(l => l.length > 5 && l.length < 120);
+          if (fallback.length > 0) return res.json({ titles: cleanTitles(fallback.slice(0, 10)) });
+          lastErr = `${model} 파싱 실패`;
+          continue;
+        } catch (e) {
+          if (e.message?.startsWith("FATAL:")) throw new Error(e.message.replace("FATAL:", ""));
+          lastErr = e.message;
+          continue;
         }
-      );
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        const msg = (err.error?.message || "").toLowerCase();
-        const status = resp.status;
-        if (status === 429 || msg.includes("quota") || msg.includes("rate") || msg.includes("exhausted")) {
-          throw new Error("Gemini 요청 한도 초과. 잠시 후 다시 시도하거나 Groq으로 전환해보세요.");
-        }
-        if (msg.includes("api key") || status === 400) throw new Error("Gemini API 키가 잘못되었습니다.");
-        if (status === 403) throw new Error("Gemini API 키 권한 없음.");
-        throw new Error(`Gemini 오류 (${status}): ${err.error?.message || "알 수 없는 오류"}`);
       }
-      const data = await resp.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const titles = extractTitles(text);
-      if (titles.length === 0) throw new Error("Gemini 제목 생성 실패. 다시 시도해주세요.");
-      return res.json({ titles });
+      throw new Error(`Gemini 제목 생성 실패 (${lastErr}). Groq으로 전환해보세요.`);
     }
 
     // ── OpenAI ──────────────────────────────────────────────
@@ -122,14 +187,7 @@ export default async function handler(req, res) {
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        const msg = (err.error?.message || "").toLowerCase();
-        if (resp.status === 429 || msg.includes("rate_limit") || msg.includes("quota")) {
-          throw new Error("Groq 일일 토큰 한도 초과. 내일 자동 초기화됩니다. Gemini(무료)로 전환해보세요.");
-        }
-        if (resp.status === 401 || msg.includes("invalid") || msg.includes("api key")) {
-          throw new Error("Groq API 키가 잘못되었습니다. 설정에서 확인해주세요.");
-        }
-        throw new Error(`Groq 오류 (${resp.status}): ${err.error?.message || "알 수 없는 오류"}`);
+        throw new Error(`Groq 오류 (${resp.status}): ${err.error?.message || ""}`);
       }
       const data = await resp.json();
       const titles = extractTitles(data.choices?.[0]?.message?.content || "[]");
