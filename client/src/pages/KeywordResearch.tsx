@@ -57,30 +57,13 @@ const CHART = [
 const STORAGE_KEY = "blogauto_keywords";
 const TITLES_KEY = "blogauto_titles";
 const SELKW_KEY = "blogauto_selkw";
-const DATALAB_CURRENT_KEY = "blogauto_datalab_current";
-const DATALAB_HISTORY_KEY = "blogauto_datalab_history";
 
 // ── 데이터랩 컴포넌트 ──────────────────────────────────
 function DataLabPanel() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any>(() => {
-    try { return JSON.parse(localStorage.getItem(DATALAB_CURRENT_KEY) || "null"); } catch { return null; }
-  });
+  const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
-  const [history, setHistory] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem(DATALAB_HISTORY_KEY) || "[]"); } catch { return []; }
-  });
-
-  useEffect(() => {
-    try {
-      if (data) localStorage.setItem(DATALAB_CURRENT_KEY, JSON.stringify(data));
-    } catch {}
-  }, [data]);
-
-  useEffect(() => {
-    try { localStorage.setItem(DATALAB_HISTORY_KEY, JSON.stringify(history.slice(0, 10))); } catch {}
-  }, [history]);
 
   const analyze = async () => {
     const kw = keyword.trim();
@@ -126,10 +109,6 @@ function DataLabPanel() {
       const d = await resp.json();
       if (!d.ok) throw new Error(d.error);
       setData(d);
-      setHistory(prev => {
-        const next = [{ ...d, savedAt: new Date().toISOString() }, ...prev.filter(item => item.keyword !== d.keyword)];
-        return next.slice(0, 10);
-      });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -140,6 +119,20 @@ function DataLabPanel() {
   const DEVICE_COLORS = ["#6366f1", "#22d3ee"];
   const GENDER_COLORS = ["#3b82f6", "#f472b6"];
   const AGE_COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#fbbf24", "#f87171"];
+
+
+const CHART_TOOLTIP_STYLE = {
+  background: "rgba(255,255,255,0.98)",
+  border: "1px solid rgba(15,23,42,0.12)",
+  borderRadius: 12,
+  boxShadow: "0 10px 30px rgba(15,23,42,0.18)",
+  color: "#0f172a",
+  fontSize: 13,
+};
+
+const CHART_LABEL_STYLE = { color: "#475569", fontWeight: 600 };
+const CHART_ITEM_STYLE = { color: "#0f172a", fontWeight: 700 };
+
 
   const ageData = data ? Object.entries(data.ages).map(([name, value]) => ({ name, value })) : [];
   const deviceData = data ? [
@@ -237,7 +230,7 @@ function DataLabPanel() {
                   <Pie data={deviceData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
                     {deviceData.map((_, i) => <Cell key={i} fill={DEVICE_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Tooltip formatter={(v) => `${v}%`} contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_LABEL_STYLE} itemStyle={CHART_ITEM_STYLE} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-3 mt-1">
@@ -261,7 +254,7 @@ function DataLabPanel() {
                   <Pie data={genderData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
                     {genderData.map((_, i) => <Cell key={i} fill={GENDER_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Tooltip formatter={(v) => `${v}%`} contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_LABEL_STYLE} itemStyle={CHART_ITEM_STYLE} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-3 mt-1">
@@ -284,7 +277,7 @@ function DataLabPanel() {
                 <BarChart data={ageData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Tooltip formatter={(v) => `${v}%`} contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_LABEL_STYLE} itemStyle={CHART_ITEM_STYLE} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     {ageData.map((_, i) => <Cell key={i} fill={AGE_COLORS[i % AGE_COLORS.length]} />)}
                   </Bar>
@@ -304,7 +297,7 @@ function DataLabPanel() {
                 <LineChart data={data.trend.map((d: any) => ({ date: d.period.slice(5), ratio: d.ratio }))}>
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_LABEL_STYLE} itemStyle={CHART_ITEM_STYLE} formatter={(value: number) => [`${Number(value).toFixed(5)}`, "ratio"]} />
                   <Line type="monotone" dataKey="ratio" stroke="var(--color-emerald)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -312,43 +305,6 @@ function DataLabPanel() {
           )}
         </div>
       )}
-
-
-{history.length > 0 && (
-  <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-    <div className="flex items-center justify-between mb-3">
-      <div className="text-xs font-bold text-foreground">최근 데이터랩 기록</div>
-      <button
-        onClick={() => {
-          setHistory([]);
-          localStorage.removeItem(DATALAB_HISTORY_KEY);
-          localStorage.removeItem(DATALAB_CURRENT_KEY);
-          setData(null);
-        }}
-        className="text-xs px-2 py-1 rounded-md"
-        style={{ background: "oklch(0.65 0.22 25/10%)", color: "oklch(0.65 0.22 25)" }}
-      >
-        기록 비우기
-      </button>
-    </div>
-    <div className="flex flex-wrap gap-2">
-      {history.map((item, idx) => (
-        <button
-          key={`${item.keyword}-${idx}`}
-          onClick={() => {
-            setKeyword(item.keyword || "");
-            setData(item);
-            setError("");
-          }}
-          className="px-3 py-2 rounded-lg text-xs font-medium"
-          style={{ background: "oklch(0.75 0.18 200/10%)", color: "oklch(0.75 0.18 200)", border: "1px solid oklch(0.75 0.18 200/25%)" }}
-        >
-          {item.keyword}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
 
       {!data && !loading && !error && (
         <div className="py-8 text-center">
