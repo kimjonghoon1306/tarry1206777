@@ -12,6 +12,7 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { useLocation } from "wouter";
+import { userGet } from "@/lib/user-storage";
 import { toast } from "sonner";
 import {
   TrendingUp, FileText, Image, Send, Eye,
@@ -196,8 +197,8 @@ export default function Dashboard() {
 
     const content = JSON.parse(localStorage.getItem("blogauto_content") || "{}");
     const gallery = JSON.parse(localStorage.getItem("imggen_gallery") || "[]");
-    const coupangKey = localStorage.getItem("coupang_access_key");
-    const tistoryToken = localStorage.getItem("tistory_access_token");
+    const coupangKey = userGet("coupang_access_key");
+    const tistoryToken = userGet("tistory_access_token");
 
     if (content?.title && !existing.find(n => n.message.includes(content.title?.slice(0, 10)))) {
       newNotifs.push({ id: Date.now().toString(), type: "success", message: `글 생성 완료: "${content.title?.slice(0, 20)}..."`, time: "방금", read: false });
@@ -375,7 +376,7 @@ export default function Dashboard() {
         </div>
 
         {/* ── 수익 최적화 팁 배너 ── */}
-        {!localStorage.getItem("coupang_access_key") && (
+        {!userGet("coupang_access_key") && (
           <div className="rounded-xl px-4 py-3 flex items-center gap-3"
             style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/30%)" }}>
             <ShoppingCart className="w-4 h-4 shrink-0" style={{ color: "var(--color-amber-brand)" }} />
@@ -662,9 +663,9 @@ export default function Dashboard() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { title: "쿠팡파트너스 연동", desc: "글마다 관련 상품 자동 삽입 → 클릭당 수익", icon: ShoppingCart, color: "#C00F0C", action: () => navigate("/settings"), badge: localStorage.getItem("coupang_access_key") ? "연동됨" : "미연동" },
-              { title: "티스토리 자동 발행", desc: "애드센스 + 자동 발행 조합으로 수익 극대화", icon: Send, color: "#FF6300", action: () => navigate("/settings"), badge: localStorage.getItem("tistory_access_token") ? "연동됨" : "미연동" },
-              { title: "워드프레스 자동 발행", desc: "자체 도메인 + 애드센스 최고 수익 조합", icon: Globe, color: "#21759B", action: () => navigate("/settings"), badge: localStorage.getItem("wp_url") ? "연동됨" : "미연동" },
+              { title: "쿠팡파트너스 연동", desc: "글마다 관련 상품 자동 삽입 → 클릭당 수익", icon: ShoppingCart, color: "#C00F0C", action: () => navigate("/settings"), badge: userGet("coupang_access_key") ? "연동됨" : "미연동" },
+              { title: "티스토리 자동 발행", desc: "애드센스 + 자동 발행 조합으로 수익 극대화", icon: Send, color: "#FF6300", action: () => navigate("/settings"), badge: userGet("tistory_access_token") ? "연동됨" : "미연동" },
+              { title: "워드프레스 자동 발행", desc: "자체 도메인 + 애드센스 최고 수익 조합", icon: Globe, color: "#21759B", action: () => navigate("/settings"), badge: userGet("wp_url") ? "연동됨" : "미연동" },
             ].map(item => (
               <button key={item.title}
                 className="flex items-start gap-3 p-3.5 rounded-xl text-left transition-all hover:scale-[1.02] active:scale-[0.98]"

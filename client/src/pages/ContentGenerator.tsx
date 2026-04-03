@@ -318,6 +318,11 @@ export default function ContentGenerator() {
       setCharCount(content.length);
       setProgress(100);
       setActiveTab("preview");
+
+      // ✅ 새 글 생성 시 배포관리 블록 초기화 → 배포관리에서 이전 글 나오는 버그 수정
+      localStorage.removeItem("blogauto_deploy_blocks");
+      localStorage.removeItem("blogauto_deploy_images");
+
       toast.success(`생성 완료! 총 ${content.length.toLocaleString()}자`, { id: "generate" });
     } catch (e: any) {
       clearInterval(interval);

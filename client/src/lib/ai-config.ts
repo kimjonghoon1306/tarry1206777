@@ -1,7 +1,7 @@
 import { userGet, SETTINGS_KEYS } from "./user-storage";
 
 export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
-export type ImageAIProvider = "gemini" | "openai" | "flux" | "pollinations";
+export type ImageAIProvider = "openai" | "pollinations";
 
 export function getContentProvider(): ContentAIProvider {
   return (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
@@ -78,46 +78,19 @@ export const IMAGE_AI_OPTIONS = [
     label: "Pollinations AI",
     badge: "완전 무료",
     badgeColor: "var(--color-emerald)",
-    desc: "API 키 없이 바로 사용",
-    pros: "설정 없이 즉시 사용 · 무제한",
-    cons: "퀄리티 들쑥날쑥 · 가끔 느림",
+    desc: "API 키 없이 바로 사용 · 무제한",
+    pros: "설정 없이 즉시 사용 · 무제한 · 키워드 자동 영문 변환",
+    cons: "가끔 느림",
     logo: "P", logoColor: "#7C3AED",
     keyLabel: "", keyPlaceholder: "", keyStorageKey: "",
     keyLink: "https://pollinations.ai",
-  },
-
-  {
-    value: "gemini" as ImageAIProvider,
-    label: "Gemini Flash",
-    badge: "무료/유료",
-    badgeColor: "oklch(0.65 0.15 200)",
-    desc: "Google · 무료 키로 이용 가능",
-    pros: "무료 API 키 발급 · 빠른 속도",
-    cons: "이미지 전용 아님 · 한도 제한",
-    logo: "G", logoColor: "#4285F4",
-    keyLabel: "Gemini API Key", keyPlaceholder: "AIza...",
-    keyStorageKey: SETTINGS_KEYS.GEMINI_KEY,
-    keyLink: "https://aistudio.google.com/app/apikey",
-  },
-  {
-    value: "flux" as ImageAIProvider,
-    label: "Flux Schnell",
-    badge: "무료",
-    badgeColor: "var(--color-emerald)",
-    desc: "fal.ai · 빠른 무료 이미지",
-    pros: "빠른 생성 속도 · fal.ai 무료 크레딧",
-    cons: "API 키 필요 · 무료 한도 제한",
-    logo: "F", logoColor: "#F55036",
-    keyLabel: "fal.ai API Key", keyPlaceholder: "fal-...",
-    keyStorageKey: SETTINGS_KEYS.FLUX_KEY,
-    keyLink: "https://fal.ai/dashboard/keys",
   },
   {
     value: "openai" as ImageAIProvider,
     label: "DALL-E 3",
     badge: "유료",
     badgeColor: "oklch(0.769 0.188 70.08)",
-    desc: "OpenAI · 창의적 이미지",
+    desc: "OpenAI · 최고 품질 이미지",
     pros: "최고 품질 이미지 · 정확한 프롬프트 이해",
     cons: "유료 · 이미지당 비용 발생",
     logo: "O", logoColor: "#10A37F",

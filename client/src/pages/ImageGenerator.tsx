@@ -721,12 +721,12 @@ if (provider === "pollinations") {
       }
     }
 
-    // AI 번역 시도 (Gemini)
+    // AI 번역 시도 (Gemini 또는 Groq 키 있으면)
     const hasKorean = /[가-힣]/.test(p);
     if (hasKorean) {
       const aiProvider = getContentProvider();
       const aiKey = getAPIKey(aiProvider);
-      if (aiKey && (aiProvider === "gemini" || aiProvider === "groq")) {
+      if (aiKey) {
         try {
           const resp = await fetch("/api/generate-content", {
             method: "POST",
@@ -734,22 +734,43 @@ if (provider === "pollinations") {
             body: JSON.stringify({
               provider: aiProvider,
               apiKey: aiKey,
-              keyword: `"${p}"를 이미지 생성 영어 프롬프트로 변환. 시각적 요소, 분위기, 조명, 색감 포함. 25단어 이내. 영어만 출력.`,
+              keyword: `Translate this Korean blog topic into an English image generation prompt. Topic: "${p}". Requirements: visual scene description, mood, lighting, colors. Max 20 words. Output ONLY the English prompt, nothing else.`,
               language: "en",
               minChars: 10,
-              stylePrompt: "Output only the English prompt, no explanation"
+              stylePrompt: "Output only the English image prompt, no Korean, no explanation, no quotes",
             }),
           });
           const data = await resp.json();
-          const translated = (data.content || "").trim().split("\n")[0].replace(/['"]/g, "").trim();
-          if (translated && translated.length > 5 && /[a-zA-Z]/.test(translated)) return translated;
+          const translated = (data.content || "").trim().split("\n")[0]
+            .replace(/['"「」『』]/g, "").replace(/[가-힣]/g, "").trim();
+          if (translated && translated.length > 5 && /[a-zA-Z]/.test(translated)) {
+            return `${translated}, professional photography, 8K ultra realistic`;
+          }
         } catch {}
       }
+
+      // AI 번역도 실패한 경우 — 한글 키워드 기반 범용 영문 생성
+      // 한글을 절대 Pollinations에 넘기지 않음
+      const genericMap: Record<string, string> = {
+        "정보": "informative lifestyle concept, clean modern aesthetic",
+        "방법": "how-to guide concept, step by step process visual",
+        "추천": "recommendation top picks, curated selection display",
+        "후기": "review experience testimonial, authentic lifestyle",
+        "가이드": "guide tutorial concept, helpful information visual",
+        "꿀팁": "tips tricks lifestyle hack, useful concept visual",
+        "비교": "comparison side by side, choice decision concept",
+        "순위": "ranking list top results, best choice concept",
+      };
+      for (const [ko, en] of Object.entries(genericMap)) {
+        if (p.includes(ko)) return `${en}, professional blog photography, 8K ultra realistic`;
+      }
+
+      // 완전 최후 수단 — 한글 전부 제거 후 영문 기본값
+      return "beautiful lifestyle blog photography, professional quality, natural lighting, vivid colors, 8K ultra realistic";
     }
 
-    // 최종 폴백 - 한국어 제거하고 기본 품질 태그
-    const cleaned = p.replace(/[가-힣]/g, "").trim();
-    return `${cleaned || p} beautiful photography, professional quality, natural lighting, vivid colors, 8K ultra realistic`.trim();
+    // 한글 없으면 그대로 사용
+    return `${p}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
   };
 
   const handleGenerate = async () => {

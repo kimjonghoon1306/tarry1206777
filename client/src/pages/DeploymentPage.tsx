@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { userGet } from "@/lib/user-storage";
 
 // ─────────────────────────────────────────────────────────
 // 타입 정의
@@ -598,14 +599,14 @@ export default function DeploymentPage() {
       try { return JSON.parse(stored); } catch {}
     }
     const defaults: Platform[] = [];
-    if (localStorage.getItem("naver_blog_id"))
+    if (userGet("naver_blog_id"))
       defaults.push({ id: uid(), type: "naver", name: "네이버 블로그" });
-    if (localStorage.getItem("wp_url"))
+    if (userGet("wp_url"))
       defaults.push({ id: uid(), type: "wordpress", name: "WordPress" });
-    if (localStorage.getItem("webhook_url") ||
+    if (userGet("webhook_url") ||
        (JSON.parse(localStorage.getItem("platform_custom_list") || "[]").length > 0))
       defaults.push({ id: uid(), type: "custom", name: "커스텀 사이트" });
-    if (localStorage.getItem("tistory_access_token"))
+    if (userGet("tistory_access_token"))
       defaults.push({ id: uid(), type: "tistory" as any, name: "티스토리" });
     return defaults;
   });
@@ -884,9 +885,9 @@ export default function DeploymentPage() {
 
   // ── WordPress 발행 ──
   async function publishToWordPress(scheduledAt: string | null) {
-    const wpUrl = localStorage.getItem("wp_url");
-    const wpUser = localStorage.getItem("wp_username");
-    const wpPass = localStorage.getItem("wp_app_password");
+    const wpUrl = userGet("wp_url");
+    const wpUser = userGet("wp_username");
+    const wpPass = userGet("wp_app_password");
     if (!wpUrl || !wpUser || !wpPass) throw new Error("WordPress 설정이 없습니다.");
     const postData: Record<string, unknown> = {
       title,
@@ -914,8 +915,8 @@ export default function DeploymentPage() {
   const [coupangLoading, setCoupangLoading] = React.useState(false);
 
   const fetchCoupangLinks = async () => {
-    const accessKey = localStorage.getItem("coupang_access_key");
-    const secretKey = localStorage.getItem("coupang_secret_key");
+    const accessKey = userGet("coupang_access_key");
+    const secretKey = userGet("coupang_secret_key");
     if (!accessKey || !secretKey) {
       toast.error("설정에서 쿠팡파트너스 API 키를 먼저 입력해주세요");
       return;
@@ -964,8 +965,8 @@ export default function DeploymentPage() {
 
   // ── 티스토리 발행 ──────────────────────────────────
   async function publishToTistory(scheduledAt: string | null) {
-    const accessToken = localStorage.getItem("tistory_access_token");
-    const blogName = localStorage.getItem("tistory_blog_name");
+    const accessToken = userGet("tistory_access_token");
+    const blogName = userGet("tistory_blog_name");
     if (!accessToken || !blogName) throw new Error("설정에서 티스토리 Access Token과 블로그를 먼저 등록해주세요");
 
     const htmlContent = blocks.map(b => {
@@ -1049,9 +1050,9 @@ export default function DeploymentPage() {
     } catch {}
 
     // 2. 기존 방식 fallback
-    if (!url) url = localStorage.getItem("webhook_url") || "";
-    if (!key) key = localStorage.getItem("webhook_auth_key") || "";
-    if (authHeader === "Authorization") authHeader = localStorage.getItem("webhook_auth_header") || "Authorization";
+    if (!url) url = userGet("webhook_url") || "";
+    if (!key) key = userGet("webhook_auth_key") || "";
+    if (authHeader === "Authorization") authHeader = userGet("webhook_auth_header") || "Authorization";
 
     if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트를 등록해주세요.");
     // CORS 우회: Vercel 서버를 프록시로 사용
@@ -1226,7 +1227,7 @@ export default function DeploymentPage() {
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
               {/* 쿠팡파트너스 링크 버튼 */}
-              {localStorage.getItem("coupang_access_key") && (
+              {userGet("coupang_access_key") && (
                 <Button size="sm" className="gap-1.5 h-9"
                   style={{ background: "#C00F0C", color: "white" }}
                   onClick={fetchCoupangLinks}
