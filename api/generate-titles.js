@@ -80,7 +80,7 @@ export default async function handler(req, res) {
 
   function isQuotaError(status, msg) {
     return (
-      status === 429 || status === 503 || status === 404 ||
+      status === 429 || status === 503 ||
       msg.includes("quota") || msg.includes("rate") ||
       msg.includes("exhausted") || msg.includes("resource_exhausted") ||
       msg.includes("too many") || msg.includes("overloaded") ||
@@ -98,7 +98,8 @@ export default async function handler(req, res) {
         "gemini-2.0-flash-lite",
         "gemini-2.0-flash-exp",
         "gemini-exp-1206",
-        "gemini-2.5-flash-preview-04-17",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
       ];
 
       let lastErr = null;
@@ -228,3 +229,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
 }
+// fix
