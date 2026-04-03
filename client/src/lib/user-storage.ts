@@ -50,10 +50,7 @@ export function isAdminUser(): boolean {
 // ── 저장 ─────────────────────────────────────────────
 export function userSet(key: string, value: string): void {
   const uid = getCurrentUserId();
-  const normalized = typeof value === "string" ? value.trim() : String(value ?? "").trim();
-  localStorage.setItem(`u:${uid}:${key}`, normalized);
-  // 구버전 코드 호환용 raw key도 같이 저장
-  localStorage.setItem(key, normalized);
+  localStorage.setItem(`u:${uid}:${key}`, value);
 }
 
 // ── 불러오기 ─────────────────────────────────────────
@@ -61,18 +58,30 @@ export function userSet(key: string, value: string): void {
 export function userGet(key: string, fallback = ""): string {
   const uid = getCurrentUserId();
   const value = localStorage.getItem(`u:${uid}:${key}`);
-  if (value !== null && value.trim() !== "") return value.trim();
-
-  // 구버전 raw localStorage 키 호환
-  const rawValue = localStorage.getItem(key);
-  if (rawValue !== null && rawValue.trim() !== "") return rawValue.trim();
-
+  if (value !== null && value.trim() !== "") return value;
   // admin 네임스페이스 폴백 (관리자가 설정한 키 자동 적용)
   if (uid !== "admin") {
     const adminValue = localStorage.getItem(`u:admin:${key}`);
-    if (adminValue !== null && adminValue.trim() !== "") return adminValue.trim();
+    if (adminValue !== null && adminValue.trim() !== "") return adminValue;
   }
   return fallback;
+}
+
+
+
+// ── 현재 사용자 로컬 값만 읽기 (admin 폴백 없음) ─────────────────
+export function userGetLocalOnly(key: string, fallback = ""): string {
+  const uid = getCurrentUserId();
+  const value = localStorage.getItem(`u:${uid}:${key}`);
+  return value !== null && value.trim() !== "" ? value : fallback;
+}
+
+// ── 설정 화면 전용 값 읽기 ───────────────────────────────────────
+// 관리자(admin) 계정의 공용 키는 일반 설정 화면에 자동 표시하지 않음
+export function userGetSettingsValue(key: string, fallback = ""): string {
+  const uid = getCurrentUserId();
+  if (uid === "admin") return fallback;
+  return userGetLocalOnly(key, fallback);
 }
 
 // ── 삭제 ─────────────────────────────────────────────
