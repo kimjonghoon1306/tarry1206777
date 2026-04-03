@@ -212,11 +212,11 @@ ${categoryGuide}
     if (provider === "gemini") {
       // 폴백 체인: 2.0-flash → 1.5-flash → 1.5-flash-8b (가장 한도 넉넉)
       const GEMINI_MODELS = [
-        "gemini-2.5-flash-preview-04-17",
         "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
+        "gemini-2.0-flash-lite",
         "gemini-1.5-flash-8b",
+        "gemini-2.5-flash-preview-04-17",
       ];
 
       let lastError = null;
@@ -261,8 +261,24 @@ ${categoryGuide}
           }
 
           const data = await resp.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          if (!text) { lastError = `${model} 빈 응답`; continue; }
+          const candidate = data.candidates?.[0];
+          if (!candidate) {
+            console.error(`[generate-content] ${model} candidates 없음:`, JSON.stringify(data).slice(0, 500));
+            lastError = `${model} 빈 응답 (candidates 없음)`;
+            continue;
+          }
+          const finishReason = candidate.finishReason || "";
+          if (finishReason === "RECITATION" || finishReason === "SAFETY") {
+            console.error(`[generate-content] ${model} 필터됨 finishReason=${finishReason}`);
+            lastError = `${model} 필터 (${finishReason})`;
+            continue;
+          }
+          const text = candidate.content?.parts?.[0]?.text || "";
+          if (!text) {
+            console.error(`[generate-content] ${model} 텍스트 없음, finishReason=${finishReason}, candidate:`, JSON.stringify(candidate).slice(0, 300));
+            lastError = `${model} 빈 텍스트`;
+            continue;
+          }
 
           return res.json({ content: removeNonKorean(text) });
 

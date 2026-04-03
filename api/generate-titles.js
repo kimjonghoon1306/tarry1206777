@@ -92,11 +92,11 @@ export default async function handler(req, res) {
     // ── Gemini ──────────────────────────────────────────────
     if (provider === "gemini") {
       const GEMINI_MODELS = [
-        "gemini-2.5-flash-preview-04-17",
         "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
+        "gemini-2.0-flash-lite",
         "gemini-1.5-flash-8b",
+        "gemini-2.5-flash-preview-04-17",
       ];
 
       let lastErr = null;
@@ -130,9 +130,17 @@ export default async function handler(req, res) {
           const data = await resp.json();
           // 200 OK지만 candidates가 없거나 finishReason이 이상한 경우 다음 모델로
           const candidate = data.candidates?.[0];
-          if (!candidate) { lastErr = `${model} 빈 응답`; continue; }
+          if (!candidate) {
+            console.error(`[generate-titles] ${model} candidates 없음:`, JSON.stringify(data).slice(0, 500));
+            lastErr = `${model} 빈 응답 (candidates 없음)`;
+            continue;
+          }
           const finishReason = candidate.finishReason || "";
-          if (finishReason === "RECITATION" || finishReason === "SAFETY") { lastErr = `${model} 필터`; continue; }
+          if (finishReason === "RECITATION" || finishReason === "SAFETY") {
+            console.error(`[generate-titles] ${model} 필터됨 finishReason=${finishReason}`);
+            lastErr = `${model} 필터`;
+            continue;
+          }
           const text = candidate.content?.parts?.[0]?.text || "";
           if (!text) { lastErr = `${model} 빈 텍스트`; continue; }
           const titles = extractTitles(text);

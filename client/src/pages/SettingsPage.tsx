@@ -24,7 +24,7 @@ import {
   CONTENT_AI_OPTIONS, IMAGE_AI_OPTIONS,
   type ContentAIProvider, type ImageAIProvider,
 } from "@/lib/ai-config";
-import { userGet, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings, loadSettingsFromServer } from "@/lib/user-storage";
+import { userGet, userGetOwn, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings, loadSettingsFromServer } from "@/lib/user-storage";
 
 const LANGUAGES = [
   { code: "ko", label: "한국어", flag: "🇰🇷" },
@@ -40,7 +40,8 @@ const LANGUAGES = [
 function ApiKeyInput({ label, placeholder, storageKey, link }: {
   label: string; placeholder: string; storageKey: string; link: string;
 }) {
-  const [value, setValue] = useState(() => userGet(storageKey));
+  // 표시용: 자기 네임스페이스만 읽음 (관리자 키가 일반 설정에 보이는 버그 방지)
+  const [value, setValue] = useState(() => userGetOwn(storageKey));
   const [show, setShow] = useState(false);
   const [saved, setSaved] = useState(false);
 

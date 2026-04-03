@@ -67,6 +67,15 @@ export function userGet(key: string, fallback = ""): string {
   return fallback;
 }
 
+// ── 자기 네임스페이스만 읽기 (admin 폴백 없음) ─────────
+// SettingsPage 표시용: 자기가 직접 저장한 값만 보여줌
+export function userGetOwn(key: string, fallback = ""): string {
+  const uid = getCurrentUserId();
+  const value = localStorage.getItem(`u:${uid}:${key}`);
+  if (value !== null && value.trim() !== "") return value;
+  return fallback;
+}
+
 // ── 삭제 ─────────────────────────────────────────────
 export function userDel(key: string): void {
   const uid = getCurrentUserId();
