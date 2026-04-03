@@ -57,73 +57,77 @@ const CHART = [
 const STORAGE_KEY = "blogauto_keywords";
 const TITLES_KEY = "blogauto_titles";
 const SELKW_KEY = "blogauto_selkw";
-const DATALAB_CURRENT_KEY = "blogauto_datalab_current";
-const DATALAB_HISTORY_KEY = "blogauto_datalab_history";
-
 
 // ── 데이터랩 컴포넌트 ──────────────────────────────────
 function DataLabPanel() {
-  const [keyword, setKeyword] = useState(() => {
+  const DATALAB_CURRENT_KEY = "blogauto_datalab_current_v2";
+  const DATALAB_HISTORY_KEY = "blogauto_datalab_history_v2";
+
+  const loadCurrent = () => {
     try {
-      const saved = localStorage.getItem(DATALAB_CURRENT_KEY);
-      if (!saved) return "";
-      return JSON.parse(saved)?.keyword || "";
-    } catch {
-      return "";
-    }
-  });
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any>(() => {
-    try {
-      const saved = localStorage.getItem(DATALAB_CURRENT_KEY);
-      if (!saved) return null;
-      return JSON.parse(saved) || null;
+      const raw = localStorage.getItem(DATALAB_CURRENT_KEY);
+      return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
-  });
-  const [history, setHistory] = useState<any[]>(() => {
+  };
+
+  const loadHistory = () => {
     try {
-      return JSON.parse(localStorage.getItem(DATALAB_HISTORY_KEY) || "[]");
+      const raw = localStorage.getItem(DATALAB_HISTORY_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
-  });
+  };
+
+  const currentSaved = typeof window !== "undefined" ? loadCurrent() : null;
+  const [keyword, setKeyword] = useState(currentSaved?.keyword || "");
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any>(currentSaved?.data || null);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState<any[]>(() => (typeof window !== "undefined" ? loadHistory() : []));
 
-  const saveDataLabResult = (result: any) => {
+  const saveCurrent = (kw: string, nextData: any) => {
     try {
-      localStorage.setItem(DATALAB_CURRENT_KEY, JSON.stringify(result));
-      setData(result);
-      setKeyword(result?.keyword || "");
-      setHistory(prev => {
-        const next = [result, ...prev.filter((item) => item?.keyword !== result?.keyword)].slice(0, 10);
-        localStorage.setItem(DATALAB_HISTORY_KEY, JSON.stringify(next));
-        return next;
-      });
+      localStorage.setItem(DATALAB_CURRENT_KEY, JSON.stringify({ keyword: kw, data: nextData, savedAt: Date.now() }));
     } catch {}
   };
 
-  const restoreHistoryItem = (item: any) => {
-    if (!item) return;
-    setData(item);
-    setKeyword(item.keyword || "");
-    setError("");
-    try {
-      localStorage.setItem(DATALAB_CURRENT_KEY, JSON.stringify(item));
-    } catch {}
+  const pushHistory = (kw: string, nextData: any) => {
+    const nextEntry = {
+      id: Date.now(),
+      keyword: kw,
+      data: nextData,
+      savedAt: Date.now(),
+    };
+    setHistory((prev) => {
+      const filtered = prev.filter((item) => item.keyword !== kw);
+      const next = [nextEntry, ...filtered].slice(0, 10);
+      try { localStorage.setItem(DATALAB_HISTORY_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
   };
 
-  const clearDataLabHistory = () => {
-    setData(null);
-    setHistory([]);
+  const handleReset = () => {
     setKeyword("");
+    setData(null);
     setError("");
+    setHistory([]);
     try {
       localStorage.removeItem(DATALAB_CURRENT_KEY);
       localStorage.removeItem(DATALAB_HISTORY_KEY);
     } catch {}
-    toast.success("데이터랩 기록을 초기화했습니다");
+    toast.success("데이터랩 기록이 초기화되었습니다");
+  };
+
+  const restoreFromHistory = (entry: any) => {
+    setKeyword(entry.keyword || "");
+    setData(entry.data || null);
+    setError("");
+    saveCurrent(entry.keyword || "", entry.data || null);
+    toast.success(`'${entry.keyword}' 기록을 불러왔습니다`);
   };
 
   const analyze = async () => {
@@ -131,9 +135,7 @@ function DataLabPanel() {
     if (!kw) { setError("키워드를 입력해주세요"); return; }
     let clientId = userGet("naver_datalab_client_id");
     let clientSecret = userGet("naver_datalab_client_secret");
-    // 키 없으면 서버 설정 + admin 설정 sync 후 재시도
     if (!clientId || !clientSecret) {
-      // 일반 유저 서버 설정 먼저 시도
       try {
         const token = localStorage.getItem("ba_token");
         if (token) {
@@ -160,7 +162,8 @@ function DataLabPanel() {
       setError("설정 페이지에서 네이버 데이터랩 Client ID/Secret을 입력해주세요");
       return;
     }
-    setLoading(true); setError(""); setData(null);
+
+    setLoading(true); setError("");
     try {
       const resp = await fetch("/api/naver-datalab", {
         method: "POST",
@@ -169,7 +172,9 @@ function DataLabPanel() {
       });
       const d = await resp.json();
       if (!d.ok) throw new Error(d.error);
-      saveDataLabResult(d);
+      setData(d);
+      saveCurrent(kw, d);
+      pushHistory(kw, d);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -191,9 +196,10 @@ function DataLabPanel() {
     { name: "남성", value: data.gender.male },
   ] : [];
 
+  const tooltipStyle = { background: "#ffffff", border: "1px solid rgba(15,23,42,0.08)", color: "#111827", borderRadius: 12, boxShadow: "0 8px 24px rgba(15,23,42,0.12)" } as const;
+
   return (
     <div className="rounded-xl p-4 sm:p-5 space-y-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      {/* 헤더 */}
       <div className="flex items-center gap-2">
         <Activity className="w-5 h-5" style={{ color: "oklch(0.75 0.18 200)" }} />
         <h3 className="font-bold text-foreground">네이버 데이터랩 분석</h3>
@@ -202,14 +208,13 @@ function DataLabPanel() {
         </span>
       </div>
 
-      {/* 검색 */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <input
           value={keyword}
           onChange={e => setKeyword(e.target.value)}
           onKeyDown={e => e.key === "Enter" && analyze()}
           placeholder="분석할 키워드 입력 (예: 다이어트)"
-          className="flex-1 h-10 px-3 rounded-lg text-sm text-foreground"
+          className="flex-1 min-w-[220px] h-10 px-3 rounded-lg text-sm text-foreground"
           style={{ background: "var(--background)", border: "1px solid var(--border)" }}
         />
         <button
@@ -221,7 +226,42 @@ function DataLabPanel() {
           {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           {loading ? "분석 중..." : "분석"}
         </button>
+        <button
+          onClick={handleReset}
+          type="button"
+          className="h-10 px-4 rounded-lg text-sm font-semibold flex items-center gap-1.5"
+          style={{ background: "oklch(0.72 0.16 342)", color: "white" }}
+        >
+          <Trash2 className="w-4 h-4" />
+          데이터 초기화
+        </button>
       </div>
+
+      {history.length > 0 && (
+        <div className="rounded-xl p-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div>
+              <div className="text-sm font-semibold text-foreground">최근 데이터랩 기록</div>
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>최근 10개까지 누적 저장돼요</div>
+            </div>
+            <span className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.75 0.12 300/14%)", color: "oklch(0.75 0.12 300)" }}>{history.length}개</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {history.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => restoreFromHistory(entry)}
+                className="px-3 py-2 rounded-lg text-left text-xs font-medium transition-all hover:opacity-90"
+                style={{ background: "oklch(0.75 0.18 200/10%)", border: "1px solid oklch(0.75 0.18 200/20%)", color: "var(--foreground)" }}
+              >
+                <div className="font-semibold">{entry.keyword}</div>
+                <div style={{ color: "var(--muted-foreground)" }}>{new Date(entry.savedAt).toLocaleDateString()}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "oklch(0.65 0.22 25/10%)", color: "oklch(0.65 0.22 25)", border: "1px solid oklch(0.65 0.22 25/30%)" }}>
@@ -229,198 +269,117 @@ function DataLabPanel() {
         </div>
       )}
 
-      <div className="rounded-xl p-3 space-y-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div>
-            <div className="text-sm font-bold text-foreground">데이터랩 기록</div>
-            <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>최근 분석 10개까지 저장되고, 화면을 이동해도 유지됩니다</div>
-          </div>
-          <button
-            onClick={clearDataLabHistory}
-            className="h-9 px-3 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
-            style={{ background: "oklch(0.72 0.19 350)", color: "white" }}
-          >
-            데이터 초기화
-          </button>
-        </div>
-
-        {history.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {history.map((item, idx) => {
-              const topAge = Object.entries(item?.ages || {}).sort((a: any, b: any) => Number(b[1]) - Number(a[1]))[0]?.[0] || "-";
-              return (
-                <button
-                  key={`${item?.keyword || 'item'}-${idx}`}
-                  type="button"
-                  onClick={() => restoreHistoryItem(item)}
-                  className="text-left rounded-lg p-3 transition-all hover:-translate-y-[1px]"
-                  style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-semibold text-foreground truncate">{item?.keyword || "키워드"}</div>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "oklch(0.75 0.18 200/12%)", color: "oklch(0.75 0.18 200)" }}>
-                      기록 {idx + 1}
-                    </span>
-                  </div>
-                  <div className="mt-2 grid grid-cols-3 gap-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
-                    <div>모바일 {item?.device?.mobile ?? 0}%</div>
-                    <div>{(item?.gender?.female ?? 0) >= (item?.gender?.male ?? 0) ? "여성" : "남성"} 우세</div>
-                    <div>주 연령 {topAge}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-xs px-3 py-3 rounded-lg" style={{ background: "var(--card)", color: "var(--muted-foreground)", border: "1px dashed var(--border)" }}>
-            아직 저장된 데이터랩 기록이 없습니다
-          </div>
-        )}
-      </div>
-
       {data && (
         <div className="space-y-5">
-          {/* 요약 카드 */}
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-xl p-3 text-center" style={{ background: "oklch(0.75 0.18 200/10%)", border: "1px solid oklch(0.75 0.18 200/30%)" }}>
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Smartphone className="w-3.5 h-3.5" style={{ color: "oklch(0.75 0.18 200)" }} />
                 <span className="text-xs font-semibold" style={{ color: "oklch(0.75 0.18 200)" }}>모바일</span>
               </div>
-              <div className="text-2xl font-black" style={{ color: "oklch(0.75 0.18 200)", fontFamily: "'Space Grotesk',sans-serif" }}>
-                {data.device.mobile}%
-              </div>
+              <div className="text-2xl font-black" style={{ color: "oklch(0.75 0.18 200)", fontFamily: "'Space Grotesk',sans-serif" }}>{data.device.mobile}%</div>
             </div>
             <div className="rounded-xl p-3 text-center" style={{ background: "oklch(0.7 0.18 330/10%)", border: "1px solid oklch(0.7 0.18 330/30%)" }}>
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Users className="w-3.5 h-3.5" style={{ color: "oklch(0.7 0.18 330)" }} />
-                <span className="text-xs font-semibold" style={{ color: "oklch(0.7 0.18 330)" }}>
-                  {data.gender.female >= data.gender.male ? "여성" : "남성"} 우세
-                </span>
+                <span className="text-xs font-semibold" style={{ color: "oklch(0.7 0.18 330)" }}>{data.gender.female >= data.gender.male ? "여성" : "남성"} 우세</span>
               </div>
-              <div className="text-2xl font-black" style={{ color: "oklch(0.7 0.18 330)", fontFamily: "'Space Grotesk',sans-serif" }}>
-                {Math.max(data.gender.female, data.gender.male)}%
-              </div>
+              <div className="text-2xl font-black" style={{ color: "oklch(0.7 0.18 330)", fontFamily: "'Space Grotesk',sans-serif" }}>{Math.max(data.gender.female, data.gender.male)}%</div>
             </div>
             <div className="rounded-xl p-3 text-center" style={{ background: "oklch(0.696 0.17 162/10%)", border: "1px solid oklch(0.696 0.17 162/30%)" }}>
               <div className="flex items-center justify-center gap-1 mb-1">
                 <BarChart2 className="w-3.5 h-3.5" style={{ color: "var(--color-emerald)" }} />
                 <span className="text-xs font-semibold" style={{ color: "var(--color-emerald)" }}>주 연령</span>
               </div>
-              <div className="text-2xl font-black" style={{ color: "var(--color-emerald)", fontFamily: "'Space Grotesk',sans-serif" }}>
-                {Object.entries(data.ages).sort((a: any, b: any) => b[1] - a[1])[0]?.[0]}
-              </div>
+              <div className="text-2xl font-black" style={{ color: "var(--color-emerald)", fontFamily: "'Space Grotesk',sans-serif" }}>{Object.entries(data.ages).sort((a: any, b: any) => b[1] - a[1])[0]?.[0]}</div>
             </div>
           </div>
 
-          {/* 차트 3개 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* 디바이스 */}
             <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-1.5 mb-3">
                 <Monitor className="w-4 h-4" style={{ color: DEVICE_COLORS[0] }} />
                 <span className="text-xs font-bold text-foreground">디바이스</span>
               </div>
-              <ResponsiveContainer width="100%" height={140}>
-                <PieChart>
-                  <Pie data={deviceData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
-                    {deviceData.map((_, i) => <Cell key={i} fill={DEVICE_COLORS[i]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.18)" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 600 }} formatter={(v) => `${v}%`} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex justify-center gap-3 mt-1">
-                {deviceData.map((d, i) => (
-                  <div key={i} className="flex items-center gap-1 text-xs">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: DEVICE_COLORS[i] }} />
-                    <span style={{ color: "var(--muted-foreground)" }}>{d.name} {d.value}%</span>
-                  </div>
-                ))}
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={deviceData} dataKey="value" nameKey="name" innerRadius={38} outerRadius={58} paddingAngle={3}>
+                      {deviceData.map((_: any, i: number) => <Cell key={i} fill={DEVICE_COLORS[i % DEVICE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            {/* 성별 */}
             <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-1.5 mb-3">
                 <Users className="w-4 h-4" style={{ color: GENDER_COLORS[0] }} />
                 <span className="text-xs font-bold text-foreground">성별</span>
               </div>
-              <ResponsiveContainer width="100%" height={140}>
-                <PieChart>
-                  <Pie data={genderData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
-                    {genderData.map((_, i) => <Cell key={i} fill={GENDER_COLORS[i]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.18)" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 600 }} formatter={(v) => `${v}%`} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex justify-center gap-3 mt-1">
-                {genderData.map((d, i) => (
-                  <div key={i} className="flex items-center gap-1 text-xs">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: GENDER_COLORS[i] }} />
-                    <span style={{ color: "var(--muted-foreground)" }}>{d.name} {d.value}%</span>
-                  </div>
-                ))}
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={genderData} dataKey="value" nameKey="name" innerRadius={38} outerRadius={58} paddingAngle={3}>
+                      {genderData.map((_: any, i: number) => <Cell key={i} fill={GENDER_COLORS[i % GENDER_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            {/* 연령대 */}
             <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-1.5 mb-3">
-                <BarChart2 className="w-4 h-4" style={{ color: AGE_COLORS[2] }} />
-                <span className="text-xs font-bold text-foreground">연령대</span>
+                <BarChart2 className="w-4 h-4" style={{ color: AGE_COLORS[0] }} />
+                <span className="text-xs font-bold text-foreground">연령</span>
               </div>
-              <ResponsiveContainer width="100%" height={140}>
-                <BarChart data={ageData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip contentStyle={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.18)" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 600 }} formatter={(v) => `${v}%`} />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {ageData.map((_, i) => <Cell key={i} fill={AGE_COLORS[i % AGE_COLORS.length]} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={ageData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.12} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
+                    <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                      {ageData.map((_: any, i: number) => <Cell key={i} fill={AGE_COLORS[i % AGE_COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
 
-          {/* 트렌드 라인 */}
-          {data.trend && data.trend.length > 0 && (
-            <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-1.5 mb-3">
-                <TrendingUp className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                <span className="text-xs font-bold text-foreground">검색 트렌드 ({data.keyword})</span>
+          <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-semibold text-foreground">검색 추이</div>
+                <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>{keyword} 최근 추세</div>
               </div>
-              <ResponsiveContainer width="100%" height={120}>
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/12%)", color: "var(--color-emerald)" }}>최근 12개월</span>
+            </div>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.trend.map((d: any) => ({ date: d.period.slice(5), ratio: d.ratio }))}>
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip contentStyle={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.18)" }} itemStyle={{ color: "#059669" }} labelStyle={{ color: "#6b7280", fontWeight: 600 }} />
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip contentStyle={tooltipStyle} />
                   <Line type="monotone" dataKey="ratio" stroke="var(--color-emerald)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          )}
-        </div>
-      )}
-
-      {!data && !loading && !error && (
-        <div className="py-8 text-center">
-          <Activity className="w-10 h-10 mx-auto mb-3 opacity-20" style={{ color: "oklch(0.75 0.18 200)" }} />
-          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>키워드를 입력하고 분석 버튼을 눌러주세요</p>
-          <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>설정에서 네이버 데이터랩 Client ID/Secret을 먼저 입력하세요</p>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-export default function KeywordResearch() {
-  const [location, navigate] = useLocation();
-  const [adsenseOn, setAdsenseOn] = useState(true);
-  const [adpostOn, setAdpostOn] = useState(true);
-  const [inputKW, setInputKW] = useState("");
-  const [isCollecting, setIsCollecting] = useState(false);
-
-  // 1. localStorage에서 키워드 불러오기 (페이지 이탈해도 유지)
+// 1. localStorage에서 키워드 불러오기 (페이지 이탈해도 유지)
   const [keywords, setKeywords] = useState<KW[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
