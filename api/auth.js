@@ -1,12 +1,7 @@
-// BlogAuto Pro - auth v4.0
-/**
- * [수정 내용]
- * 1. saveSettings / loadSettings - 토큰 기반으로 user:userId에 완전 분리 저장
- * 2. saveAdminGlobalSettings / loadAdminGlobalSettings 추가
- *    - 관리자가 저장한 설정은 admin:global_settings 키에 별도 보관
- *    - 일반 회원 loadSettings에서 절대 노출 안됨
- * 3. 관리자(admin role) 여부 검증 로직 추가
- */
+// BlogAuto Pro - auth v5.0
+// ✅ 관리자 비번 KV 서버 저장 (배포해도 초기화 안됨)
+// ✅ 회원가입 시 userIndex 등록 (회원 목록 관리)
+// ✅ 회원 목록/등급 변경/삭제 관리자 API
 
 const KV_URL = process.env.KV_REST_API_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN;
@@ -76,9 +71,30 @@ async function setEmailIndex(email, userId) {
   await kvSet(`email:${email}`, userId);
 }
 
+// ── 회원 인덱스 관리 (목록 조회용) ────────────────────
+async function getUserIndex() {
+  const idx = await kvGet("userIndex");
+  return idx || _mem["userIndex"] || [];
+}
+async function addToUserIndex(userId) {
+  const idx = await getUserIndex();
+  if (!idx.includes(userId)) {
+    const updated = [...idx, userId];
+    _mem["userIndex"] = updated;
+    await kvSet("userIndex", updated);
+  }
+}
+async function removeFromUserIndex(userId) {
+  const idx = await getUserIndex();
+  const updated = idx.filter(id => id !== userId);
+  _mem["userIndex"] = updated;
+  await kvSet("userIndex", updated);
+}
+
 const mkToken = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const b64 = (s) => Buffer.from(s).toString("base64");
 
+// ── 관리자 초기화 (비번은 KV에 이미 있으면 절대 덮어쓰지 않음) ──
 async function initAdmin() {
   const existing = await getUser("admin");
   if (!existing) {
@@ -87,10 +103,10 @@ async function initAdmin() {
       password: b64("123456"),
     });
     await setEmailIndex("admin@blogauto.pro", "admin");
+    // admin은 userIndex에 넣지 않음 (회원 목록에서 제외)
   }
 }
 
-// 토큰으로 유저 role 확인
 async function getUserRole(token) {
   if (!token) return null;
   const uid = await getSession(token);
@@ -111,7 +127,7 @@ export default async function handler(req, res) {
 
   await initAdmin();
 
-  // 회원가입
+  // ── 회원가입 ──────────────────────────────────────────
   if (action === "signup") {
     const { name, userId, email, password } = body;
     if (!name?.trim()) return res.json({ ok: false, error: "이름을 입력해주세요" });
@@ -132,12 +148,13 @@ export default async function handler(req, res) {
     };
     await setUser(userId, userData);
     await setEmailIndex(email, userId);
+    await addToUserIndex(userId); // ✅ 회원 목록에 등록
     const tk = mkToken();
     await setSession(tk, userId);
     return res.json({ ok: true, token: tk, user: { id: userId, ...userData.profile } });
   }
 
-  // 로그인
+  // ── 로그인 ──────────────────────────────────────────
   if (action === "login") {
     const { userId, password } = body;
     const u = await getUser(userId);
@@ -148,7 +165,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, token: tk, user: { id: userId, ...u.profile } });
   }
 
-  // 아이디 찾기
+  // ── 아이디 찾기 ──────────────────────────────────────
   if (action === "find-id") {
     const { email } = body;
     if (!email?.trim()) return res.json({ ok: false, error: "이메일을 입력해주세요" });
@@ -160,7 +177,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, userId: masked });
   }
 
-  // 비밀번호 초기화
+  // ── 비밀번호 초기화 ──────────────────────────────────
   if (action === "reset-password") {
     const { userId, email } = body;
     if (!userId?.trim() || !email?.trim()) return res.json({ ok: false, error: "아이디와 이메일을 모두 입력해주세요" });
@@ -174,7 +191,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, message: "임시 비밀번호가 발급되었습니다", tempPw });
   }
 
-  // 비밀번호 변경
+  // ── 비밀번호 변경 (일반 회원) ────────────────────────
   if (action === "changePassword") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
@@ -189,62 +206,120 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // ── 회원별 설정 저장 (일반 회원 + admin 각자 분리) ──────────
+  // ── 관리자 비밀번호 변경 (KV 서버에 저장 → 배포해도 유지) ──
+  if (action === "changeAdminPassword") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+    const { currentPassword, newPassword } = body;
+    const u = await getUser("admin");
+    if (u.password !== b64(currentPassword)) return res.json({ ok: false, error: "현재 비밀번호가 올바르지 않아요" });
+    if (!newPassword || newPassword.length < 4) return res.json({ ok: false, error: "새 비밀번호는 4자 이상이어야 해요" });
+    u.password = b64(newPassword);
+    await setUser("admin", u); // ✅ KV에 저장 → 배포해도 유지
+    return res.json({ ok: true });
+  }
+
+  // ── 설정 저장 ────────────────────────────────────────
   if (action === "saveSettings") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
     if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
     const u = await getUser(uid);
     if (!u.settings) u.settings = {};
-    // 기존 설정에 병합 (전체 덮어쓰기가 아닌 merge)
     u.settings = { ...u.settings, ...body.settings };
     await setUser(uid, u);
     return res.json({ ok: true });
   }
 
-  // ── 회원별 설정 불러오기 ─────────────────────────────────────
+  // ── 설정 불러오기 ─────────────────────────────────────
   if (action === "loadSettings") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
     if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
     const u = await getUser(uid);
-    // 반드시 해당 유저 settings만 반환 - 다른 유저 설정 절대 안 섞임
     return res.json({ ok: true, settings: u?.settings || {} });
   }
 
-  // ── 관리자 전용: 글로벌 설정 저장 ───────────────────────────
-  // SuperAdminPage에서만 호출 - 일반 회원에게 절대 노출 안됨
+  // ── 관리자: 글로벌 설정 저장 ─────────────────────────
   if (action === "saveAdminGlobalSettings") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const info = await getUserRole(tk);
-    if (!info || info.role !== "admin") {
-      return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
-    }
-    // admin:global 키에 별도 저장 - user:admin 과도 분리
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
     _mem["admin:global_settings"] = body.settings;
     await kvSet("admin:global_settings", body.settings);
     return res.json({ ok: true });
   }
 
-  // ── 관리자 전용: 글로벌 설정 불러오기 ───────────────────────
+  // ── 관리자: 글로벌 설정 불러오기 ─────────────────────
   if (action === "loadAdminGlobalSettings") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const info = await getUserRole(tk);
-    if (!info || info.role !== "admin") {
-      return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
-    }
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
     const gs = await kvGet("admin:global_settings") || _mem["admin:global_settings"] || {};
     return res.json({ ok: true, settings: gs });
   }
 
-  // 로그아웃
+  // ── 관리자: 회원 목록 조회 ────────────────────────────
+  if (action === "listUsers") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+    const userIds = await getUserIndex();
+    const users = [];
+    for (const uid of userIds) {
+      const u = await getUser(uid);
+      if (u) {
+        users.push({
+          id: uid,
+          name: u.profile?.name || uid,
+          email: u.profile?.email || "",
+          role: u.profile?.role || "user",
+          createdAt: u.profile?.createdAt || "",
+          postCount: (u.posts || []).length,
+        });
+      }
+    }
+    return res.json({ ok: true, users });
+  }
+
+  // ── 관리자: 회원 등급 변경 ────────────────────────────
+  if (action === "changeUserRole") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+    const { targetUserId, newRole } = body;
+    if (!targetUserId || !["user", "admin"].includes(newRole)) return res.json({ ok: false, error: "잘못된 요청" });
+    if (targetUserId === "admin") return res.json({ ok: false, error: "관리자 계정 등급은 변경할 수 없어요" });
+    const u = await getUser(targetUserId);
+    if (!u) return res.json({ ok: false, error: "존재하지 않는 회원이에요" });
+    u.profile.role = newRole;
+    await setUser(targetUserId, u);
+    return res.json({ ok: true });
+  }
+
+  // ── 관리자: 회원 삭제 ─────────────────────────────────
+  if (action === "deleteUser") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+    const { targetUserId } = body;
+    if (!targetUserId || targetUserId === "admin") return res.json({ ok: false, error: "삭제할 수 없는 계정이에요" });
+    const u = await getUser(targetUserId);
+    if (u?.profile?.email) await kvDel(`email:${u.profile.email}`);
+    await kvDel(`user:${targetUserId}`);
+    await removeFromUserIndex(targetUserId);
+    return res.json({ ok: true });
+  }
+
+  // ── 로그아웃 ──────────────────────────────────────────
   if (action === "logout") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     await delSession(tk);
     return res.json({ ok: true });
   }
 
-  // 발행 글 저장
+  // ── 발행 글 저장 ──────────────────────────────────────
   if (action === "savePost") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
@@ -272,7 +347,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, post: entry });
   }
 
-  // 발행 글 목록 불러오기
+  // ── 발행 글 목록 ──────────────────────────────────────
   if (action === "loadPosts") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
@@ -281,7 +356,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, posts: u?.posts || [] });
   }
 
-  // 발행 글 삭제
+  // ── 발행 글 삭제 ──────────────────────────────────────
   if (action === "deletePost") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
@@ -294,7 +369,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // 통계 저장
+  // ── 통계 저장 ────────────────────────────────────────
   if (action === "saveStats") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
@@ -311,7 +386,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // 통계 불러오기
+  // ── 통계 불러오기 ─────────────────────────────────────
   if (action === "loadStats") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
