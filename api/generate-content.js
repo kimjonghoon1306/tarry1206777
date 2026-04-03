@@ -216,7 +216,7 @@ ${categoryGuide}
         "gemini-2.0-flash-lite",
         "gemini-2.0-flash-exp",
         "gemini-exp-1206",
-        "gemini-2.5-flash-preview-04-17",
+        "gemini-2.5-flash",
       ];
 
       let lastError = null;
@@ -360,3 +360,4 @@ ${categoryGuide}
     return res.status(500).json({ error: e.message });
   }
 }
+// fix
