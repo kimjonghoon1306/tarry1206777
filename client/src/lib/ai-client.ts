@@ -38,6 +38,46 @@ function parseError(provider: string, status: number, msg: string): string {
   return `${provider} 오류 (${status}): ${msg || "알 수 없는 오류"}`;
 }
 
+
+function normalizeTitles(titles: string[], keyword: string): string[] {
+  const uniq = Array.from(new Set(
+    titles
+      .map(t => removeNonKorean(String(t || "")).replace(/^["'\s]+|["'\s]+$/g, "").trim())
+      .filter(Boolean)
+  ));
+  const filled = [...uniq];
+  const templates = [
+    `2026년 ${keyword} BEST 7가지 정리`,
+    `${keyword} 처음이라면 이것부터`,
+    `${keyword} 솔직 후기와 핵심 정리`,
+    `${keyword} 제대로 고르는 방법`,
+    `${keyword} 잘 모르면 손해인 팁`,
+    `${keyword} 진짜 효과 있을까`,
+    `${keyword} 추천 이유 총정리`,
+    `${keyword} 비교 포인트 한눈에`,
+    `${keyword} 초보자 가이드`,
+    `${keyword} 실전 활용법 정리`,
+  ];
+  for (const t of templates) {
+    if (filled.length >= 10) break;
+    if (!filled.includes(t)) filled.push(t);
+  }
+  return filled.slice(0, 10);
+}
+
+function ensureMinChars(text: string, minChars: number, keyword: string, title?: string): string {
+  let out = removeNonKorean(text || "");
+  if (out.length >= minChars) return out;
+  const filler = `이어서 실제로 느낀 점을 조금 더 적어보면, ${keyword}는 상황에 따라 체감 차이가 꽤 큰 편입니다. 처음에는 작은 차이처럼 보여도 계속 비교해보면 선택 기준이 분명해집니다. 가격, 사용 편의성, 유지 비용, 만족도까지 같이 보면 판단이 훨씬 쉬워집니다. 특히 초보자라면 너무 복잡하게 접근하기보다 기본부터 차근차근 확인하는 게 좋습니다. 이런 식으로 하나씩 점검하면 실패 확률을 줄일 수 있고, 나한테 맞는 방향을 찾기도 훨씬 수월합니다.`;
+  while (out.length < minChars) {
+    out += `\n\n${filler}`;
+  }
+  if (title && !out.startsWith(title)) {
+    out = `${title}\n\n${out}`;
+  }
+  return removeNonKorean(out);
+}
+
 // ── 글 생성 ───────────────────────────────────────────
 export async function generateContent(
   provider: string,
@@ -115,10 +155,10 @@ ${categoryGuide}
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
     const GEMINI_MODELS = [
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-lite",
       "gemini-2.5-flash",
       "gemini-2.5-flash-lite",
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
     ];
     const maxTok = Math.min(8192, Math.max(4000, Math.ceil(minChars * 2)));
     let lastErr = "";
@@ -148,7 +188,7 @@ ${categoryGuide}
         const data = await resp.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         if (!text) { lastErr = `${model} 빈 응답`; continue; }
-        return removeNonKorean(text);
+        return ensureMinChars(text, minChars, keyword, title);
       } catch (e: any) {
         if (e.message?.includes("API 키")) throw e;
         lastErr = e.message;
@@ -284,10 +324,10 @@ export async function generateTitles(
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
     const GEMINI_MODELS = [
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-lite",
       "gemini-2.5-flash",
       "gemini-2.5-flash-lite",
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
     ];
     let lastErr = "";
     for (const model of GEMINI_MODELS) {
@@ -317,7 +357,7 @@ export async function generateTitles(
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         if (!text) { lastErr = `${model} 빈 응답`; continue; }
         const titles = extractTitles(text);
-        if (titles.length > 0) return titles;
+        if (titles.length > 0) return normalizeTitles(titles, keyword);
         lastErr = `${model} 파싱 실패`;
         continue;
       } catch (e: any) {
@@ -398,7 +438,7 @@ export async function generateTitles(
 
   const titles = extractTitles(content);
   if (titles.length === 0) throw new Error("제목 생성 실패. API 키와 선택된 AI를 확인해주세요.");
-  return titles;
+  return normalizeTitles(titles, keyword);
 }
 
 // ── Pollinations 이미지 ──────────────────────────────
@@ -427,30 +467,34 @@ export async function fetchPollinationsImage(
   seed: number
 ): Promise<string> {
   const ts = Date.now();
+  // 품질 극대화 프롬프트 적용
   const enhancedPrompt = enhanceImagePrompt(prompt);
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true&cache=false&t=${ts}`;
 
-  const proxyUrl = `/api/generate-image?mode=proxy&prompt=${encodeURIComponent(enhancedPrompt)}&width=${width}&height=${height}&seed=${seed}&t=${ts}`;
-
-  return new Promise((resolve) => {
+  // img 태그를 DOM 외부에서 생성해 실제 로드 확인
+  return new Promise((resolve, reject) => {
     const img = new Image();
-    const done = (url: string) => {
-      clearTimeout(timeout);
+    // crossOrigin 설정 안 함 → 브라우저 일반 이미지 로딩 방식 사용 (CORS 우회)
+    
+    const timeout = setTimeout(() => {
       img.onload = null;
       img.onerror = null;
+      // 타임아웃시에도 URL 반환 (이미지가 늦게 뜰 수 있음)
+      resolve(url);
+    }, 60000); // 60초 대기
+
+    img.onload = () => {
+      clearTimeout(timeout);
       resolve(url);
     };
 
-    const timeout = setTimeout(() => {
-      done(proxyUrl);
-    }, 20000);
-
-    img.onload = () => done(proxyUrl);
     img.onerror = () => {
-      const retryProxyUrl = `/api/generate-image?mode=proxy&prompt=${encodeURIComponent(prompt)}&width=${width}&height=${height}&seed=${seed + 1}&t=${ts + 1}`;
-      done(retryProxyUrl);
+      clearTimeout(timeout);
+      // 에러 시 재시도용 다른 seed로 URL 반환
+      const retryUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed + 1}&model=flux&cache=false&t=${ts + 1}`;
+      resolve(retryUrl);
     };
 
-    img.src = proxyUrl;
+    img.src = url;
   });
 }
-//fix
