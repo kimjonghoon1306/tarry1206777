@@ -67,24 +67,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 병렬로 모든 분석 요청
-    const [
-      overall,
-      pc, mobile,
-      male, female,
-      age10, age20, age30, age40, age50
-    ] = await Promise.all([
-      fetchTrend(null, null, null),
-      fetchTrend("pc", null, null),
-      fetchTrend("mo", null, null),
-      fetchTrend(null, "m", null),
-      fetchTrend(null, "f", null),
-      fetchTrend(null, null, ["2"]),   // 10대
-      fetchTrend(null, null, ["3"]),   // 20대
-      fetchTrend(null, null, ["4"]),   // 30대
-      fetchTrend(null, null, ["5"]),   // 40대
-      fetchTrend(null, null, ["6"]),   // 50대
-    ]);
+    // 순차 처리 + 딜레이로 Rate Limit 우회
+    const overall  = await fetchTrend(null, null, null);   await sleep(200);
+    const pc       = await fetchTrend("pc", null, null);   await sleep(200);
+    const mobile   = await fetchTrend("mo", null, null);   await sleep(200);
+    const male     = await fetchTrend(null, "m", null);    await sleep(200);
+    const female   = await fetchTrend(null, "f", null);    await sleep(200);
+    const age10    = await fetchTrend(null, null, ["2"]);   await sleep(200);
+    const age20    = await fetchTrend(null, null, ["3"]);   await sleep(200);
+    const age30    = await fetchTrend(null, null, ["4"]);   await sleep(200);
+    const age40    = await fetchTrend(null, null, ["5"]);   await sleep(200);
+    const age50    = await fetchTrend(null, null, ["6"]);
 
     // 최신 데이터 기준 비율 계산
     const latestPC = pc[pc.length - 1]?.ratio || 0;
