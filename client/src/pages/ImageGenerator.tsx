@@ -315,14 +315,21 @@ function GalleryCard({
             className="w-full h-full object-cover"
             style={{ opacity: status === "ok" ? 1 : 0, transition: "opacity 0.3s" }}
             onLoad={() => setStatus("ok")}
-            onError={() => setStatus("error")}
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              const retries = Number(target.dataset.retries || 0);
+              if (retries < 2 && img._prompt) {
+                target.dataset.retries = String(retries + 1);
+                setTimeout(() => {
+                  const seed = Math.floor(Math.random() * 999999);
+                  target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+                }, 3000 * (retries + 1));
+              } else {
+                setStatus("error");
+              }
+            }}
           />
         )}
-      </div>
-    );
-  }
-
-  return (
     <div
       className="relative rounded-xl overflow-hidden group"
       style={{
@@ -365,7 +372,19 @@ function GalleryCard({
           className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
           style={{ opacity: status === "ok" ? 1 : 0, transition: "opacity 0.4s ease" }}
           onLoad={() => setStatus("ok")}
-          onError={() => setStatus("error")}
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement;
+            const retries = Number(target.dataset.retries || 0);
+            if (retries < 2 && img._prompt) {
+              target.dataset.retries = String(retries + 1);
+              setTimeout(() => {
+                const seed = Math.floor(Math.random() * 999999);
+                target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+              }, 3000 * (retries + 1));
+            } else {
+              setStatus("error");
+            }
+          }}
           onClick={status === "ok" ? onLightbox : undefined}
         />
       )}
@@ -517,14 +536,39 @@ if (provider === "pollinations") {
 
       // URL 즉시 생성 후 한번에 갤러리 업데이트 (img 태그가 직접 로드)
       const successCount = numImages;
+      const newSeeds: number[] = [];
       setGallery(prev => prev.map(item => {
         const idx = placeholderIds.indexOf(item.id);
         if (idx === -1) return item;
         const seed = Math.floor(Math.random() * 999999) + idx * 1000;
+        newSeeds[idx] = seed;
         const src = generatePollinationsUrl(fullPrompt, w, h, seed);
         return { ...item, src, loading: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed };
       }));
       setProgress(100);
+
+      // ── 이미지 로드 실패 감지 및 자동 재시도 (최대 2회) ──
+      // Pollinations URL을 img 태그로 로드하면 서버가 느릴 때 타임아웃 발생
+      // 실패한 이미지만 새로운 seed로 재시도
+      (async () => {
+        await new Promise(r => setTimeout(r, 3000)); // 최초 3초 대기 후 체크
+        for (let attempt = 0; attempt < 2; attempt++) {
+          setGallery(prev => {
+            const failedIds = prev
+              .filter(item => placeholderIds.includes(item.id) && item.src && !item._loaded && !item.loadError)
+              .map(item => item.id);
+            if (failedIds.length === 0) return prev;
+            // 실패 아이템 새 seed로 URL 교체
+            return prev.map(item => {
+              if (!failedIds.includes(item.id)) return item;
+              const seed = Math.floor(Math.random() * 999999) + attempt * 7777;
+              const src = generatePollinationsUrl(fullPrompt, w, h, seed);
+              return { ...item, src, loading: false, _seed: seed };
+            });
+          });
+          await new Promise(r => setTimeout(r, 8000)); // 재시도 간격 8초
+        }
+      })();
 
       const elapsed = (Date.now() - startTime) / 1000;
       setStats(prev => {

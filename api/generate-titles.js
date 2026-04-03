@@ -92,11 +92,11 @@ export default async function handler(req, res) {
     // ── Gemini ──────────────────────────────────────────────
     if (provider === "gemini") {
       const GEMINI_MODELS = [
-        "gemini-2.5-flash-preview-04-17",
         "gemini-2.0-flash",
         "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
+        "gemini-2.5-flash-preview-04-17",
       ];
 
       let lastErr = null;
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
           continue;
         }
       }
-      throw new Error(`Gemini 제목 생성 실패 (${lastErr}). Groq으로 전환해보세요.`);
+      throw new Error(`Gemini 제목 생성 실패: ${lastErr}. 잠시 후 다시 시도하거나, 설정에서 Groq(무료·빠름)으로 전환해보세요.`);
     }
 
     // ── OpenAI ──────────────────────────────────────────────

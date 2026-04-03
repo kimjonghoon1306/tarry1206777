@@ -70,8 +70,27 @@ function DataLabPanel() {
     if (!kw) { setError("키워드를 입력해주세요"); return; }
     let clientId = userGet("naver_datalab_client_id");
     let clientSecret = userGet("naver_datalab_client_secret");
-    // 키 없으면 admin 설정 sync 후 재시도
+    // 키 없으면 서버 설정 + admin 설정 sync 후 재시도
     if (!clientId || !clientSecret) {
+      // 일반 유저 서버 설정 먼저 시도
+      try {
+        const token = localStorage.getItem("ba_token");
+        if (token) {
+          const r = await fetch("/api/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ action: "loadSettings" }),
+          });
+          const d = await r.json();
+          if (d.ok && d.settings) {
+            if (d.settings["naver_datalab_client_id"]) {
+              const uid = (() => { try { return JSON.parse(localStorage.getItem("ba_user") || "{}").id || "guest"; } catch { return "guest"; } })();
+              localStorage.setItem(`u:${uid}:naver_datalab_client_id`, d.settings["naver_datalab_client_id"]);
+              localStorage.setItem(`u:${uid}:naver_datalab_client_secret`, d.settings["naver_datalab_client_secret"] || "");
+            }
+          }
+        }
+      } catch {}
       await syncAdminSettingsToLocal();
       clientId = userGet("naver_datalab_client_id");
       clientSecret = userGet("naver_datalab_client_secret");

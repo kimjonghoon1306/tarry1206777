@@ -212,11 +212,11 @@ ${categoryGuide}
     if (provider === "gemini") {
       // 폴백 체인: 2.0-flash → 1.5-flash → 1.5-flash-8b (가장 한도 넉넉)
       const GEMINI_MODELS = [
-        "gemini-2.5-flash-preview-04-17",
         "gemini-2.0-flash",
         "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
+        "gemini-2.5-flash-preview-04-17",
       ];
 
       let lastError = null;
@@ -274,7 +274,7 @@ ${categoryGuide}
       }
 
       // 모든 모델 실패
-      throw new Error(`Gemini 모든 모델(${GEMINI_MODELS.length}개) 한도 초과. 설정에서 Groq(무료·빠름)으로 전환하거나 1분 후 다시 시도해주세요.`);
+      throw new Error(`Gemini 일시적 한도 초과 (${lastError}). 잠시 후 다시 시도하거나 설정에서 Groq(무료·빠름)으로 전환해주세요.`);
     }
 
     // ── Claude ────────────────────────────────────────────

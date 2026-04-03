@@ -706,8 +706,25 @@ export default function SettingsPage() {
   const [naverBlogSaved, setNaverBlogSaved] = useState(false);
 
   // 일반 웹사이트 배포
-  const [datalabId, setDatalabId] = useState(() => userGet(SETTINGS_KEYS.DATALAB_ID || "naver_datalab_client_id"));
-  const [datalabSecret, setDatalabSecret] = useState(() => userGet(SETTINGS_KEYS.DATALAB_SECRET || "naver_datalab_client_secret"));
+  const [datalabId, setDatalabId] = useState(() => userGet(SETTINGS_KEYS.DATALAB_ID));
+  const [datalabSecret, setDatalabSecret] = useState(() => userGet(SETTINGS_KEYS.DATALAB_SECRET));
+
+  // 데이터랩 키가 로컬에 없으면 서버에서 자동 로드
+  React.useEffect(() => {
+    if (!datalabId || !datalabSecret) {
+      loadSettingsFromServer().then(settings => {
+        if (!settings) return;
+        if (settings["naver_datalab_client_id"] && !datalabId) {
+          userSet("naver_datalab_client_id", settings["naver_datalab_client_id"]);
+          setDatalabId(settings["naver_datalab_client_id"]);
+        }
+        if (settings["naver_datalab_client_secret"] && !datalabSecret) {
+          userSet("naver_datalab_client_secret", settings["naver_datalab_client_secret"]);
+          setDatalabSecret(settings["naver_datalab_client_secret"]);
+        }
+      });
+    }
+  }, []);
   const [datalabSaved, setDatalabSaved] = useState(false);
   const [showDatalabSecret, setShowDatalabSecret] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState(() => userGet(SETTINGS_KEYS.WEBHOOK_URL));
