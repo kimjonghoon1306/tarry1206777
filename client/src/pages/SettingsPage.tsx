@@ -24,7 +24,7 @@ import {
   CONTENT_AI_OPTIONS, IMAGE_AI_OPTIONS,
   type ContentAIProvider, type ImageAIProvider,
 } from "@/lib/ai-config";
-import { userGet, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings, loadSettingsFromServer } from "@/lib/user-storage";
+import { userGet, userGetSettingsValue, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings, loadSettingsFromServer, isAdminUser } from "@/lib/user-storage";
 
 const LANGUAGES = [
   { code: "ko", label: "한국어", flag: "🇰🇷" },
@@ -40,13 +40,13 @@ const LANGUAGES = [
 function ApiKeyInput({ label, placeholder, storageKey, link }: {
   label: string; placeholder: string; storageKey: string; link: string;
 }) {
-  const [value, setValue] = useState(() => userGet(storageKey));
+  const [value, setValue] = useState(() => userGetSettingsValue(storageKey));
   const [show, setShow] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // 로그인 직후 서버에서 키 로드 - useState 초기값이 빈값일 때 서버에서 재시도
   React.useEffect(() => {
-    if (!value) {
+    if (!value && !isAdminUser()) {
       loadSettingsFromServer().then(settings => {
         if (settings && settings[storageKey]) {
           const serverVal = settings[storageKey];
@@ -103,10 +103,10 @@ function ApiKeyInput({ label, placeholder, storageKey, link }: {
 
 // ── 티스토리 연동 섹션 ──────────────────────────────
 function TistorySection() {
-  const [clientId, setClientId] = React.useState(() => userGet("tistory_client_id"));
-  const [clientSecret, setClientSecret] = React.useState(() => userGet("tistory_client_secret"));
-  const [accessToken, setAccessToken] = React.useState(() => userGet("tistory_access_token"));
-  const [blogName, setBlogName] = React.useState(() => userGet("tistory_blog_name"));
+  const [clientId, setClientId] = React.useState(() => userGetSettingsValue("tistory_client_id"));
+  const [clientSecret, setClientSecret] = React.useState(() => userGetSettingsValue("tistory_client_secret"));
+  const [accessToken, setAccessToken] = React.useState(() => userGetSettingsValue("tistory_access_token"));
+  const [blogName, setBlogName] = React.useState(() => userGetSettingsValue("tistory_blog_name"));
   const [blogs, setBlogs] = React.useState<{name:string;title:string;url:string}[]>([]);
   const [showSecret, setShowSecret] = React.useState(false);
   const [showToken, setShowToken] = React.useState(false);
@@ -237,9 +237,9 @@ function TistorySection() {
 
 // ── 쿠팡파트너스 섹션 ────────────────────────────────
 function CoupangSection() {
-  const [accessKey, setAccessKey] = React.useState(() => userGet("coupang_access_key"));
-  const [secretKey, setSecretKey] = React.useState(() => userGet("coupang_secret_key"));
-  const [subId, setSubId] = React.useState(() => userGet("coupang_sub_id"));
+  const [accessKey, setAccessKey] = React.useState(() => userGetSettingsValue("coupang_access_key"));
+  const [secretKey, setSecretKey] = React.useState(() => userGetSettingsValue("coupang_secret_key"));
+  const [subId, setSubId] = React.useState(() => userGetSettingsValue("coupang_sub_id"));
   const [showSecret, setShowSecret] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const [testResult, setTestResult] = React.useState<string>("");
@@ -654,7 +654,7 @@ export default function SettingsPage() {
     try { return JSON.parse(localStorage.getItem("ba_user") || "null"); } catch { return null; }
   });
   const token = localStorage.getItem("ba_token") || "";
-  const [adPlatform, setAdPlatform] = React.useState(() => userGet("selected_ad_platform") || "both");
+  const [adPlatform, setAdPlatform] = React.useState(() => userGetSettingsValue("selected_ad_platform") || "both");
 
   const saveAllToServer = async (settings: Record<string,string>) => {
     if (!token) return;
@@ -680,34 +680,34 @@ export default function SettingsPage() {
     } catch { return {}; }
   };
   const [contentLang, setContentLang] = useState(
-    () => userGet(SETTINGS_KEYS.CONTENT_LANG, "ko")
+    () => userGetSettingsValue(SETTINGS_KEYS.CONTENT_LANG, "ko")
   );
   const [contentAI, setContentAI] = useState<ContentAIProvider>(
-    () => (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
+    () => (userGetSettingsValue(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
   );
   const [imageAI, setImageAI] = useState<ImageAIProvider>(
-    () => (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations"
+    () => (userGetSettingsValue(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations"
   );
-  const [naverLicense, setNaverLicense] = useState(() => userGet(SETTINGS_KEYS.NAVER_LICENSE));
-  const [naverSecret, setNaverSecret] = useState(() => userGet(SETTINGS_KEYS.NAVER_SECRET));
-  const [naverCustomer, setNaverCustomer] = useState(() => userGet(SETTINGS_KEYS.NAVER_CUSTOMER));
+  const [naverLicense, setNaverLicense] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_LICENSE));
+  const [naverSecret, setNaverSecret] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_SECRET));
+  const [naverCustomer, setNaverCustomer] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_CUSTOMER));
   const [showNaverSecret, setShowNaverSecret] = useState(false);
   const [naverSaved, setNaverSaved] = useState(false);
-  const [wpUrl, setWpUrl] = useState(() => userGet(SETTINGS_KEYS.WP_URL));
-  const [wpUser, setWpUser] = useState(() => userGet(SETTINGS_KEYS.WP_USER));
-  const [wpPass, setWpPass] = useState(() => userGet(SETTINGS_KEYS.WP_PASS));
+  const [wpUrl, setWpUrl] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WP_URL));
+  const [wpUser, setWpUser] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WP_USER));
+  const [wpPass, setWpPass] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WP_PASS));
   const [showWpPass, setShowWpPass] = useState(false);
   const [wpSaved, setWpSaved] = useState(false);
 
   // 네이버 블로그 배포
-  const [naverBlogId, setNaverBlogId] = useState(() => userGet(SETTINGS_KEYS.NAVER_BLOG_ID));
-  const [naverBlogToken, setNaverBlogToken] = useState(() => userGet(SETTINGS_KEYS.NAVER_BLOG_TOKEN));
+  const [naverBlogId, setNaverBlogId] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_BLOG_ID));
+  const [naverBlogToken, setNaverBlogToken] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_BLOG_TOKEN));
   const [showNaverBlogToken, setShowNaverBlogToken] = useState(false);
   const [naverBlogSaved, setNaverBlogSaved] = useState(false);
 
   // 일반 웹사이트 배포
-  const [datalabId, setDatalabId] = useState(() => userGet(SETTINGS_KEYS.DATALAB_ID).trim());
-  const [datalabSecret, setDatalabSecret] = useState(() => userGet(SETTINGS_KEYS.DATALAB_SECRET).trim());
+  const [datalabId, setDatalabId] = useState(() => userGetSettingsValue(SETTINGS_KEYS.DATALAB_ID));
+  const [datalabSecret, setDatalabSecret] = useState(() => userGetSettingsValue(SETTINGS_KEYS.DATALAB_SECRET));
 
   // 데이터랩 키가 로컬에 없으면 서버에서 자동 로드
   React.useEffect(() => {
@@ -715,22 +715,20 @@ export default function SettingsPage() {
       loadSettingsFromServer().then(settings => {
         if (!settings) return;
         if (settings["naver_datalab_client_id"] && !datalabId) {
-          const nextId = String(settings["naver_datalab_client_id"]).trim();
-          userSet("naver_datalab_client_id", nextId);
-          setDatalabId(nextId);
+          userSet("naver_datalab_client_id", settings["naver_datalab_client_id"]);
+          setDatalabId(settings["naver_datalab_client_id"]);
         }
         if (settings["naver_datalab_client_secret"] && !datalabSecret) {
-          const nextSecret = String(settings["naver_datalab_client_secret"]).trim();
-          userSet("naver_datalab_client_secret", nextSecret);
-          setDatalabSecret(nextSecret);
+          userSet("naver_datalab_client_secret", settings["naver_datalab_client_secret"]);
+          setDatalabSecret(settings["naver_datalab_client_secret"]);
         }
       });
     }
   }, []);
   const [datalabSaved, setDatalabSaved] = useState(false);
   const [showDatalabSecret, setShowDatalabSecret] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState(() => userGet(SETTINGS_KEYS.WEBHOOK_URL));
-  const [webhookKey, setWebhookKey] = useState(() => userGet(SETTINGS_KEYS.WEBHOOK_KEY));
+  const [webhookUrl, setWebhookUrl] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_URL));
+  const [webhookKey, setWebhookKey] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_KEY));
   const [showWebhookKey, setShowWebhookKey] = useState(false);
   const [webhookSaved, setWebhookSaved] = useState(false);
   const [notifications, setNotifications] = useState({
@@ -754,23 +752,10 @@ export default function SettingsPage() {
   };
 
   const handleSaveDatalab = () => {
-    const nextId = datalabId.trim();
-    const nextSecret = datalabSecret.trim();
-    if (!nextId || !nextSecret) { toast.error("Client ID와 Secret을 모두 입력해주세요"); return; }
-
-    setDatalabId(nextId);
-    setDatalabSecret(nextSecret);
-
-    userSet("naver_datalab_client_id", nextId);
-    userSet("naver_datalab_client_secret", nextSecret);
-
-    // 구버전 직접 조회 코드 호환
-    try {
-      localStorage.setItem("naver_datalab_client_id", nextId);
-      localStorage.setItem("naver_datalab_client_secret", nextSecret);
-    } catch {}
-
-    saveSettingsToServer({ naver_datalab_client_id: nextId, naver_datalab_client_secret: nextSecret });
+    if (!datalabId || !datalabSecret) { toast.error("Client ID와 Secret을 모두 입력해주세요"); return; }
+    userSet("naver_datalab_client_id", datalabId);
+    userSet("naver_datalab_client_secret", datalabSecret);
+    saveSettingsToServer({ naver_datalab_client_id: datalabId, naver_datalab_client_secret: datalabSecret });
     setDatalabSaved(true);
     toast.success("네이버 데이터랩 API 저장됨 ✅");
     setTimeout(() => setDatalabSaved(false), 3000);
@@ -847,7 +832,7 @@ export default function SettingsPage() {
   const handleExportSettings = () => {
     const keys = Object.values(SETTINGS_KEYS);
     const data: Record<string, string> = {};
-    keys.forEach(k => { const v = userGet(k); if (v) data[k] = v; });
+    keys.forEach(k => { const v = userGetSettingsValue(k); if (v) data[k] = v; });
     const code = btoa(JSON.stringify(data));
     setSyncCode(code);
     navigator.clipboard.writeText(code).then(() => toast.success("설정 코드가 클립보드에 복사됐어요!"));
@@ -1243,7 +1228,7 @@ export default function SettingsPage() {
                 onClick={async () => {
                   const allData: Record<string,string> = {};
                   Object.values(SETTINGS_KEYS).forEach(k => {
-                    const v = userGet(k); if (v) allData[k] = v;
+                    const v = userGetSettingsValue(k); if (v) allData[k] = v;
                   });
                   await saveAllToServer(allData);
                   toast.success("✅ 모든 설정이 서버에 저장됐어요! 다른 기기에서 로그인하면 자동 적용됩니다");
