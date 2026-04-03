@@ -57,6 +57,15 @@ const CHART = [
 const STORAGE_KEY = "blogauto_keywords";
 const TITLES_KEY = "blogauto_titles";
 const SELKW_KEY = "blogauto_selkw";
+const DATALAB_HISTORY_KEY = "blogauto_datalab_history_v1";
+const DATALAB_HISTORY_LIMIT = 10;
+
+function loadDataLabHistory() {
+  try { return JSON.parse(localStorage.getItem(DATALAB_HISTORY_KEY) || "[]"); } catch { return []; }
+}
+function saveDataLabHistory(items: any[]) {
+  try { localStorage.setItem(DATALAB_HISTORY_KEY, JSON.stringify(items.slice(0, DATALAB_HISTORY_LIMIT))); } catch {}
+}
 
 // ── 데이터랩 컴포넌트 ──────────────────────────────────
 function DataLabPanel() {
@@ -64,6 +73,37 @@ function DataLabPanel() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState<any[]>(() => loadDataLabHistory());
+
+  const saveAnalysisToHistory = (payload: any) => {
+    const entry = {
+      keyword: payload.keyword,
+      device: payload.device,
+      gender: payload.gender,
+      ages: payload.ages,
+      trend: payload.trend,
+      savedAt: new Date().toISOString(),
+    };
+    const current = loadDataLabHistory();
+    if (current.length >= DATALAB_HISTORY_LIMIT) {
+      const ok = window.confirm("데이터 기록이 10개 누적되었습니다. 초기화 후 계속하시겠습니까?");
+      if (!ok) return;
+      const next = [entry];
+      setHistory(next);
+      saveDataLabHistory(next);
+      return;
+    }
+    const next = [entry, ...current].slice(0, DATALAB_HISTORY_LIMIT);
+    setHistory(next);
+    saveDataLabHistory(next);
+  };
+
+  const clearHistory = () => {
+    const ok = window.confirm("데이터 기록을 모두 초기화할까요?");
+    if (!ok) return;
+    localStorage.removeItem(DATALAB_HISTORY_KEY);
+    setHistory([]);
+  };
 
   const analyze = async () => {
     const kw = keyword.trim();
@@ -109,6 +149,7 @@ function DataLabPanel() {
       const d = await resp.json();
       if (!d.ok) throw new Error(d.error);
       setData(d);
+      saveAnalysisToHistory(d);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -216,7 +257,7 @@ function DataLabPanel() {
                   <Pie data={deviceData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
                     {deviceData.map((_, i) => <Cell key={i} fill={DEVICE_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Tooltip formatter={(v) => [`${v}%`, "비율"]} contentStyle={{ background: "#ffffff", border: "1px solid #d1d5db", borderRadius: 12, color: "#111827" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 700 }} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-3 mt-1">
@@ -240,7 +281,7 @@ function DataLabPanel() {
                   <Pie data={genderData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
                     {genderData.map((_, i) => <Cell key={i} fill={GENDER_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Tooltip formatter={(v) => [`${v}%`, "비율"]} contentStyle={{ background: "#ffffff", border: "1px solid #d1d5db", borderRadius: 12, color: "#111827" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 700 }} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-3 mt-1">
@@ -263,7 +304,7 @@ function DataLabPanel() {
                 <BarChart data={ageData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Tooltip formatter={(v) => [`${v}%`, "비율"]} contentStyle={{ background: "#ffffff", border: "1px solid #d1d5db", borderRadius: 12, color: "#111827" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 700 }} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     {ageData.map((_, i) => <Cell key={i} fill={AGE_COLORS[i % AGE_COLORS.length]} />)}
                   </Bar>
@@ -283,7 +324,7 @@ function DataLabPanel() {
                 <LineChart data={data.trend.map((d: any) => ({ date: d.period.slice(5), ratio: d.ratio }))}>
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
+                  <Tooltip formatter={(v: any) => [`ratio : ${v}`, "검색지수"]} contentStyle={{ background: "#ffffff", border: "1px solid #d1d5db", borderRadius: 12, color: "#111827" }} itemStyle={{ color: "#059669", fontWeight: 700 }} labelStyle={{ color: "#9ca3af", fontWeight: 700 }} />
                   <Line type="monotone" dataKey="ratio" stroke="var(--color-emerald)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -291,6 +332,42 @@ function DataLabPanel() {
           )}
         </div>
       )}
+
+      <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-bold text-foreground">데이터 기록</h4>
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>최대 10개까지 저장됩니다</p>
+          </div>
+          <button
+            onClick={clearHistory}
+            className="h-9 px-3 rounded-lg text-sm font-semibold"
+            style={{ background: "oklch(0.7 0.18 330)", color: "white" }}
+          >
+            기록 초기화
+          </button>
+        </div>
+        {history.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>저장된 데이터 기록이 없습니다</p>
+        ) : (
+          <div className="space-y-2">
+            {history.map((item, idx) => (
+              <div key={`${item.keyword}-${item.savedAt}-${idx}`} className="rounded-lg px-3 py-2 flex items-center justify-between gap-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-foreground truncate">{item.keyword}</div>
+                  <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    {new Date(item.savedAt).toLocaleString()}
+                  </div>
+                </div>
+                <div className="text-xs text-right" style={{ color: "var(--muted-foreground)" }}>
+                  <div>모바일 {item.device?.mobile ?? 0}% / PC {item.device?.pc ?? 0}%</div>
+                  <div>여성 {item.gender?.female ?? 0}% / 남성 {item.gender?.male ?? 0}%</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {!data && !loading && !error && (
         <div className="py-8 text-center">
