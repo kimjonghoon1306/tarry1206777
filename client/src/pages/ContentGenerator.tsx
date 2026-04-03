@@ -386,9 +386,8 @@ export default function ContentGenerator() {
                 <Button size="sm" className="gap-1.5"
                   style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
                   onClick={() => {
-                    const autoPrompt = title
-                      ? `${title}, ${keyword}, 블로그 썸네일, 고품질 사진`
-                      : `${keyword}, 블로그 썸네일, 고품질 사진`;
+                    // 키워드와 제목만 전달 - 한글 노이즈 제거
+                    const autoPrompt = title ? `${keyword} ${title}` : keyword;
                     navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
                   }}>
                   <Image className="w-4 h-4" /> 이미지 생성
@@ -729,9 +728,7 @@ export default function ContentGenerator() {
                   <Button size="sm" className="text-xs gap-1.5"
                     style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
                     onClick={() => {
-                      const autoPrompt = title
-                        ? `${title}, ${keyword}, 블로그 썸네일, 고품질`
-                        : `${keyword}, 블로그 썸네일, 고품질`;
+                      const autoPrompt = title ? `${keyword} ${title}` : keyword;
                       navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
                     }}>
                     <Sparkles className="w-3.5 h-3.5" /> AI생성

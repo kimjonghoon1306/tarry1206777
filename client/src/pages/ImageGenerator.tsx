@@ -608,170 +608,146 @@ if (provider === "pollinations") {
 
   // ── 신규 생성 ──────────────────────────────────────
   // 한국어 → 영어 이미지 프롬프트 자동 변환
+  // ── 한국어 → 영어 이미지 프롬프트 자동 변환 ──────────────
+  // 전략: AI 번역 우선 → 카테고리 매핑 → 범용 폴백
   const autoTranslatePrompt = async (koreanPrompt: string): Promise<string> => {
-    const p = koreanPrompt;
+    const p = koreanPrompt.trim();
 
-    // ── 주제별 상세 프롬프트 빌더 ──────────────────────────
-    // 맛집/음식
-    if (/맛집|음식|카페|식당|요리|레스토랑|빵|디저트|커피|치킨|피자|라면|삼겹살|스테이크|초밥|파스타|떡볶이|브런치/.test(p)) {
-      const items: Record<string, string> = {
-        "카페": "cozy cafe interior, latte art coffee cup, warm ambient lighting, wooden table, soft bokeh",
-        "맛집": "beautiful Korean restaurant interior, delicious food plating, warm lighting, appetizing meal",
-        "브런치": "brunch table spread, avocado toast eggs benedict, morning light, cafe setting",
-        "디저트": "elegant dessert plating, chocolate cake macaron, pastel background, food photography",
-        "치킨": "crispy golden fried chicken, appetizing close-up, steam rising, restaurant setting",
-        "스테이크": "juicy medium rare steak, sizzling cast iron, fine dining plate, dramatic lighting",
-        "초밥": "fresh sushi platter, salmon tuna rolls, Japanese restaurant, elegant presentation",
-        "라면": "steaming ramen bowl, rich broth, noodles chashu pork, Japanese restaurant atmosphere",
-        "커피": "specialty coffee latte art, barista cafe, warm lighting, artisan brewing",
-        "삼겹살": "Korean BBQ grilling pork belly, smoke charcoal, ssamjang vegetables, table setting",
-      };
-      for (const [ko, en] of Object.entries(items)) {
-        if (p.includes(ko)) return en + ", ultra realistic food photography, 8K, professional";
-      }
-      return "delicious Korean food photography, beautiful plating, restaurant setting, warm lighting, appetizing, ultra realistic, 8K";
+    // 이미 영문이면 그대로 사용
+    if (!/[가-힣]/.test(p)) {
+      return `${p}, professional photography, 8K ultra realistic`;
     }
 
-    // 여행/관광
+    // ── Step 1: AI 번역 최우선 ──────────────────────────────
+    const aiProvider = getContentProvider();
+    const aiKey = getAPIKey(aiProvider);
+    if (aiKey) {
+      try {
+        const resp = await fetch("/api/generate-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: aiProvider,
+            apiKey: aiKey,
+            keyword: `Convert this Korean blog topic into an English image prompt for Flux AI image generator. Topic: "${p}". Describe a specific visual scene. Include subject, setting, mood, lighting style. Max 25 words. Output ONLY the English prompt, no Korean, no explanation.`,
+            language: "en",
+            minChars: 5,
+            stylePrompt: "Output ONLY the English image prompt. No Korean. No quotes. Max 25 words.",
+          }),
+        });
+        const data = await resp.json();
+        const raw = (data.content || "").trim();
+        const translated = raw.split("\n")[0]
+          .replace(/[가-힣]/g, "")
+          .replace(/^[-•*]\s*/, "")
+          .trim();
+        if (translated && translated.length > 8 && /[a-zA-Z]/.test(translated)) {
+          return `${translated}, professional photography, 8K ultra realistic`;
+        }
+      } catch {}
+    }
+
+    // ── Step 2: 카테고리 매핑 ──────────────────────────────
+    // 재테크/절약/사회초년생/직장인
+    if (/재테크|투자|주식|부동산|금융|절약|저축|돈|부업|사회초년생|직장인|월급|적금|경제|가계/.test(p)) {
+      if (p.includes("절약") || p.includes("사회초년생")) return "young Korean professional saving money, piggy bank coins wallet, budget planning desk, warm optimistic lighting, lifestyle photography, 8K";
+      if (p.includes("직장인") || p.includes("월급")) return "Korean office worker professional lifestyle, modern workplace, business casual, natural lighting, 8K";
+      if (p.includes("주식") || p.includes("재테크")) return "financial investment growth chart, money coins stacking, professional office, success concept, 8K";
+      if (p.includes("부동산")) return "modern apartment building exterior, real estate property, city skyline, professional photography, 8K";
+      return "Korean young professional financial planning, saving money concept, modern lifestyle, professional photography, 8K";
+    }
+
+    // 맛집/음식
+    if (/맛집|음식|카페|식당|요리|레스토랑|빵|디저트|커피|치킨|피자|라면|삼겹살|스테이크|초밥|파스타|떡볶이|브런치/.test(p)) {
+      if (p.includes("카페") || p.includes("커피")) return "cozy cafe interior, latte art coffee cup, warm ambient lighting, wooden table, soft bokeh, 8K";
+      if (p.includes("치킨")) return "crispy golden fried chicken, appetizing close-up, steam rising, restaurant setting, 8K";
+      if (p.includes("스테이크")) return "juicy medium rare steak, sizzling cast iron, fine dining plate, dramatic lighting, 8K";
+      if (p.includes("초밥")) return "fresh sushi platter, salmon tuna rolls, Japanese restaurant, elegant presentation, 8K";
+      if (p.includes("라면")) return "steaming ramen bowl, rich broth, noodles chashu pork, atmospheric restaurant, 8K";
+      if (p.includes("삼겹살")) return "Korean BBQ grilling pork belly, smoke charcoal, vegetables, table setting, 8K";
+      return "delicious Korean food photography, beautiful plating, restaurant setting, warm lighting, appetizing, 8K";
+    }
+
+    // 여행
     if (/여행|관광|호텔|숙소|제주|부산|서울|해외|유럽|도쿄|방콕|발리|파리|뉴욕/.test(p)) {
-      const items: Record<string, string> = {
-        "제주": "Jeju Island coastal scenery, Hallasan mountain, orange mandarin fields, clear blue ocean, golden hour",
-        "부산": "Busan Haeundae beach, colorful Gamcheon village, ocean view, vibrant cityscape",
-        "서울": "Seoul city skyline, Han River bridge lights, Namsan Tower night view, modern urban",
-        "파리": "Paris Eiffel Tower, Seine River, charming streets, golden sunset, romantic atmosphere",
-        "도쿄": "Tokyo neon lights, Shibuya crossing, cherry blossoms, futuristic cityscape",
-        "발리": "Bali tropical paradise, rice terraces, temple sunset, turquoise ocean, lush jungle",
-        "유럽": "European cobblestone street, historic architecture, cafe terrace, golden light",
-        "호텔": "luxury hotel room interior, ocean view balcony, elegant decor, soft lighting",
-      };
-      for (const [ko, en] of Object.entries(items)) {
-        if (p.includes(ko)) return en + ", travel photography, stunning landscape, professional, 8K";
-      }
+      if (p.includes("제주")) return "Jeju Island coastal scenery, Hallasan mountain, clear blue ocean, golden hour, travel photography, 8K";
+      if (p.includes("부산")) return "Busan Haeundae beach, colorful Gamcheon village, vibrant cityscape, travel photography, 8K";
+      if (p.includes("파리")) return "Paris Eiffel Tower, Seine River, golden sunset, romantic atmosphere, travel photography, 8K";
+      if (p.includes("도쿄")) return "Tokyo neon lights, Shibuya crossing, cherry blossoms, futuristic cityscape, 8K";
       return "beautiful travel destination landscape, scenic view, golden hour lighting, professional travel photography, 8K";
     }
 
-    // 건강/운동/다이어트
-    if (/운동|헬스|다이어트|요가|필라테스|건강|피트니스|홈트|수영|달리기/.test(p)) {
-      const items: Record<string, string> = {
-        "요가": "yoga meditation pose, serene nature background, morning light, calm atmosphere, flexible woman",
-        "헬스": "modern gym workout, weightlifting, fitness motivation, athletic physique, bright lighting",
-        "다이어트": "healthy meal prep, colorful nutritious food, clean eating, fitness lifestyle",
-        "필라테스": "pilates studio, reformer exercise, elegant movement, bright airy space",
-        "달리기": "runner on scenic trail, morning jog, dynamic action shot, nature background",
-        "홈트": "home workout living room, yoga mat exercise, natural lighting, healthy lifestyle",
-      };
-      for (const [ko, en] of Object.entries(items)) {
-        if (p.includes(ko)) return en + ", health lifestyle photography, vibrant, motivational, 8K";
-      }
+    // 건강/운동
+    if (/운동|헬스|다이어트|요가|필라테스|건강|피트니스|홈트|수영|달리기|체중/.test(p)) {
+      if (p.includes("요가")) return "yoga meditation pose, serene nature background, morning light, calm atmosphere, health lifestyle photography, 8K";
+      if (p.includes("헬스") || p.includes("피트니스")) return "modern gym workout, weightlifting, fitness motivation, athletic physique, bright lighting, 8K";
+      if (p.includes("다이어트")) return "healthy meal prep, colorful nutritious food, clean eating, fitness lifestyle, 8K";
       return "healthy active lifestyle, fitness motivation, natural lighting, energetic atmosphere, professional photography, 8K";
     }
 
-    // 뷰티/패션/스타일
+    // 뷰티/패션
     if (/패션|뷰티|스킨케어|화장|메이크업|옷|코디|쇼핑|명품|가방|신발/.test(p)) {
-      const items: Record<string, string> = {
-        "스킨케어": "luxury skincare products flatlay, clean beauty aesthetic, white marble background, soft lighting",
-        "메이크업": "professional makeup artist, glamorous beauty look, studio lighting, fashion editorial",
-        "패션": "fashion editorial shoot, stylish outfit, urban background, modern aesthetic, professional",
-        "명품": "luxury brand product photography, elegant accessories, premium aesthetic, soft bokeh",
-        "가방": "luxury handbag product shot, leather texture, elegant background, high fashion",
-        "신발": "stylish sneakers product photography, clean background, creative angle, premium quality",
-      };
-      for (const [ko, en] of Object.entries(items)) {
-        if (p.includes(ko)) return en + ", fashion photography, professional, 8K ultra quality";
-      }
+      if (p.includes("스킨케어")) return "luxury skincare products flatlay, clean beauty aesthetic, white marble background, soft lighting, 8K";
+      if (p.includes("패션")) return "fashion editorial shoot, stylish outfit, urban background, modern aesthetic, professional, 8K";
       return "fashion lifestyle photography, stylish aesthetic, professional editorial, beautiful lighting, 8K";
     }
 
     // 육아/가족
-    if (/육아|아이|아기|임신|엄마|가족|유아|어린이|키즈/.test(p)) {
-      return "happy family moments, children playing, warm home atmosphere, natural window light, joyful lifestyle photography, soft colors, 8K";
+    if (/육아|아이|아기|임신|엄마|가족|유아|어린이|키즈|출산/.test(p)) {
+      return "happy family moments, children playing, warm home atmosphere, natural window light, joyful lifestyle photography, 8K";
     }
 
-    // IT/테크
-    if (/IT|앱|AI|인공지능|테크|스마트폰|노트북|컴퓨터|프로그래밍|개발|코딩/.test(p)) {
-      return "modern technology workspace, sleek laptop setup, futuristic interface, clean desk, blue ambient lighting, professional tech photography, 8K";
+    // IT/테크/블로그
+    if (/IT|앱|AI|인공지능|테크|스마트폰|노트북|컴퓨터|블로그|코딩/.test(p)) {
+      return "modern technology workspace, sleek laptop setup, clean desk, blue ambient lighting, professional tech photography, 8K";
     }
 
-    // 재테크/금융
-    if (/재테크|투자|주식|부동산|금융|돈|절약|부업/.test(p)) {
-      return "financial success concept, modern office with charts graphs, professional businessman, wealth management, clean business aesthetic, 8K";
+    // 취업/학생
+    if (/취업|취준|면접|자소서|스펙|알바|인턴|대학생|수능|공부/.test(p)) {
+      return "Korean college student studying, job interview preparation, bright desk workspace, hopeful atmosphere, professional photography, 8K";
     }
 
-    // 인테리어/라이프스타일
-    if (/인테리어|집|방|거실|주방|인테리어|홈|셀프|리모델링/.test(p)) {
+    // 인테리어
+    if (/인테리어|거실|주방|홈|셀프|리모델링/.test(p)) {
       return "modern interior design, cozy living room, minimalist aesthetic, natural light, beautiful home decor, architectural photography, 8K";
     }
 
     // 반려동물
     if (/강아지|고양이|반려동물|펫|애완/.test(p)) {
-      const items: Record<string, string> = {
-        "강아지": "adorable puppy dog portrait, golden retriever, happy expression, soft natural light, bokeh background",
-        "고양이": "cute cat portrait, fluffy kitten, curious eyes, soft lighting, cozy home atmosphere",
-      };
-      for (const [ko, en] of Object.entries(items)) {
-        if (p.includes(ko)) return en + ", pet photography, ultra realistic, 8K";
-      }
+      if (p.includes("강아지")) return "adorable puppy dog portrait, golden retriever, happy expression, soft natural light, bokeh background, 8K";
+      if (p.includes("고양이")) return "cute cat portrait, fluffy kitten, curious eyes, soft lighting, cozy home atmosphere, 8K";
       return "adorable pet animal portrait, natural lighting, cute expression, bokeh background, professional pet photography, 8K";
     }
 
-    // KO_EN_MAP 매핑 시도
+    // KO_EN_MAP 매핑
     for (const [ko, en] of Object.entries(KO_EN_MAP)) {
       if (p.includes(ko)) {
         return `${en}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
       }
     }
 
-    // AI 번역 시도 (Gemini 또는 Groq 키 있으면)
-    const hasKorean = /[가-힣]/.test(p);
-    if (hasKorean) {
-      const aiProvider = getContentProvider();
-      const aiKey = getAPIKey(aiProvider);
-      if (aiKey) {
-        try {
-          const resp = await fetch("/api/generate-content", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              provider: aiProvider,
-              apiKey: aiKey,
-              keyword: `Translate this Korean blog topic into an English image generation prompt. Topic: "${p}". Requirements: visual scene description, mood, lighting, colors. Max 20 words. Output ONLY the English prompt, nothing else.`,
-              language: "en",
-              minChars: 10,
-              stylePrompt: "Output only the English image prompt, no Korean, no explanation, no quotes",
-            }),
-          });
-          const data = await resp.json();
-          const translated = (data.content || "").trim().split("\n")[0]
-            .replace(/['"「」『』]/g, "").replace(/[가-힣]/g, "").trim();
-          if (translated && translated.length > 5 && /[a-zA-Z]/.test(translated)) {
-            return `${translated}, professional photography, 8K ultra realistic`;
-          }
-        } catch {}
-      }
-
-      // AI 번역도 실패한 경우 — 한글 키워드 기반 범용 영문 생성
-      // 한글을 절대 Pollinations에 넘기지 않음
-      const genericMap: Record<string, string> = {
-        "정보": "informative lifestyle concept, clean modern aesthetic",
-        "방법": "how-to guide concept, step by step process visual",
-        "추천": "recommendation top picks, curated selection display",
-        "후기": "review experience testimonial, authentic lifestyle",
-        "가이드": "guide tutorial concept, helpful information visual",
-        "꿀팁": "tips tricks lifestyle hack, useful concept visual",
-        "비교": "comparison side by side, choice decision concept",
-        "순위": "ranking list top results, best choice concept",
-      };
-      for (const [ko, en] of Object.entries(genericMap)) {
-        if (p.includes(ko)) return `${en}, professional blog photography, 8K ultra realistic`;
-      }
-
-      // 완전 최후 수단 — 한글 전부 제거 후 영문 기본값
-      return "beautiful lifestyle blog photography, professional quality, natural lighting, vivid colors, 8K ultra realistic";
+    // ── Step 3: 범용 폴백 (한글 절대 Pollinations에 넘기지 않음) ──
+    const genericPairs: [string, string][] = [
+      ["정보", "informative lifestyle concept, clean modern aesthetic, professional blog photography"],
+      ["방법", "step by step guide concept, helpful tutorial visual, clean bright setting"],
+      ["추천", "top picks recommendation, curated selection, modern lifestyle concept"],
+      ["후기", "authentic review experience, real lifestyle testimonial, candid photography"],
+      ["가이드", "comprehensive guide tutorial concept, helpful information, clean visual"],
+      ["꿀팁", "life hack tips tricks, useful clever concept, bright modern aesthetic"],
+      ["비교", "comparison analysis concept, choice decision, clean professional layout"],
+      ["순위", "ranking top list concept, best choice winner, modern style"],
+      ["리뷰", "honest product review, detailed examination, clean photography"],
+      ["정리", "organized clean concept, neat arrangement, minimalist aesthetic"],
+      ["BEST", "best top selection, premium quality showcase, professional photography"],
+      ["완벽", "perfect achievement success concept, professional quality, bright lighting"],
+    ];
+    for (const [ko, en] of genericPairs) {
+      if (p.includes(ko)) return `${en}, 8K ultra realistic`;
     }
 
-    // 한글 없으면 그대로 사용
-    return `${p}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
+    return "modern Korean lifestyle blog photography, professional quality, natural lighting, vivid colors, 8K ultra realistic";
   };
+
 
   const handleGenerate = async () => {
     const provider = getImageProvider();
@@ -941,9 +917,20 @@ if (provider === "pollinations") {
           <div className="lg:col-span-1 rounded-xl p-5 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
             <h3 className="font-semibold text-foreground">이미지 설정</h3>
             <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>프롬프트</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>프롬프트</label>
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/15%)", color: "var(--color-emerald)" }}>
+                  {/[가-힣]/.test(prompt) ? "한글 → 자동 영문 변환" : "영문 직접 입력"}
+                </span>
+              </div>
               <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)}
-                placeholder="생성할 이미지를 상세히 설명하세요..." className="text-sm min-h-24 resize-none" />
+                placeholder="키워드 또는 영문 프롬프트 입력&#10;예) 사회초년생 절약&#10;또는) young professional saving money, desk, warm lighting"
+                className="text-sm min-h-28 resize-none" />
+              {/[가-힣]/.test(prompt) && (
+                <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: "var(--muted-foreground)" }}>
+                  💡 한글 입력 시 AI가 자동으로 영문 이미지 프롬프트로 변환해요
+                </p>
+              )}
             </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>이미지 스타일</label>
