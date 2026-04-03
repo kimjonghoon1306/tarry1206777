@@ -15,6 +15,16 @@ function removeNonKorean(text) {
     .replace(/ {2,}/g, " ")                // 연속 공백 정리
     .replace(/\n{3,}/g, "\n\n")            // 빈 줄 3개 이상 → 2개
     .trim();
+
+}
+
+function ensureMinChars(text, minChars, keyword, title) {
+  let out = removeNonKorean(text || "");
+  if (out.length >= minChars) return out;
+  const filler = `이어서 실제로 느낀 점을 조금 더 적어보면, ${keyword}는 상황에 따라 체감 차이가 꽤 큰 편입니다. 처음에는 작은 차이처럼 보여도 계속 비교해보면 선택 기준이 분명해집니다. 가격, 사용 편의성, 유지 비용, 만족도까지 같이 보면 판단이 훨씬 쉬워집니다. 특히 초보자라면 너무 복잡하게 접근하기보다 기본부터 차근차근 확인하는 게 좋습니다. 이런 식으로 하나씩 점검하면 실패 확률을 줄일 수 있고, 나한테 맞는 방향을 찾기도 훨씬 수월합니다.`;
+  while (out.length < minChars) out += `\n\n${filler}`;
+  if (title && !out.startsWith(title)) out = `${title}\n\n${out}`;
+  return removeNonKorean(out);
 }
 
 export default async function handler(req, res) {
@@ -217,6 +227,7 @@ ${categoryGuide}
         "gemini-2.0-flash-exp",
         "gemini-exp-1206",
         "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
       ];
 
       let lastError = null;
@@ -360,4 +371,4 @@ ${categoryGuide}
     return res.status(500).json({ error: e.message });
   }
 }
-// fix
+//fix
