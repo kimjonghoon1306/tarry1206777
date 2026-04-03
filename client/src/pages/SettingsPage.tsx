@@ -705,13 +705,28 @@ export default function SettingsPage() {
   const [showNaverBlogToken, setShowNaverBlogToken] = useState(false);
   const [naverBlogSaved, setNaverBlogSaved] = useState(false);
 
-  // 데이터랩 키는 관리자 페이지 전용
-  // 설정 페이지가 죽지 않도록 상태는 유지하되, 기본값은 비워두고 저장도 막는다.
-  const [datalabId, setDatalabId] = useState("");
-  const [datalabSecret, setDatalabSecret] = useState("");
-  const [showDatalabSecret, setShowDatalabSecret] = useState(false);
-  const [datalabSaved, setDatalabSaved] = useState(false);
+  // 일반 웹사이트 배포
+  const [datalabId, setDatalabId] = useState(() => userGetSettingsValue(SETTINGS_KEYS.DATALAB_ID));
+  const [datalabSecret, setDatalabSecret] = useState(() => userGetSettingsValue(SETTINGS_KEYS.DATALAB_SECRET));
 
+  // 데이터랩 키가 로컬에 없으면 서버에서 자동 로드
+  React.useEffect(() => {
+    if (!datalabId || !datalabSecret) {
+      loadSettingsFromServer().then(settings => {
+        if (!settings) return;
+        if (settings["naver_datalab_client_id"] && !datalabId) {
+          userSet("naver_datalab_client_id", settings["naver_datalab_client_id"]);
+          setDatalabId(settings["naver_datalab_client_id"]);
+        }
+        if (settings["naver_datalab_client_secret"] && !datalabSecret) {
+          userSet("naver_datalab_client_secret", settings["naver_datalab_client_secret"]);
+          setDatalabSecret(settings["naver_datalab_client_secret"]);
+        }
+      });
+    }
+  }, []);
+  const [datalabSaved, setDatalabSaved] = useState(false);
+  const [showDatalabSecret, setShowDatalabSecret] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_URL));
   const [webhookKey, setWebhookKey] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_KEY));
   const [showWebhookKey, setShowWebhookKey] = useState(false);
@@ -737,8 +752,13 @@ export default function SettingsPage() {
   };
 
   const handleSaveDatalab = () => {
-    toast.error("네이버 데이터랩 키는 관리자 페이지에서만 저장할 수 있어요.");
-    setDatalabSaved(false);
+    if (!datalabId || !datalabSecret) { toast.error("Client ID와 Secret을 모두 입력해주세요"); return; }
+    userSet("naver_datalab_client_id", datalabId);
+    userSet("naver_datalab_client_secret", datalabSecret);
+    saveSettingsToServer({ naver_datalab_client_id: datalabId, naver_datalab_client_secret: datalabSecret });
+    setDatalabSaved(true);
+    toast.success("네이버 데이터랩 API 저장됨 ✅");
+    setTimeout(() => setDatalabSaved(false), 3000);
   };
 
   const handleSaveNaver = () => {
