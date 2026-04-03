@@ -15,7 +15,7 @@ import {
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
   Smartphone, Upload, QrCode, Send, Plus, Trash2, RefreshCw,
-  ShoppingCart, Link, DollarSign, Activity, Sparkles,
+  ShoppingCart, Link, DollarSign, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -705,28 +705,9 @@ export default function SettingsPage() {
   const [showNaverBlogToken, setShowNaverBlogToken] = useState(false);
   const [naverBlogSaved, setNaverBlogSaved] = useState(false);
 
-  // 일반 웹사이트 배포
-  const [datalabId, setDatalabId] = useState(() => userGetSettingsValue(SETTINGS_KEYS.DATALAB_ID));
-  const [datalabSecret, setDatalabSecret] = useState(() => userGetSettingsValue(SETTINGS_KEYS.DATALAB_SECRET));
-
-  // 데이터랩 키가 로컬에 없으면 서버에서 자동 로드
-  React.useEffect(() => {
-    if (!datalabId || !datalabSecret) {
-      loadSettingsFromServer().then(settings => {
-        if (!settings) return;
-        if (settings["naver_datalab_client_id"] && !datalabId) {
-          userSet("naver_datalab_client_id", settings["naver_datalab_client_id"]);
-          setDatalabId(settings["naver_datalab_client_id"]);
-        }
-        if (settings["naver_datalab_client_secret"] && !datalabSecret) {
-          userSet("naver_datalab_client_secret", settings["naver_datalab_client_secret"]);
-          setDatalabSecret(settings["naver_datalab_client_secret"]);
-        }
-      });
-    }
-  }, []);
+  // 데이터랩 키는 관리자 페이지 전용
   const [datalabSaved, setDatalabSaved] = useState(false);
-  const [showDatalabSecret, setShowDatalabSecret] = useState(false);
+
   const [webhookUrl, setWebhookUrl] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_URL));
   const [webhookKey, setWebhookKey] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_KEY));
   const [showWebhookKey, setShowWebhookKey] = useState(false);
@@ -752,13 +733,8 @@ export default function SettingsPage() {
   };
 
   const handleSaveDatalab = () => {
-    if (!datalabId || !datalabSecret) { toast.error("Client ID와 Secret을 모두 입력해주세요"); return; }
-    userSet("naver_datalab_client_id", datalabId);
-    userSet("naver_datalab_client_secret", datalabSecret);
-    saveSettingsToServer({ naver_datalab_client_id: datalabId, naver_datalab_client_secret: datalabSecret });
-    setDatalabSaved(true);
-    toast.success("네이버 데이터랩 API 저장됨 ✅");
-    setTimeout(() => setDatalabSaved(false), 3000);
+    toast.error("네이버 데이터랩 키는 관리자 페이지에서만 저장할 수 있어요.");
+    setDatalabSaved(false);
   };
 
   const handleSaveNaver = () => {
@@ -852,8 +828,7 @@ export default function SettingsPage() {
 
   return (
     <Layout>
-      <div className="p-6"><div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
-        <div className="space-y-6 min-w-0">
+      <div className="p-6 space-y-6 max-w-3xl">
         <div>
           <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             설정
@@ -1393,48 +1368,7 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
-        </div>
-
-        <aside className="hidden xl:block">
-          <div className="sticky top-6 space-y-4">
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg, oklch(0.696 0.17 162.48/10%), oklch(0.75 0.12 300/10%))", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4" style={{ color: "oklch(0.75 0.12 300)" }} />
-                <h3 className="font-semibold text-foreground">작업 대시보드</h3>
-              </div>
-              <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>오른쪽 공간을 작업 요약 공간으로 채웠어요. 현재 선택된 AI와 연결 상태를 한눈에 볼 수 있습니다.</p>
-              <div className="space-y-3">
-                <div className="rounded-xl p-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  <div className="text-xs mb-1" style={{ color: "var(--muted-foreground)" }}>글 생성 AI</div>
-                  <div className="text-sm font-semibold text-foreground">{CONTENT_AI_OPTIONS.find(opt => opt.value === contentAI)?.label || "미선택"}</div>
-                </div>
-                <div className="rounded-xl p-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  <div className="text-xs mb-1" style={{ color: "var(--muted-foreground)" }}>이미지 생성 AI</div>
-                  <div className="text-sm font-semibold text-foreground">{IMAGE_AI_OPTIONS.find(opt => opt.value === imageAI)?.label || "미선택"}</div>
-                </div>
-                <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold" style={{ color: "var(--muted-foreground)" }}>연결 상태</span>
-                    <span className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/15%)", color: "var(--color-emerald)" }}>준비 완료</span>
-                  </div>
-                  <div className="space-y-2">
-                    {[
-                      ["네이버 블로그", !!userGetSettingsValue("naver_blog_id")],
-                      ["웹사이트", !!userGetSettingsValue("webhook_url")],
-                      ["WordPress", !!userGetSettingsValue("wp_url")],
-                    ].map(([label, ok]) => (
-                      <div key={String(label)} className="flex items-center justify-between text-sm">
-                        <span style={{ color: "var(--muted-foreground)" }}>{label}</span>
-                        <span style={{ color: ok ? "var(--color-emerald)" : "var(--color-amber-brand)" }}>{ok ? "연결" : "설정 필요"}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div></div>
+      </div>
     </Layout>
   );
 }
