@@ -103,7 +103,13 @@ export default async function handler(req, res) {
             if (msg.includes("api key") || msg.includes("api_key") || status === 403) {
               throw new Error("FATAL:Gemini API 키가 잘못되었거나 권한이 없습니다.");
             }
-            if (status === 429 || msg.includes("quota") || msg.includes("rate") || msg.includes("exhausted")) {
+            if (
+              status === 429 || status === 503 ||
+              msg.includes("quota") || msg.includes("rate") ||
+              msg.includes("exhausted") || msg.includes("resource_exhausted") ||
+              msg.includes("too many") || msg.includes("overloaded") ||
+              msg.includes("limit")
+            ) {
               lastErr = `${model} 한도 초과`;
               continue;
             }

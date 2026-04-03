@@ -25,12 +25,13 @@ import { getImageProvider, getAPIKey, IMAGE_AI_OPTIONS } from "@/lib/ai-config";
 import { useLocation } from "wouter";
 
 // ── 이미지 URL 로드 테스트 ──────────────────────────
-async function testImageUrl(url: string, timeoutMs = 25000): Promise<boolean> {
+async function testImageUrl(url: string, timeoutMs = 12000): Promise<boolean> {
   return new Promise((resolve) => {
     const img = new window.Image();
-    const timer = setTimeout(() => { img.onload = null; img.onerror = null; resolve(false); }, timeoutMs);
-    img.onload = () => { clearTimeout(timer); resolve(true); };
-    img.onerror = () => { clearTimeout(timer); resolve(false); };
+    const done = (ok: boolean) => { clearTimeout(timer); img.onload = null; img.onerror = null; img.src = ""; resolve(ok); };
+    const timer = setTimeout(() => done(false), timeoutMs);
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
     img.src = url;
   });
 }
@@ -181,27 +182,26 @@ async function generatePollinationsUrl(
   const encoded = encodeURIComponent(prompt);
   const ts = Date.now();
 
-  // 1차: Pollinations AI - 3번 시도 (타임아웃 늘림)
-  const seeds = [seed, seed + 7, seed + 13];
+  // 1차: Pollinations flux 모델 - 2번 시도
+  const seeds = [seed, seed + 7];
   for (const s of seeds) {
     const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${s}&model=flux&t=${ts + s}`;
-    const ok = await testImageUrl(url, 25000);
+    const ok = await testImageUrl(url, 12000);
     if (ok) return url;
   }
 
-  // 2차: Unsplash - 키워드 매핑으로 관련 이미지
-  const keyword = extractKeyword(prompt);
-  const unsplashUrl = `https://source.unsplash.com/${width}x${height}/?${encodeURIComponent(keyword)}&sig=${seed}`;
-  const unsplashOk = await testImageUrl(unsplashUrl, 10000);
-  if (unsplashOk) return unsplashUrl;
-
-  // 3차: Pollinations 다른 모델 시도
+  // 2차: Pollinations turbo 모델
   const altUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 99}&model=turbo&t=${ts + 99}`;
-  const altOk = await testImageUrl(altUrl, 15000);
+  const altOk = await testImageUrl(altUrl, 12000);
   if (altOk) return altUrl;
 
-  // 4차: Picsum (완전 랜덤 - 최후 수단)
-  return `https://picsum.photos/seed/${seed}/${width}/${height}`;
+  // 3차: Pollinations 기본 (모델 지정 없이)
+  const basicUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 200}&t=${ts + 200}`;
+  const basicOk = await testImageUrl(basicUrl, 15000);
+  if (basicOk) return basicUrl;
+
+  // 최후 수단: URL 그대로 반환 (브라우저가 직접 로드)
+  return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
@@ -302,12 +302,12 @@ function GalleryCard({
   onLightbox: () => void;
   onRetry: () => void;
 }) {
-  const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "loading" : "error");
+  const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "ok" : "error");
 
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
     if (!img.src) { setStatus("error"); return; }
-    setStatus("loading"); // 새 src → 다시 로딩 시도
+    setStatus("ok"); // 새 src → 이미 검증된 URL이므로 바로 ok
   }, [img.src, img.loading]);
 
   if (viewMode === "list") {

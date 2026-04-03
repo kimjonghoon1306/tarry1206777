@@ -55,8 +55,8 @@ Examples:
         );
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
-          const status = resp.status;
-          if (status === 429 || (err.error?.message || "").toLowerCase().includes("quota")) continue;
+          const msg2 = (err.error?.message || "").toLowerCase();
+          if (status === 429 || status === 503 || msg2.includes("quota") || msg2.includes("exhausted") || msg2.includes("rate") || msg2.includes("limit") || msg2.includes("overloaded")) continue;
           throw new Error(`Gemini 오류 (${status}): ${err.error?.message || ""}`);
         }
         const data = await resp.json();

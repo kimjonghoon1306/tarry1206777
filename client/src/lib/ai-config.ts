@@ -3,12 +3,28 @@ import { userGet, SETTINGS_KEYS } from "./user-storage";
 export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
 export type ImageAIProvider = "openai" | "pollinations";
 
+// admin 네임스페이스에서 직접 읽기 (폴백용)
+function adminGet(key: string): string {
+  try {
+    return localStorage.getItem(`u:admin:${key}`) || "";
+  } catch {
+    return "";
+  }
+}
+
+// 현재 유저 값 없으면 admin 키로 폴백
+function userGetWithAdminFallback(key: string): string {
+  const val = userGet(key);
+  if (val && val.trim()) return val;
+  return adminGet(key);
+}
+
 export function getContentProvider(): ContentAIProvider {
-  return (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
+  return (userGetWithAdminFallback(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
 }
 
 export function getImageProvider(): ImageAIProvider {
-  return (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations";
+  return (userGetWithAdminFallback(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations";
 }
 
 export function getAPIKey(provider: string): string {
@@ -22,7 +38,9 @@ export function getAPIKey(provider: string): string {
     huggingface: SETTINGS_KEYS.HUGGING_KEY,
   };
   const k = keyMap[provider];
-  return k ? userGet(k) : "";
+  if (!k) return "";
+  // 유저 키 없으면 admin 키 자동 폴백
+  return userGetWithAdminFallback(k);
 }
 
 export const CONTENT_AI_OPTIONS = [

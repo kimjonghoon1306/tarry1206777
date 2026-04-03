@@ -242,8 +242,14 @@ ${categoryGuide}
               throw new Error("FATAL:Gemini API 키가 잘못되었거나 권한이 없습니다. 설정에서 확인해주세요.");
             }
 
-            // 429 → 다음 모델로 자동 전환 (continue)
-            if (status === 429 || msg.includes("quota") || msg.includes("resource_exhausted") || msg.includes("rate")) {
+            // 429/503 → 다음 모델로 자동 전환 (continue)
+            if (
+              status === 429 || status === 503 ||
+              msg.includes("quota") || msg.includes("resource_exhausted") ||
+              msg.includes("rate") || msg.includes("too many") ||
+              msg.includes("overloaded") || msg.includes("limit") ||
+              msg.includes("exhausted")
+            ) {
               lastError = `${model} 한도 초과 → 다음 모델 시도`;
               continue; // 폴백 체인 다음으로
             }
