@@ -57,19 +57,36 @@ const CHART = [
 const STORAGE_KEY = "blogauto_keywords";
 const TITLES_KEY = "blogauto_titles";
 const SELKW_KEY = "blogauto_selkw";
+const DATALAB_CURRENT_KEY = "blogauto_datalab_current";
+const DATALAB_HISTORY_KEY = "blogauto_datalab_history";
 
 // ── 데이터랩 컴포넌트 ──────────────────────────────────
 function DataLabPanel() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<any>(() => {
+    try { return JSON.parse(localStorage.getItem(DATALAB_CURRENT_KEY) || "null"); } catch { return null; }
+  });
   const [error, setError] = useState("");
+  const [history, setHistory] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem(DATALAB_HISTORY_KEY) || "[]"); } catch { return []; }
+  });
+
+  useEffect(() => {
+    try {
+      if (data) localStorage.setItem(DATALAB_CURRENT_KEY, JSON.stringify(data));
+    } catch {}
+  }, [data]);
+
+  useEffect(() => {
+    try { localStorage.setItem(DATALAB_HISTORY_KEY, JSON.stringify(history.slice(0, 10))); } catch {}
+  }, [history]);
 
   const analyze = async () => {
     const kw = keyword.trim();
     if (!kw) { setError("키워드를 입력해주세요"); return; }
-    let clientId = userGet(SETTINGS_KEYS.DATALAB_ID) || localStorage.getItem(SETTINGS_KEYS.DATALAB_ID) || localStorage.getItem("naver_datalab_client_id") || "";
-    let clientSecret = userGet(SETTINGS_KEYS.DATALAB_SECRET) || localStorage.getItem(SETTINGS_KEYS.DATALAB_SECRET) || localStorage.getItem("naver_datalab_client_secret") || "";
+    let clientId = userGet("naver_datalab_client_id");
+    let clientSecret = userGet("naver_datalab_client_secret");
     // 키 없으면 서버 설정 + admin 설정 sync 후 재시도
     if (!clientId || !clientSecret) {
       // 일반 유저 서버 설정 먼저 시도
@@ -92,8 +109,8 @@ function DataLabPanel() {
         }
       } catch {}
       await syncAdminSettingsToLocal();
-      clientId = userGet(SETTINGS_KEYS.DATALAB_ID) || localStorage.getItem(SETTINGS_KEYS.DATALAB_ID) || localStorage.getItem("naver_datalab_client_id") || "";
-      clientSecret = userGet(SETTINGS_KEYS.DATALAB_SECRET) || localStorage.getItem(SETTINGS_KEYS.DATALAB_SECRET) || localStorage.getItem("naver_datalab_client_secret") || "";
+      clientId = userGet("naver_datalab_client_id");
+      clientSecret = userGet("naver_datalab_client_secret");
     }
     if (!clientId || !clientSecret) {
       setError("설정 페이지에서 네이버 데이터랩 Client ID/Secret을 입력해주세요");
@@ -109,6 +126,10 @@ function DataLabPanel() {
       const d = await resp.json();
       if (!d.ok) throw new Error(d.error);
       setData(d);
+      setHistory(prev => {
+        const next = [{ ...d, savedAt: new Date().toISOString() }, ...prev.filter(item => item.keyword !== d.keyword)];
+        return next.slice(0, 10);
+      });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -291,6 +312,43 @@ function DataLabPanel() {
           )}
         </div>
       )}
+
+
+{history.length > 0 && (
+  <div className="rounded-xl p-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+    <div className="flex items-center justify-between mb-3">
+      <div className="text-xs font-bold text-foreground">최근 데이터랩 기록</div>
+      <button
+        onClick={() => {
+          setHistory([]);
+          localStorage.removeItem(DATALAB_HISTORY_KEY);
+          localStorage.removeItem(DATALAB_CURRENT_KEY);
+          setData(null);
+        }}
+        className="text-xs px-2 py-1 rounded-md"
+        style={{ background: "oklch(0.65 0.22 25/10%)", color: "oklch(0.65 0.22 25)" }}
+      >
+        기록 비우기
+      </button>
+    </div>
+    <div className="flex flex-wrap gap-2">
+      {history.map((item, idx) => (
+        <button
+          key={`${item.keyword}-${idx}`}
+          onClick={() => {
+            setKeyword(item.keyword || "");
+            setData(item);
+            setError("");
+          }}
+          className="px-3 py-2 rounded-lg text-xs font-medium"
+          style={{ background: "oklch(0.75 0.18 200/10%)", color: "oklch(0.75 0.18 200)", border: "1px solid oklch(0.75 0.18 200/25%)" }}
+        >
+          {item.keyword}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
 
       {!data && !loading && !error && (
         <div className="py-8 text-center">
@@ -909,3 +967,4 @@ export default function KeywordResearch() {
     </Layout>
   );
 }
+//fix
