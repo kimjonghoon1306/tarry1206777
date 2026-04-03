@@ -57,13 +57,74 @@ const CHART = [
 const STORAGE_KEY = "blogauto_keywords";
 const TITLES_KEY = "blogauto_titles";
 const SELKW_KEY = "blogauto_selkw";
+const DATALAB_CURRENT_KEY = "blogauto_datalab_current";
+const DATALAB_HISTORY_KEY = "blogauto_datalab_history";
+
 
 // ── 데이터랩 컴포넌트 ──────────────────────────────────
 function DataLabPanel() {
-  const [keyword, setKeyword] = useState("");
+  const [keyword, setKeyword] = useState(() => {
+    try {
+      const saved = localStorage.getItem(DATALAB_CURRENT_KEY);
+      if (!saved) return "";
+      return JSON.parse(saved)?.keyword || "";
+    } catch {
+      return "";
+    }
+  });
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem(DATALAB_CURRENT_KEY);
+      if (!saved) return null;
+      return JSON.parse(saved) || null;
+    } catch {
+      return null;
+    }
+  });
+  const [history, setHistory] = useState<any[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(DATALAB_HISTORY_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  });
   const [error, setError] = useState("");
+
+  const saveDataLabResult = (result: any) => {
+    try {
+      localStorage.setItem(DATALAB_CURRENT_KEY, JSON.stringify(result));
+      setData(result);
+      setKeyword(result?.keyword || "");
+      setHistory(prev => {
+        const next = [result, ...prev.filter((item) => item?.keyword !== result?.keyword)].slice(0, 10);
+        localStorage.setItem(DATALAB_HISTORY_KEY, JSON.stringify(next));
+        return next;
+      });
+    } catch {}
+  };
+
+  const restoreHistoryItem = (item: any) => {
+    if (!item) return;
+    setData(item);
+    setKeyword(item.keyword || "");
+    setError("");
+    try {
+      localStorage.setItem(DATALAB_CURRENT_KEY, JSON.stringify(item));
+    } catch {}
+  };
+
+  const clearDataLabHistory = () => {
+    setData(null);
+    setHistory([]);
+    setKeyword("");
+    setError("");
+    try {
+      localStorage.removeItem(DATALAB_CURRENT_KEY);
+      localStorage.removeItem(DATALAB_HISTORY_KEY);
+    } catch {}
+    toast.success("데이터랩 기록을 초기화했습니다");
+  };
 
   const analyze = async () => {
     const kw = keyword.trim();
@@ -108,7 +169,7 @@ function DataLabPanel() {
       });
       const d = await resp.json();
       if (!d.ok) throw new Error(d.error);
-      setData(d);
+      saveDataLabResult(d);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -119,20 +180,6 @@ function DataLabPanel() {
   const DEVICE_COLORS = ["#6366f1", "#22d3ee"];
   const GENDER_COLORS = ["#3b82f6", "#f472b6"];
   const AGE_COLORS = ["#a78bfa", "#60a5fa", "#34d399", "#fbbf24", "#f87171"];
-
-
-const CHART_TOOLTIP_STYLE = {
-  background: "rgba(255,255,255,0.98)",
-  border: "1px solid rgba(15,23,42,0.12)",
-  borderRadius: 12,
-  boxShadow: "0 10px 30px rgba(15,23,42,0.18)",
-  color: "#0f172a",
-  fontSize: 13,
-};
-
-const CHART_LABEL_STYLE = { color: "#475569", fontWeight: 600 };
-const CHART_ITEM_STYLE = { color: "#0f172a", fontWeight: 700 };
-
 
   const ageData = data ? Object.entries(data.ages).map(([name, value]) => ({ name, value })) : [];
   const deviceData = data ? [
@@ -182,6 +229,55 @@ const CHART_ITEM_STYLE = { color: "#0f172a", fontWeight: 700 };
         </div>
       )}
 
+      <div className="rounded-xl p-3 space-y-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <div className="text-sm font-bold text-foreground">데이터랩 기록</div>
+            <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>최근 분석 10개까지 저장되고, 화면을 이동해도 유지됩니다</div>
+          </div>
+          <button
+            onClick={clearDataLabHistory}
+            className="h-9 px-3 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{ background: "oklch(0.72 0.19 350)", color: "white" }}
+          >
+            데이터 초기화
+          </button>
+        </div>
+
+        {history.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {history.map((item, idx) => {
+              const topAge = Object.entries(item?.ages || {}).sort((a: any, b: any) => Number(b[1]) - Number(a[1]))[0]?.[0] || "-";
+              return (
+                <button
+                  key={`${item?.keyword || 'item'}-${idx}`}
+                  type="button"
+                  onClick={() => restoreHistoryItem(item)}
+                  className="text-left rounded-lg p-3 transition-all hover:-translate-y-[1px]"
+                  style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold text-foreground truncate">{item?.keyword || "키워드"}</div>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "oklch(0.75 0.18 200/12%)", color: "oklch(0.75 0.18 200)" }}>
+                      기록 {idx + 1}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    <div>모바일 {item?.device?.mobile ?? 0}%</div>
+                    <div>{(item?.gender?.female ?? 0) >= (item?.gender?.male ?? 0) ? "여성" : "남성"} 우세</div>
+                    <div>주 연령 {topAge}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-xs px-3 py-3 rounded-lg" style={{ background: "var(--card)", color: "var(--muted-foreground)", border: "1px dashed var(--border)" }}>
+            아직 저장된 데이터랩 기록이 없습니다
+          </div>
+        )}
+      </div>
+
       {data && (
         <div className="space-y-5">
           {/* 요약 카드 */}
@@ -230,7 +326,7 @@ const CHART_ITEM_STYLE = { color: "#0f172a", fontWeight: 700 };
                   <Pie data={deviceData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
                     {deviceData.map((_, i) => <Cell key={i} fill={DEVICE_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip formatter={(v) => `${v}%`} contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_LABEL_STYLE} itemStyle={CHART_ITEM_STYLE} />
+                  <Tooltip contentStyle={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.18)" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 600 }} formatter={(v) => `${v}%`} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-3 mt-1">
@@ -254,7 +350,7 @@ const CHART_ITEM_STYLE = { color: "#0f172a", fontWeight: 700 };
                   <Pie data={genderData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} dataKey="value" paddingAngle={3}>
                     {genderData.map((_, i) => <Cell key={i} fill={GENDER_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip formatter={(v) => `${v}%`} contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_LABEL_STYLE} itemStyle={CHART_ITEM_STYLE} />
+                  <Tooltip contentStyle={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.18)" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 600 }} formatter={(v) => `${v}%`} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-3 mt-1">
@@ -277,7 +373,7 @@ const CHART_ITEM_STYLE = { color: "#0f172a", fontWeight: 700 };
                 <BarChart data={ageData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip formatter={(v) => `${v}%`} contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_LABEL_STYLE} itemStyle={CHART_ITEM_STYLE} />
+                  <Tooltip contentStyle={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.18)" }} itemStyle={{ color: "#111827" }} labelStyle={{ color: "#6b7280", fontWeight: 600 }} formatter={(v) => `${v}%`} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     {ageData.map((_, i) => <Cell key={i} fill={AGE_COLORS[i % AGE_COLORS.length]} />)}
                   </Bar>
@@ -297,7 +393,7 @@ const CHART_ITEM_STYLE = { color: "#0f172a", fontWeight: 700 };
                 <LineChart data={data.trend.map((d: any) => ({ date: d.period.slice(5), ratio: d.ratio }))}>
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_LABEL_STYLE} itemStyle={CHART_ITEM_STYLE} formatter={(value: number) => [`${Number(value).toFixed(5)}`, "ratio"]} />
+                  <Tooltip contentStyle={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.18)" }} itemStyle={{ color: "#059669" }} labelStyle={{ color: "#6b7280", fontWeight: 600 }} />
                   <Line type="monotone" dataKey="ratio" stroke="var(--color-emerald)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
