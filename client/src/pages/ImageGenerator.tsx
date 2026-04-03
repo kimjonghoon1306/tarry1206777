@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 
 interface ImageItem {
   url: string;
-  status: 'done' | 'error';
 }
 
 export default function ImageGenerator() {
@@ -15,14 +14,9 @@ export default function ImageGenerator() {
 
     setLoading(true);
 
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
 
-    const newImage: ImageItem = {
-      url,
-      status: 'done',
-    };
-
-    setImages((prev) => [newImage, ...prev]);
+    setImages((prev) => [{ url }, ...prev]);
 
     setLoading(false);
   };
@@ -36,11 +30,11 @@ export default function ImageGenerator() {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="이미지 설명 입력"
-          className="border p-2 flex-1 rounded"
+          className="border p-2 flex-1 rounded bg-black text-white"
         />
         <button
           onClick={generateImage}
-          className="bg-black text-white px-4 rounded"
+          className="bg-green-500 text-white px-4 rounded"
         >
           생성
         </button>
@@ -48,14 +42,14 @@ export default function ImageGenerator() {
 
       {loading && <p>생성중...</p>}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {images.map((image, idx) => (
           <img
             key={idx}
             src={image.url}
             alt="generated"
             className="rounded"
-            referrerPolicy="no-referrer"
+            loading="lazy"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
