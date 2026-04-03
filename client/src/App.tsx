@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { syncAdminSettingsToLocal } from "./lib/user-storage";
 import { AuthProvider } from "./contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import KeywordResearch from "./pages/KeywordResearch";
@@ -60,6 +61,11 @@ function Router() {
 }
 
 function App() {
+  // 앱 시작 시 admin 설정 동기화 → 관리자 키가 모든 유저에게 폴백 적용
+  import("./lib/user-storage").then(({ syncAdminSettingsToLocal }) => {
+    syncAdminSettingsToLocal();
+  });
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable>

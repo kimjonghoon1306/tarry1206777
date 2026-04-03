@@ -1,11 +1,10 @@
 /**
- * user-storage.ts v3.0
+ * user-storage.ts v5.0
  * ─────────────────────────────────────────────────────
- * [핵심 변경]
- * - userGet() 구형 공용 키 fallback 완전 제거
- *   → 관리자가 저장한 공용 키를 일반 회원이 절대 읽을 수 없음
- * - 회원 설정은 오직 u:{userId}:{key} 네임스페이스에만 존재
- * - 로그인 시 서버에서 해당 유저 설정만 가져와서 적용
+ * ✅ userGet() → 유저 키 없으면 admin 키 자동 폴백
+ *    → 관리자가 설정한 키를 유저가 지워도 자동 적용
+ * ✅ SETTINGS_KEYS 확장 (티스토리/쿠팡/데이터랩 추가)
+ * ✅ 앱 시작 시 admin 설정 캐시 로드
  * ─────────────────────────────────────────────────────
  */
 
@@ -51,16 +50,27 @@ export function isAdminUser(): boolean {
 // ── 저장 ─────────────────────────────────────────────
 export function userSet(key: string, value: string): void {
   const uid = getCurrentUserId();
-  // 오직 네임스페이스 키에만 저장 - 공용 키에는 절대 쓰지 않음
   localStorage.setItem(`u:${uid}:${key}`, value);
 }
 
 // ── 불러오기 ─────────────────────────────────────────
-// 공용 키 fallback 완전 제거 - 오직 자기 네임스페이스만 읽음
+// ✅ 핵심: 유저 키 없으면 admin 키 자동 폴백
+// 관리자가 SuperAdmin에서 설정한 키를 유저가 지워도 자동 적용
 export function userGet(key: string, fallback = ""): string {
   const uid = getCurrentUserId();
-  const value = localStorage.getItem(`u:${uid}:${key}`);
-  return value !== null ? value : fallback;
+
+  // 1. 유저 본인 키 확인
+  const userVal = localStorage.getItem(`u:${uid}:${key}`);
+  if (userVal !== null && userVal.trim() !== "") return userVal;
+
+  // 2. admin 키 폴백 (유저가 키를 비워도 관리자 키 사용)
+  //    단, 이미 admin이면 폴백 필요 없음
+  if (uid !== "admin") {
+    const adminVal = localStorage.getItem(`u:admin:${key}`);
+    if (adminVal !== null && adminVal.trim() !== "") return adminVal;
+  }
+
+  return fallback;
 }
 
 // ── 삭제 ─────────────────────────────────────────────
@@ -100,6 +110,28 @@ export async function loadSettingsFromServer(): Promise<Record<string, string> |
   } catch { return null; }
 }
 
+// ── admin 설정을 로컬에 캐시 (비로그인 유저도 관리자 키 사용 가능) ──
+// ✅ 앱 시작 시 또는 로그인 후 호출
+export async function syncAdminSettingsToLocal(): Promise<void> {
+  try {
+    // admin 토큰 없이 admin 설정을 공개 API로 가져오기
+    const resp = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "loadAdminPublicSettings" }),
+    });
+    const d = await resp.json();
+    if (d.ok && d.settings) {
+      // admin 네임스페이스에 캐시
+      Object.entries(d.settings).forEach(([k, v]) => {
+        if (typeof v === "string" && v.trim()) {
+          localStorage.setItem(`u:admin:${k}`, v);
+        }
+      });
+    }
+  } catch {}
+}
+
 // ── 로그인 후: 서버 설정을 해당 유저 네임스페이스에 적용 ──
 export async function applyServerSettings(): Promise<void> {
   const serverSettings = await loadSettingsFromServer();
@@ -108,10 +140,11 @@ export async function applyServerSettings(): Promise<void> {
   if (uid === "guest") return;
   for (const [key, value] of Object.entries(serverSettings)) {
     if (typeof value === "string") {
-      // 오직 자기 네임스페이스에만 저장
       localStorage.setItem(`u:${uid}:${key}`, value);
     }
   }
+  // admin 설정도 같이 동기화
+  await syncAdminSettingsToLocal();
 }
 
 // ── 로그아웃: 현재 유저 로컬 캐시 전체 삭제 ─────────────
@@ -127,26 +160,46 @@ export function clearUserLocalCache(): void {
   toRemove.forEach(k => localStorage.removeItem(k));
 }
 
-// ── 설정 키 상수 ─────────────────────────────────────
+// ── 설정 키 상수 (전체 확장) ──────────────────────────
 export const SETTINGS_KEYS = {
-  CONTENT_AI:       "content_ai_provider",
-  IMAGE_AI:         "image_ai_provider",
-  CONTENT_LANG:     "content_language",
-  GEMINI_KEY:       "gemini_api_key",
-  OPENAI_KEY:       "openai_api_key",
-  CLAUDE_KEY:       "claude_api_key",
-  GROQ_KEY:         "groq_api_key",
-  FLUX_KEY:         "flux_api_key",
-  HUGGING_KEY:      "huggingface_api_key",
-  NAVER_LICENSE:    "naver_access_license",
-  NAVER_SECRET:     "naver_secret_key",
-  NAVER_CUSTOMER:   "naver_customer_id",
-  NAVER_BLOG_ID:    "naver_blog_id",
-  NAVER_BLOG_TOKEN: "naver_blog_access_token",
-  WP_URL:           "wp_url",
-  WP_USER:          "wp_username",
-  WP_PASS:          "wp_app_password",
-  WEBHOOK_URL:      "webhook_url",
-  WEBHOOK_KEY:      "webhook_auth_key",
-  GREETING:         "blogauto_greeting",
+  // AI
+  CONTENT_AI:         "content_ai_provider",
+  IMAGE_AI:           "image_ai_provider",
+  CONTENT_LANG:       "content_language",
+  GEMINI_KEY:         "gemini_api_key",
+  OPENAI_KEY:         "openai_api_key",
+  CLAUDE_KEY:         "claude_api_key",
+  GROQ_KEY:           "groq_api_key",
+  FLUX_KEY:           "flux_api_key",
+  HUGGING_KEY:        "huggingface_api_key",
+  // 네이버 검색광고
+  NAVER_LICENSE:      "naver_access_license",
+  NAVER_SECRET:       "naver_secret_key",
+  NAVER_CUSTOMER:     "naver_customer_id",
+  // 네이버 블로그
+  NAVER_BLOG_ID:      "naver_blog_id",
+  NAVER_BLOG_TOKEN:   "naver_blog_access_token",
+  // 네이버 데이터랩
+  DATALAB_ID:         "naver_datalab_client_id",
+  DATALAB_SECRET:     "naver_datalab_client_secret",
+  // 티스토리
+  TISTORY_CLIENT_ID:  "tistory_client_id",
+  TISTORY_SECRET:     "tistory_client_secret",
+  TISTORY_TOKEN:      "tistory_access_token",
+  TISTORY_BLOG:       "tistory_blog_name",
+  // 쿠팡파트너스
+  COUPANG_ACCESS:     "coupang_access_key",
+  COUPANG_SECRET:     "coupang_secret_key",
+  COUPANG_SUB_ID:     "coupang_sub_id",
+  // 워드프레스
+  WP_URL:             "wp_url",
+  WP_USER:            "wp_username",
+  WP_PASS:            "wp_app_password",
+  // Webhook
+  WEBHOOK_URL:        "webhook_url",
+  WEBHOOK_KEY:        "webhook_auth_key",
+  WEBHOOK_HEADER:     "webhook_auth_header",
+  // 기타
+  GREETING:           "blogauto_greeting",
+  AD_PLATFORM:        "selected_ad_platform",
 };

@@ -8,6 +8,7 @@
     "api/webhook-proxy.js": { "maxDuration": 30 },
     "api/auth.js": { "maxDuration": 10 },
     "api/tistory.js": { "maxDuration": 15 },
-    "api/coupang.js": { "maxDuration": 15 }
+    "api/coupang.js": { "maxDuration": 15 },
+    "api/translate-prompt.js": { "maxDuration": 20 }
   }
 }

@@ -609,143 +609,63 @@ if (provider === "pollinations") {
   // ── 신규 생성 ──────────────────────────────────────
   // 한국어 → 영어 이미지 프롬프트 자동 변환
   // ── 한국어 → 영어 이미지 프롬프트 자동 변환 ──────────────
-  // 전략: AI 번역 우선 → 카테고리 매핑 → 범용 폴백
+  // 전용 translate-prompt API 사용 → 어떤 주제든 정확하게 변환
   const autoTranslatePrompt = async (koreanPrompt: string): Promise<string> => {
     const p = koreanPrompt.trim();
 
-    // 이미 영문이면 그대로 사용
+    // 이미 영문이면 그대로
     if (!/[가-힣]/.test(p)) {
       return `${p}, professional photography, 8K ultra realistic`;
     }
 
-    // ── Step 1: AI 번역 최우선 ──────────────────────────────
+    // ── Step 1: 전용 번역 API (어떤 주제든 정확) ───────────
     const aiProvider = getContentProvider();
     const aiKey = getAPIKey(aiProvider);
     if (aiKey) {
       try {
-        const resp = await fetch("/api/generate-content", {
+        const resp = await fetch("/api/translate-prompt", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider: aiProvider,
-            apiKey: aiKey,
-            keyword: `Convert this Korean blog topic into an English image prompt for Flux AI image generator. Topic: "${p}". Describe a specific visual scene. Include subject, setting, mood, lighting style. Max 25 words. Output ONLY the English prompt, no Korean, no explanation.`,
-            language: "en",
-            minChars: 5,
-            stylePrompt: "Output ONLY the English image prompt. No Korean. No quotes. Max 25 words.",
-          }),
+          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: p }),
         });
         const data = await resp.json();
-        const raw = (data.content || "").trim();
-        const translated = raw.split("\n")[0]
-          .replace(/[가-힣]/g, "")
-          .replace(/^[-•*]\s*/, "")
-          .trim();
-        if (translated && translated.length > 8 && /[a-zA-Z]/.test(translated)) {
-          return `${translated}, professional photography, 8K ultra realistic`;
+        if (data.ok && data.prompt && data.prompt.length > 5) {
+          return `${data.prompt}, professional photography, 8K ultra realistic`;
         }
       } catch {}
     }
 
-    // ── Step 2: 카테고리 매핑 ──────────────────────────────
-    // 재테크/절약/사회초년생/직장인
-    if (/재테크|투자|주식|부동산|금융|절약|저축|돈|부업|사회초년생|직장인|월급|적금|경제|가계/.test(p)) {
-      if (p.includes("절약") || p.includes("사회초년생")) return "young Korean professional saving money, piggy bank coins wallet, budget planning desk, warm optimistic lighting, lifestyle photography, 8K";
-      if (p.includes("직장인") || p.includes("월급")) return "Korean office worker professional lifestyle, modern workplace, business casual, natural lighting, 8K";
-      if (p.includes("주식") || p.includes("재테크")) return "financial investment growth chart, money coins stacking, professional office, success concept, 8K";
-      if (p.includes("부동산")) return "modern apartment building exterior, real estate property, city skyline, professional photography, 8K";
-      return "Korean young professional financial planning, saving money concept, modern lifestyle, professional photography, 8K";
-    }
-
-    // 맛집/음식
-    if (/맛집|음식|카페|식당|요리|레스토랑|빵|디저트|커피|치킨|피자|라면|삼겹살|스테이크|초밥|파스타|떡볶이|브런치/.test(p)) {
-      if (p.includes("카페") || p.includes("커피")) return "cozy cafe interior, latte art coffee cup, warm ambient lighting, wooden table, soft bokeh, 8K";
-      if (p.includes("치킨")) return "crispy golden fried chicken, appetizing close-up, steam rising, restaurant setting, 8K";
-      if (p.includes("스테이크")) return "juicy medium rare steak, sizzling cast iron, fine dining plate, dramatic lighting, 8K";
-      if (p.includes("초밥")) return "fresh sushi platter, salmon tuna rolls, Japanese restaurant, elegant presentation, 8K";
-      if (p.includes("라면")) return "steaming ramen bowl, rich broth, noodles chashu pork, atmospheric restaurant, 8K";
-      if (p.includes("삼겹살")) return "Korean BBQ grilling pork belly, smoke charcoal, vegetables, table setting, 8K";
-      return "delicious Korean food photography, beautiful plating, restaurant setting, warm lighting, appetizing, 8K";
-    }
-
-    // 여행
-    if (/여행|관광|호텔|숙소|제주|부산|서울|해외|유럽|도쿄|방콕|발리|파리|뉴욕/.test(p)) {
-      if (p.includes("제주")) return "Jeju Island coastal scenery, Hallasan mountain, clear blue ocean, golden hour, travel photography, 8K";
-      if (p.includes("부산")) return "Busan Haeundae beach, colorful Gamcheon village, vibrant cityscape, travel photography, 8K";
-      if (p.includes("파리")) return "Paris Eiffel Tower, Seine River, golden sunset, romantic atmosphere, travel photography, 8K";
-      if (p.includes("도쿄")) return "Tokyo neon lights, Shibuya crossing, cherry blossoms, futuristic cityscape, 8K";
-      return "beautiful travel destination landscape, scenic view, golden hour lighting, professional travel photography, 8K";
-    }
-
-    // 건강/운동
-    if (/운동|헬스|다이어트|요가|필라테스|건강|피트니스|홈트|수영|달리기|체중/.test(p)) {
-      if (p.includes("요가")) return "yoga meditation pose, serene nature background, morning light, calm atmosphere, health lifestyle photography, 8K";
-      if (p.includes("헬스") || p.includes("피트니스")) return "modern gym workout, weightlifting, fitness motivation, athletic physique, bright lighting, 8K";
-      if (p.includes("다이어트")) return "healthy meal prep, colorful nutritious food, clean eating, fitness lifestyle, 8K";
-      return "healthy active lifestyle, fitness motivation, natural lighting, energetic atmosphere, professional photography, 8K";
-    }
-
-    // 뷰티/패션
-    if (/패션|뷰티|스킨케어|화장|메이크업|옷|코디|쇼핑|명품|가방|신발/.test(p)) {
-      if (p.includes("스킨케어")) return "luxury skincare products flatlay, clean beauty aesthetic, white marble background, soft lighting, 8K";
-      if (p.includes("패션")) return "fashion editorial shoot, stylish outfit, urban background, modern aesthetic, professional, 8K";
-      return "fashion lifestyle photography, stylish aesthetic, professional editorial, beautiful lighting, 8K";
-    }
-
-    // 육아/가족
-    if (/육아|아이|아기|임신|엄마|가족|유아|어린이|키즈|출산/.test(p)) {
-      return "happy family moments, children playing, warm home atmosphere, natural window light, joyful lifestyle photography, 8K";
-    }
-
-    // IT/테크/블로그
-    if (/IT|앱|AI|인공지능|테크|스마트폰|노트북|컴퓨터|블로그|코딩/.test(p)) {
-      return "modern technology workspace, sleek laptop setup, clean desk, blue ambient lighting, professional tech photography, 8K";
-    }
-
-    // 취업/학생
-    if (/취업|취준|면접|자소서|스펙|알바|인턴|대학생|수능|공부/.test(p)) {
-      return "Korean college student studying, job interview preparation, bright desk workspace, hopeful atmosphere, professional photography, 8K";
-    }
-
-    // 인테리어
-    if (/인테리어|거실|주방|홈|셀프|리모델링/.test(p)) {
-      return "modern interior design, cozy living room, minimalist aesthetic, natural light, beautiful home decor, architectural photography, 8K";
-    }
-
-    // 반려동물
-    if (/강아지|고양이|반려동물|펫|애완/.test(p)) {
-      if (p.includes("강아지")) return "adorable puppy dog portrait, golden retriever, happy expression, soft natural light, bokeh background, 8K";
-      if (p.includes("고양이")) return "cute cat portrait, fluffy kitten, curious eyes, soft lighting, cozy home atmosphere, 8K";
-      return "adorable pet animal portrait, natural lighting, cute expression, bokeh background, professional pet photography, 8K";
-    }
-
-    // KO_EN_MAP 매핑
+    // ── Step 2: KO_EN_MAP 매핑 ───────────────────────────
     for (const [ko, en] of Object.entries(KO_EN_MAP)) {
       if (p.includes(ko)) {
         return `${en}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
       }
     }
 
-    // ── Step 3: 범용 폴백 (한글 절대 Pollinations에 넘기지 않음) ──
-    const genericPairs: [string, string][] = [
-      ["정보", "informative lifestyle concept, clean modern aesthetic, professional blog photography"],
-      ["방법", "step by step guide concept, helpful tutorial visual, clean bright setting"],
-      ["추천", "top picks recommendation, curated selection, modern lifestyle concept"],
-      ["후기", "authentic review experience, real lifestyle testimonial, candid photography"],
-      ["가이드", "comprehensive guide tutorial concept, helpful information, clean visual"],
-      ["꿀팁", "life hack tips tricks, useful clever concept, bright modern aesthetic"],
-      ["비교", "comparison analysis concept, choice decision, clean professional layout"],
-      ["순위", "ranking top list concept, best choice winner, modern style"],
-      ["리뷰", "honest product review, detailed examination, clean photography"],
-      ["정리", "organized clean concept, neat arrangement, minimalist aesthetic"],
-      ["BEST", "best top selection, premium quality showcase, professional photography"],
-      ["완벽", "perfect achievement success concept, professional quality, bright lighting"],
-    ];
-    for (const [ko, en] of genericPairs) {
-      if (p.includes(ko)) return `${en}, 8K ultra realistic`;
-    }
+    // ── Step 3: 카테고리 폴백 ──────────────────────────────
+    if (/절약|저축|재테크|투자|사회초년생|직장인|월급|금융|경제/.test(p))
+      return "young Korean professional saving money, coins wallet desk, warm optimistic lighting, lifestyle photography, 8K";
+    if (/맛집|음식|카페|식당|요리|커피|치킨|스테이크|라면/.test(p))
+      return "delicious Korean food photography, beautiful plating, restaurant setting, warm lighting, 8K";
+    if (/여행|관광|제주|부산|호텔|해외/.test(p))
+      return "beautiful travel destination landscape, scenic view, golden hour lighting, professional photography, 8K";
+    if (/다이어트|운동|헬스|요가|건강|피트니스/.test(p))
+      return "healthy active lifestyle, fitness motivation, natural lighting, energetic atmosphere, 8K";
+    if (/패션|뷰티|스킨케어|메이크업|옷/.test(p))
+      return "fashion lifestyle photography, stylish aesthetic, professional editorial, beautiful lighting, 8K";
+    if (/육아|아이|아기|가족/.test(p))
+      return "happy family moments, children playing, warm home atmosphere, joyful lifestyle photography, 8K";
+    if (/IT|앱|AI|테크|컴퓨터|블로그/.test(p))
+      return "modern technology workspace, sleek laptop setup, clean desk, professional tech photography, 8K";
+    if (/취업|공부|학생|수능/.test(p))
+      return "Korean student studying, bright desk workspace, hopeful atmosphere, professional photography, 8K";
+    if (/강아지|고양이|반려동물/.test(p))
+      return "adorable pet animal portrait, natural lighting, cute expression, bokeh background, pet photography, 8K";
+    if (/인테리어|집|거실|홈/.test(p))
+      return "modern interior design, cozy living room, minimalist aesthetic, natural light, architectural photography, 8K";
 
-    return "modern Korean lifestyle blog photography, professional quality, natural lighting, vivid colors, 8K ultra realistic";
+    // 완전 최후 수단
+    return "modern Korean lifestyle blog photography, professional quality, natural lighting, vivid colors, 8K";
   };
 
 

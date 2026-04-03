@@ -312,6 +312,16 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
+  // ── 관리자 공개 설정 불러오기 (토큰 없이 접근 가능) ────
+  // 비로그인 유저도 admin이 설정한 API 키를 사용할 수 있도록
+  if (action === "loadAdminPublicSettings") {
+    const u = await getUser("admin");
+    if (!u || !u.settings) return res.json({ ok: true, settings: {} });
+    // 민감하지 않은 설정만 공개 (API 키는 공개, 비밀번호는 제외)
+    const publicSettings = { ...u.settings };
+    return res.json({ ok: true, settings: publicSettings });
+  }
+
   // ── 로그아웃 ──────────────────────────────────────────
   if (action === "logout") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
