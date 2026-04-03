@@ -67,25 +67,6 @@ export function userGet(key: string, fallback = ""): string {
   return fallback;
 }
 
-// ── admin 동기화 후 읽기 (키 없을 때 한 번 자동 sync) ───
-// DeploymentPage, KeywordResearch 등 중요 API 키 읽기에 사용
-export async function userGetWithSync(key: string, fallback = ""): Promise<string> {
-  const val = userGet(key, fallback);
-  if (val && val.trim()) return val;
-  // 없으면 admin 설정 sync 후 재시도
-  await syncAdminSettingsToLocal();
-  return userGet(key, fallback);
-}
-
-// ── 자기 네임스페이스만 읽기 (admin 폴백 없음) ─────────
-// SettingsPage 표시용: 자기가 직접 저장한 값만 보여줌
-export function userGetOwn(key: string, fallback = ""): string {
-  const uid = getCurrentUserId();
-  const value = localStorage.getItem(`u:${uid}:${key}`);
-  if (value !== null && value.trim() !== "") return value;
-  return fallback;
-}
-
 // ── 삭제 ─────────────────────────────────────────────
 export function userDel(key: string): void {
   const uid = getCurrentUserId();

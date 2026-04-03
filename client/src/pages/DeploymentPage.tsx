@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { userGet, userGetWithSync } from "@/lib/user-storage";
+import { userGet } from "@/lib/user-storage";
 
 // ─────────────────────────────────────────────────────────
 // 타입 정의
@@ -885,9 +885,9 @@ export default function DeploymentPage() {
 
   // ── WordPress 발행 ──
   async function publishToWordPress(scheduledAt: string | null) {
-    const wpUrl = await userGetWithSync("wp_url");
-    const wpUser = await userGetWithSync("wp_username");
-    const wpPass = await userGetWithSync("wp_app_password");
+    const wpUrl = userGet("wp_url");
+    const wpUser = userGet("wp_username");
+    const wpPass = userGet("wp_app_password");
     if (!wpUrl || !wpUser || !wpPass) throw new Error("WordPress 설정이 없습니다.");
     const postData: Record<string, unknown> = {
       title,
@@ -915,8 +915,8 @@ export default function DeploymentPage() {
   const [coupangLoading, setCoupangLoading] = React.useState(false);
 
   const fetchCoupangLinks = async () => {
-    const accessKey = await userGetWithSync("coupang_access_key");
-    const secretKey = await userGetWithSync("coupang_secret_key");
+    const accessKey = userGet("coupang_access_key");
+    const secretKey = userGet("coupang_secret_key");
     if (!accessKey || !secretKey) {
       toast.error("설정에서 쿠팡파트너스 API 키를 먼저 입력해주세요");
       return;
@@ -965,8 +965,8 @@ export default function DeploymentPage() {
 
   // ── 티스토리 발행 ──────────────────────────────────
   async function publishToTistory(scheduledAt: string | null) {
-    const accessToken = await userGetWithSync("tistory_access_token");
-    const blogName = await userGetWithSync("tistory_blog_name");
+    const accessToken = userGet("tistory_access_token");
+    const blogName = userGet("tistory_blog_name");
     if (!accessToken || !blogName) throw new Error("설정에서 티스토리 Access Token과 블로그를 먼저 등록해주세요");
 
     const htmlContent = blocks.map(b => {
@@ -1050,9 +1050,9 @@ export default function DeploymentPage() {
     } catch {}
 
     // 2. 기존 방식 fallback
-    if (!url) url = await userGetWithSync("webhook_url") || "";
-    if (!key) key = await userGetWithSync("webhook_auth_key") || "";
-    if (authHeader === "Authorization") authHeader = await userGetWithSync("webhook_auth_header") || "Authorization";
+    if (!url) url = userGet("webhook_url") || "";
+    if (!key) key = userGet("webhook_auth_key") || "";
+    if (authHeader === "Authorization") authHeader = userGet("webhook_auth_header") || "Authorization";
 
     if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트를 등록해주세요.");
     // CORS 우회: Vercel 서버를 프록시로 사용

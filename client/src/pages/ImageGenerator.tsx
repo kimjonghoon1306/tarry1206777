@@ -287,12 +287,7 @@ function GalleryCard({
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
     if (!img.src) { setStatus("error"); return; }
-    setStatus("loading");
-    // 60초 후에도 onLoad 안 불리면 재시도
-    const timer = setTimeout(() => {
-      setStatus(prev => { if (prev === "loading") { onRetry(); } return prev; });
-    }, 60000);
-    return () => clearTimeout(timer);
+    setStatus("loading"); // 새 src → img 태그가 onLoad 후 ok로 전환
   }, [img.src, img.loading]);
 
   if (viewMode === "list") {

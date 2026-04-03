@@ -40,12 +40,7 @@ const LANGUAGES = [
 function ApiKeyInput({ label, placeholder, storageKey, link }: {
   label: string; placeholder: string; storageKey: string; link: string;
 }) {
-  const [value, setValue] = useState(() => {
-    // 표시용: 자기 네임스페이스만 읽음 (admin 키가 일반설정에 보이는 버그 방지)
-    const uid = (() => { try { const u = JSON.parse(localStorage.getItem("ba_user")||"{}"); return u?.id||"guest"; } catch { return "guest"; } })();
-    const own = localStorage.getItem(`u:${uid}:${storageKey}`);
-    return (own && own.trim()) ? own : "";
-  });
+  const [value, setValue] = useState(() => userGet(storageKey));
   const [show, setShow] = useState(false);
   const [saved, setSaved] = useState(false);
 
