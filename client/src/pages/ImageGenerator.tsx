@@ -283,26 +283,14 @@ function GalleryCard({
   onRetry: () => void;
 }) {
   const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "loading" : "error");
-  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
     if (!img.src) { setStatus("error"); return; }
-    setStatus("loading"); // 새 src → img 태그가 onLoad 후 ok로 전환
-
-    // 60초 후에도 onLoad가 안 불리면 재시도 (최대 2회)
+    setStatus("loading");
+    // 60초 후에도 onLoad 안 불리면 재시도
     const timer = setTimeout(() => {
-      setStatus(prev => {
-        if (prev === "loading") {
-          if (retryCount < 2) {
-            setRetryCount(c => c + 1);
-            onRetry();
-          } else {
-            return "error";
-          }
-        }
-        return prev;
-      });
+      setStatus(prev => { if (prev === "loading") { onRetry(); } return prev; });
     }, 60000);
     return () => clearTimeout(timer);
   }, [img.src, img.loading]);
@@ -694,17 +682,20 @@ if (provider === "pollinations") {
     for (let i = 0; i < failed.length; i++) {
       const item = failed[i];
       const seed = Math.floor(Math.random() * 999999) + i * 1000 + Date.now();
-      const src = generatePollinationsUrl(
-        item._prompt!,
-        item._w || 1024,
-        item._h || 1024,
-        seed
-      );
-      // loading:false → img 태그의 onLoad/onError가 status 전환 담당
-      setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, _seed: seed } : g));
-      successCount++;
-      setProgress(Math.round(((i + 1) / failed.length) * 100));
-      toast.loading(`재시도 ${i + 1}/${failed.length} URL 발급됨`, { id: "imggen" });
+      try {
+        const src = await generatePollinationsUrl(
+          item._prompt!,
+          item._w || 1024,
+          item._h || 1024,
+          seed
+        );
+        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, _seed: seed } : g));
+        successCount++;
+        setProgress(Math.round(((i + 1) / failed.length) * 100));
+        toast.loading(`재시도 ${i + 1}/${failed.length} 완료`, { id: "imggen" });
+      } catch {
+        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, loading: false, src: "" } : g));
+      }
     }
 
     toast[successCount > 0 ? "success" : "error"](
@@ -717,16 +708,20 @@ if (provider === "pollinations") {
   };
 
   // ── 개별 이미지 재시도 ────────────────────────────
-  const handleRetrySingle = (id: number) => {
+  const handleRetrySingle = async (id: number) => {
     const item = gallery.find(g => g.id === id);
     if (!item || !item._prompt) return;
 
     setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "" } : g));
     const seed = Math.floor(Math.random() * 999999) + Date.now();
-    const src = generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
-    // loading:false → img 태그의 onLoad/onError가 status 전환 담당
-    setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, _seed: seed } : g));
-    toast.info("이미지 URL 재발급됨. 로딩 중...");
+    try {
+      const src = await generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, _seed: seed } : g));
+      toast.success("이미지 복구 완료!");
+    } catch {
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "" } : g));
+      toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   // ── 갤러리 초기화 ─────────────────────────────────

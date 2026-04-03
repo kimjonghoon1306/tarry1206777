@@ -130,17 +130,9 @@ export default async function handler(req, res) {
           const data = await resp.json();
           // 200 OK지만 candidates가 없거나 finishReason이 이상한 경우 다음 모델로
           const candidate = data.candidates?.[0];
-          if (!candidate) {
-            console.error(`[generate-titles] ${model} candidates 없음:`, JSON.stringify(data).slice(0, 500));
-            lastErr = `${model} 빈 응답 (candidates 없음)`;
-            continue;
-          }
+          if (!candidate) { lastErr = `${model} 빈 응답`; continue; }
           const finishReason = candidate.finishReason || "";
-          if (finishReason === "RECITATION" || finishReason === "SAFETY") {
-            console.error(`[generate-titles] ${model} 필터됨 finishReason=${finishReason}`);
-            lastErr = `${model} 필터`;
-            continue;
-          }
+          if (finishReason === "RECITATION" || finishReason === "SAFETY") { lastErr = `${model} 필터`; continue; }
           const text = candidate.content?.parts?.[0]?.text || "";
           if (!text) { lastErr = `${model} 빈 텍스트`; continue; }
           const titles = extractTitles(text);

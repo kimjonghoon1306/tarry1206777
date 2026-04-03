@@ -62,7 +62,6 @@ function Router() {
 }
 
 function App() {
-  // 앱 시작 시 1회만 admin 설정 동기화 → 관리자 키가 모든 유저에게 폴백 적용
   useEffect(() => {
     syncAdminSettingsToLocal();
   }, []);
