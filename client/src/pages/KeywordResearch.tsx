@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { getContentProvider, getAPIKey } from "@/lib/ai-config";
-import { userGet, SETTINGS_KEYS } from "@/lib/user-storage";
+import { userGet, SETTINGS_KEYS, syncAdminSettingsToLocal, userGetWithSync } from "@/lib/user-storage";
 
 // 대형 키워드 풀 - 다양한 카테고리
 const POOLS: Record<string, string[]> = {
@@ -68,8 +68,9 @@ function DataLabPanel() {
   const analyze = async () => {
     const kw = keyword.trim();
     if (!kw) { setError("키워드를 입력해주세요"); return; }
-    const clientId = userGet("naver_datalab_client_id");
-    const clientSecret = userGet("naver_datalab_client_secret");
+    // 키 없으면 admin sync 후 자동 재시도
+    const clientId = await userGetWithSync("naver_datalab_client_id");
+    const clientSecret = await userGetWithSync("naver_datalab_client_secret");
     if (!clientId || !clientSecret) {
       setError("설정 페이지에서 네이버 데이터랩 Client ID/Secret을 입력해주세요");
       return;
