@@ -115,9 +115,9 @@ ${categoryGuide}
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
     const GEMINI_MODELS = [
+      "gemini-2.5-flash",
       "gemini-2.0-flash",
-      "gemini-2.0-flash-lite",
-      "gemini-2.5-flash-preview-04-17",
+      "gemini-1.5-flash",
     ];
     const maxTok = Math.min(8192, Math.max(4000, Math.ceil(minChars * 2)));
     let lastErr = "";
@@ -140,6 +140,14 @@ ${categoryGuide}
           const status = resp.status;
           if (status === 401 || status === 403 || msg.includes("api key") || msg.includes("api_key")) {
             throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+          }
+          if (status === 404 || msg.includes("not found") || msg.includes("unsupported")) {
+            lastErr = `${model} 모델 없음(404)`;
+            continue;
+          }
+          if (status === 429 || msg.includes("quota") || msg.includes("resource_exhausted") || msg.includes("rate") || msg.includes("limit") || msg.includes("exhausted")) {
+            lastErr = `${model} 한도 초과(429)`;
+            continue;
           }
           lastErr = `${model} 오류(${status})`;
           continue;
@@ -283,9 +291,9 @@ export async function generateTitles(
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
     const GEMINI_MODELS = [
+      "gemini-2.5-flash",
       "gemini-2.0-flash",
-      "gemini-2.0-flash-lite",
-      "gemini-2.5-flash-preview-04-17",
+      "gemini-1.5-flash",
     ];
     let lastErr = "";
     for (const model of GEMINI_MODELS) {
@@ -307,6 +315,14 @@ export async function generateTitles(
           const status = resp.status;
           if (status === 401 || status === 403 || msg.includes("api key") || msg.includes("api_key")) {
             throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
+          }
+          if (status === 404 || msg.includes("not found") || msg.includes("unsupported")) {
+            lastErr = `${model} 모델 없음(404)`;
+            continue;
+          }
+          if (status === 429 || msg.includes("quota") || msg.includes("resource_exhausted") || msg.includes("rate") || msg.includes("limit") || msg.includes("exhausted")) {
+            lastErr = `${model} 한도 초과(429)`;
+            continue;
           }
           lastErr = `${model} 오류(${status})`;
           continue;
