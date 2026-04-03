@@ -27,8 +27,9 @@ export default async function handler(req, res) {
       });
 
       if (!resp.ok) {
-        const text = await resp.text().catch(() => "");
-        return res.status(resp.status).json({ error: `Pollinations 프록시 오류 (${resp.status}): ${text.slice(0, 120)}` });
+        // 바이너리 프록시가 막히면 브라우저가 직접 받아가도록 리다이렉트
+        res.setHeader("Cache-Control", "no-store, max-age=0");
+        return res.redirect(302, upstream);
       }
 
       const contentType = resp.headers.get("content-type") || "image/jpeg";
@@ -38,7 +39,9 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", "no-store, max-age=0");
       return res.status(200).send(Buffer.from(arrayBuffer));
     } catch (e) {
-      return res.status(500).json({ error: e.message || "Pollinations 프록시 실패" });
+      // 네트워크 이슈면 직접 upstream으로 넘겨서 마지막으로 시도
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+      return res.redirect(302, upstream);
     }
   }
 
