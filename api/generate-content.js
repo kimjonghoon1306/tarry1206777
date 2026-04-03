@@ -212,7 +212,9 @@ ${categoryGuide}
     if (provider === "gemini") {
       // 폴백 체인: 2.0-flash → 1.5-flash → 1.5-flash-8b (가장 한도 넉넉)
       const GEMINI_MODELS = [
+        "gemini-2.5-flash-preview-04-17",
         "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
       ];
@@ -347,7 +349,8 @@ ${categoryGuide}
         throw new Error(`Groq 오류: ${resp.status}`);
       }
       const data = await resp.json();
-      return res.json({ content: data.choices?.[0]?.message?.content || "" });
+      const groqText = data.choices?.[0]?.message?.content || "";
+      return res.json({ content: removeNonKorean(groqText) });
     }
 
     return res.status(400).json({ error: "지원하지 않는 AI입니다" });

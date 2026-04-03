@@ -54,11 +54,17 @@ export function userSet(key: string, value: string): void {
 }
 
 // ── 불러오기 ─────────────────────────────────────────
-// 오직 자기 네임스페이스만 읽음
+// 자기 네임스페이스 우선, 없으면 admin 키 자동 폴백
 export function userGet(key: string, fallback = ""): string {
   const uid = getCurrentUserId();
   const value = localStorage.getItem(`u:${uid}:${key}`);
-  return value !== null ? value : fallback;
+  if (value !== null && value.trim() !== "") return value;
+  // admin 네임스페이스 폴백 (관리자가 설정한 키 자동 적용)
+  if (uid !== "admin") {
+    const adminValue = localStorage.getItem(`u:admin:${key}`);
+    if (adminValue !== null && adminValue.trim() !== "") return adminValue;
+  }
+  return fallback;
 }
 
 // ── 삭제 ─────────────────────────────────────────────

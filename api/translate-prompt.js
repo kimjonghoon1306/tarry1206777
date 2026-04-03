@@ -39,7 +39,7 @@ Examples:
   try {
     // Gemini - 폴백 체인
     if (provider === "gemini") {
-      const MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+      const MODELS = ["gemini-2.5-flash-preview-04-17", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
       for (const model of MODELS) {
         const resp = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -55,9 +55,10 @@ Examples:
         );
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
+          const httpStatus = resp.status;
           const msg2 = (err.error?.message || "").toLowerCase();
-          if (status === 429 || status === 503 || msg2.includes("quota") || msg2.includes("exhausted") || msg2.includes("rate") || msg2.includes("limit") || msg2.includes("overloaded")) continue;
-          throw new Error(`Gemini 오류 (${status}): ${err.error?.message || ""}`);
+          if (httpStatus === 429 || httpStatus === 503 || msg2.includes("quota") || msg2.includes("exhausted") || msg2.includes("rate") || msg2.includes("limit") || msg2.includes("overloaded") || msg2.includes("capacity")) continue;
+          throw new Error(`Gemini 오류 (${httpStatus}): ${err.error?.message || ""}`);
         }
         const data = await resp.json();
         const text = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim()

@@ -175,33 +175,13 @@ function extractKeyword(prompt: string): string {
 }
 
 
-// ── 이미지 생성: Pollinations 우선, fallback은 키워드 기반 ──
-async function generatePollinationsUrl(
+// ── 이미지 생성: Pollinations URL 즉시 반환 (img 태그가 직접 로드) ──
+function generatePollinationsUrl(
   prompt: string, width: number, height: number, seed: number
-): Promise<string> {
+): string {
   const encoded = encodeURIComponent(prompt);
-  const ts = Date.now();
-
-  // 1차: Pollinations flux 모델 - 2번 시도
-  const seeds = [seed, seed + 7];
-  for (const s of seeds) {
-    const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${s}&model=flux&t=${ts + s}`;
-    const ok = await testImageUrl(url, 12000);
-    if (ok) return url;
-  }
-
-  // 2차: Pollinations turbo 모델
-  const altUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 99}&model=turbo&t=${ts + 99}`;
-  const altOk = await testImageUrl(altUrl, 12000);
-  if (altOk) return altUrl;
-
-  // 3차: Pollinations 기본 (모델 지정 없이)
-  const basicUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed + 200}&t=${ts + 200}`;
-  const basicOk = await testImageUrl(basicUrl, 15000);
-  if (basicOk) return basicUrl;
-
-  // 최후 수단: URL 그대로 반환 (브라우저가 직접 로드)
-  return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux`;
+  // t= 캐시버스터 제거 → 브라우저 캐시 활용
+  return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true`;
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
@@ -302,12 +282,12 @@ function GalleryCard({
   onLightbox: () => void;
   onRetry: () => void;
 }) {
-  const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "ok" : "error");
+  const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "loading" : "error");
 
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
     if (!img.src) { setStatus("error"); return; }
-    setStatus("ok"); // 새 src → 이미 검증된 URL이므로 바로 ok
+    setStatus("loading"); // 새 src → img 태그가 onLoad 후 ok로 전환
   }, [img.src, img.loading]);
 
   if (viewMode === "list") {
@@ -535,27 +515,16 @@ if (provider === "pollinations") {
         ));
       }
 
-      let successCount = 0;
-      for (let i = 0; i < numImages; i++) {
-        const pid = placeholderIds[i];
-        const seed = Math.floor(Math.random() * 999999) + i * 1000;
-        try {
-          const src = await generatePollinationsUrl(fullPrompt, w, h, seed);
-          setGallery(prev => prev.map(item =>
-            item.id === pid
-              ? { ...item, src, loading: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed }
-              : item
-          ));
-          successCount++;
-          setProgress(Math.round(((i + 1) / numImages) * 100));
-          toast.loading(`${i + 1}/${numImages}번째 완료 ✓`, { id: "imggen" });
-        } catch {
-          // src="" loading=false → 실패 상태
-          setGallery(prev => prev.map(item =>
-            item.id === pid ? { ...item, src: "", loading: false } : item
-          ));
-        }
-      }
+      // URL 즉시 생성 후 한번에 갤러리 업데이트 (img 태그가 직접 로드)
+      const successCount = numImages;
+      setGallery(prev => prev.map(item => {
+        const idx = placeholderIds.indexOf(item.id);
+        if (idx === -1) return item;
+        const seed = Math.floor(Math.random() * 999999) + idx * 1000;
+        const src = generatePollinationsUrl(fullPrompt, w, h, seed);
+        return { ...item, src, loading: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed };
+      }));
+      setProgress(100);
 
       const elapsed = (Date.now() - startTime) / 1000;
       setStats(prev => {
@@ -564,11 +533,7 @@ if (provider === "pollinations") {
         return u;
       });
 
-      if (successCount === 0) {
-        toast.error("모든 이미지 생성 실패. Pollinations 서버 상태를 확인해주세요.", { id: "imggen" });
-      } else {
-        toast.success(`✅ ${successCount}개 완성! ${numImages - successCount > 0 ? `(${numImages - successCount}개 실패)` : ""}`, { id: "imggen" });
-      }
+      toast.success(`✅ ${successCount}개 이미지 생성 시작! 잠시 기다려주세요.`, { id: "imggen" });
       return successCount;
     } else {
       // 다른 API provider
