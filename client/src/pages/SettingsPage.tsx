@@ -706,6 +706,10 @@ export default function SettingsPage() {
   const [naverBlogSaved, setNaverBlogSaved] = useState(false);
 
   // 데이터랩 키는 관리자 페이지 전용
+  // 설정 페이지가 죽지 않도록 상태는 유지하되, 기본값은 비워두고 저장도 막는다.
+  const [datalabId, setDatalabId] = useState("");
+  const [datalabSecret, setDatalabSecret] = useState("");
+  const [showDatalabSecret, setShowDatalabSecret] = useState(false);
   const [datalabSaved, setDatalabSaved] = useState(false);
 
   const [webhookUrl, setWebhookUrl] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_URL));
