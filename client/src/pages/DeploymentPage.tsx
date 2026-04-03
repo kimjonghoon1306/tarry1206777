@@ -1210,7 +1210,7 @@ export default function DeploymentPage() {
   return (
     <>
       <Layout>
-        <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-24 sm:pb-6">
+        <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-44 sm:pb-6">
 
           {/* 헤더 */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1247,7 +1247,7 @@ export default function DeploymentPage() {
                 <span className="hidden sm:inline">네이버 복사</span>
                 <span className="sm:hidden">N복사</span>
               </Button>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowPreview(true)}>
+              <Button size="sm" className="gap-1.5" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
                 <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">구독자 미리보기</span>
                 <span className="sm:hidden">미리보기</span>
@@ -1840,7 +1840,7 @@ export default function DeploymentPage() {
           </button>
         </div>
         <div className="flex gap-2 px-3 py-2">
-          <Button className="flex-1 gap-1.5 h-10" variant="outline" onClick={() => setShowPreview(true)}>
+          <Button className="flex-1 gap-1.5 h-10" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
             <Eye className="w-4 h-4" /> 미리보기
           </Button>
           <Button
@@ -2017,3 +2017,4 @@ export default function DeploymentPage() {
     </>
   );
 }
+//fix
