@@ -1,13 +1,56 @@
-// BlogAuto Pro - generate-titles v2.0
-// 한자/외국문자 강제 제거 + Gemini 폴백 체인 강화
+// BlogAuto Pro - generate-titles v3.0
 function cleanTitles(titles) {
-  return titles.map(t =>
-    t
-      .replace(/[一-鿿㐀-䶿]/g, "")      // 한자
-      .replace(/[぀-ゟ゠-ヿ]/g, "")      // 일본어
-      .replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s.,!?;:()\-'"'""\[\]%@#&+=/\\~`|<>{}^_$*]/g, "")
-      .trim()
-  ).filter(t => t.length > 3);
+  return titles
+    .map(t => String(t || "")
+      .replace(/[一-鿿㐀-䶿]/g, "")
+      .replace(/[぀-ゟ゠-ヿ]/g, "")
+      .replace(/[^가-힣a-zA-Z0-9\s.,!?;:()\-'"\[\]%@#&+=/\\~`|<>{}^_$]/g, "")
+      .replace(/\s{2,}/g, " ")
+      .trim())
+    .filter(t => t.length > 3);
+}
+
+function extractTitles(text) {
+  if (!text) return [];
+  const clean = String(text).replace(/```json|```/gi, "").trim();
+  try {
+    const match = clean.match(/\[[\s\S]*\]/);
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed)) return cleanTitles(parsed);
+    }
+  } catch {}
+  try {
+    const parsed = JSON.parse(clean);
+    if (Array.isArray(parsed)) return cleanTitles(parsed);
+  } catch {}
+  const lines = clean.split("\n")
+    .map(l => l.replace(/^[\d]+[\).\s]+|^[-*•\s]+/, "").replace(/^[\s"'「」『』]+|[\s"'「」『』]+$/g, "").trim())
+    .filter(l => l.length > 4 && l.length < 120 && !l.startsWith("{") && !l.startsWith("["));
+  if (lines.length) return cleanTitles(lines);
+  const quoted = [...clean.matchAll(/"([^"]{4,100})"/g)].map(m => m[1]);
+  return cleanTitles(quoted);
+}
+
+function fillToTen(keyword, titles) {
+  const uniq = Array.from(new Set(cleanTitles(titles)));
+  const templates = [
+    `2026년 ${keyword} BEST 7가지 정리`,
+    `${keyword} 처음이라면 이것부터`,
+    `${keyword} 솔직 후기와 핵심 정리`,
+    `${keyword} 제대로 고르는 방법`,
+    `${keyword} 잘 모르면 손해인 팁`,
+    `${keyword} 진짜 효과 있을까`,
+    `${keyword} 추천 이유 총정리`,
+    `${keyword} 비교 포인트 한눈에`,
+    `${keyword} 초보자 가이드`,
+    `${keyword} 실전 활용법 정리`,
+  ];
+  for (const t of templates) {
+    if (uniq.length >= 10) break;
+    if (!uniq.includes(t)) uniq.push(t);
+  }
+  return uniq.slice(0, 10);
 }
 
 export default async function handler(req, res) {
@@ -17,166 +60,62 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { provider, apiKey, keyword } = req.body;
+  const { provider, apiKey, keyword } = req.body || {};
   if (!provider || !apiKey || !keyword) {
     return res.status(400).json({ error: "필수 파라미터 누락 (provider, apiKey, keyword)" });
   }
 
-  const prompt = `당신은 대한민국 최고의 SEO 전문가이자 블로그 제목 작성 전문가입니다.
-"${keyword}" 키워드로 아래 조건을 모두 충족하는 블로그 제목 10개를 만들어주세요.
+  const prompt = `당신은 대한민국 최고의 SEO 블로그 제목 전문가입니다.
+키워드: "${keyword}"
 
-[핵심 목표]
-1. 경쟁이 낮은 롱테일 키워드 활용 (메인 키워드 + 수식어 조합)
-2. 클릭률(CTR) 극대화 - 독자가 누르지 않을 수 없는 제목
-3. 검색 의도 정확히 반영 (정보 탐색형/구매 의도형/비교형)
+반드시 제목 10개를 만들어야 합니다.
+반드시 JSON 배열 하나만 반환하세요.
+반드시 10개 모두 서로 다른 제목이어야 합니다.
+반드시 각 제목에 "${keyword}"를 자연스럽게 포함하세요.
+각 제목은 30자 안팎으로 짧고 클릭률 높게 만드세요.
 
-[제목 패턴 10가지 반드시 다양하게]
-1. 숫자+연도형: "2026년 ${keyword} BEST 7가지 완벽 정리"
-2. 경험 후기형: "직접 써봤더니 달라진 ${keyword} 진짜 솔직 후기"
-3. 문제 해결형: "${keyword} 때문에 고민이라면 이것만 보세요"
-4. 비교 분석형: "${keyword} vs 다른 것, 뭐가 진짜 나을까?"
-5. 충격/반전형: "아무도 알려주지 않는 ${keyword}의 숨겨진 진실"
-6. 초보자형: "${keyword} 처음이라면? 이것부터 시작하세요"
-7. 전문가형: "전문가가 추천하는 ${keyword} 제대로 활용하는 법"
-8. 실용 팁형: "${keyword} 잘 모르면 손해, 꼭 알아야 할 핵심 5가지"
-9. 감성/공감형: "저도 처음엔 몰랐던 ${keyword}, 이제는 자신 있어요"
-10. 질문형: "${keyword} 진짜 효과 있을까? 3개월 직접 해봤습니다"
-
-[필수 규칙]
-- 제목에 자연스럽게 키워드 포함
-- 30자 이내로 간결하게
-- 한글, 영어, 숫자만 사용 (한자, 중국어, 일본어 등 외국 문자 절대 금지)
-- 클릭베이트 금지 (실제 내용과 일치해야 함)
-- 반드시 JSON 배열로만 응답 (다른 텍스트 없이): ["제목1", "제목2", ...]
-- 절대 한자, 중국어, 일본어, 베트남어 등 외국 문자 사용 금지
-- 오직 한글, 영어, 숫자만 사용`;
-
-  function extractTitles(text) {
-    if (!text) return [];
-    try {
-      const clean = text.replace(/```json|```/gi, "").trim();
-      const match = clean.match(/\[[\s\S]*\]/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return cleanTitles(parsed.filter(t => typeof t === "string" && t.length > 3).slice(0, 10));
-        }
-      }
-      try {
-        const parsed = JSON.parse(clean);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return cleanTitles(parsed.filter(t => typeof t === "string" && t.length > 3).slice(0, 10));
-        }
-      } catch {}
-      const lines = clean.split("\n")
-        .map(l => l.replace(/^[\d]+[\).\s]+|^[-*•\s]+/, "").replace(/^[\s"'"「」『』]+|[\s"'"「」『』]+$/g, "").trim())
-        .filter(l => l.length > 5 && l.length < 120 && !l.startsWith("{") && !l.startsWith("["));
-      if (lines.length >= 2) return cleanTitles(lines.slice(0, 10));
-      const quoted = [...clean.matchAll(/"([^"]{5,100})"/g)].map(m => m[1]);
-      if (quoted.length >= 2) return cleanTitles(quoted.slice(0, 10));
-    } catch {}
-    return [];
-  }
-
-  function isQuotaError(status, msg) {
-    return (
-      status === 429 || status === 503 ||
-      msg.includes("quota") || msg.includes("rate") ||
-      msg.includes("exhausted") || msg.includes("resource_exhausted") ||
-      msg.includes("too many") || msg.includes("overloaded") ||
-      msg.includes("limit") || msg.includes("capacity") ||
-      msg.includes("unavailable") || msg.includes("exceeded") ||
-      msg.includes("not found") || msg.includes("deprecated")
-    );
-  }
+출력 예시:
+["제목1","제목2","제목3","제목4","제목5","제목6","제목7","제목8","제목9","제목10"]`;
 
   try {
-    // ── Gemini ──────────────────────────────────────────────
     if (provider === "gemini") {
-      const GEMINI_MODELS = [
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-2.0-flash-exp",
-        "gemini-exp-1206",
+      const models = [
         "gemini-2.5-flash",
         "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
       ];
-
-      let lastErr = null;
-      for (const model of GEMINI_MODELS) {
-        try {
-          const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { maxOutputTokens: 1000 },
-              }),
-            }
-          );
-          if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            const msg = (err.error?.message || "").toLowerCase();
-            const status = resp.status;
-            if (msg.includes("api key") || msg.includes("api_key") || status === 403) {
-              throw new Error("FATAL:Gemini API 키가 잘못되었거나 권한이 없습니다.");
-            }
-            if (isQuotaError(status, msg)) {
-              lastErr = `${model} 한도 초과`;
-              continue;
-            }
-            lastErr = `Gemini 오류 (${status})`;
-            continue;
+      let lastErr = "알 수 없는 오류";
+      for (const model of models) {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.9,
+              maxOutputTokens: 1200,
+              responseMimeType: "application/json",
+            },
+          }),
+        });
+        const payload = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          const msg = payload?.error?.message || "";
+          if (resp.status === 401 || resp.status === 403 || /api[_ ]?key|permission/i.test(msg)) {
+            throw new Error("Gemini API 키가 잘못되었거나 권한이 없습니다.");
           }
-          const data = await resp.json();
-          // 200 OK지만 candidates가 없거나 finishReason이 이상한 경우 다음 모델로
-          const candidate = data.candidates?.[0];
-          if (!candidate) { lastErr = `${model} 빈 응답`; continue; }
-          const finishReason = candidate.finishReason || "";
-          if (finishReason === "RECITATION" || finishReason === "SAFETY") { lastErr = `${model} 필터`; continue; }
-          const text = candidate.content?.parts?.[0]?.text || "";
-          if (!text) { lastErr = `${model} 빈 텍스트`; continue; }
-          const titles = extractTitles(text);
-          if (titles.length > 0) return res.json({ titles });
-          const fallback = text.split("\n")
-            .map(l => l.replace(/^[\d\s\-\*\.\)]+/, "").replace(/^["\']/,"").replace(/["\'\s]+$/,"").trim())
-            .filter(l => l.length > 5 && l.length < 120);
-          if (fallback.length > 0) return res.json({ titles: cleanTitles(fallback.slice(0, 10)) });
-          lastErr = `${model} 파싱 실패`;
-          continue;
-        } catch (e) {
-          if (e.message?.startsWith("FATAL:")) throw new Error(e.message.replace("FATAL:", ""));
-          lastErr = e.message;
+          lastErr = `${model} 오류(${resp.status})`;
           continue;
         }
+        const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const titles = fillToTen(keyword, extractTitles(text));
+        if (titles.length >= 10) return res.json({ titles });
+        lastErr = `${model} 응답 파싱 실패`;
       }
-      throw new Error(`Gemini 제목 생성 실패: ${lastErr}. 잠시 후 다시 시도하거나, 설정에서 Groq(무료·빠름)으로 전환해보세요.`);
+      throw new Error(`Gemini 제목 생성 실패: ${lastErr}`);
     }
 
-    // ── OpenAI ──────────────────────────────────────────────
-    if (provider === "openai") {
-      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 1000,
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(`OpenAI 오류 (${resp.status}): ${err.error?.message || ""}`);
-      }
-      const data = await resp.json();
-      const titles = extractTitles(data.choices?.[0]?.message?.content || "[]");
-      if (titles.length === 0) throw new Error("OpenAI 제목 생성 실패.");
-      return res.json({ titles });
-    }
-
-    // ── Groq ────────────────────────────────────────────────
     if (provider === "groq") {
       const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -184,21 +123,31 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
           messages: [{ role: "user", content: prompt }],
-          max_tokens: 1000,
-          temperature: 0.8,
+          temperature: 0.9,
+          max_tokens: 1200,
         }),
       });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(`Groq 오류 (${resp.status}): ${err.error?.message || ""}`);
-      }
-      const data = await resp.json();
-      const titles = extractTitles(data.choices?.[0]?.message?.content || "[]");
-      if (titles.length === 0) throw new Error("Groq 제목 생성 실패.");
-      return res.json({ titles });
+      const payload = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(`Groq 오류 (${resp.status}): ${payload?.error?.message || ""}`);
+      return res.json({ titles: fillToTen(keyword, extractTitles(payload?.choices?.[0]?.message?.content || "")) });
     }
 
-    // ── Claude ──────────────────────────────────────────────
+    if (provider === "openai") {
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.9,
+          max_tokens: 1200,
+        }),
+      });
+      const payload = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(`OpenAI 오류 (${resp.status}): ${payload?.error?.message || ""}`);
+      return res.json({ titles: fillToTen(keyword, extractTitles(payload?.choices?.[0]?.message?.content || "")) });
+    }
+
     if (provider === "claude") {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -209,24 +158,18 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
-          max_tokens: 1000,
+          max_tokens: 1200,
           messages: [{ role: "user", content: prompt }],
         }),
       });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(`Claude 오류 (${resp.status}): ${err.error?.message || ""}`);
-      }
-      const data = await resp.json();
-      const titles = extractTitles(data.content?.[0]?.text || "[]");
-      if (titles.length === 0) throw new Error("Claude 제목 생성 실패.");
-      return res.json({ titles });
+      const payload = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(`Claude 오류 (${resp.status}): ${payload?.error?.message || ""}`);
+      return res.json({ titles: fillToTen(keyword, extractTitles(payload?.content?.[0]?.text || "")) });
     }
 
     return res.status(400).json({ error: "지원하지 않는 AI입니다" });
-
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
 }
-// fix
+//fix
