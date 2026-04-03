@@ -813,16 +813,9 @@ export default function SettingsPage() {
   const [showImport, setShowImport] = useState(false);
 
   const handleExportSettings = () => {
-    const keys = [
-      "naver_access_license", "naver_secret_key", "naver_customer_id",
-      "gemini_api_key", "claude_api_key", "openai_api_key", "flux_api_key",
-      "wp_url", "wp_username", "wp_app_password",
-      "naver_blog_id", "naver_blog_access_token",
-      "webhook_url", "webhook_auth_key",
-      "content_ai_provider", "image_ai_provider", "content_language",
-    ];
+    const keys = Object.values(SETTINGS_KEYS);
     const data: Record<string, string> = {};
-    keys.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = v; });
+    keys.forEach(k => { const v = userGet(k); if (v) data[k] = v; });
     const code = btoa(JSON.stringify(data));
     setSyncCode(code);
     navigator.clipboard.writeText(code).then(() => toast.success("설정 코드가 클립보드에 복사됐어요!"));
@@ -831,7 +824,7 @@ export default function SettingsPage() {
   const handleImportSettings = () => {
     try {
       const data = JSON.parse(atob(importCode.trim()));
-      Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v as string));
+      Object.entries(data).forEach(([k, v]) => userSet(k, v as string));
       toast.success("설정이 가져와졌어요! 페이지를 새로고침해주세요.");
       setShowImport(false);
       setImportCode("");

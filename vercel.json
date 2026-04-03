@@ -5,6 +5,9 @@
   "functions": {
     "api/generate-content.js": { "maxDuration": 60 },
     "api/generate-titles.js": { "maxDuration": 30 },
+    "api/generate-image.js": { "maxDuration": 30 },
+    "api/naver-keywords.js": { "maxDuration": 15 },
+    "api/naver-datalab.js": { "maxDuration": 30 },
     "api/webhook-proxy.js": { "maxDuration": 30 },
     "api/auth.js": { "maxDuration": 10 },
     "api/tistory.js": { "maxDuration": 15 },
