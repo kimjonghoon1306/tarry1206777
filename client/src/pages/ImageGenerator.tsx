@@ -28,4 +28,19 @@ import { useLocation } from "wouter";
 async function testImageUrl(url: string, timeoutMs = 12000): Promise<boolean> {
   return new Promise((resolve) => {
     const img = new window.Image();
-    const done = (ok: boolean) => { clearTimeout(timer); img.onload = null; img.onerror = null; img.src = ""; resolve(오케이)
+
+    const done = (ok: boolean) => {
+      clearTimeout(timer);
+      img.onload = null;
+      img.onerror = null;
+      img.src = "";
+      resolve(ok);
+    };
+
+    const timer = window.setTimeout(() => done(false), timeoutMs);
+
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
+    img.src = url;
+  });
+}
