@@ -506,7 +506,7 @@ export default function Dashboard() {
             </div>
           </div>
           <Button size="sm" className="gap-1.5"
-            style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
+            style={{ background: "oklch(0.72 0.18 350)", color: "white" }}
             onClick={() => {
               if (!previewContent?.content && previewBlocks.length === 0) {
                 toast.info("먼저 콘텐츠를 생성해주세요!");
@@ -752,3 +752,4 @@ export default function Dashboard() {
     </Layout>
   );
 }
+//fix
