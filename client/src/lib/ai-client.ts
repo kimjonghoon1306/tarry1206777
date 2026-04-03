@@ -115,9 +115,10 @@ ${categoryGuide}
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
     const GEMINI_MODELS = [
-      "gemini-2.5-flash",
       "gemini-2.0-flash",
-      "gemini-1.5-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
     ];
     const maxTok = Math.min(8192, Math.max(4000, Math.ceil(minChars * 2)));
     let lastErr = "";
@@ -140,14 +141,6 @@ ${categoryGuide}
           const status = resp.status;
           if (status === 401 || status === 403 || msg.includes("api key") || msg.includes("api_key")) {
             throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
-          }
-          if (status === 404 || msg.includes("not found") || msg.includes("unsupported")) {
-            lastErr = `${model} 모델 없음(404)`;
-            continue;
-          }
-          if (status === 429 || msg.includes("quota") || msg.includes("resource_exhausted") || msg.includes("rate") || msg.includes("limit") || msg.includes("exhausted")) {
-            lastErr = `${model} 한도 초과(429)`;
-            continue;
           }
           lastErr = `${model} 오류(${status})`;
           continue;
@@ -291,9 +284,10 @@ export async function generateTitles(
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
     const GEMINI_MODELS = [
-      "gemini-2.5-flash",
       "gemini-2.0-flash",
-      "gemini-1.5-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
     ];
     let lastErr = "";
     for (const model of GEMINI_MODELS) {
@@ -315,14 +309,6 @@ export async function generateTitles(
           const status = resp.status;
           if (status === 401 || status === 403 || msg.includes("api key") || msg.includes("api_key")) {
             throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
-          }
-          if (status === 404 || msg.includes("not found") || msg.includes("unsupported")) {
-            lastErr = `${model} 모델 없음(404)`;
-            continue;
-          }
-          if (status === 429 || msg.includes("quota") || msg.includes("resource_exhausted") || msg.includes("rate") || msg.includes("limit") || msg.includes("exhausted")) {
-            lastErr = `${model} 한도 초과(429)`;
-            continue;
           }
           lastErr = `${model} 오류(${status})`;
           continue;
@@ -441,34 +427,30 @@ export async function fetchPollinationsImage(
   seed: number
 ): Promise<string> {
   const ts = Date.now();
-  // 품질 극대화 프롬프트 적용
   const enhancedPrompt = enhanceImagePrompt(prompt);
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true&cache=false&t=${ts}`;
 
-  // img 태그를 DOM 외부에서 생성해 실제 로드 확인
-  return new Promise((resolve, reject) => {
+  const proxyUrl = `/api/generate-image?mode=proxy&prompt=${encodeURIComponent(enhancedPrompt)}&width=${width}&height=${height}&seed=${seed}&t=${ts}`;
+
+  return new Promise((resolve) => {
     const img = new Image();
-    // crossOrigin 설정 안 함 → 브라우저 일반 이미지 로딩 방식 사용 (CORS 우회)
-    
-    const timeout = setTimeout(() => {
+    const done = (url: string) => {
+      clearTimeout(timeout);
       img.onload = null;
       img.onerror = null;
-      // 타임아웃시에도 URL 반환 (이미지가 늦게 뜰 수 있음)
-      resolve(url);
-    }, 60000); // 60초 대기
-
-    img.onload = () => {
-      clearTimeout(timeout);
       resolve(url);
     };
 
+    const timeout = setTimeout(() => {
+      done(proxyUrl);
+    }, 20000);
+
+    img.onload = () => done(proxyUrl);
     img.onerror = () => {
-      clearTimeout(timeout);
-      // 에러 시 재시도용 다른 seed로 URL 반환
-      const retryUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&seed=${seed + 1}&model=flux&cache=false&t=${ts + 1}`;
-      resolve(retryUrl);
+      const retryProxyUrl = `/api/generate-image?mode=proxy&prompt=${encodeURIComponent(prompt)}&width=${width}&height=${height}&seed=${seed + 1}&t=${ts + 1}`;
+      done(retryProxyUrl);
     };
 
-    img.src = url;
+    img.src = proxyUrl;
   });
 }
+//fix
