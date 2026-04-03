@@ -204,7 +204,7 @@ function ApiKeyManager() {
 
     await saveSettingsToServer(toSave);
     setSaving(false);
-    toast.success("✅ 저장 완료! 다른 페이지에서 바로 적용돼요.");
+    toast.success("✅ 관리자 페이지에 저장 완료!");
   };
 
   return (
@@ -215,7 +215,7 @@ function ApiKeyManager() {
         <div>
           <p className="text-sm font-semibold text-foreground">관리자 API 키 관리</p>
           <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-            관리자 계정(admin)의 API 키를 저장합니다. 회원은 설정 페이지에서 각자 키를 입력해요.
+            관리자 계정(admin)의 API 키를 저장합니다. 네이버 데이터랩 키는 관리자 페이지에서만 저장되고, 일반 설정에는 표시되지 않아요.
           </p>
         </div>
       </div>
