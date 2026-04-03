@@ -51,6 +51,8 @@ export function isAdminUser(): boolean {
 export function userSet(key: string, value: string): void {
   const uid = getCurrentUserId();
   localStorage.setItem(`u:${uid}:${key}`, value);
+  // 구버전 코드와의 호환용 레거시 키도 함께 저장
+  localStorage.setItem(key, value);
 }
 
 // ── 불러오기 ─────────────────────────────────────────
@@ -64,6 +66,9 @@ export function userGet(key: string, fallback = ""): string {
     const adminValue = localStorage.getItem(`u:admin:${key}`);
     if (adminValue !== null && adminValue.trim() !== "") return adminValue;
   }
+  // 구버전 로컬스토리지 키 폴백
+  const legacyValue = localStorage.getItem(key);
+  if (legacyValue !== null && legacyValue.trim() !== "") return legacyValue;
   return fallback;
 }
 
