@@ -288,9 +288,10 @@ function GalleryCard({
 
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
-    if (!img.src) { setStatus("error"); onLoadFail(); return; }
+    if (img.loadError) { setStatus("error"); return; }
+    if (!img.src) { setStatus("error"); return; }
     setStatus("loading"); // 새 src → img 태그가 onLoad 후 ok로 전환
-  }, [img.src, img.loading]);
+  }, [img.src, img.loading, img.loadError]);
 
   if (viewMode === "list") {
     return (
@@ -324,10 +325,11 @@ function GalleryCard({
                 target.dataset.retries = String(retries + 1);
                 setTimeout(() => {
                   const seed = Math.floor(Math.random() * 999999);
-                  target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
-                }, 3000 * (retries + 1));
+                  target.src = generatePollinationsUrl(img._prompt || "", img._w || 1024, img._h || 1024, seed);
+                }, 1800 * (retries + 1));
               } else {
-                setStatus("error"); onLoadFail();
+                setStatus("error");
+                onLoadFail();
               }
             }}
           />
@@ -363,7 +365,7 @@ function GalleryCard({
           <span className="text-xs font-semibold" style={{ color: "oklch(0.65 0.22 25)" }}>로드 실패</span>
           <button
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:opacity-80"
-            style={{ background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)", color: "white", boxShadow: "0 6px 18px rgba(236,72,153,.28)" }}
+            style={{ background: "var(--color-emerald)", color: "white" }}
             onClick={onRetry}
           >
             <RotateCcw className="w-3 h-3" /> 재시도
@@ -386,7 +388,7 @@ function GalleryCard({
               target.dataset.retries = String(retries + 1);
               setTimeout(() => {
                 const seed = Math.floor(Math.random() * 999999);
-                target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(img._prompt || "")}?width=${img._w || 1024}&height=${img._h || 1024}&nologo=true&seed=${seed}&model=flux&enhance=true`;
+                target.src = generatePollinationsUrl(img._prompt || "", img._w || 1024, img._h || 1024, seed);
               }, 3000 * (retries + 1));
             } else {
               setStatus("error");
@@ -744,7 +746,7 @@ if (provider === "pollinations") {
       const item = failed[i];
       const seed = Math.floor(Math.random() * 999999) + i * 1000 + Date.now();
       try {
-        const src = generatePollinationsUrl(
+        const src = await generatePollinationsUrl(
           item._prompt!,
           item._w || 1024,
           item._h || 1024,
@@ -776,11 +778,11 @@ if (provider === "pollinations") {
     setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "", _loaded: false, loadError: false } : g));
     const seed = Math.floor(Math.random() * 999999) + Date.now();
     try {
-      const src = generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, _seed: seed } : g));
+      const src = await generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, _seed: seed, _loaded: false, loadError: false } : g));
       toast.success("이미지 복구 완료!");
     } catch {
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "" } : g));
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "", _loaded: false, loadError: true } : g));
       toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
     }
   };
@@ -806,11 +808,11 @@ if (provider === "pollinations") {
     const final = images.slice(0, MAX_DEPLOY);
     try {
       localStorage.setItem("blogauto_deploy_images", JSON.stringify(
-        final.map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
+        final.map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false, _loaded: false, loadError: false }))
       ));
     } catch {
       localStorage.setItem("blogauto_deploy_images", JSON.stringify(
-        final.filter(i => !i.src.startsWith("data:")).map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
+        final.filter(i => !i.src.startsWith("data:")).map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false, _loaded: false, loadError: false }))
       ));
     }
     toast.success(`이미지 ${final.length}개 배포 페이지로 이동합니다!`);
@@ -853,7 +855,7 @@ if (provider === "pollinations") {
           </div>
           {loadedCount > 0 && (
             <Button className="gap-2 px-5 h-10 font-semibold"
-              style={{ background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)", color: "white", boxShadow: "0 6px 18px rgba(236,72,153,.28)" }}
+              style={{ background: "var(--color-emerald)", color: "white" }}
               onClick={goToDeployWithImages}>
               <Sparkles className="w-4 h-4" />
               {selectedImages.length > 0 ? `선택 ${selectedImages.length}개로` : `전체 ${loadedCount}개로`} 배포 진행
@@ -1030,7 +1032,7 @@ if (provider === "pollinations") {
                 </div>
                 <button
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
-                  style={{ background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)", color: "white", boxShadow: "0 6px 18px rgba(236,72,153,.28)" }}
+                  style={{ background: "var(--color-emerald)", color: "white" }}
                   onClick={handleRetryAll}>
                   <RotateCcw className="w-3.5 h-3.5" /> 전체 재시도
                 </button>
@@ -1168,7 +1170,7 @@ if (provider === "pollinations") {
                           </span>
                           <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{img.size}</span>
                           {img.loading && <span className="text-xs" style={{ color: "var(--color-amber-brand)" }}>생성 중...</span>}
-                          {!img.loading && (img.loadError || !img.src) && (
+                          {!img.loading && !img.src && (
                             <span className="text-xs" style={{ color: "oklch(0.65 0.22 25)" }}>로드 실패</span>
                           )}
                         </div>
@@ -1197,7 +1199,7 @@ if (provider === "pollinations") {
                           </Button>
                         </div>
                       )}
-                      {!img.loading && (img.loadError || !img.src) && (
+                      {!img.loading && !img.src && (
                         <button
                           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
                           style={{ background: "oklch(0.769 0.188 70.08/15%)", color: "var(--color-amber-brand)", border: "1px solid oklch(0.769 0.188 70.08/30%)" }}
@@ -1213,7 +1215,7 @@ if (provider === "pollinations") {
 
             {loadedCount > 0 && (
               <Button className="w-full h-12 gap-2 text-base font-semibold"
-                style={{ background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)", color: "white", boxShadow: "0 6px 18px rgba(236,72,153,.28)" }}
+                style={{ background: "var(--color-emerald)", color: "white" }}
                 onClick={goToDeployWithImages}>
                 <Sparkles className="w-5 h-5" />
                 {selectedImages.length > 0
@@ -1319,7 +1321,7 @@ if (provider === "pollinations") {
               <div className="flex items-center gap-2">
                 {selectedImages.length > 0 && selectedImages.length <= 15 && (
                   <Button className="gap-1.5 h-9"
-                    style={{ background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)", color: "white", boxShadow: "0 6px 18px rgba(236,72,153,.28)" }}
+                    style={{ background: "var(--color-emerald)", color: "white" }}
                     onClick={() => {
                       const toSend = successGallery.filter(g => selectedImages.includes(g.id));
                       setShowDeployModal(false);
