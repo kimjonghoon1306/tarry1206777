@@ -15,8 +15,11 @@ export default async function handler(req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch {} }
 
   const { clientId, clientSecret, keyword, startDate, endDate, timeUnit = "month" } = body || {};
+  const safeClientId = String(clientId || "").trim();
+  const safeClientSecret = String(clientSecret || "").trim();
+  const safeKeyword = String(keyword || "").trim();
 
-  if (!clientId || !clientSecret || !keyword) {
+  if (!safeClientId || !safeClientSecret || !safeKeyword) {
     return res.status(400).json({ error: "clientId, clientSecret, keyword 필요" });
   }
 
@@ -27,11 +30,11 @@ export default async function handler(req, res) {
     return d.toISOString().slice(0, 10);
   })();
 
-  const keywordGroups = [{ groupName: keyword, keywords: [keyword] }];
+  const keywordGroups = [{ groupName: safeKeyword, keywords: [safeKeyword] }];
   const headers = {
     "Content-Type": "application/json",
-    "X-Naver-Client-Id": clientId,
-    "X-Naver-Client-Secret": clientSecret,
+    "X-Naver-Client-Id": safeClientId,
+    "X-Naver-Client-Secret": safeClientSecret,
   };
 
   // 네이버 API rate limit 우회: 요청 사이 딜레이
@@ -99,7 +102,7 @@ export default async function handler(req, res) {
 
     return res.json({
       ok: true,
-      keyword,
+      keyword: safeKeyword,
       period: { start, end },
       trend: overall,
       device: {
@@ -124,3 +127,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
 }
+//fix
