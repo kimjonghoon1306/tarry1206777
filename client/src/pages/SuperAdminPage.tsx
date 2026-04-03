@@ -21,7 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { userGet, userSet, saveSettingsToServer } from "@/lib/user-storage";
+import { userGet, userSet, saveSettingsToServer, SETTINGS_KEYS } from "@/lib/user-storage";
+import { CONTENT_AI_OPTIONS, IMAGE_AI_OPTIONS, type ContentAIProvider, type ImageAIProvider } from "@/lib/ai-config";
 
 const SESSION_KEY = "bap_admin_auth";
 const OG_KEY = "blogauto_og_settings";
@@ -145,6 +146,27 @@ const API_SECTIONS = [
 // API 키 관리 컴포넌트
 // ─────────────────────────────────────────────────────
 function ApiKeyManager() {
+  // AI 선택 상태
+  const [contentAI, setContentAI] = useState<ContentAIProvider>(
+    () => (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
+  );
+  const [imageAI, setImageAI] = useState<ImageAIProvider>(
+    () => (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations"
+  );
+
+  const handleSelectContentAI = (v: ContentAIProvider) => {
+    setContentAI(v);
+    userSet(SETTINGS_KEYS.CONTENT_AI, v);
+    saveSettingsToServer({ [SETTINGS_KEYS.CONTENT_AI]: v });
+    toast.success(`글 생성 AI: ${CONTENT_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
+  };
+  const handleSelectImageAI = (v: ImageAIProvider) => {
+    setImageAI(v);
+    userSet(SETTINGS_KEYS.IMAGE_AI, v);
+    saveSettingsToServer({ [SETTINGS_KEYS.IMAGE_AI]: v });
+    toast.success(`이미지 AI: ${IMAGE_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
+  };
+
   // 모든 키 초기값 로드
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
@@ -160,7 +182,14 @@ function ApiKeyManager() {
   const handleSaveAll = async () => {
     setSaving(true);
     const toSave: Record<string, string> = {};
-    // 중복 키 처리 (openai_api_key가 여러 섹션에 있음)
+
+    // AI 선택값도 함께 저장
+    userSet(SETTINGS_KEYS.CONTENT_AI, contentAI);
+    userSet(SETTINGS_KEYS.IMAGE_AI, imageAI);
+    toSave[SETTINGS_KEYS.CONTENT_AI] = contentAI;
+    toSave[SETTINGS_KEYS.IMAGE_AI] = imageAI;
+
+    // API 키 저장 (중복 키 처리)
     const seen = new Set<string>();
     API_SECTIONS.forEach(s => s.fields.forEach(f => {
       if (!seen.has(f.key)) {
@@ -172,9 +201,10 @@ function ApiKeyManager() {
         }
       }
     }));
+
     await saveSettingsToServer(toSave);
     setSaving(false);
-    toast.success("✅ 관리자 API 키가 저장되었습니다.");
+    toast.success("✅ 저장 완료! 다른 페이지에서 바로 적용돼요.");
   };
 
   return (
@@ -187,6 +217,97 @@ function ApiKeyManager() {
           <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
             관리자 계정(admin)의 API 키를 저장합니다. 회원은 설정 페이지에서 각자 키를 입력해요.
           </p>
+        </div>
+      </div>
+
+      {/* ── 글 생성 AI 선택 ── */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
+          <Bot className="w-4 h-4" style={{ color: "#10b981" }} />
+          <span className="font-semibold text-sm text-foreground">글 생성 AI 선택</span>
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{ background: "#10b98120", color: "#10b981" }}>
+            현재: {CONTENT_AI_OPTIONS.find(o => o.value === contentAI)?.label}
+          </span>
+        </div>
+        <div className="p-3 grid grid-cols-2 gap-2">
+          {CONTENT_AI_OPTIONS.map(opt => {
+            const active = contentAI === opt.value;
+            const hasKey = !!values[opt.keyStorageKey]?.trim();
+            return (
+              <button key={opt.value}
+                className="rounded-xl p-3 text-left transition-all active:scale-95 relative"
+                style={{
+                  background: active ? `${opt.logoColor}15` : "var(--background)",
+                  border: `2px solid ${active ? opt.logoColor + "80" : "var(--border)"}`,
+                }}
+                onClick={() => handleSelectContentAI(opt.value)}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+                    style={{ background: opt.logoColor }}>{opt.logo}</div>
+                  <div className="flex items-center gap-1">
+                    {active && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: opt.logoColor }} />}
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ background: opt.badge === "무료" ? "#10b98118" : "#f59e0b18", color: opt.badge === "무료" ? "#10b981" : "#f59e0b" }}>
+                      {opt.badge}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-xs font-semibold text-foreground">{opt.label}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</div>
+                {/* 키 입력 여부 표시 */}
+                <div className="mt-1.5 text-xs flex items-center gap-1"
+                  style={{ color: hasKey ? "#10b981" : "#f59e0b" }}>
+                  {hasKey ? <><CheckCircle2 className="w-3 h-3" />키 있음</> : "⚠ 키 없음"}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── 이미지 생성 AI 선택 ── */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
+          <Image className="w-4 h-4" style={{ color: "#a78bfa" }} />
+          <span className="font-semibold text-sm text-foreground">이미지 생성 AI 선택</span>
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{ background: "#a78bfa20", color: "#a78bfa" }}>
+            현재: {IMAGE_AI_OPTIONS.find(o => o.value === imageAI)?.label}
+          </span>
+        </div>
+        <div className="p-3 grid grid-cols-2 gap-2">
+          {IMAGE_AI_OPTIONS.map((opt: any) => {
+            const active = imageAI === opt.value;
+            const hasKey = !opt.keyStorageKey || !!values[opt.keyStorageKey]?.trim();
+            return (
+              <button key={opt.value}
+                className="rounded-xl p-3 text-left transition-all active:scale-95"
+                style={{
+                  background: active ? `${opt.logoColor}15` : "var(--background)",
+                  border: `2px solid ${active ? opt.logoColor + "80" : "var(--border)"}`,
+                }}
+                onClick={() => handleSelectImageAI(opt.value)}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+                    style={{ background: opt.logoColor }}>{opt.logo}</div>
+                  <div className="flex items-center gap-1">
+                    {active && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: opt.logoColor }} />}
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ background: "#10b98118", color: "#10b981" }}>
+                      {opt.badge}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-xs font-semibold text-foreground">{opt.label}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</div>
+                <div className="mt-1.5 text-xs flex items-center gap-1"
+                  style={{ color: hasKey ? "#10b981" : "#f59e0b" }}>
+                  {hasKey ? <><CheckCircle2 className="w-3 h-3" />사용 가능</> : "⚠ 키 없음"}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
