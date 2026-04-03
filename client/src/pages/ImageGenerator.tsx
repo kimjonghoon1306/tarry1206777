@@ -696,16 +696,21 @@ if (provider === "pollinations") {
     setProgress(0);
     const numImages = parseInt(count) || 1;
 
-    // 한국어 자동 번역
-    const translatedPrompt = await autoTranslatePrompt(prompt.trim());
-    const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
-    const fullPrompt = `${translatedPrompt}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
-    const [w, h] = (size || "1024x1024").split("x").map(Number);
-    const styleLabel = STYLES.find(s => s.value === style)?.label || style;
+    try {
+      // 한국어 자동 번역 실패 시에도 원문 기반 폴백으로 계속 진행
+      const translatedPrompt = await autoTranslatePrompt(prompt.trim()).catch(() => `${prompt.trim()}, professional photography, 8K ultra realistic`);
+      const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
+      const fullPrompt = `${translatedPrompt}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
+      const [w, h] = (size || "1024x1024").split("x").map(Number);
+      const styleLabel = STYLES.find(s => s.value === style)?.label || style;
 
-    toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
-    await generateImages(numImages, fullPrompt, w || 1024, h || 1024, styleLabel, size);
-    setIsGenerating(false);
+      toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
+      await generateImages(numImages, fullPrompt, w || 1024, h || 1024, styleLabel, size);
+    } catch (e: any) {
+      toast.error(`생성 실패: ${e?.message || "알 수 없는 오류"}`, { id: "imggen" });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // ── 실패 항목 전체 재시도 ─────────────────────────
