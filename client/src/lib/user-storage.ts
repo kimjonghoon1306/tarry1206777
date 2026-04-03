@@ -50,9 +50,10 @@ export function isAdminUser(): boolean {
 // ── 저장 ─────────────────────────────────────────────
 export function userSet(key: string, value: string): void {
   const uid = getCurrentUserId();
-  localStorage.setItem(`u:${uid}:${key}`, value);
-  // 구버전 코드와의 호환용 레거시 키도 함께 저장
-  localStorage.setItem(key, value);
+  const normalized = typeof value === "string" ? value.trim() : String(value ?? "").trim();
+  localStorage.setItem(`u:${uid}:${key}`, normalized);
+  // 구버전 코드 호환용 raw key도 같이 저장
+  localStorage.setItem(key, normalized);
 }
 
 // ── 불러오기 ─────────────────────────────────────────
@@ -60,15 +61,17 @@ export function userSet(key: string, value: string): void {
 export function userGet(key: string, fallback = ""): string {
   const uid = getCurrentUserId();
   const value = localStorage.getItem(`u:${uid}:${key}`);
-  if (value !== null && value.trim() !== "") return value;
+  if (value !== null && value.trim() !== "") return value.trim();
+
+  // 구버전 raw localStorage 키 호환
+  const rawValue = localStorage.getItem(key);
+  if (rawValue !== null && rawValue.trim() !== "") return rawValue.trim();
+
   // admin 네임스페이스 폴백 (관리자가 설정한 키 자동 적용)
   if (uid !== "admin") {
     const adminValue = localStorage.getItem(`u:admin:${key}`);
-    if (adminValue !== null && adminValue.trim() !== "") return adminValue;
+    if (adminValue !== null && adminValue.trim() !== "") return adminValue.trim();
   }
-  // 구버전 로컬스토리지 키 폴백
-  const legacyValue = localStorage.getItem(key);
-  if (legacyValue !== null && legacyValue.trim() !== "") return legacyValue;
   return fallback;
 }
 
@@ -202,3 +205,4 @@ export const SETTINGS_KEYS = {
   GREETING:           "blogauto_greeting",
   AD_PLATFORM:        "selected_ad_platform",
 };
+//fix
