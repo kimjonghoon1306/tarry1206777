@@ -54,23 +54,11 @@ export function userSet(key: string, value: string): void {
 }
 
 // ── 불러오기 ─────────────────────────────────────────
-// ✅ 핵심: 유저 키 없으면 admin 키 자동 폴백
-// 관리자가 SuperAdmin에서 설정한 키를 유저가 지워도 자동 적용
+// 오직 자기 네임스페이스만 읽음
 export function userGet(key: string, fallback = ""): string {
   const uid = getCurrentUserId();
-
-  // 1. 유저 본인 키 확인
-  const userVal = localStorage.getItem(`u:${uid}:${key}`);
-  if (userVal !== null && userVal.trim() !== "") return userVal;
-
-  // 2. admin 키 폴백 (유저가 키를 비워도 관리자 키 사용)
-  //    단, 이미 admin이면 폴백 필요 없음
-  if (uid !== "admin") {
-    const adminVal = localStorage.getItem(`u:admin:${key}`);
-    if (adminVal !== null && adminVal.trim() !== "") return adminVal;
-  }
-
-  return fallback;
+  const value = localStorage.getItem(`u:${uid}:${key}`);
+  return value !== null ? value : fallback;
 }
 
 // ── 삭제 ─────────────────────────────────────────────

@@ -173,21 +173,19 @@ function ApiKeyManager() {
       }
     }));
     await saveSettingsToServer(toSave);
-    // admin 설정 공개 동기화
-    await adminApi("saveAdminGlobalSettings", { settings: toSave });
     setSaving(false);
-    toast.success("✅ 전체 저장 완료! 모든 회원에게 자동 적용됩니다.");
+    toast.success("✅ 관리자 API 키가 저장되었습니다.");
   };
 
   return (
     <div className="space-y-3">
       {/* 안내 배너 */}
-      <div className="rounded-2xl p-4 flex items-start gap-3" style={{ background: "linear-gradient(135deg, #10b98115, #059669 05)", border: "1px solid #10b98130" }}>
+      <div className="rounded-2xl p-4 flex items-start gap-3" style={{ background: "linear-gradient(135deg, #10b98115, #05966905)", border: "1px solid #10b98130" }}>
         <Shield className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#10b981" }} />
         <div>
-          <p className="text-sm font-semibold text-foreground">관리자 키 우선 적용</p>
+          <p className="text-sm font-semibold text-foreground">관리자 API 키 관리</p>
           <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-            여기서 저장한 키는 <strong>모든 회원</strong>에게 자동 적용돼요. 회원이 설정에서 키를 지워도 관리자 키가 폴백으로 사용됩니다.
+            관리자 계정(admin)의 API 키를 저장합니다. 회원은 설정 페이지에서 각자 키를 입력해요.
           </p>
         </div>
       </div>
@@ -198,7 +196,7 @@ function ApiKeyManager() {
         style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #10b981, #059669)" }}
         onClick={handleSaveAll} disabled={saving}>
         {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-        {saving ? "저장 중..." : "전체 저장 (모든 회원 적용)"}
+        {saving ? "저장 중..." : "관리자 키 저장"}
       </button>
 
       {/* 섹션별 키 입력 */}
@@ -312,7 +310,7 @@ function ApiKeyManager() {
         style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #10b981, #059669)" }}
         onClick={handleSaveAll} disabled={saving}>
         {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-        {saving ? "저장 중..." : "전체 저장 (모든 회원 적용)"}
+        {saving ? "저장 중..." : "관리자 키 저장"}
       </button>
     </div>
   );
