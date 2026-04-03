@@ -706,8 +706,8 @@ export default function SettingsPage() {
   const [naverBlogSaved, setNaverBlogSaved] = useState(false);
 
   // 일반 웹사이트 배포
-  const [datalabId, setDatalabId] = useState(() => userGet(SETTINGS_KEYS.DATALAB_ID));
-  const [datalabSecret, setDatalabSecret] = useState(() => userGet(SETTINGS_KEYS.DATALAB_SECRET));
+  const [datalabId, setDatalabId] = useState(() => userGet(SETTINGS_KEYS.DATALAB_ID).trim());
+  const [datalabSecret, setDatalabSecret] = useState(() => userGet(SETTINGS_KEYS.DATALAB_SECRET).trim());
 
   // 데이터랩 키가 로컬에 없으면 서버에서 자동 로드
   React.useEffect(() => {
@@ -715,12 +715,14 @@ export default function SettingsPage() {
       loadSettingsFromServer().then(settings => {
         if (!settings) return;
         if (settings["naver_datalab_client_id"] && !datalabId) {
-          userSet("naver_datalab_client_id", settings["naver_datalab_client_id"]);
-          setDatalabId(settings["naver_datalab_client_id"]);
+          const nextId = String(settings["naver_datalab_client_id"]).trim();
+          userSet("naver_datalab_client_id", nextId);
+          setDatalabId(nextId);
         }
         if (settings["naver_datalab_client_secret"] && !datalabSecret) {
-          userSet("naver_datalab_client_secret", settings["naver_datalab_client_secret"]);
-          setDatalabSecret(settings["naver_datalab_client_secret"]);
+          const nextSecret = String(settings["naver_datalab_client_secret"]).trim();
+          userSet("naver_datalab_client_secret", nextSecret);
+          setDatalabSecret(nextSecret);
         }
       });
     }
@@ -752,18 +754,23 @@ export default function SettingsPage() {
   };
 
   const handleSaveDatalab = () => {
-    if (!datalabId || !datalabSecret) { toast.error("Client ID와 Secret을 모두 입력해주세요"); return; }
-    const payload = {
-      [SETTINGS_KEYS.DATALAB_ID]: datalabId.trim(),
-      [SETTINGS_KEYS.DATALAB_SECRET]: datalabSecret.trim(),
-    };
-    userSet(SETTINGS_KEYS.DATALAB_ID, datalabId.trim());
-    userSet(SETTINGS_KEYS.DATALAB_SECRET, datalabSecret.trim());
-    // 구버전 키 호환 캐시
-    localStorage.setItem("naver_datalab_client_id", datalabId.trim());
-    localStorage.setItem("naver_datalab_client_secret", datalabSecret.trim());
-    saveSettingsToServer(payload);
-    saveAllToServer(payload);
+    const nextId = datalabId.trim();
+    const nextSecret = datalabSecret.trim();
+    if (!nextId || !nextSecret) { toast.error("Client ID와 Secret을 모두 입력해주세요"); return; }
+
+    setDatalabId(nextId);
+    setDatalabSecret(nextSecret);
+
+    userSet("naver_datalab_client_id", nextId);
+    userSet("naver_datalab_client_secret", nextSecret);
+
+    // 구버전 직접 조회 코드 호환
+    try {
+      localStorage.setItem("naver_datalab_client_id", nextId);
+      localStorage.setItem("naver_datalab_client_secret", nextSecret);
+    } catch {}
+
+    saveSettingsToServer({ naver_datalab_client_id: nextId, naver_datalab_client_secret: nextSecret });
     setDatalabSaved(true);
     toast.success("네이버 데이터랩 API 저장됨 ✅");
     setTimeout(() => setDatalabSaved(false), 3000);
@@ -1404,3 +1411,4 @@ export default function SettingsPage() {
     </Layout>
   );
 }
+//fix
