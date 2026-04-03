@@ -753,9 +753,17 @@ export default function SettingsPage() {
 
   const handleSaveDatalab = () => {
     if (!datalabId || !datalabSecret) { toast.error("Client ID와 Secret을 모두 입력해주세요"); return; }
-    userSet("naver_datalab_client_id", datalabId);
-    userSet("naver_datalab_client_secret", datalabSecret);
-    saveSettingsToServer({ naver_datalab_client_id: datalabId, naver_datalab_client_secret: datalabSecret });
+    const payload = {
+      [SETTINGS_KEYS.DATALAB_ID]: datalabId.trim(),
+      [SETTINGS_KEYS.DATALAB_SECRET]: datalabSecret.trim(),
+    };
+    userSet(SETTINGS_KEYS.DATALAB_ID, datalabId.trim());
+    userSet(SETTINGS_KEYS.DATALAB_SECRET, datalabSecret.trim());
+    // 구버전 키 호환 캐시
+    localStorage.setItem("naver_datalab_client_id", datalabId.trim());
+    localStorage.setItem("naver_datalab_client_secret", datalabSecret.trim());
+    saveSettingsToServer(payload);
+    saveAllToServer(payload);
     setDatalabSaved(true);
     toast.success("네이버 데이터랩 API 저장됨 ✅");
     setTimeout(() => setDatalabSaved(false), 3000);
