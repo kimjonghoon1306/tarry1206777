@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-config";
 import { generateContent } from "@/lib/ai-client";
+import { userGet, userSet, SETTINGS_KEYS } from "@/lib/user-storage";
 import { useLocation } from "wouter";
 
 const CONTENT_KEY = "blogauto_content";
@@ -121,7 +122,7 @@ export default function ContentGenerator() {
 
   const [keyword, setKeyword] = useState(prefilledKeyword || saved?.keyword || "");
   const [title, setTitle] = useState(prefilledTitle || saved?.title || "");
-  const [selectedLang, setSelectedLang] = useState(() => localStorage.getItem("content_language") || "ko");
+  const [selectedLang, setSelectedLang] = useState(() => userGet(SETTINGS_KEYS.CONTENT_LANG, "ko"));
   const [selectedStyle, setSelectedStyle] = useState(() => localStorage.getItem(STYLE_KEY) || "blog");
   const [selectedPersona, setSelectedPersona] = useState(() => localStorage.getItem(PERSONA_KEY) || "none");
   const [showPersonaPicker, setShowPersonaPicker] = useState(false);
@@ -241,7 +242,7 @@ export default function ContentGenerator() {
 
   // 언어 변경시 저장
   useEffect(() => {
-    try { localStorage.setItem("content_language", selectedLang); } catch {}
+    try { userSet(SETTINGS_KEYS.CONTENT_LANG, selectedLang); } catch {}
   }, [selectedLang]);
 
   useEffect(() => {
