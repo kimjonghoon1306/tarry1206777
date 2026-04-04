@@ -8,13 +8,14 @@ interface ImageItem {
   status: "loading" | "success" | "error";
 }
 
+// 🔥 프롬프트 자동 변환
+const enhancePrompt = (text: string) => {
+  return `high quality photo of ${text}, realistic, ultra detailed, 4k, professional lighting`;
+};
+
 export default function ImageGenerator() {
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<ImageItem[]>([]);
-
-  const enhancePrompt = (text: string) => {
-    return `${text}, ultra detailed, high quality, realistic, 4k, professional photography`;
-  };
 
   const buildImageUrl = (text: string) =>
     `https://image.pollinations.ai/prompt/${encodeURIComponent(
