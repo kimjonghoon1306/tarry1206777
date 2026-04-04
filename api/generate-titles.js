@@ -60,12 +60,15 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { provider, apiKey, keyword } = req.body || {};
+  const { provider, apiKey, keyword, mode, prompt: customPrompt } = req.body || {};
   if (!provider || !apiKey || !keyword) {
     return res.status(400).json({ error: "필수 파라미터 누락 (provider, apiKey, keyword)" });
   }
 
-  const prompt = `당신은 대한민국 최고의 SEO 블로그 제목 전문가입니다.
+  // mode: "keywords" + customPrompt → AI 키워드 추천 모드
+  const isKeywordMode = mode === "keywords" && !!customPrompt;
+
+  const prompt = isKeywordMode ? customPrompt : `당신은 대한민국 최고의 SEO 블로그 제목 전문가입니다.
 키워드: "${keyword}"
 
 반드시 제목 10개를 만들어야 합니다.
@@ -109,6 +112,11 @@ export default async function handler(req, res) {
           continue;
         }
         const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        if (isKeywordMode) {
+          // 키워드 모드: 원본 JSON 파싱 후 반환
+          const parsed = extractTitles(text);
+          return res.json({ titles: parsed });
+        }
         const titles = fillToTen(keyword, extractTitles(text));
         if (titles.length >= 10) return res.json({ titles });
         lastErr = `${model} 응답 파싱 실패`;
@@ -129,7 +137,9 @@ export default async function handler(req, res) {
       });
       const payload = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(`Groq 오류 (${resp.status}): ${payload?.error?.message || ""}`);
-      return res.json({ titles: fillToTen(keyword, extractTitles(payload?.choices?.[0]?.message?.content || "")) });
+      const groqText = payload?.choices?.[0]?.message?.content || "";
+      if (isKeywordMode) return res.json({ titles: extractTitles(groqText) });
+      return res.json({ titles: fillToTen(keyword, extractTitles(groqText)) });
     }
 
     if (provider === "openai") {
@@ -145,7 +155,9 @@ export default async function handler(req, res) {
       });
       const payload = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(`OpenAI 오류 (${resp.status}): ${payload?.error?.message || ""}`);
-      return res.json({ titles: fillToTen(keyword, extractTitles(payload?.choices?.[0]?.message?.content || "")) });
+      const openaiText = payload?.choices?.[0]?.message?.content || "";
+      if (isKeywordMode) return res.json({ titles: extractTitles(openaiText) });
+      return res.json({ titles: fillToTen(keyword, extractTitles(openaiText)) });
     }
 
     if (provider === "claude") {
@@ -164,7 +176,9 @@ export default async function handler(req, res) {
       });
       const payload = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(`Claude 오류 (${resp.status}): ${payload?.error?.message || ""}`);
-      return res.json({ titles: fillToTen(keyword, extractTitles(payload?.content?.[0]?.text || "")) });
+      const claudeText = payload?.content?.[0]?.text || "";
+      if (isKeywordMode) return res.json({ titles: extractTitles(claudeText) });
+      return res.json({ titles: fillToTen(keyword, extractTitles(claudeText)) });
     }
 
     return res.status(400).json({ error: "지원하지 않는 AI입니다" });
