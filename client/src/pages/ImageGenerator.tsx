@@ -8,9 +8,9 @@ interface ImageItem {
   status: "loading" | "success" | "error";
 }
 
-// 🔥 영어 강제 변환 느낌 (안 깨지게)
+// ✅ 핵심: 영어 강제 제거 + 최소 보정만
 const normalizePrompt = (text: string) => {
-  return `photo of ${text} object, high quality, realistic, 4k`;
+  return `${text}, high quality, detailed`;
 };
 
 export default function ImageGenerator() {
@@ -19,9 +19,10 @@ export default function ImageGenerator() {
 
   const buildImageUrl = (text: string) => {
     const safe = normalizePrompt(text);
+
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(
       safe
-    )}?nologo=true&t=${Date.now()}`;
+    )}?seed=${Date.now()}`;
   };
 
   const generateImage = () => {
@@ -63,6 +64,8 @@ export default function ImageGenerator() {
         <div className="grid grid-cols-3 gap-4">
           {images.map((img) => (
             <div key={img.id} className="border p-2">
+
+              {img.status === "loading" && <p>로딩중...</p>}
 
               <img
                 src={img.url}
