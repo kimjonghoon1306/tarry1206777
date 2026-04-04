@@ -929,14 +929,14 @@ if (provider === "pollinations") {
                 className="w-full rounded-2xl font-semibold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
                 style={{
                   height: 44,
-                  background: "oklch(0.75 0.18 350)",
+                  background: "linear-gradient(135deg, oklch(0.72 0.22 345) 0%, oklch(0.64 0.24 330) 100%)",
                   border: "none",
                   color: "white",
-                  boxShadow: "0 4px 16px oklch(0.75 0.18 350 / 40%)",
+                  boxShadow: "0 8px 24px oklch(0.72 0.22 345 / 35%)",
                 }}
                 onClick={handleRetryAll}>
                 <RotateCcw className="w-4 h-4" />
-                실패 {failedCount}개 전체 재시도
+                실패 {failedCount}개 전체 재실행
               </button>
             )}
 
@@ -998,9 +998,9 @@ if (provider === "pollinations") {
                 </div>
                 <button
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
-                  style={{ background: "oklch(0.75 0.18 350)", color: "white" }}
+                  style={{ background: "linear-gradient(135deg, oklch(0.72 0.22 345) 0%, oklch(0.64 0.24 330) 100%)", color: "white", boxShadow: "0 6px 18px oklch(0.72 0.22 345 / 28%)" }}
                   onClick={handleRetryAll}>
-                  <RotateCcw className="w-3.5 h-3.5" /> 전체 재시도
+                  <RotateCcw className="w-3.5 h-3.5" /> 전체 재실행
                 </button>
               </div>
             )}
