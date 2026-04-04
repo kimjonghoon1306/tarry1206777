@@ -520,26 +520,24 @@ function PublishPanel({
       </div>
 
       {/* 발행 버튼 */}
-      <Button
-        className="w-full h-12 text-base font-semibold gap-2"
-        style={{ background: publishBg, color: "white" }}
+      <button
+        className="w-full relative overflow-hidden h-12 text-base font-semibold gap-2 rounded-xl text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+        style={{ background: publishBg, boxShadow: isPublishing || selectedPlatforms.length === 0 ? "none" : "0 6px 24px oklch(0.696 0.17 162.48 / 40%)" }}
         disabled={isPublishing || selectedPlatforms.length === 0}
         onClick={onPublish}
       >
-        {isPublishing ? (
-          <>
-            <Send className="w-4 h-4 animate-pulse" />발행 중...
-          </>
-        ) : publishMode === "instant" ? (
-          <>
-            <Zap className="w-4 h-4" />즉시 발행하기
-          </>
-        ) : (
-          <>
-            <Calendar className="w-4 h-4" />예약 발행 등록
-          </>
+        {(!isPublishing && selectedPlatforms.length > 0) && (
+          <div className="absolute inset-0 opacity-20 pointer-events-none"
+            style={{ background: "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform: "skewX(-20deg) translateX(-100%)", animation: "shimmer 3s infinite" }} />
         )}
-      </Button>
+        {isPublishing ? (
+          <><Send className="w-4 h-4 animate-pulse" /><span>발행 중...</span></>
+        ) : publishMode === "instant" ? (
+          <><Zap className="w-4 h-4" /><span>즉시 발행하기</span></>
+        ) : (
+          <><Calendar className="w-4 h-4" /><span>예약 발행 등록</span></>
+        )}
+      </button>
 
       {selectedPlatforms.length === 0 && (
         <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
@@ -1831,32 +1829,38 @@ export default function DeploymentPage() {
         {/* 네이버 복사 버튼 - 가장 크게 강조 */}
         <div className="px-3 pt-2">
           <button
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
-            style={{ background: "#03C75A", color: "white" }}
+            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-[0.97] transition-all"
+            style={{ background: "#03C75A", color: "white", boxShadow: "0 4px 16px #03C75A55" }}
             onClick={copyForNaver}
           >
+            <div className="absolute inset-0 opacity-20 pointer-events-none"
+              style={{ background: "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform: "skewX(-20deg) translateX(-100%)", animation: "shimmer 3s infinite" }} />
             <Copy className="w-4 h-4" />
-            네이버 블로그 복사하기 📋
+            <span>네이버 블로그 복사하기 📋</span>
           </button>
         </div>
         <div className="flex gap-2 px-3 py-2">
           <Button className="flex-1 gap-1.5 h-10" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
             <Eye className="w-4 h-4" /> 미리보기
           </Button>
-          <Button
-            className="flex-1 gap-1.5 h-10 font-semibold"
-            style={{ background: publishBtnBg, color: "white" }}
+          <button
+            className="flex-1 relative overflow-hidden flex items-center justify-center gap-1.5 h-10 rounded-xl font-semibold text-sm text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ background: publishBtnBg, boxShadow: isPublishing || selectedPlatforms.length === 0 ? "none" : "0 4px 16px oklch(0.696 0.17 162.48 / 40%)" }}
             disabled={isPublishing || selectedPlatforms.length === 0}
             onClick={handlePublish}
           >
-            {isPublishing ? (
-              <><Send className="w-4 h-4 animate-pulse" />발행 중...</>
-            ) : publishMode === "instant" ? (
-              <><Zap className="w-4 h-4" />즉시 발행</>
-            ) : (
-              <><Calendar className="w-4 h-4" />예약</>
+            {(!isPublishing && selectedPlatforms.length > 0) && (
+              <div className="absolute inset-0 opacity-20 pointer-events-none"
+                style={{ background: "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform: "skewX(-20deg) translateX(-100%)", animation: "shimmer 3s infinite" }} />
             )}
-          </Button>
+            {isPublishing ? (
+              <><Send className="w-4 h-4 animate-pulse" /><span>발행 중...</span></>
+            ) : publishMode === "instant" ? (
+              <><Zap className="w-4 h-4" /><span>즉시 발행</span></>
+            ) : (
+              <><Calendar className="w-4 h-4" /><span>예약</span></>
+            )}
+          </button>
         </div>
         {selectedPlatforms.length === 0 && (
           <p className="text-xs text-center pb-1" style={{ color: "var(--muted-foreground)" }}>
