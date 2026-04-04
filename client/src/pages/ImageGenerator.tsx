@@ -19,8 +19,8 @@ export default function ImageGenerator() {
 
     const id = Date.now().toString();
 
-    // 🔥 이미 API 연결된 상태로 사용
-    const url = `/api/generate-image?prompt=${encodeURIComponent(prompt)}`;
+    // 🔥 API 없이 직접 호출 (확실하게 뜸)
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&t=${Date.now()}`;
 
     const newItem: ImageItem = {
       id,
@@ -62,9 +62,9 @@ export default function ImageGenerator() {
           ? {
               ...img,
               status: "loading",
-              url: `/api/generate-image?prompt=${encodeURIComponent(
+              url: `https://image.pollinations.ai/prompt/${encodeURIComponent(
                 img.prompt
-              )}&t=${Date.now()}`,
+              )}?nologo=true&t=${Date.now()}`,
             }
           : img
       )
@@ -75,7 +75,6 @@ export default function ImageGenerator() {
     <Layout>
       <div className="p-6 space-y-6">
 
-        {/* 입력 */}
         <div className="flex gap-2">
           <input
             value={prompt}
@@ -86,12 +85,10 @@ export default function ImageGenerator() {
           <Button onClick={generateImage}>생성</Button>
         </div>
 
-        {/* 전체 재시도 */}
         <Button onClick={retryAll}>
           전체 재시도
         </Button>
 
-        {/* 갤러리 */}
         <div className="grid grid-cols-3 gap-4">
           {images.map((img) => (
             <div key={img.id} className="border rounded p-2">
