@@ -1,14 +1,11 @@
 import { useState } from "react";
 import Layout from "@/components/Layout";
-import { Button } from "@/components/ui/button";
 
 export default function ImageGenerator() {
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<any[]>([]);
 
   const generateImage = () => {
-    console.log("🔥 클릭됨");
-
     const text = prompt.trim() || "테스트 이미지";
 
     const id = Date.now().toString();
@@ -19,7 +16,6 @@ export default function ImageGenerator() {
       {
         id,
         url,
-        status: "loading",
         prompt: text,
       },
       ...prev,
@@ -38,10 +34,15 @@ export default function ImageGenerator() {
             className="flex-1 p-3 rounded bg-black text-white border"
           />
 
-          {/* 🔥 여기 확실하게 클릭 연결 */}
+          {/* 🔥 이게 핵심 */}
           <button
             onClick={generateImage}
-            className="px-4 py-2 bg-green-500 rounded"
+            style={{
+              background: "#22c55e",
+              padding: "10px 16px",
+              borderRadius: "6px",
+              color: "white",
+            }}
           >
             생성
           </button>
@@ -52,12 +53,7 @@ export default function ImageGenerator() {
         <div className="grid grid-cols-3 gap-4">
           {images.map((img) => (
             <div key={img.id} className="border p-2">
-
-              <img
-                src={img.url}
-                className="w-full"
-              />
-
+              <img src={img.url} className="w-full" />
               <div>{img.prompt}</div>
             </div>
           ))}
