@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { getAPIKey, type ContentAIProvider } from "@/lib/ai-config";
+import { getContentProvider, getAPIKey } from "@/lib/ai-config";
 import { userGet, SETTINGS_KEYS, syncAdminSettingsToLocal } from "@/lib/user-storage";
 
 // 대형 키워드 풀 - 다양한 카테고리
@@ -479,7 +479,7 @@ export default function KeywordResearch() {
 
   // AI 키워드 추천 (네이버 API 없을 때 사용)
   async function doCollectAI(kw: string) {
-    const provider = (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
+    const provider = getContentProvider();
     const apiKey = getAPIKey(provider);
     if (!apiKey) {
       toast.error("설정에서 AI API 키를 먼저 입력해주세요");
@@ -614,7 +614,7 @@ export default function KeywordResearch() {
 
   // 2. 제목 생성 - forceNew=true면 항상 초기화 후 생성
   async function genTitles(kw: string, forceNew = false) {
-    const provider = (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
+    const provider = getContentProvider();
     const apiKey = getAPIKey(provider);
 
     if (!apiKey) {
@@ -685,17 +685,12 @@ export default function KeywordResearch() {
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={clearAll}>
               <Trash2 className="w-3.5 h-3.5"/>초기화
             </Button>
-            <button
-              className="relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{background:isCollecting?"var(--muted)":"var(--color-emerald)", boxShadow:isCollecting?"none":"0 4px 16px oklch(0.696 0.17 162.48 / 40%)"}}
+            <Button size="sm" className="gap-1.5"
+              style={{background:isCollecting?"var(--muted)":"var(--color-emerald)",color:"white"}}
               onClick={()=>doCollect()} disabled={isCollecting}>
-              {!isCollecting && (
-                <div className="absolute inset-0 opacity-20 pointer-events-none"
-                  style={{background:"linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform:"skewX(-20deg) translateX(-100%)", animation:"shimmer 3s infinite"}} />
-              )}
               {isCollecting?<RefreshCw className="w-4 h-4 animate-spin"/>:<Zap className="w-4 h-4"/>}
-              <span>{isCollecting?"수집 중...":"키워드 수집"}</span>
-            </button>
+              {isCollecting?"수집 중...":"키워드 수집"}
+            </Button>
           </div>
         </div>
 
@@ -719,16 +714,12 @@ export default function KeywordResearch() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {/* 제목 생성 (초기화 후 새로 생성) */}
-                <button className="relative overflow-hidden flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{background:"oklch(0.75 0.12 300)", boxShadow:"0 3px 12px oklch(0.75 0.12 300 / 40%)"}}
+                <Button size="sm" className="gap-1.5 text-xs h-7"
+                  style={{background:"oklch(0.75 0.12 300)", color:"white"}}
                   onClick={()=>genTitles(selKW!, true)} disabled={isGenTitles}>
-                  {!isGenTitles && (
-                    <div className="absolute inset-0 opacity-20 pointer-events-none"
-                      style={{background:"linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform:"skewX(-20deg) translateX(-100%)", animation:"shimmer 3s infinite"}} />
-                  )}
                   <Sparkles className={`w-3.5 h-3.5 ${isGenTitles?"animate-spin":""}`}/>
-                  <span>제목 생성</span>
-                </button>
+                  제목 생성
+                </Button>
                 {/* 10개 더 (누적) */}
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7"
                   onClick={()=>genTitles(selKW!)} disabled={isGenTitles}>
@@ -768,15 +759,11 @@ export default function KeywordResearch() {
                     아직 제목이 없어요.<br/>
                     <span className="text-xs">API 키가 설정됐는지 확인 후 아래 버튼을 눌러주세요.</span>
                   </p>
-                  <button className="relative overflow-hidden flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-60"
-                    style={{background:"oklch(0.75 0.12 300)"}}
+                  <Button size="sm" className="gap-2"
+                    style={{background:"oklch(0.75 0.12 300)", color:"white"}}
                     onClick={()=>genTitles(selKW!)} disabled={isGenTitles}>
-                    {!isGenTitles && (
-                      <div className="absolute inset-0 opacity-20 pointer-events-none"
-                        style={{background:"linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform:"skewX(-20deg) translateX(-100%)", animation:"shimmer 3s infinite"}} />
-                    )}
-                    <RefreshCw className="w-3.5 h-3.5"/><span>제목 생성 시작</span>
-                  </button>
+                    <RefreshCw className="w-3.5 h-3.5"/>제목 생성 시작
+                  </Button>
                 </div>
               ) : (
                 <>
