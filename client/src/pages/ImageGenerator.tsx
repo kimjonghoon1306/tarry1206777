@@ -264,6 +264,7 @@ type GalleryItem = {
   style: string;
   size: string;
   loading: boolean;
+  failed?: boolean;
   // 재시도를 위한 원본 정보 저장
   _prompt?: string;
   _w?: number;
@@ -273,7 +274,7 @@ type GalleryItem = {
 
 // ── 개별 이미지 카드 ──────────────────────────────────
 function GalleryCard({
-  img, isSelected, viewMode, onSelect, onLightbox, onRetry,
+  img, isSelected, viewMode, onSelect, onLightbox, onRetry, onLoadSuccess, onLoadError,
 }: {
   img: GalleryItem;
   isSelected: boolean;
@@ -281,14 +282,16 @@ function GalleryCard({
   onSelect: () => void;
   onLightbox: () => void;
   onRetry: () => void;
+  onLoadSuccess: () => void;
+  onLoadError: () => void;
 }) {
-  const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "loading" : "error");
+  const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.failed ? "error" : img.src ? "loading" : "error");
 
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
-    if (!img.src) { setStatus("error"); return; }
+    if (img.failed || !img.src) { setStatus("error"); return; }
     setStatus("loading"); // 새 src → img 태그가 onLoad 후 ok로 전환
-  }, [img.src, img.loading]);
+  }, [img.src, img.loading, img.failed]);
 
   if (viewMode === "list") {
     return (
@@ -314,8 +317,8 @@ function GalleryCard({
             alt={img.title}
             className="w-full h-full object-cover"
             style={{ opacity: status === "ok" ? 1 : 0, transition: "opacity 0.3s" }}
-            onLoad={() => setStatus("ok")}
-            onError={() => setStatus("error")}
+            onLoad={() => { setStatus("ok"); onLoadSuccess(); }}
+            onError={() => { setStatus("error"); onLoadError(); }}
           />
         )}
       </div>
@@ -364,8 +367,8 @@ function GalleryCard({
           alt={img.title}
           className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
           style={{ opacity: status === "ok" ? 1 : 0, transition: "opacity 0.4s ease" }}
-          onLoad={() => setStatus("ok")}
-          onError={() => setStatus("error")}
+          onLoad={() => { setStatus("ok"); onLoadSuccess(); }}
+          onError={() => { setStatus("error"); onLoadError(); }}
           onClick={status === "ok" ? onLightbox : undefined}
         />
       )}
@@ -447,12 +450,12 @@ export default function ImageGenerator() {
     try { localStorage.setItem("imggen_state", JSON.stringify({ prompt, style, size, count })); } catch {}
   }, [prompt, style, size, count]);
 
-  const successGallery = gallery.filter(g => !g.loading && g.src);
+  const successGallery = gallery.filter(g => !g.loading && g.src && !g.failed);
   const lightboxImg = lightboxIndex !== null ? successGallery[lightboxIndex] ?? null : null;
   const loadedCount = successGallery.length;
   const loadingCount = gallery.filter(g => g.loading).length;
-  // 실패한 항목: src 없고 loading도 아닌 것
-  const failedItems = gallery.filter(g => !g.loading && !g.src);
+  // 실패한 항목: src가 없거나 실제 img 로드 에러가 난 것
+  const failedItems = gallery.filter(g => !g.loading && (g.failed || !g.src));
   const failedCount = failedItems.length;
 
   // 키보드 단축키
@@ -481,6 +484,14 @@ export default function ImageGenerator() {
 
   const currentAI = IMAGE_AI_OPTIONS.find(o => o.value === getImageProvider());
 
+  const markImageFailed = (id: number) => {
+    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, failed: true } : g));
+  };
+
+  const markImageLoaded = (id: number) => {
+    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, failed: false } : g));
+  };
+
   // ── 이미지 생성 공통 로직 ──────────────────────────
   const generateImages = async (
     numImages: number,
@@ -504,6 +515,7 @@ if (provider === "pollinations") {
             id, src: "", title: `${prompt.slice(0, 20)}...`,
             keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
             loading: true,
+            failed: false,
             _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999),
           })),
           ...prev,
@@ -512,7 +524,7 @@ if (provider === "pollinations") {
       } else {
         // 재시도: 기존 아이템을 loading 상태로 복원
         setGallery(prev => prev.map(item =>
-          existingIds.includes(item.id) ? { ...item, src: "", loading: true } : item
+          existingIds.includes(item.id) ? { ...item, src: "", loading: true, failed: false } : item
         ));
       }
 
@@ -523,7 +535,7 @@ if (provider === "pollinations") {
         if (idx === -1) return item;
         const seed = Math.floor(Math.random() * 999999) + idx * 1000;
         const src = generatePollinationsUrl(fullPrompt, w, h, seed);
-        return { ...item, src, loading: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed };
+        return { ...item, src, loading: false, failed: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed };
       }));
       setProgress(100);
 
@@ -558,7 +570,7 @@ if (provider === "pollinations") {
           return u;
         });
         setGallery(prev => [
-          ...images.map((src, i) => ({ id: Date.now() + i, src, title: `${prompt.slice(0, 20)}...`, keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false })),
+          ...images.map((src, i) => ({ id: Date.now() + i, src, title: `${prompt.slice(0, 20)}...`, keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false, failed: false })),
           ...prev,
         ]);
         setProgress(100);
@@ -684,7 +696,7 @@ if (provider === "pollinations") {
 
     // 실패 항목을 loading 상태로 복원
     setGallery(prev => prev.map(item =>
-      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "" } : item
+      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "", failed: false } : item
     ));
 
     let successCount = 0;
@@ -698,12 +710,12 @@ if (provider === "pollinations") {
           item._h || 1024,
           seed
         );
-        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, _seed: seed } : g));
+        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, failed: false, _seed: seed } : g));
         successCount++;
         setProgress(Math.round(((i + 1) / failed.length) * 100));
         toast.loading(`재시도 ${i + 1}/${failed.length} 완료`, { id: "imggen" });
       } catch {
-        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, loading: false, src: "" } : g));
+        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, loading: false, src: "", failed: true } : g));
       }
     }
 
@@ -721,14 +733,14 @@ if (provider === "pollinations") {
     const item = gallery.find(g => g.id === id);
     if (!item || !item._prompt) return;
 
-    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "" } : g));
+    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "", failed: false } : g));
     const seed = Math.floor(Math.random() * 999999) + Date.now();
     try {
       const src = await generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, _seed: seed } : g));
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, failed: false, _seed: seed } : g));
       toast.success("이미지 복구 완료!");
     } catch {
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "" } : g));
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "", failed: true } : g));
       toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
     }
   };
@@ -902,6 +914,24 @@ if (provider === "pollinations") {
               </div>
             </button>
 
+
+            {/* ── 실패 전체 재실행 버튼 ── */}
+            {failedCount > 0 && !isBusy && (
+              <button
+                className="w-full rounded-2xl font-semibold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
+                style={{
+                  height: 48,
+                  background: "linear-gradient(135deg, oklch(0.72 0.22 345) 0%, oklch(0.64 0.24 330) 100%)",
+                  border: "none",
+                  color: "white",
+                  boxShadow: "0 8px 24px oklch(0.72 0.22 345 / 35%)",
+                }}
+                onClick={handleRetryAll}>
+                <RotateCcw className="w-4 h-4" />
+                실패 {failedCount}개 전체 재실행
+              </button>
+            )}
+
             {/* ── 발행하기 버튼 ── */}
             {loadedCount > 0 && !isBusy && (
               <button
@@ -920,23 +950,6 @@ if (provider === "pollinations") {
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </div>
-              </button>
-            )}
-
-            {/* 실패 재시도 버튼 */}
-            {failedCount > 0 && !isBusy && (
-              <button
-                className="w-full rounded-2xl font-semibold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
-                style={{
-                  height: 44,
-                  background: "linear-gradient(135deg, oklch(0.72 0.22 345) 0%, oklch(0.64 0.24 330) 100%)",
-                  border: "none",
-                  color: "white",
-                  boxShadow: "0 8px 24px oklch(0.72 0.22 345 / 35%)",
-                }}
-                onClick={handleRetryAll}>
-                <RotateCcw className="w-4 h-4" />
-                실패 {failedCount}개 전체 재실행
               </button>
             )}
 
@@ -1105,6 +1118,8 @@ if (provider === "pollinations") {
                         if (idx !== -1) setLightboxIndex(idx);
                       }}
                       onRetry={() => handleRetrySingle(img.id)}
+                      onLoadSuccess={() => markImageLoaded(img.id)}
+                      onLoadError={() => markImageFailed(img.id)}
                     />
                   ))}
                 </div>
