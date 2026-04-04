@@ -26,6 +26,30 @@ import {
 } from "@/lib/ai-config";
 import { userGet, userGetSettingsValue, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings, loadSettingsFromServer, isAdminUser } from "@/lib/user-storage";
 
+const IMAGE_API_QUICK_LINKS = [
+  {
+    label: "Gemini 이미지 API",
+    desc: "일부 무료 사용 후 유료 결제",
+    href: "https://aistudio.google.com/app/apikey",
+    color: "#4285F4",
+    bg: "rgba(66,133,244,0.10)",
+  },
+  {
+    label: "GPT 이미지 API",
+    desc: "유료 · 키 발급 후 바로 연결",
+    href: "https://platform.openai.com/api-keys",
+    color: "oklch(0.75 0.12 300)",
+    bg: "oklch(0.75 0.12 300 / 0.10)",
+  },
+  {
+    label: "Replicate 이미지 API",
+    desc: "일부 무료 사용 후 유료 결제",
+    href: "https://replicate.com/account/api-tokens",
+    color: "#EAB308",
+    bg: "rgba(234,179,8,0.10)",
+  },
+];
+
 const LANGUAGES = [
   { code: "ko", label: "한국어", flag: "🇰🇷" },
   { code: "en", label: "English", flag: "🇺🇸" },
@@ -883,6 +907,34 @@ export default function SettingsPage() {
             <Wand2 className="w-5 h-5" style={{ color: "oklch(0.75 0.12 300)" }} />
             <h3 className="font-semibold text-foreground">이미지 생성 AI 선택</h3>
           </div>
+          <div className="mb-4 rounded-xl px-4 py-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-sm font-semibold text-foreground">이미지 API 키 빠른 이동</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                  기능은 건드리지 않고 키 발급 링크만 추가했습니다. 일부 무료 사용 후 유료 결제로 이어지는 서비스는 안내문을 함께 표시합니다.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {IMAGE_API_QUICK_LINKS.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl px-3 py-2 transition-all hover:opacity-90"
+                    style={{ background: item.bg, border: `1px solid ${item.color}55` }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold" style={{ color: item.color }}>{item.label}</span>
+                      <ExternalLink className="w-3.5 h-3.5" style={{ color: item.color }} />
+                    </div>
+                    <div className="text-[11px] mt-0.5" style={{ color: "var(--muted-foreground)" }}>{item.desc}</div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {IMAGE_AI_OPTIONS.map((opt: any) => {
               const selected = imageAI === opt.value;
@@ -922,6 +974,25 @@ export default function SettingsPage() {
 
                   {/* 설명 */}
                   <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</p>
+
+                  {opt.keyLink && (
+                    <div className="mb-3">
+                      <a
+                        href={opt.keyLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg hover:opacity-90"
+                        style={{
+                          background: selected ? `${opt.logoColor}20` : `${opt.logoColor}12`,
+                          color: opt.logoColor,
+                          border: `1px solid ${opt.logoColor}33`,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        키 발급받기 <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
 
                   {/* 장단점 */}
                   {opt.pros && (
