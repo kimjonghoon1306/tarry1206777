@@ -274,7 +274,7 @@ type GalleryItem = {
 
 // ── 개별 이미지 카드 ──────────────────────────────────
 function GalleryCard({
-  img, isSelected, viewMode, onSelect, onLightbox, onRetry, onLoadSuccess, onLoadError,
+  img, isSelected, viewMode, onSelect, onLightbox, onRetry,
 }: {
   img: GalleryItem;
   isSelected: boolean;
@@ -282,16 +282,14 @@ function GalleryCard({
   onSelect: () => void;
   onLightbox: () => void;
   onRetry: () => void;
-  onLoadSuccess: () => void;
-  onLoadError: () => void;
 }) {
-  const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.failed ? "error" : img.src ? "loading" : "error");
+  const [status, setStatus] = useState<ImgStatus>(img.loading ? "loading" : img.src ? "loading" : "error");
 
   useEffect(() => {
     if (img.loading) { setStatus("loading"); return; }
-    if (img.failed || !img.src) { setStatus("error"); return; }
+    if (!img.src) { setStatus("error"); return; }
     setStatus("loading"); // 새 src → img 태그가 onLoad 후 ok로 전환
-  }, [img.src, img.loading, img.failed]);
+  }, [img.src, img.loading]);
 
   if (viewMode === "list") {
     return (
@@ -317,8 +315,8 @@ function GalleryCard({
             alt={img.title}
             className="w-full h-full object-cover"
             style={{ opacity: status === "ok" ? 1 : 0, transition: "opacity 0.3s" }}
-            onLoad={() => { setStatus("ok"); onLoadSuccess(); }}
-            onError={() => { setStatus("error"); onLoadError(); }}
+            onLoad={() => setStatus("ok")}
+            onError={() => setStatus("error")}
           />
         )}
       </div>
@@ -367,8 +365,8 @@ function GalleryCard({
           alt={img.title}
           className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
           style={{ opacity: status === "ok" ? 1 : 0, transition: "opacity 0.4s ease" }}
-          onLoad={() => { setStatus("ok"); onLoadSuccess(); }}
-          onError={() => { setStatus("error"); onLoadError(); }}
+          onLoad={() => setStatus("ok")}
+          onError={() => setStatus("error")}
           onClick={status === "ok" ? onLightbox : undefined}
         />
       )}
@@ -430,12 +428,11 @@ export default function ImageGenerator() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showDeployModal, setShowDeployModal] = useState(false);
-  const [autoStarted, setAutoStarted] = useState(false);
 
   // 갤러리 변경시 localStorage 저장 (URL 이미지만)
   useEffect(() => {
     try {
-      const toSave = gallery.filter(g => !g.loading && g.src && !g.src.startsWith("data:"));
+      const toSave = gallery.filter(g => !g.loading && g.src && !g.failed && !g.src.startsWith("data:"));
       localStorage.setItem("imggen_gallery", JSON.stringify(toSave.slice(0, 50)));
     } catch {}
   }, [gallery]);
@@ -450,11 +447,11 @@ export default function ImageGenerator() {
     try { localStorage.setItem("imggen_state", JSON.stringify({ prompt, style, size, count })); } catch {}
   }, [prompt, style, size, count]);
 
-  const successGallery = gallery.filter(g => !g.loading && g.src && !g.failed);
+  const successGallery = gallery.filter(g => !g.loading && !!g.src && !g.failed);
   const lightboxImg = lightboxIndex !== null ? successGallery[lightboxIndex] ?? null : null;
   const loadedCount = successGallery.length;
   const loadingCount = gallery.filter(g => g.loading).length;
-  // 실패한 항목: src가 없거나 실제 img 로드 에러가 난 것
+  // 실패한 항목: src 없고 loading도 아닌 것
   const failedItems = gallery.filter(g => !g.loading && (g.failed || !g.src));
   const failedCount = failedItems.length;
 
@@ -484,14 +481,6 @@ export default function ImageGenerator() {
 
   const currentAI = IMAGE_AI_OPTIONS.find(o => o.value === getImageProvider());
 
-  const markImageFailed = (id: number) => {
-    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, failed: true } : g));
-  };
-
-  const markImageLoaded = (id: number) => {
-    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, failed: false } : g));
-  };
-
   // ── 이미지 생성 공통 로직 ──────────────────────────
   const generateImages = async (
     numImages: number,
@@ -514,8 +503,7 @@ if (provider === "pollinations") {
           ...placeholderIds.map(id => ({
             id, src: "", title: `${prompt.slice(0, 20)}...`,
             keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
-            loading: true,
-            failed: false,
+            loading: true, failed: false,
             _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999),
           })),
           ...prev,
@@ -528,25 +516,59 @@ if (provider === "pollinations") {
         ));
       }
 
-      // URL 즉시 생성 후 한번에 갤러리 업데이트 (img 태그가 직접 로드)
-      const successCount = numImages;
-      setGallery(prev => prev.map(item => {
-        const idx = placeholderIds.indexOf(item.id);
-        if (idx === -1) return item;
-        const seed = Math.floor(Math.random() * 999999) + idx * 1000;
-        const src = generatePollinationsUrl(fullPrompt, w, h, seed);
-        return { ...item, src, loading: false, failed: false, _prompt: fullPrompt, _w: w, _h: h, _seed: seed };
-      }));
-      setProgress(100);
+      // Pollinations는 URL만 만든다고 끝이 아니라 실제 이미지 로드를 확인해야 함
+      // 동시에 너무 많이 때리면 실패율이 올라가서 2개씩 배치로 검증
+      let successCount = 0;
+      const batchSize = 2;
+
+      for (let start = 0; start < placeholderIds.length; start += batchSize) {
+        const batch = placeholderIds.slice(start, start + batchSize);
+
+        await Promise.all(
+          batch.map(async (id, batchIndex) => {
+            const globalIndex = start + batchIndex;
+            const seed = Math.floor(Math.random() * 999999) + globalIndex * 1000 + Date.now();
+            const src = generatePollinationsUrl(fullPrompt, w, h, seed);
+            const ok = await testImageUrl(src, 15000);
+
+            if (ok) successCount++;
+
+            setGallery(prev => prev.map(item => {
+              if (item.id !== id) return item;
+              return {
+                ...item,
+                src: ok ? src : "",
+                loading: false,
+                failed: !ok,
+                _prompt: fullPrompt,
+                _w: w,
+                _h: h,
+                _seed: seed,
+              };
+            }));
+
+            setProgress(Math.round(((globalIndex + 1) / numImages) * 100));
+          })
+        );
+      }
 
       const elapsed = (Date.now() - startTime) / 1000;
       setStats(prev => {
-        const u = { ...prev, todayCount: prev.todayCount + successCount, monthCount: prev.monthCount + successCount, times: [...(prev.times || []), elapsed].slice(-20) };
+        const u = {
+          ...prev,
+          todayCount: prev.todayCount + successCount,
+          monthCount: prev.monthCount + successCount,
+          times: [...(prev.times || []), elapsed].slice(-20),
+        };
         saveStats(u);
         return u;
       });
 
-      toast.success(`✅ ${successCount}개 이미지 생성 시작! 잠시 기다려주세요.`, { id: "imggen" });
+      if (successCount > 0) {
+        toast.success(`✅ ${successCount}개 이미지 생성 완료`, { id: "imggen" });
+      } else {
+        toast.error("이미지 로드에 모두 실패했습니다. 잠시 후 다시 시도해주세요.", { id: "imggen" });
+      }
       return successCount;
     } else {
       // 다른 API provider
@@ -672,48 +694,59 @@ if (provider === "pollinations") {
     setIsGenerating(false);
   };
 
-
-
-  useEffect(() => {
-    if (!autoPrompt || autoStarted || isGenerating || isRetrying) return;
-
-    const timer = window.setTimeout(() => {
-      setAutoStarted(true);
-      handleGenerate();
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [autoPrompt, autoStarted, isGenerating, isRetrying, prompt, style, size, count]);
-
   // ── 실패 항목 전체 재시도 ─────────────────────────
   const handleRetryAll = async () => {
     const failed = gallery.filter(g => !g.loading && (g.failed || !g.src) && g._prompt);
-    if (failed.length === 0) { toast.info("재실행할 실패 이미지가 없어요"); return; }
+    if (failed.length === 0) { toast.info("재시도할 실패 이미지가 없어요"); return; }
 
     setIsRetrying(true);
     setProgress(0);
-    toast.loading(`실패 이미지 ${failed.length}개 전체 재실행 중...`, { id: "imggen" });
+    toast.loading(`실패 이미지 ${failed.length}개 재시도 중...`, { id: "imggen" });
 
-    for (let i = 0; i < failed.length; i++) {
-      const item = failed[i];
-      const seed = Math.floor(Math.random() * 999999) + i * 1000 + Date.now();
-      const src = generatePollinationsUrl(
-        item._prompt!,
-        item._w || 1024,
-        item._h || 1024,
-        seed
+    // 실패 항목을 loading 상태로 복원
+    setGallery(prev => prev.map(item =>
+      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "", failed: false } : item
+    ));
+
+    let successCount = 0;
+    const batchSize = 2;
+
+    for (let start = 0; start < failed.length; start += batchSize) {
+      const batch = failed.slice(start, start + batchSize);
+
+      await Promise.all(
+        batch.map(async (item, batchIndex) => {
+          const globalIndex = start + batchIndex;
+          const seed = Math.floor(Math.random() * 999999) + globalIndex * 1000 + Date.now();
+          const src = generatePollinationsUrl(
+            item._prompt!,
+            item._w || 1024,
+            item._h || 1024,
+            seed
+          );
+          const ok = await testImageUrl(src, 15000);
+
+          if (ok) successCount++;
+
+          setGallery(prev => prev.map(g => g.id === item.id ? {
+            ...g,
+            src: ok ? src : "",
+            loading: false,
+            failed: !ok,
+            _seed: seed
+          } : g));
+
+          setProgress(Math.round(((globalIndex + 1) / failed.length) * 100));
+        })
       );
-
-      setGallery(prev => prev.map(g =>
-        g.id === item.id
-          ? { ...g, src, loading: false, failed: false, _seed: seed }
-          : g
-      ));
-
-      setProgress(Math.round(((i + 1) / failed.length) * 100));
     }
 
-    toast.success(`실패 이미지 ${failed.length}개 재실행 요청 완료`, { id: "imggen" });
+    toast[successCount > 0 ? "success" : "error"](
+      successCount > 0
+        ? `✅ ${successCount}/${failed.length}개 복구 완료!`
+        : "재시도 후에도 이미지 로드에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      { id: "imggen" }
+    );
     setIsRetrying(false);
   };
 
@@ -722,16 +755,19 @@ if (provider === "pollinations") {
     const item = gallery.find(g => g.id === id);
     if (!item || !item._prompt) return;
 
+    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "", failed: false } : g));
     const seed = Math.floor(Math.random() * 999999) + Date.now();
+
     const src = generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
+    const ok = await testImageUrl(src, 15000);
 
-    setGallery(prev => prev.map(g =>
-      g.id === id
-        ? { ...g, src, loading: false, failed: false, _seed: seed }
-        : g
-    ));
-
-    toast.success("이미지 재실행 요청 완료");
+    if (ok) {
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, failed: false, _seed: seed } : g));
+      toast.success("이미지 복구 완료!");
+    } else {
+      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "", failed: true } : g));
+      toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   // ── 갤러리 초기화 ─────────────────────────────────
@@ -814,7 +850,7 @@ if (provider === "pollinations") {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* ── 설정 패널 — 모바일에서 숨기고 데스크탑만 표시 ── */}
-          <div className="lg:col-span-1 rounded-xl p-4 sm:p-5 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="hidden lg:block lg:col-span-1 rounded-xl p-5 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
             <h3 className="font-semibold text-foreground">이미지 설정</h3>
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -903,24 +939,6 @@ if (provider === "pollinations") {
               </div>
             </button>
 
-
-            {/* ── 실패 전체 재실행 버튼 ── */}
-            {failedCount > 0 && !isBusy && (
-              <button
-                className="w-full rounded-2xl font-semibold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
-                style={{
-                  height: 48,
-                  background: "linear-gradient(135deg, oklch(0.72 0.22 345) 0%, oklch(0.64 0.24 330) 100%)",
-                  border: "none",
-                  color: "white",
-                  boxShadow: "0 8px 24px oklch(0.72 0.22 345 / 35%)",
-                }}
-                onClick={handleRetryAll}>
-                <RotateCcw className="w-4 h-4" />
-                실패 {failedCount}개 전체 재실행
-              </button>
-            )}
-
             {/* ── 발행하기 버튼 ── */}
             {loadedCount > 0 && !isBusy && (
               <button
@@ -939,6 +957,23 @@ if (provider === "pollinations") {
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </div>
+              </button>
+            )}
+
+            {/* 실패 재시도 버튼 */}
+            {failedCount > 0 && !isBusy && (
+              <button
+                className="w-full rounded-2xl font-semibold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
+                style={{
+                  height: 44,
+                  background: "oklch(0.75 0.18 350)",
+                  border: "none",
+                  color: "white",
+                  boxShadow: "0 4px 16px oklch(0.75 0.18 350 / 40%)",
+                }}
+                onClick={handleRetryAll}>
+                <RotateCcw className="w-4 h-4" />
+                실패 {failedCount}개 전체 재시도
               </button>
             )}
 
@@ -1000,9 +1035,9 @@ if (provider === "pollinations") {
                 </div>
                 <button
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap"
-                  style={{ background: "linear-gradient(135deg, oklch(0.72 0.22 345) 0%, oklch(0.64 0.24 330) 100%)", color: "white", boxShadow: "0 6px 18px oklch(0.72 0.22 345 / 28%)" }}
+                  style={{ background: "oklch(0.75 0.18 350)", color: "white" }}
                   onClick={handleRetryAll}>
-                  <RotateCcw className="w-3.5 h-3.5" /> 전체 재실행
+                  <RotateCcw className="w-3.5 h-3.5" /> 전체 재시도
                 </button>
               </div>
             )}
@@ -1107,8 +1142,6 @@ if (provider === "pollinations") {
                         if (idx !== -1) setLightboxIndex(idx);
                       }}
                       onRetry={() => handleRetrySingle(img.id)}
-                      onLoadSuccess={() => markImageLoaded(img.id)}
-                      onLoadError={() => markImageFailed(img.id)}
                     />
                   ))}
                 </div>
