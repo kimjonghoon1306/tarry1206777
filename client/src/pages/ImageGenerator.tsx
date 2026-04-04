@@ -1,195 +1,200 @@
-import React, { useEffect, useMemo, useState } from "react";
-import Layout from "@/components/Layout";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
-type Status = "loading" | "success" | "error";
-
-interface Item {
-  id: string;
-  prompt: string;
+type ImageItem = {
+  id: number;
   url: string;
-  status: Status;
-}
+  status: "pending" | "success" | "fail";
+};
 
 export default function ImageGenerator() {
+  const [searchParams] = useSearchParams();
   const [prompt, setPrompt] = useState("");
-  const [images, setImages] = useState<Item[]>([]);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const buildUrl = (text: string) => {
-    const final = `high quality realistic ${text}`;
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(
-      final
-    )}?nologo=true&t=${Date.now()}`;
-  };
+  // ✅ 콘텐츠에서 넘어온 프롬프트 자동 세팅
+  useEffect(() => {
+    const p = searchParams.get("prompt");
+    if (p) {
+      setPrompt(p);
+      generateImages(p);
+    }
+  }, []);
 
-  const generate = () => {
-    if (!prompt.trim()) return;
+  // ✅ 이미지 생성 (15개)
+  const generateImages = async (customPrompt?: string) => {
+    const finalPrompt = customPrompt || prompt;
+    if (!finalPrompt) return;
 
     setLoading(true);
 
-    const list: Item[] = Array.from({ length: 15 }).map((_, i) => ({
-      id: Date.now() + "-" + i,
-      prompt,
-      url: buildUrl(prompt),
-      status: "loading",
+    const temp: ImageItem[] = Array.from({ length: 15 }).map((_, i) => ({
+      id: i,
+      url: "",
+      status: "pending",
     }));
 
-    setImages((prev) => [...list, ...prev]);
-  };
+    setImages(temp);
 
-  const update = (id: string, status: Status) => {
-    setImages((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, status } : i))
+    // 👉 실제 API 연결 부분 (현재는 더미)
+    const results = await Promise.all(
+      temp.map(async (item) => {
+        try {
+          // ⚠️ 여기에 실제 이미지 API 연결하면 됨
+          await new Promise((res) => setTimeout(res, 500 + Math.random() * 1000));
+
+          return {
+            ...item,
+            url: `https://picsum.photos/seed/${Math.random()}/400/400`,
+            status: "success" as const,
+          };
+        } catch {
+          return {
+            ...item,
+            status: "fail" as const,
+            url: "",
+          };
+        }
+      })
     );
+
+    setImages(results);
+    setLoading(false);
   };
 
-  const retry = (id: string) => {
-    setImages((prev) =>
-      prev.map((i) =>
-        i.id === id
-          ? { ...i, status: "loading", url: buildUrl(i.prompt) }
-          : i
-      )
+  // ✅ 실패만 재생성
+  const regenerateFailed = async () => {
+    const failed = images.filter((i) => i.status === "fail");
+    if (failed.length === 0) return;
+
+    const updated = await Promise.all(
+      images.map(async (item) => {
+        if (item.status !== "fail") return item;
+
+        try {
+          await new Promise((res) => setTimeout(res, 500));
+
+          return {
+            ...item,
+            url: `https://picsum.photos/seed/${Math.random()}/400/400`,
+            status: "success" as const,
+          };
+        } catch {
+          return item;
+        }
+      })
     );
+
+    setImages(updated);
   };
 
-  const retryAll = () => {
-    setImages((prev) =>
-      prev.map((i) =>
-        i.status === "error"
-          ? { ...i, status: "loading", url: buildUrl(i.prompt) }
-          : i
-      )
-    );
+  // ✅ 전체 초기화
+  const resetAll = () => {
+    setImages([]);
+    setPrompt("");
   };
-
-  const stats = useMemo(() => {
-    return {
-      total: images.length,
-      success: images.filter((i) => i.status === "success").length,
-      error: images.filter((i) => i.status === "error").length,
-      loading: images.filter((i) => i.status === "loading").length,
-    };
-  }, [images]);
-
-  useEffect(() => {
-    if (stats.loading === 0) setLoading(false);
-  }, [stats.loading]);
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-[#0b0f17] text-white p-6">
+    <div style={{ display: "flex", height: "100vh", background: "#0b0f14", color: "#fff" }}>
+      
+      {/* 왼쪽 컨트롤 */}
+      <div style={{
+        width: "350px",
+        padding: "20px",
+        borderRight: "1px solid #222"
+      }}>
+        <h2 style={{ marginBottom: "20px" }}>이미지 생성 스튜디오</h2>
 
-        {/* 🔥 상단 */}
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-black">이미지 생성 스튜디오</h1>
-            <p className="text-zinc-400 text-sm">
-              설정 + 생성 + 결과를 한 화면에서 관리
-            </p>
-          </div>
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="프롬프트 입력"
+          style={{
+            width: "100%",
+            height: "150px",
+            background: "#111",
+            border: "1px solid #333",
+            color: "#fff",
+            padding: "10px",
+            marginBottom: "20px"
+          }}
+        />
 
-          <div className="flex gap-3">
-            <div className="bg-black/40 px-4 py-2 rounded-xl">
-              총 {stats.total}
-            </div>
-            <div className="bg-green-500/20 px-4 py-2 rounded-xl text-green-300">
-              성공 {stats.success}
-            </div>
-            <div className="bg-yellow-500/20 px-4 py-2 rounded-xl text-yellow-300">
-              진행 {stats.loading}
-            </div>
-            <div className="bg-red-500/20 px-4 py-2 rounded-xl text-red-300">
-              실패 {stats.error}
-            </div>
-          </div>
-        </div>
+        <button
+          onClick={() => generateImages()}
+          style={{
+            width: "100%",
+            padding: "15px",
+            background: "#4CAF50",
+            border: "none",
+            marginBottom: "10px",
+            fontWeight: "bold"
+          }}
+        >
+          15개 생성
+        </button>
 
-        {/* 🔥 좌우 구조 */}
-        <div className="grid grid-cols-[350px_1fr] gap-6">
+        <button
+          onClick={regenerateFailed}
+          style={{
+            width: "100%",
+            padding: "15px",
+            background: "#d4a017",
+            border: "none",
+            marginBottom: "10px",
+            fontWeight: "bold"
+          }}
+        >
+          실패 재생성
+        </button>
 
-          {/* 👉 왼쪽 설정 */}
-          <div className="bg-black/40 rounded-2xl p-5 space-y-4">
-
-            <div>
-              <div className="text-sm mb-2 text-zinc-400">프롬프트</div>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="w-full h-40 p-3 rounded bg-black border border-white/10"
-              />
-            </div>
-
-            <button
-              onClick={generate}
-              className="w-full bg-green-500 py-3 rounded-xl font-bold text-black"
-            >
-              15개 생성
-            </button>
-
-            <button
-              onClick={retryAll}
-              className="w-full bg-yellow-500 py-3 rounded-xl font-bold text-black"
-            >
-              실패 전체 재생성
-            </button>
-
-            <button
-              onClick={() => setImages([])}
-              className="w-full bg-red-500 py-3 rounded-xl font-bold"
-            >
-              전체 초기화
-            </button>
-
-          </div>
-
-          {/* 👉 오른쪽 갤러리 */}
-          <div className="grid grid-cols-3 gap-4">
-
-            {images.map((img) => (
-              <div
-                key={img.id}
-                className="bg-black/40 rounded-xl p-3 border border-white/10"
-              >
-                <div className="aspect-square bg-black rounded overflow-hidden">
-
-                  <img
-                    src={img.url}
-                    onLoad={() => update(img.id, "success")}
-                    onError={() => update(img.id, "error")}
-                    className="w-full h-full object-cover"
-                  />
-
-                  {img.status === "loading" && (
-                    <div className="text-center p-4">로딩중...</div>
-                  )}
-
-                  {img.status === "error" && (
-                    <div className="text-center p-4 text-red-400">
-                      실패
-                      <button
-                        onClick={() => retry(img.id)}
-                        className="block mt-2 bg-red-500 px-3 py-1 rounded"
-                      >
-                        재생성
-                      </button>
-                    </div>
-                  )}
-
-                </div>
-
-                <div className="mt-2 text-sm text-zinc-400">
-                  {img.prompt}
-                </div>
-
-              </div>
-            ))}
-
-          </div>
-
-        </div>
-
+        <button
+          onClick={resetAll}
+          style={{
+            width: "100%",
+            padding: "15px",
+            background: "#d32f2f",
+            border: "none",
+            fontWeight: "bold"
+          }}
+        >
+          전체 초기화
+        </button>
       </div>
-    </Layout>
+
+      {/* 오른쪽 결과 */}
+      <div style={{ flex: 1, padding: "20px", overflow: "auto" }}>
+        <h3 style={{ marginBottom: "20px" }}>
+          결과 ({images.filter(i => i.status === "success").length} / {images.length})
+        </h3>
+
+        {loading && <p>이미지 생성 중...</p>}
+
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+          gap: "10px"
+        }}>
+          {images.map((img) => (
+            <div key={img.id} style={{
+              width: "100%",
+              height: "150px",
+              background: "#111",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "12px"
+            }}>
+              {img.status === "pending" && "대기중"}
+              {img.status === "fail" && "실패"}
+              {img.status === "success" && (
+                <img src={img.url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
