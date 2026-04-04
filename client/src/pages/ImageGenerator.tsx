@@ -19,7 +19,8 @@ export default function ImageGenerator() {
 
     const id = Date.now().toString();
 
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
+    // 🔥 이미 API 연결된 상태로 사용
+    const url = `/api/generate-image?prompt=${encodeURIComponent(prompt)}`;
 
     const newItem: ImageItem = {
       id,
@@ -55,19 +56,18 @@ export default function ImageGenerator() {
       return;
     }
 
-    const retryImages = failed.map((img) => ({
-      ...img,
-      status: "loading",
-      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(
-        img.prompt
-      )}?nologo=true&t=${Date.now()}`,
-    }));
-
     setImages((prev) =>
-      prev.map((img) => {
-        const found = retryImages.find((r) => r.id === img.id);
-        return found ? found : img;
-      })
+      prev.map((img) =>
+        img.status === "error"
+          ? {
+              ...img,
+              status: "loading",
+              url: `/api/generate-image?prompt=${encodeURIComponent(
+                img.prompt
+              )}&t=${Date.now()}`,
+            }
+          : img
+      )
     );
   };
 
@@ -86,12 +86,10 @@ export default function ImageGenerator() {
           <Button onClick={generateImage}>생성</Button>
         </div>
 
-        {/* 버튼 */}
-        <div className="flex gap-2">
-          <Button onClick={retryAll}>
-            전체 재시도
-          </Button>
-        </div>
+        {/* 전체 재시도 */}
+        <Button onClick={retryAll}>
+          전체 재시도
+        </Button>
 
         {/* 갤러리 */}
         <div className="grid grid-cols-3 gap-4">
