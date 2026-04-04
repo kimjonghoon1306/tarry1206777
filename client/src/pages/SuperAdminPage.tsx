@@ -250,10 +250,13 @@ function ApiKeyManager() {
             const hasKey = !!values[opt.keyStorageKey]?.trim();
             return (
               <button key={opt.value}
-                className="rounded-xl p-3 text-left transition-all active:scale-95 relative"
+                className="rounded-xl p-3 text-left transition-all active:scale-[0.97] relative overflow-hidden"
                 style={{
-                  background: active ? `${opt.logoColor}15` : "var(--background)",
-                  border: `2px solid ${active ? opt.logoColor + "80" : "var(--border)"}`,
+                  background: active ? `${opt.logoColor}18` : "var(--background)",
+                  border: `2px solid ${active ? opt.logoColor : "var(--border)"}`,
+                  boxShadow: active ? `0 0 20px ${opt.logoColor}30` : "none",
+                  outline: active ? `2px solid ${opt.logoColor}50` : "none",
+                  outlineOffset: "2px",
                 }}
                 onClick={() => handleSelectContentAI(opt.value)}>
                 <div className="flex items-center justify-between mb-1.5">
@@ -296,10 +299,13 @@ function ApiKeyManager() {
             const hasKey = !opt.keyStorageKey || !!values[opt.keyStorageKey]?.trim();
             return (
               <button key={opt.value}
-                className="rounded-xl p-3 text-left transition-all active:scale-95"
+                className="rounded-xl p-3 text-left transition-all active:scale-[0.97] overflow-hidden"
                 style={{
-                  background: active ? `${opt.logoColor}15` : "var(--background)",
-                  border: `2px solid ${active ? opt.logoColor + "80" : "var(--border)"}`,
+                  background: active ? `${opt.logoColor}18` : "var(--background)",
+                  border: `2px solid ${active ? opt.logoColor : "var(--border)"}`,
+                  boxShadow: active ? `0 0 20px ${opt.logoColor}30` : "none",
+                  outline: active ? `2px solid ${opt.logoColor}50` : "none",
+                  outlineOffset: "2px",
                 }}
                 onClick={() => handleSelectImageAI(opt.value)}>
                 <div className="flex items-center justify-between mb-1.5">
