@@ -19,7 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { getAPIKey, CONTENT_AI_OPTIONS, type ContentAIProvider } from "@/lib/ai-config";
+import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-config";
 import { generateContent } from "@/lib/ai-client";
 import { userGet, userSet, SETTINGS_KEYS } from "@/lib/user-storage";
 import { useLocation } from "wouter";
@@ -207,7 +207,7 @@ export default function ContentGenerator() {
     return () => window.removeEventListener("paste", handlePaste);
   }, [handleFileUpload]);
 
-  const currentAI = CONTENT_AI_OPTIONS.find(o => o.value === ((userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"));
+  const currentAI = CONTENT_AI_OPTIONS.find(o => o.value === getContentProvider());
   useEffect(() => {
     if (generatedContent || keyword) {
       try {
@@ -279,7 +279,7 @@ export default function ContentGenerator() {
   };
 
   const handleGenerate = async () => {
-    const provider = (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
+    const provider = getContentProvider();
     const apiKey = getAPIKey(provider);
     if (!apiKey) {
       toast.error(`설정 페이지에서 ${currentAI?.label} API 키를 먼저 입력해주세요`);
@@ -534,21 +534,12 @@ export default function ContentGenerator() {
 
           {/* 버튼 */}
           <div className="flex flex-wrap gap-2 mt-4">
-            <button
-              className="relative overflow-hidden rounded-xl font-bold text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 px-4 py-2"
-              style={{
-                background: isGenerating ? "var(--muted)" : "var(--color-emerald)",
-                boxShadow: isGenerating ? "none" : "0 4px 20px oklch(0.696 0.17 162.48 / 40%)",
-                minWidth: 120,
-              }}
+            <Button className="gap-2"
+              style={{ background: isGenerating ? "var(--muted)" : "var(--color-emerald)", color: "white" }}
               onClick={handleGenerate} disabled={isGenerating}>
-              {!isGenerating && (
-                <div className="absolute inset-0 opacity-20 pointer-events-none"
-                  style={{ background: "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform: "skewX(-20deg) translateX(-100%)", animation: "shimmer 3s infinite" }} />
-              )}
               {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              <span>{isGenerating ? "생성 중..." : `${currentAI?.label || "AI"} 생성`}</span>
-            </button>
+              {isGenerating ? "생성 중..." : `${currentAI?.label || "AI"} 생성`}
+            </Button>
             {generatedContent && (
               <>
                 <Button variant="outline" className="gap-2" onClick={handleCopy}><Copy className="w-4 h-4" />복사</Button>
