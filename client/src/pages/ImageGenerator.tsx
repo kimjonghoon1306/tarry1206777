@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import Layout from "@/components/Layout";
 
 interface ImageItem {
@@ -8,12 +8,11 @@ interface ImageItem {
   status: "loading" | "success" | "error";
 }
 
-// ✅ 이상한 번역 제거 + 최소 보정
 const normalizePrompt = (text: string) => {
   return `${text}, high quality, detailed`;
 };
 
-function ImageGenerator() {
+const ImageGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<ImageItem[]>([]);
 
@@ -95,7 +94,6 @@ function ImageGenerator() {
       </div>
     </Layout>
   );
-}
+};
 
-// ✅ 🔥 이거 때문에 빌드 에러 났던거 해결
 export default ImageGenerator;
