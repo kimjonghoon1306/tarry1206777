@@ -687,44 +687,33 @@ if (provider === "pollinations") {
 
   // ── 실패 항목 전체 재시도 ─────────────────────────
   const handleRetryAll = async () => {
-    const failed = gallery.filter(g => !g.loading && !g.src && g._prompt);
-    if (failed.length === 0) { toast.info("재시도할 실패 이미지가 없어요"); return; }
+    const failed = gallery.filter(g => !g.loading && (g.failed || !g.src) && g._prompt);
+    if (failed.length === 0) { toast.info("재실행할 실패 이미지가 없어요"); return; }
 
     setIsRetrying(true);
     setProgress(0);
-    toast.loading(`실패 이미지 ${failed.length}개 재시도 중...`, { id: "imggen" });
+    toast.loading(`실패 이미지 ${failed.length}개 전체 재실행 중...`, { id: "imggen" });
 
-    // 실패 항목을 loading 상태로 복원
-    setGallery(prev => prev.map(item =>
-      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "", failed: false } : item
-    ));
-
-    let successCount = 0;
     for (let i = 0; i < failed.length; i++) {
       const item = failed[i];
       const seed = Math.floor(Math.random() * 999999) + i * 1000 + Date.now();
-      try {
-        const src = await generatePollinationsUrl(
-          item._prompt!,
-          item._w || 1024,
-          item._h || 1024,
-          seed
-        );
-        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, src, loading: false, failed: false, _seed: seed } : g));
-        successCount++;
-        setProgress(Math.round(((i + 1) / failed.length) * 100));
-        toast.loading(`재시도 ${i + 1}/${failed.length} 완료`, { id: "imggen" });
-      } catch {
-        setGallery(prev => prev.map(g => g.id === item.id ? { ...g, loading: false, src: "", failed: true } : g));
-      }
+      const src = generatePollinationsUrl(
+        item._prompt!,
+        item._w || 1024,
+        item._h || 1024,
+        seed
+      );
+
+      setGallery(prev => prev.map(g =>
+        g.id === item.id
+          ? { ...g, src, loading: false, failed: false, _seed: seed }
+          : g
+      ));
+
+      setProgress(Math.round(((i + 1) / failed.length) * 100));
     }
 
-    toast[successCount > 0 ? "success" : "error"](
-      successCount > 0
-        ? `✅ ${successCount}/${failed.length}개 복구 완료!`
-        : "재시도도 실패했습니다. Pollinations 서버가 불안정해요.",
-      { id: "imggen" }
-    );
+    toast.success(`실패 이미지 ${failed.length}개 재실행 요청 완료`, { id: "imggen" });
     setIsRetrying(false);
   };
 
@@ -733,16 +722,16 @@ if (provider === "pollinations") {
     const item = gallery.find(g => g.id === id);
     if (!item || !item._prompt) return;
 
-    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "", failed: false } : g));
     const seed = Math.floor(Math.random() * 999999) + Date.now();
-    try {
-      const src = await generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, failed: false, _seed: seed } : g));
-      toast.success("이미지 복구 완료!");
-    } catch {
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "", failed: true } : g));
-      toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
-    }
+    const src = generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
+
+    setGallery(prev => prev.map(g =>
+      g.id === id
+        ? { ...g, src, loading: false, failed: false, _seed: seed }
+        : g
+    ));
+
+    toast.success("이미지 재실행 요청 완료");
   };
 
   // ── 갤러리 초기화 ─────────────────────────────────
