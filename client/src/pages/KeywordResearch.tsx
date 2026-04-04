@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { getContentProvider, getAPIKey } from "@/lib/ai-config";
+import { getAPIKey, type ContentAIProvider } from "@/lib/ai-config";
 import { userGet, SETTINGS_KEYS, syncAdminSettingsToLocal } from "@/lib/user-storage";
 
 // 대형 키워드 풀 - 다양한 카테고리
@@ -479,7 +479,7 @@ export default function KeywordResearch() {
 
   // AI 키워드 추천 (네이버 API 없을 때 사용)
   async function doCollectAI(kw: string) {
-    const provider = getContentProvider();
+    const provider = (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
     const apiKey = getAPIKey(provider);
     if (!apiKey) {
       toast.error("설정에서 AI API 키를 먼저 입력해주세요");
@@ -614,7 +614,7 @@ export default function KeywordResearch() {
 
   // 2. 제목 생성 - forceNew=true면 항상 초기화 후 생성
   async function genTitles(kw: string, forceNew = false) {
-    const provider = getContentProvider();
+    const provider = (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
     const apiKey = getAPIKey(provider);
 
     if (!apiKey) {

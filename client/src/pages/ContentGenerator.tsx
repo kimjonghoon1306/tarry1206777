@@ -19,7 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-config";
+import { getAPIKey, CONTENT_AI_OPTIONS, type ContentAIProvider } from "@/lib/ai-config";
 import { generateContent } from "@/lib/ai-client";
 import { userGet, userSet, SETTINGS_KEYS } from "@/lib/user-storage";
 import { useLocation } from "wouter";
@@ -207,7 +207,7 @@ export default function ContentGenerator() {
     return () => window.removeEventListener("paste", handlePaste);
   }, [handleFileUpload]);
 
-  const currentAI = CONTENT_AI_OPTIONS.find(o => o.value === getContentProvider());
+  const currentAI = CONTENT_AI_OPTIONS.find(o => o.value === ((userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"));
   useEffect(() => {
     if (generatedContent || keyword) {
       try {
@@ -279,7 +279,7 @@ export default function ContentGenerator() {
   };
 
   const handleGenerate = async () => {
-    const provider = getContentProvider();
+    const provider = (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
     const apiKey = getAPIKey(provider);
     if (!apiKey) {
       toast.error(`설정 페이지에서 ${currentAI?.label} API 키를 먼저 입력해주세요`);
