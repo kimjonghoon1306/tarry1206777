@@ -685,12 +685,17 @@ export default function KeywordResearch() {
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={clearAll}>
               <Trash2 className="w-3.5 h-3.5"/>초기화
             </Button>
-            <Button size="sm" className="gap-1.5"
-              style={{background:isCollecting?"var(--muted)":"var(--color-emerald)",color:"white"}}
+            <button
+              className="relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{background:isCollecting?"var(--muted)":"var(--color-emerald)", boxShadow:isCollecting?"none":"0 4px 16px oklch(0.696 0.17 162.48 / 40%)"}}
               onClick={()=>doCollect()} disabled={isCollecting}>
+              {!isCollecting && (
+                <div className="absolute inset-0 opacity-20 pointer-events-none"
+                  style={{background:"linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform:"skewX(-20deg) translateX(-100%)", animation:"shimmer 3s infinite"}} />
+              )}
               {isCollecting?<RefreshCw className="w-4 h-4 animate-spin"/>:<Zap className="w-4 h-4"/>}
-              {isCollecting?"수집 중...":"키워드 수집"}
-            </Button>
+              <span>{isCollecting?"수집 중...":"키워드 수집"}</span>
+            </button>
           </div>
         </div>
 
@@ -714,12 +719,16 @@ export default function KeywordResearch() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {/* 제목 생성 (초기화 후 새로 생성) */}
-                <Button size="sm" className="gap-1.5 text-xs h-7"
-                  style={{background:"oklch(0.75 0.12 300)", color:"white"}}
+                <button className="relative overflow-hidden flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{background:"oklch(0.75 0.12 300)", boxShadow:"0 3px 12px oklch(0.75 0.12 300 / 40%)"}}
                   onClick={()=>genTitles(selKW!, true)} disabled={isGenTitles}>
+                  {!isGenTitles && (
+                    <div className="absolute inset-0 opacity-20 pointer-events-none"
+                      style={{background:"linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform:"skewX(-20deg) translateX(-100%)", animation:"shimmer 3s infinite"}} />
+                  )}
                   <Sparkles className={`w-3.5 h-3.5 ${isGenTitles?"animate-spin":""}`}/>
-                  제목 생성
-                </Button>
+                  <span>제목 생성</span>
+                </button>
                 {/* 10개 더 (누적) */}
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7"
                   onClick={()=>genTitles(selKW!)} disabled={isGenTitles}>
@@ -759,11 +768,15 @@ export default function KeywordResearch() {
                     아직 제목이 없어요.<br/>
                     <span className="text-xs">API 키가 설정됐는지 확인 후 아래 버튼을 눌러주세요.</span>
                   </p>
-                  <Button size="sm" className="gap-2"
-                    style={{background:"oklch(0.75 0.12 300)", color:"white"}}
+                  <button className="relative overflow-hidden flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-60"
+                    style={{background:"oklch(0.75 0.12 300)"}}
                     onClick={()=>genTitles(selKW!)} disabled={isGenTitles}>
-                    <RefreshCw className="w-3.5 h-3.5"/>제목 생성 시작
-                  </Button>
+                    {!isGenTitles && (
+                      <div className="absolute inset-0 opacity-20 pointer-events-none"
+                        style={{background:"linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform:"skewX(-20deg) translateX(-100%)", animation:"shimmer 3s infinite"}} />
+                    )}
+                    <RefreshCw className="w-3.5 h-3.5"/><span>제목 생성 시작</span>
+                  </button>
                 </div>
               ) : (
                 <>
