@@ -1,69 +1,116 @@
-export type ContentAIProvider = "gemini" | "groq" | "claude" | "openai";
+import { userGet, SETTINGS_KEYS } from "./user-storage";
 
-export type ImageAIProvider =
-  | "openai"
-  | "gemini"
-  | "replicate";
+export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
+export type ImageAIProvider = "openai" | "gemini" | "replicate";
+
+// userGet 자체에 admin 폴백이 포함되어 있음 (user-storage.ts 참고)
+export function getContentProvider(): ContentAIProvider {
+  return (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini";
+}
+
+export function getImageProvider(): ImageAIProvider {
+  return (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "gemini";
+}
+
+export function getAPIKey(provider: string): string {
+  const keyMap: Record<string, string> = {
+    gemini:      SETTINGS_KEYS.GEMINI_KEY,
+    claude:      SETTINGS_KEYS.CLAUDE_KEY,
+    openai:      SETTINGS_KEYS.OPENAI_KEY,
+    flux:        SETTINGS_KEYS.FLUX_KEY,
+    groq:        SETTINGS_KEYS.GROQ_KEY,
+    replicate:   SETTINGS_KEYS.REPLICATE_KEY,
+    huggingface: SETTINGS_KEYS.HUGGING_KEY,
+  };
+  const k = keyMap[provider];
+  return k ? userGet(k) : "";
+}
 
 export const CONTENT_AI_OPTIONS = [
   {
-    id: "gemini",
-    name: "Gemini Flash",
-    desc: "Google AI · 블로그 무료",
-    free: true,
+    value: "gemini" as ContentAIProvider,
+    label: "Gemini Flash",
+    badge: "무료",
+    badgeColor: "var(--color-emerald)",
+    desc: "Google AI · 빠르고 무료",
+    logo: "G", logoColor: "#4285F4",
+    keyLabel: "Gemini API Key", keyPlaceholder: "AIza...",
+    keyStorageKey: SETTINGS_KEYS.GEMINI_KEY,
+    keyLink: "https://aistudio.google.com/app/apikey",
   },
   {
-    id: "groq",
-    name: "Groq (Llama 3)",
+    value: "groq" as ContentAIProvider,
+    label: "Groq (Llama 3)",
+    badge: "무료",
+    badgeColor: "var(--color-emerald)",
     desc: "Groq · 초고속 완전 무료",
-    free: true,
+    logo: "L", logoColor: "#F55036",
+    keyLabel: "Groq API Key", keyPlaceholder: "gsk_...",
+    keyStorageKey: SETTINGS_KEYS.GROQ_KEY,
+    keyLink: "https://console.groq.com/keys",
   },
   {
-    id: "claude",
-    name: "Claude Sonnet",
+    value: "claude" as ContentAIProvider,
+    label: "Claude Sonnet",
+    badge: "유료",
+    badgeColor: "oklch(0.769 0.188 70.08)",
     desc: "Anthropic · 고품질",
-    free: false,
+    logo: "A", logoColor: "#CC785C",
+    keyLabel: "Claude API Key", keyPlaceholder: "sk-ant-...",
+    keyStorageKey: SETTINGS_KEYS.CLAUDE_KEY,
+    keyLink: "https://console.anthropic.com/",
   },
   {
-    id: "openai",
-    name: "GPT-4o",
+    value: "openai" as ContentAIProvider,
+    label: "GPT-4o",
+    badge: "유료",
+    badgeColor: "oklch(0.769 0.188 70.08)",
     desc: "OpenAI · 범용 최강",
-    free: false,
+    logo: "O", logoColor: "#10A37F",
+    keyLabel: "OpenAI API Key", keyPlaceholder: "sk-...",
+    keyStorageKey: SETTINGS_KEYS.OPENAI_KEY,
+    keyLink: "https://platform.openai.com/api-keys",
   },
 ];
 
 export const IMAGE_AI_OPTIONS = [
   {
-    id: "gemini",
-    name: "Gemini Image",
-    desc: "일부 무료 사용 후 유료 결제",
-    color: "blue",
-    link: "https://aistudio.google.com/app/apikey",
+    value: "gemini" as ImageAIProvider,
+    label: "Gemini Image",
+    badge: "일부 무료",
+    badgeColor: "#4F7CFF",
+    desc: "Google AI · 일부 무료 사용 후 유료 결제",
+    pros: "Gemini 생태계 연동 · 일부 무료 사용 가능 · 한국어 프롬프트 대응",
+    cons: "사용량 초과 시 유료 결제 필요",
+    logo: "G", logoColor: "#4F7CFF",
+    keyLabel: "Gemini API Key", keyPlaceholder: "AIza...",
+    keyStorageKey: SETTINGS_KEYS.GEMINI_KEY,
+    keyLink: "https://aistudio.google.com/app/apikey",
   },
   {
-    id: "openai",
-    name: "DALL·E 3",
-    desc: "유료 · 최고 품질 이미지",
-    color: "purple",
-    link: "https://platform.openai.com/api-keys",
+    value: "openai" as ImageAIProvider,
+    label: "GPT Image",
+    badge: "유료",
+    badgeColor: "oklch(0.75 0.12 300)",
+    desc: "OpenAI · 최고 품질 이미지",
+    pros: "최고 품질 이미지 · 정확한 프롬프트 이해",
+    cons: "유료 · 이미지당 비용 발생",
+    logo: "O", logoColor: "oklch(0.75 0.12 300)",
+    keyLabel: "OpenAI API Key", keyPlaceholder: "sk-...",
+    keyStorageKey: SETTINGS_KEYS.OPENAI_KEY,
+    keyLink: "https://platform.openai.com/api-keys",
   },
   {
-    id: "replicate",
-    name: "Replicate",
-    desc: "일부 무료 사용 후 유료 결제",
-    color: "yellow",
-    link: "https://replicate.com/account/api-tokens",
+    value: "replicate" as ImageAIProvider,
+    label: "Replicate",
+    badge: "일부 무료",
+    badgeColor: "oklch(0.769 0.188 70.08)",
+    desc: "Replicate · 일부 무료 사용 후 유료 결제",
+    pros: "다양한 이미지 모델 사용 가능 · 일부 무료 사용 가능",
+    cons: "사용량 초과 시 유료 결제 필요",
+    logo: "R", logoColor: "oklch(0.769 0.188 70.08)",
+    keyLabel: "Replicate API Token", keyPlaceholder: "r8_...",
+    keyStorageKey: SETTINGS_KEYS.REPLICATE_KEY,
+    keyLink: "https://replicate.com/account/api-tokens",
   },
 ];
-
-export function getImageProvider(): ImageAIProvider {
-  return (localStorage.getItem("image_provider") as ImageAIProvider) || "gemini";
-}
-
-export function setImageProvider(provider: ImageAIProvider) {
-  localStorage.setItem("image_provider", provider);
-}
-
-export function getAPIKey(provider: string) {
-  return localStorage.getItem(`${provider}_api_key`) || "";
-}
