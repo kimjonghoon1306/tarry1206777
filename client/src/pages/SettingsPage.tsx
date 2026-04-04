@@ -874,10 +874,13 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {CONTENT_AI_OPTIONS.map((opt) => (
               <button key={opt.value}
-                className="rounded-xl p-4 text-left transition-all"
+                className="rounded-xl p-4 text-left transition-all active:scale-[0.97] relative overflow-hidden"
                 style={{
-                  background: contentAI === opt.value ? "oklch(0.696 0.17 162.48 / 12%)" : "var(--background)",
-                  border: `2px solid ${contentAI === opt.value ? "oklch(0.696 0.17 162.48 / 60%)" : "var(--border)"}`,
+                  background: contentAI === opt.value ? `${opt.logoColor}18` : "var(--background)",
+                  border: `2px solid ${contentAI === opt.value ? opt.logoColor : "var(--border)"}`,
+                  boxShadow: contentAI === opt.value ? `0 0 20px ${opt.logoColor}30` : "none",
+                  outline: contentAI === opt.value ? `2px solid ${opt.logoColor}50` : "none",
+                  outlineOffset: "2px",
                 }}
                 onClick={() => handleSelectContentAI(opt.value)}>
                 <div className="flex items-center justify-between mb-2">
@@ -911,15 +914,19 @@ export default function SettingsPage() {
               const selected = imageAI === opt.value;
               return (
                 <button key={opt.value}
-                  className="rounded-2xl p-4 text-left transition-all relative overflow-hidden"
+                  className="rounded-2xl p-4 text-left transition-all relative overflow-hidden active:scale-[0.97]"
                   style={{
                     background: selected ? `${opt.logoColor}18` : "var(--background)",
-                    border: `2px solid ${selected ? opt.logoColor + "80" : "var(--border)"}`,
-                    boxShadow: selected ? `0 0 20px ${opt.logoColor}20` : "none",
+                    border: `2px solid ${selected ? opt.logoColor : "var(--border)"}`,
+                    boxShadow: selected ? `0 0 24px ${opt.logoColor}40` : "none",
+                    outline: selected ? `2px solid ${opt.logoColor}60` : "none",
+                    outlineOffset: "2px",
                   }}
                   onClick={() => handleSelectImageAI(opt.value)}>
-
-                  {/* 상단: 로고 + 배지 + 선택됨 */}
+                  {selected && (
+                    <div className="absolute inset-0 opacity-10 pointer-events-none"
+                      style={{ background: `linear-gradient(135deg, ${opt.logoColor}, transparent)` }} />
+                  )}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-white"
