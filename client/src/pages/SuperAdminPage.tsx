@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { userGet, userSet, saveSettingsToServer, SETTINGS_KEYS } from "@/lib/user-storage";
 import { CONTENT_AI_OPTIONS, IMAGE_AI_OPTIONS, type ContentAIProvider, type ImageAIProvider } from "@/lib/ai-config";
 
@@ -135,9 +136,20 @@ const API_SECTIONS = [
     title: "Webhook (커스텀)", icon: "Link", color: "#6366f1", grad: "linear-gradient(135deg,#6366f1,#4f46e5)",
     desc: "커스텀 사이트 자동 발행",
     fields: [
-      { label: "Webhook URL", key: "webhook_url", placeholder: "https://...", link: "", badge: "", badgeColor: "" },
-      { label: "Auth Key", key: "webhook_auth_key", placeholder: "Bearer Token 등", link: "", badge: "", badgeColor: "" },
-      { label: "Auth Header", key: "webhook_auth_header", placeholder: "Authorization", link: "", badge: "", badgeColor: "" },
+      { label: "Webhook URL", key: "webhook_url", placeholder: "https://mysite.com/api/posts", link: "", badge: "", badgeColor: "" },
+      { label: "Auth Key", key: "webhook_auth_key", placeholder: "Bearer Token 또는 API 키", link: "", badge: "", badgeColor: "" },
+      {
+        label: "Auth Header 방식", key: "webhook_auth_header", placeholder: "Authorization",
+        link: "", badge: "", badgeColor: "",
+        type: "select",
+        options: [
+          { value: "Authorization", label: "Authorization (Bearer Token)" },
+          { value: "X-API-Key", label: "X-API-Key" },
+          { value: "X-Auth-Token", label: "X-Auth-Token" },
+          { value: "X-Custom-Auth", label: "X-Custom-Auth" },
+          { value: "none", label: "인증 없음 (공개 API)" },
+        ],
+      },
     ],
   },
 ];
@@ -151,7 +163,7 @@ function ApiKeyManager() {
     () => (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
   );
   const [imageAI, setImageAI] = useState<ImageAIProvider>(
-    () => (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations"
+    () => (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "gemini"
   );
 
   const handleSelectContentAI = (v: ContentAIProvider) => {
@@ -363,9 +375,39 @@ function ApiKeyManager() {
             {isOpen && (
               <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--border)" }}>
                 <div className="pt-3 space-y-3">
-                  {fields.map(({ label, key, placeholder, link, badge, badgeColor }) => {
+                  {fields.map(({ label, key, placeholder, link, badge, badgeColor, type, options }: any) => {
                     const uid = key + label;
                     const filled = !!values[key]?.trim();
+
+                    // ── Select 드롭다운 타입 ──
+                    if (type === "select" && options) {
+                      return (
+                        <div key={uid}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-medium text-foreground">{label}</span>
+                          </div>
+                          <Select
+                            value={values[key] || options[0]?.value || ""}
+                            onValueChange={v => setValues(p => ({ ...p, [key]: v }))}>
+                            <SelectTrigger className="h-11 text-sm" style={{ borderColor: filled ? `${color}60` : undefined }}>
+                              <SelectValue placeholder={placeholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {options.map((opt: { value: string; label: string }) => (
+                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {filled && (
+                            <p className="text-xs mt-1 flex items-center gap-1" style={{ color }}>
+                              <CheckCircle2 className="w-3 h-3" /> {options.find((o: any) => o.value === values[key])?.label}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // ── 기본 Input 타입 ──
                     return (
                       <div key={uid}>
                         <div className="flex items-center justify-between mb-1.5">
