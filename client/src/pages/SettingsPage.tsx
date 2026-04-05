@@ -817,12 +817,30 @@ export default function SettingsPage() {
     setTimeout(() => setWebhookSaved(false), 3000);
   };
 
+  // 글 생성 AI 키 (글 생성 AI 섹션에서만 사용)
+  const contentRequiredKeys = Array.from(
+    new Map(
+      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI)]
+        .filter(Boolean)
+        .filter(o => o!.keyStorageKey)
+        .map(o => [o!.keyStorageKey, o!])
+    ).values()
+  );
+
+  // 이미지 AI 키 (이미지 AI 섹션에서만 사용, 글 생성 AI 키와 같으면 중복 제거)
+  const imageRequiredKeys = Array.from(
+    new Map(
+      [IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
+        .filter(Boolean)
+        .filter(o => o!.keyStorageKey)
+        .map(o => [o!.keyStorageKey, o!])
+    ).values()
+  );
+
+  // API 키 관리 섹션에는 중복 없이 둘 다 표시
   const requiredKeys = Array.from(
     new Map(
-      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI), IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
-        .filter(Boolean)
-        .filter(o => o!.keyStorageKey) // API 키 불필요한 항목 제외 (Pollinations 등)
-        .map(o => [o!.keyStorageKey, o!])
+      [...contentRequiredKeys, ...imageRequiredKeys].map(o => [o.keyStorageKey, o])
     ).values()
   );
 
@@ -1418,4 +1436,3 @@ export default function SettingsPage() {
   );
 }
 //fix
-
