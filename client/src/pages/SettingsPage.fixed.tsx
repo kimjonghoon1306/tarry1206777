@@ -242,7 +242,6 @@ function CoupangSection() {
   const [subId, setSubId] = React.useState(() => userGetSettingsValue("coupang_sub_id"));
   const [showSecret, setShowSecret] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
-  const [customDomain, setCustomDomain] = React.useState(() => userGetSettingsValue(SETTINGS_KEYS.CUSTOM_DOMAIN));
   const [testResult, setTestResult] = React.useState<string>("");
   const [testing, setTesting] = React.useState(false);
 
@@ -354,6 +353,7 @@ function CustomWebhookSection() {
     try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
   });
   const [showAdd, setShowAdd] = React.useState(false);
+  const [customDomain, setCustomDomain] = React.useState(() => userGetSettingsValue("custom_domain") || localStorage.getItem("custom_domain") || localStorage.getItem("admin_custom_domain") || "");
   const [url, setUrl] = React.useState("");
   const [authHeader, setAuthHeader] = React.useState("Authorization");
   const [authKey, setAuthKey] = React.useState("");
@@ -362,13 +362,14 @@ function CustomWebhookSection() {
 
   const handleSave = () => {
     if (!url.trim()) { toast.error("Webhook URL을 입력해주세요"); return; }
+    const normalizedDomain = (customDomain.trim() || url.replace(/^https?:\/\//, "").split("/")[0]).trim();
     const entry = {
-      _name: url.replace("https://", "").split("/")[0],
+      _name: normalizedDomain || url.replace("https://", "").split("/")[0],
       _type: "custom",
+      custom_domain: normalizedDomain,
       webhook_url: url.trim(),
       webhook_auth_header: authHeader,
       webhook_auth_key: authKey.trim(),
-      custom_domain: customDomain.trim(),
     };
     const updated = [...accounts, entry];
     setAccounts(updated);
@@ -376,17 +377,19 @@ function CustomWebhookSection() {
     // 기존 키도 저장 (호환성)
     userSet(SETTINGS_KEYS.WEBHOOK_URL, url.trim());
     userSet(SETTINGS_KEYS.WEBHOOK_KEY, authKey.trim());
-    userSet(SETTINGS_KEYS.CUSTOM_DOMAIN, customDomain.trim());
-    localStorage.setItem("admin_custom_domain", customDomain.trim());
-    localStorage.setItem("blogauto_custom_domain", customDomain.trim());
     userSet("webhook_auth_header", authHeader);
+    userSet("custom_domain", normalizedDomain);
+    localStorage.setItem("custom_domain", normalizedDomain);
+    localStorage.setItem("admin_custom_domain", normalizedDomain);
+    localStorage.setItem("blogauto_custom_domain", normalizedDomain);
     // 배포 플랫폼 목록 업데이트
     const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
     platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
     localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
-    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, [SETTINGS_KEYS.CUSTOM_DOMAIN]: customDomain.trim() });
+    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain });
     setSaved(true);
     setShowAdd(false);
+    setCustomDomain(normalizedDomain);
     setUrl(""); setAuthKey(""); setAuthHeader("Authorization");
     toast.success("✅ 웹사이트 등록됐어요!");
     setTimeout(() => setSaved(false), 3000);
@@ -430,13 +433,11 @@ function CustomWebhookSection() {
                 <div className="min-w-0">
                   <p className="text-sm text-foreground truncate">{acc._name}</p>
                   <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    도메인: {acc.custom_domain || acc._name}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                     헤더: {acc.webhook_auth_header || "Authorization"}
                   </p>
-                  {acc.custom_domain && (
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                      도메인: {acc.custom_domain}
-                    </p>
-                  )}
                 </div>
               </div>
               <button onClick={() => remove(idx)}
@@ -452,6 +453,18 @@ function CustomWebhookSection() {
       {/* 추가 폼 */}
       {showAdd && (
         <div className="space-y-3 p-4 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+          {/* 커스텀 도메인 */}
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
+              커스텀 도메인
+            </label>
+            <Input value={customDomain} onChange={e => setCustomDomain(e.target.value)}
+              placeholder="mysite.com 또는 blog.mysite.com" className="text-sm" />
+            <p className="text-xs mt-1.5" style={{ color: "var(--muted-foreground)" }}>
+              관리자 페이지 커스텀 도메인과 같은 값으로 저장됩니다. 웹페이지 발송 시 이 도메인을 기준으로 표시해요.
+            </p>
+          </div>
+
           {/* Webhook URL */}
           <div>
             <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
@@ -459,15 +472,6 @@ function CustomWebhookSection() {
             </label>
             <Input value={url} onChange={e => setUrl(e.target.value)}
               placeholder="https://mysite.com/api/posts" className="text-sm" />
-          </div>
-
-          {/* 커스텀 도메인 */}
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
-              Custom Domain
-            </label>
-            <Input value={customDomain} onChange={e => setCustomDomain(e.target.value)}
-              placeholder="https://yourdomain.com" className="text-sm" />
           </div>
 
           {/* 인증 헤더 선택 */}
@@ -705,7 +709,7 @@ export default function SettingsPage() {
     () => (userGetSettingsValue(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
   );
   const [imageAI, setImageAI] = useState<ImageAIProvider>(
-    () => (userGetSettingsValue(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations"
+    () => (userGetSettingsValue(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "replicate"
   );
   const [naverLicense, setNaverLicense] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_LICENSE));
   const [naverSecret, setNaverSecret] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_SECRET));
@@ -806,22 +810,37 @@ export default function SettingsPage() {
     }
     userSet(SETTINGS_KEYS.WEBHOOK_URL, webhookUrl);
     userSet(SETTINGS_KEYS.WEBHOOK_KEY, webhookKey);
-    userSet(SETTINGS_KEYS.CUSTOM_DOMAIN, customDomain);
-    localStorage.setItem("admin_custom_domain", customDomain);
-    localStorage.setItem("blogauto_custom_domain", customDomain);
-    const shk = { [SETTINGS_KEYS.WEBHOOK_URL]: webhookUrl, [SETTINGS_KEYS.WEBHOOK_KEY]: webhookKey, [SETTINGS_KEYS.CUSTOM_DOMAIN]: customDomain };
+    const shk = { [SETTINGS_KEYS.WEBHOOK_URL]: webhookUrl, [SETTINGS_KEYS.WEBHOOK_KEY]: webhookKey };
     saveSettingsToServer(shk); saveAllToServer(shk);
     setWebhookSaved(true);
     toast.success("웹사이트 설정 저장됨 ✅ 모든 기기 자동 적용");
     setTimeout(() => setWebhookSaved(false), 3000);
   };
 
+  // 글 생성 AI 키 (글 생성 AI 섹션에서만 사용)
+  const contentRequiredKeys = Array.from(
+    new Map(
+      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI)]
+        .filter(Boolean)
+        .filter(o => o!.keyStorageKey)
+        .map(o => [o!.keyStorageKey, o!])
+    ).values()
+  );
+
+  // 이미지 AI 키 (이미지 AI 섹션에서만 사용, 글 생성 AI 키와 같으면 중복 제거)
+  const imageRequiredKeys = Array.from(
+    new Map(
+      [IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
+        .filter(Boolean)
+        .filter(o => o!.keyStorageKey)
+        .map(o => [o!.keyStorageKey, o!])
+    ).values()
+  );
+
+  // API 키 관리 섹션에는 중복 없이 둘 다 표시
   const requiredKeys = Array.from(
     new Map(
-      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI), IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
-        .filter(Boolean)
-        .filter(o => o!.keyStorageKey) // API 키 불필요한 항목 제외
-        .map(o => [o!.keyStorageKey, o!])
+      [...contentRequiredKeys, ...imageRequiredKeys].map(o => [o.keyStorageKey, o])
     ).values()
   );
 
@@ -873,10 +892,13 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {CONTENT_AI_OPTIONS.map((opt) => (
               <button key={opt.value}
-                className="rounded-xl p-4 text-left transition-all"
+                className="rounded-xl p-4 text-left transition-all active:scale-[0.97] relative overflow-hidden"
                 style={{
-                  background: contentAI === opt.value ? "oklch(0.696 0.17 162.48 / 12%)" : "var(--background)",
-                  border: `2px solid ${contentAI === opt.value ? "oklch(0.696 0.17 162.48 / 60%)" : "var(--border)"}`,
+                  background: contentAI === opt.value ? `${opt.logoColor}18` : "var(--background)",
+                  border: `2px solid ${contentAI === opt.value ? opt.logoColor : "var(--border)"}`,
+                  boxShadow: contentAI === opt.value ? `0 0 20px ${opt.logoColor}30` : "none",
+                  outline: contentAI === opt.value ? `2px solid ${opt.logoColor}50` : "none",
+                  outlineOffset: "2px",
                 }}
                 onClick={() => handleSelectContentAI(opt.value)}>
                 <div className="flex items-center justify-between mb-2">
@@ -905,49 +927,24 @@ export default function SettingsPage() {
             <Wand2 className="w-5 h-5" style={{ color: "oklch(0.75 0.12 300)" }} />
             <h3 className="font-semibold text-foreground">이미지 생성 AI 선택</h3>
           </div>
-
-          <div className="rounded-xl p-4 mb-4" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-            <div className="text-sm font-semibold text-foreground mb-1">이미지 API 키 빠른 이동</div>
-            <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>
-              기능은 건드리지 않고 키 발급 링크만 연결했습니다. 일부 무료 사용 후 유료 결제로 이어지는 서비스는 안내문을 함께 표시합니다.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {IMAGE_AI_OPTIONS.map((opt: any) => (
-                <a
-                  key={`quick-${opt.value}`}
-                  href={opt.keyLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-xl px-4 py-3 transition-all"
-                  style={{
-                    background: `${opt.logoColor}12`,
-                    border: `1px solid ${opt.logoColor}55`,
-                    color: opt.logoColor,
-                  }}
-                >
-                  <div className="flex items-center gap-1.5 text-sm font-bold">
-                    <span>{opt.label} API</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</div>
-                </a>
-              ))}
-            </div>
-          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {IMAGE_AI_OPTIONS.map((opt: any) => {
               const selected = imageAI === opt.value;
               return (
                 <button key={opt.value}
-                  className="rounded-2xl p-4 text-left transition-all relative overflow-hidden"
+                  className="rounded-2xl p-4 text-left transition-all relative overflow-hidden active:scale-[0.97]"
                   style={{
                     background: selected ? `${opt.logoColor}18` : "var(--background)",
-                    border: `2px solid ${selected ? opt.logoColor + "80" : "var(--border)"}`,
-                    boxShadow: selected ? `0 0 20px ${opt.logoColor}20` : "none",
+                    border: `2px solid ${selected ? opt.logoColor : "var(--border)"}`,
+                    boxShadow: selected ? `0 0 24px ${opt.logoColor}40` : "none",
+                    outline: selected ? `2px solid ${opt.logoColor}60` : "none",
+                    outlineOffset: "2px",
                   }}
                   onClick={() => handleSelectImageAI(opt.value)}>
-
-                  {/* 상단: 로고 + 배지 + 선택됨 */}
+                  {selected && (
+                    <div className="absolute inset-0 opacity-10 pointer-events-none"
+                      style={{ background: `linear-gradient(135deg, ${opt.logoColor}, transparent)` }} />
+                  )}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-white"
@@ -973,19 +970,6 @@ export default function SettingsPage() {
 
                   {/* 설명 */}
                   <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</p>
-
-                  {opt.keyLink && (
-                    <a
-                      href={opt.keyLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold mb-3"
-                      style={{ background: `${opt.logoColor}12`, color: opt.logoColor, border: `1px solid ${opt.logoColor}33` }}
-                    >
-                      키 발급받기 <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
 
                   {/* 장단점 */}
                   {opt.pros && (
@@ -1016,18 +1000,8 @@ export default function SettingsPage() {
             선택한 AI에 필요한 키만 표시됩니다. 키는 브라우저에 저장됩니다.
           </p>
 
+
           <div className="space-y-4">
-            {requiredKeys.length === 0 && (
-              <div className="rounded-xl px-4 py-3 flex items-center gap-3"
-                style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
-                <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-emerald)" }} />
-                <div>
-                  <p className="text-sm font-semibold" style={{ color: "var(--color-emerald)" }}>
-                    선택한 이미지 AI 키를 입력하면 바로 사용할 수 있어요.
-                  </p>
-                </div>
-              </div>
-            )}
             {requiredKeys.map((opt) => (
               <ApiKeyInput key={opt.keyStorageKey} label={opt.keyLabel}
                 placeholder={opt.keyPlaceholder} storageKey={opt.keyStorageKey} link={opt.keyLink} />
