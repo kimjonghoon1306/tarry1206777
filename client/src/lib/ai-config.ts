@@ -1,7 +1,7 @@
 import { userGet, SETTINGS_KEYS } from "./user-storage";
 
 export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
-export type ImageAIProvider = "openai" | "replicate";
+export type ImageAIProvider = "openai" | "replicate" | "gemini";
 
 // userGet 자체에 admin 폴백이 포함되어 있음 (user-storage.ts 참고)
 export function getContentProvider(): ContentAIProvider {
@@ -9,7 +9,7 @@ export function getContentProvider(): ContentAIProvider {
 }
 
 export function getImageProvider(): ImageAIProvider {
-  return (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "gemini";
+  return (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "replicate";
 }
 
 export function getAPIKey(provider: string): string {
@@ -75,6 +75,19 @@ export const CONTENT_AI_OPTIONS = [
 
 export const IMAGE_AI_OPTIONS = [
   {
+    value: "gemini" as ImageAIProvider,
+    label: "Gemini Image",
+    badge: "무료 시도",
+    badgeColor: "#4285F4",
+    desc: "Google AI · AI Studio 키로 시도 (무료)",
+    pros: "AI Studio 키 그대로 사용 · 무료 시도 가능",
+    cons: "모델 지원 여부 불확실 · 실패 시 에러 표시",
+    logo: "G", logoColor: "#4285F4",
+    keyLabel: "Gemini API Key", keyPlaceholder: "AIza...",
+    keyStorageKey: SETTINGS_KEYS.GEMINI_KEY,
+    keyLink: "https://aistudio.google.com/app/apikey",
+  },
+  {
     value: "openai" as ImageAIProvider,
     label: "GPT Image",
     badge: "유료",
@@ -95,31 +108,6 @@ export const IMAGE_AI_OPTIONS = [
     desc: "Replicate · 가입 시 무료 크레딧 제공",
     pros: "가입 시 무료 크레딧 · Flux 고품질 · 이미지당 약 3~25원",
     cons: "무료 크레딧 소진 후 유료 전환",
-    logo: "R", logoColor: "oklch(0.769 0.188 70.08)",
-    keyLabel: "Replicate API Token", keyPlaceholder: "r8_...",
-    keyStorageKey: SETTINGS_KEYS.REPLICATE_KEY,
-    keyLink: "https://replicate.com/account/api-tokens",
-  },
-];
-    label: "GPT Image",
-    badge: "유료",
-    badgeColor: "oklch(0.75 0.12 300)",
-    desc: "OpenAI · 최고 품질 이미지",
-    pros: "최고 품질 이미지 · 정확한 프롬프트 이해",
-    cons: "유료 · 이미지당 비용 발생",
-    logo: "O", logoColor: "oklch(0.75 0.12 300)",
-    keyLabel: "OpenAI API Key", keyPlaceholder: "sk-...",
-    keyStorageKey: SETTINGS_KEYS.OPENAI_KEY,
-    keyLink: "https://platform.openai.com/api-keys",
-  },
-  {
-    value: "replicate" as ImageAIProvider,
-    label: "Replicate",
-    badge: "일부 무료",
-    badgeColor: "oklch(0.769 0.188 70.08)",
-    desc: "Replicate · 일부 무료 사용 후 유료 결제",
-    pros: "다양한 이미지 모델 사용 가능 · 일부 무료 사용 가능",
-    cons: "사용량 초과 시 유료 결제 필요",
     logo: "R", logoColor: "oklch(0.769 0.188 70.08)",
     keyLabel: "Replicate API Token", keyPlaceholder: "r8_...",
     keyStorageKey: SETTINGS_KEYS.REPLICATE_KEY,
