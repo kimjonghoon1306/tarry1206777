@@ -389,7 +389,10 @@ export default function ContentGenerator() {
                   onClick={() => {
                     // 키워드와 제목만 전달 - 한글 노이즈 제거
                     const autoPrompt = title ? `${keyword} ${title}` : keyword;
-                    navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
+                    // 단락 수 계산 (줄바꿈 기준)
+                    const paragraphCount = generatedContent ? generatedContent.split(/\n\n+/).filter((p: string) => p.trim().length > 10).length : 0;
+                    const maxImgs = Math.max(1, Math.floor(paragraphCount / 3));
+                    navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}&maxImages=${maxImgs}`);
                   }}>
                   <Image className="w-4 h-4" /> 이미지 생성
                 </Button>
