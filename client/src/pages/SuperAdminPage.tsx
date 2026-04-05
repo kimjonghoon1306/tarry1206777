@@ -74,11 +74,12 @@ const API_SECTIONS = [
   },
   {
     title: "이미지 생성 AI", icon: "Image", color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)",
-    desc: "OpenAI · Replicate",
+    desc: "OpenAI · Replicate · imgbb",
     fields: [
       { label: "Gemini API Key (글쓰기 공용)", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "글쓰기용", badgeColor: "#4285F4" },
       { label: "OpenAI API Key (DALL-E 3)", key: "openai_api_key", placeholder: "sk-...", link: "https://platform.openai.com/api-keys", badge: "유료", badgeColor: "#f59e0b" },
       { label: "Replicate API Token (Flux)", key: "replicate_api_token", placeholder: "r8_...", link: "https://replicate.com/account/api-tokens", badge: "유료", badgeColor: "#f59e0b" },
+      { label: "imgbb API Key (이미지 영구 저장)", key: "imgbb_api_key", placeholder: "imgbb API 키...", link: "https://api.imgbb.com", badge: "무료", badgeColor: "#10b981" },
     ],
   },
   {
