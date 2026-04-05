@@ -1,1421 +1,1133 @@
-// BlogAuto Pro - SettingsPage v3.1
 /**
- * BlogAuto Pro - Settings Page
- * AI 툴 선택 + API 키 관리 + 발행 설정
+ * BlogAuto Pro - Super Admin Page v6.0
+ * ✅ 설정과 동일한 모든 키 항목 (티스토리/쿠팡/데이터랩/Webhook 포함)
+ * ✅ 관리자 키 → 유저가 지워도 자동 폴백 적용
+ * ✅ 비밀번호 서버 저장 (배포해도 유지)
+ * ✅ 회원 목록 / 등급 변경 / 삭제
+ * ✅ 모바일 최적화 + 색상 다양하게
  */
 
-import { useState } from "react";
-import React from "react";
+import { useState, useRef, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import {
-  Sun, Moon, Monitor, Globe, Bell,
-  Palette, Download, Save, ChevronRight,
-  Key, Eye, EyeOff, CheckCircle2, Bot,
-  Wand2, Zap, ExternalLink, Newspaper,
-  Smartphone, Upload, QrCode, Send, Plus, Trash2, RefreshCw,
-  ShoppingCart, Link, DollarSign, Activity, Sparkles, Lock,
+  Shield, Key, Eye, EyeOff, Copy, Lock, Zap,
+  CheckCircle2, Image, Upload, X, Globe, Link,
+  Trash2, ExternalLink, Home, Save,
+  Users, Crown, UserX, RefreshCw, ChevronDown,
+  Activity, Cpu, Database, HardDrive, Wifi,
+  Send, ShoppingCart, FileText, Search, BarChart3, Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import {
-  CONTENT_AI_OPTIONS, IMAGE_AI_OPTIONS,
-  type ContentAIProvider, type ImageAIProvider,
-} from "@/lib/ai-config";
-import { userGet, userGetSettingsValue, userSet, SETTINGS_KEYS, saveSettingsToServer, applyServerSettings, loadSettingsFromServer, isAdminUser } from "@/lib/user-storage";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { userGet, userSet, saveSettingsToServer, SETTINGS_KEYS } from "@/lib/user-storage";
+import { CONTENT_AI_OPTIONS, IMAGE_AI_OPTIONS, type ContentAIProvider, type ImageAIProvider } from "@/lib/ai-config";
 
-const LANGUAGES = [
-  { code: "ko", label: "한국어", flag: "🇰🇷" },
-  { code: "en", label: "English", flag: "🇺🇸" },
-  { code: "ja", label: "日本語", flag: "🇯🇵" },
-  { code: "zh", label: "中文", flag: "🇨🇳" },
-  { code: "es", label: "Español", flag: "🇪🇸" },
-  { code: "fr", label: "Français", flag: "🇫🇷" },
-  { code: "de", label: "Deutsch", flag: "🇩🇪" },
-  { code: "pt", label: "Português", flag: "🇧🇷" },
-];
+const SESSION_KEY = "bap_admin_auth";
+const OG_KEY = "blogauto_og_settings";
 
-function ApiKeyInput({ label, placeholder, storageKey, link }: {
-  label: string; placeholder: string; storageKey: string; link: string;
-}) {
-  const [value, setValue] = useState(() => userGetSettingsValue(storageKey));
-  const [show, setShow] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  // 로그인 직후 서버에서 키 로드 - useState 초기값이 빈값일 때 서버에서 재시도
-  React.useEffect(() => {
-    if (!value && !isAdminUser()) {
-      loadSettingsFromServer().then(settings => {
-        if (settings && settings[storageKey]) {
-          const serverVal = settings[storageKey];
-          userSet(storageKey, serverVal);
-          setValue(serverVal);
-        }
-      });
-    }
-  }, []);
-
-  const handleSave = () => {
-    if (!value.trim()) { toast.error("API 키를 입력해주세요"); return; }
-    userSet(storageKey, value.trim());
-    saveSettingsToServer({ [storageKey]: value.trim() });
-    setSaved(true);
-    toast.success(`${label} 저장됨`);
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>
-          {label}
-        </label>
-        <a href={link} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs hover:underline"
-          style={{ color: "var(--color-emerald)" }}>
-          발급받기 <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Input type={show ? "text" : "password"} placeholder={placeholder}
-            value={value} onChange={(e) => setValue(e.target.value)}
-            className="pr-10 text-sm font-mono" />
-          <button className="absolute right-3 top-1/2 -translate-y-1/2"
-            style={{ color: "var(--muted-foreground)" }}
-            onClick={() => setShow(v => !v)}>
-            {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
-        <Button className="gap-1.5 shrink-0 text-sm"
-          style={{ background: saved ? "var(--color-emerald)" : "oklch(0.75 0.12 300)", color: "white" }}
-          onClick={handleSave}>
-          {saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Key className="w-3.5 h-3.5" />}
-          {saved ? "저장됨" : "저장"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-
-// ── 티스토리 연동 섹션 ──────────────────────────────
-function TistorySection() {
-  const [clientId, setClientId] = React.useState(() => userGetSettingsValue("tistory_client_id"));
-  const [clientSecret, setClientSecret] = React.useState(() => userGetSettingsValue("tistory_client_secret"));
-  const [accessToken, setAccessToken] = React.useState(() => userGetSettingsValue("tistory_access_token"));
-  const [blogName, setBlogName] = React.useState(() => userGetSettingsValue("tistory_blog_name"));
-  const [blogs, setBlogs] = React.useState<{name:string;title:string;url:string}[]>([]);
-  const [showSecret, setShowSecret] = React.useState(false);
-  const [showToken, setShowToken] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
-
-  const handleSave = () => {
-    if (!clientId || !clientSecret) { toast.error("Client ID와 Secret을 입력해주세요"); return; }
-    userSet("tistory_client_id", clientId);
-    userSet("tistory_client_secret", clientSecret);
-    if (accessToken) userSet("tistory_access_token", accessToken);
-    if (blogName) userSet("tistory_blog_name", blogName);
-    saveSettingsToServer({ tistory_client_id: clientId, tistory_client_secret: clientSecret, tistory_access_token: accessToken, tistory_blog_name: blogName });
-    toast.success("✅ 티스토리 설정 저장됨");
-  };
-
-  const handleGetToken = () => {
-    if (!clientId) { toast.error("Client ID를 먼저 입력해주세요"); return; }
-    const redirectUri = `${window.location.origin}/settings?tistory_callback=1`;
-    const url = `https://www.tistory.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
-    window.open(url, "_blank", "width=600,height=700");
-    toast.info("팝업에서 티스토리 로그인 후 code를 복사해서 아래에 붙여넣으세요");
-  };
-
-  const handleGetBlogList = async () => {
-    if (!accessToken) { toast.error("Access Token을 먼저 입력해주세요"); return; }
-    setLoading(true);
-    try {
-      const resp = await fetch("/api/tistory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "getBlogInfo", accessToken }),
-      });
-      const data = await resp.json();
-      if (!data.ok) throw new Error(data.error);
-      setBlogs(data.blogs);
-      toast.success(`블로그 ${data.blogs.length}개 불러왔어요!`);
-    } catch (e: any) {
-      toast.error("블로그 조회 실패: " + e.message);
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-            style={{ background: "#FF6300" }}>T</div>
-          <h3 className="font-semibold text-foreground">티스토리</h3>
-          <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-            style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-            ⚡ 자동 발행
-          </span>
-        </div>
-        <a href="https://www.tistory.com/guide/api/manage/register" target="_blank" rel="noopener noreferrer"
-          className="text-xs flex items-center gap-1 hover:underline" style={{ color: "#FF6300" }}>
-          앱 등록 <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
-      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-        티스토리 → 관리 → 앱 등록 → Client ID, Secret 발급 후 입력
-      </p>
-      <div className="space-y-3">
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client ID</label>
-          <Input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="티스토리 앱 Client ID" className="text-sm font-mono" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client Secret</label>
-          <div className="relative">
-            <Input type={showSecret ? "text" : "password"} value={clientSecret} onChange={e => setClientSecret(e.target.value)}
-              placeholder="Client Secret" className="text-sm font-mono pr-10" />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-              onClick={() => setShowSecret(v => !v)}>
-              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Access Token</label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input type={showToken ? "text" : "password"} value={accessToken} onChange={e => setAccessToken(e.target.value)}
-                placeholder="OAuth Access Token" className="text-sm font-mono pr-10" />
-              <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-                onClick={() => setShowToken(v => !v)}>
-                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={handleGetToken}>
-              토큰 발급
-            </Button>
-          </div>
-        </div>
-        {blogs.length > 0 && (
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>블로그 선택</label>
-            <div className="space-y-1.5">
-              {blogs.map(b => (
-                <button key={b.name}
-                  className="w-full flex items-center justify-between p-2.5 rounded-lg text-sm transition-all"
-                  style={{
-                    background: blogName === b.name ? "oklch(0.696 0.17 162.48/10%)" : "var(--background)",
-                    border: `1px solid ${blogName === b.name ? "oklch(0.696 0.17 162.48/40%)" : "var(--border)"}`,
-                  }}
-                  onClick={() => { setBlogName(b.name); userSet("tistory_blog_name", b.name); }}>
-                  <span className="text-foreground">{b.title}</span>
-                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{b.url}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Button className="gap-2" style={{ background: "#FF6300", color: "white" }} onClick={handleSave}>
-            <Key className="w-4 h-4" /> 저장
-          </Button>
-          {accessToken && (
-            <Button variant="outline" className="gap-2 text-xs" onClick={handleGetBlogList} disabled={loading}>
-              {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              블로그 목록
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── 쿠팡파트너스 섹션 ────────────────────────────────
-function CoupangSection() {
-  const [accessKey, setAccessKey] = React.useState(() => userGetSettingsValue("coupang_access_key"));
-  const [secretKey, setSecretKey] = React.useState(() => userGetSettingsValue("coupang_secret_key"));
-  const [subId, setSubId] = React.useState(() => userGetSettingsValue("coupang_sub_id"));
-  const [showSecret, setShowSecret] = React.useState(false);
-  const [saved, setSaved] = React.useState(false);
-  const [testResult, setTestResult] = React.useState<string>("");
-  const [testing, setTesting] = React.useState(false);
-
-  const handleSave = () => {
-    if (!accessKey || !secretKey) { toast.error("Access Key와 Secret Key를 입력해주세요"); return; }
-    userSet("coupang_access_key", accessKey);
-    userSet("coupang_secret_key", secretKey);
-    if (subId) userSet("coupang_sub_id", subId);
-    saveSettingsToServer({ coupang_access_key: accessKey, coupang_secret_key: secretKey, coupang_sub_id: subId });
-    setSaved(true);
-    toast.success("✅ 쿠팡파트너스 설정 저장됨! 배포 페이지에서 자동 링크 삽입이 활성화됩니다");
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  const handleTest = async () => {
-    if (!accessKey || !secretKey) { toast.error("키를 먼저 저장해주세요"); return; }
-    setTesting(true);
-    setTestResult("");
-    try {
-      const resp = await fetch("/api/coupang", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "search", accessKey, secretKey, keyword: "노트북", limit: 1 }),
-      });
-      const data = await resp.json();
-      if (data.ok && data.products?.length > 0) {
-        setTestResult(`✅ 연결 성공! "${data.products[0].productName.slice(0, 30)}..." 상품 검색됨`);
-      } else {
-        setTestResult("❌ " + (data.error || "상품 없음"));
-      }
-    } catch (e: any) {
-      setTestResult("❌ " + e.message);
-    } finally { setTesting(false); }
-  };
-
-  return (
-    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-            style={{ background: "#C00F0C" }}>CP</div>
-          <h3 className="font-semibold text-foreground">쿠팡파트너스</h3>
-          <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-            style={{ background: "oklch(0.769 0.188 70.08/20%)", color: "var(--color-amber-brand)" }}>
-            💰 자동 링크 삽입
-          </span>
-        </div>
-        <a href="https://partners.coupang.com" target="_blank" rel="noopener noreferrer"
-          className="text-xs flex items-center gap-1 hover:underline" style={{ color: "#C00F0C" }}>
-          파트너스 가입 <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
-      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-        쿠팡파트너스 → 계정관리 → API 설정에서 Access/Secret Key 발급
-        글 발행 시 키워드 관련 쿠팡 상품 링크가 자동 삽입됩니다
-      </p>
-      <div className="space-y-3">
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Access Key</label>
-          <Input value={accessKey} onChange={e => setAccessKey(e.target.value)} placeholder="쿠팡파트너스 Access Key" className="text-sm font-mono" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Secret Key</label>
-          <div className="relative">
-            <Input type={showSecret ? "text" : "password"} value={secretKey} onChange={e => setSecretKey(e.target.value)}
-              placeholder="Secret Key" className="text-sm font-mono pr-10" />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-              onClick={() => setShowSecret(v => !v)}>
-              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Sub ID (선택)</label>
-          <Input value={subId} onChange={e => setSubId(e.target.value)} placeholder="수익 추적용 서브 ID" className="text-sm" />
-        </div>
-        {testResult && (
-          <div className="rounded-lg px-3 py-2 text-xs" style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}>
-            {testResult}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Button className="gap-2" style={{ background: saved ? "var(--color-emerald)" : "#C00F0C", color: "white" }} onClick={handleSave}>
-            {saved ? <CheckCircle2 className="w-4 h-4" /> : <Key className="w-4 h-4" />}
-            {saved ? "저장됨" : "저장"}
-          </Button>
-          <Button variant="outline" className="gap-2 text-xs" onClick={handleTest} disabled={testing}>
-            {testing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShoppingCart className="w-3.5 h-3.5" />}
-            연결 테스트
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-// ── 커스텀 웹사이트 Webhook 섹션 (인증 방식 선택) ──
-const AUTH_HEADER_OPTIONS = [
-  { value: "Authorization", label: "Authorization", example: "Bearer {키} 또는 {키}" },
-  { value: "X-API-Key", label: "X-API-Key", example: "API 키 직접 입력" },
-  { value: "X-Auth-Token", label: "X-Auth-Token", example: "토큰 직접 입력" },
-  { value: "X-Custom-Auth", label: "X-Custom-Auth", example: "커스텀 인증" },
-  { value: "none", label: "인증 없음", example: "공개 API" },
-];
-
-function CustomWebhookSection() {
-  const [accounts, setAccounts] = React.useState<Record<string, string>[]>(() => {
-    try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
-  });
-  const [showAdd, setShowAdd] = React.useState(false);
-  const [customDomain, setCustomDomain] = React.useState(() => userGetSettingsValue("custom_domain") || localStorage.getItem("custom_domain") || localStorage.getItem("admin_custom_domain") || "");
-  const [url, setUrl] = React.useState("");
-  const [authHeader, setAuthHeader] = React.useState("Authorization");
-  const [authKey, setAuthKey] = React.useState("");
-  const [showKey, setShowKey] = React.useState(false);
-  const [saved, setSaved] = React.useState(false);
-
-  const handleSave = () => {
-    if (!url.trim()) { toast.error("Webhook URL을 입력해주세요"); return; }
-    const normalizedDomain = (customDomain.trim() || url.replace(/^https?:\/\//, "").split("/")[0]).trim();
-    const entry = {
-      _name: normalizedDomain || url.replace("https://", "").split("/")[0],
-      _type: "custom",
-      custom_domain: normalizedDomain,
-      webhook_url: url.trim(),
-      webhook_auth_header: authHeader,
-      webhook_auth_key: authKey.trim(),
-    };
-    const updated = [...accounts, entry];
-    setAccounts(updated);
-    localStorage.setItem("platform_custom_list", JSON.stringify(updated));
-    // 기존 키도 저장 (호환성)
-    userSet(SETTINGS_KEYS.WEBHOOK_URL, url.trim());
-    userSet(SETTINGS_KEYS.WEBHOOK_KEY, authKey.trim());
-    userSet("webhook_auth_header", authHeader);
-    userSet("custom_domain", normalizedDomain);
-    localStorage.setItem("custom_domain", normalizedDomain);
-    localStorage.setItem("admin_custom_domain", normalizedDomain);
-    localStorage.setItem("blogauto_custom_domain", normalizedDomain);
-    // 배포 플랫폼 목록 업데이트
-    const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
-    platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
-    localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
-    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain });
-    setSaved(true);
-    setShowAdd(false);
-    setCustomDomain(normalizedDomain);
-    setUrl(""); setAuthKey(""); setAuthHeader("Authorization");
-    toast.success("✅ 웹사이트 등록됐어요!");
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  const remove = (idx: number) => {
-    const updated = accounts.filter((_, i) => i !== idx);
-    setAccounts(updated);
-    localStorage.setItem("platform_custom_list", JSON.stringify(updated));
-    toast.success("삭제됐어요");
-  };
-
-  const selectedAuth = AUTH_HEADER_OPTIONS.find(o => o.value === authHeader);
-
-  return (
-    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-            style={{ background: "oklch(0.65 0.28 350)" }}>W</div>
-          <h3 className="font-semibold text-foreground">일반 웹사이트 (커스텀)</h3>
-        </div>
-        <Button size="sm" className="gap-1.5 text-xs h-7"
-          style={{ background: "oklch(0.65 0.28 350)", color: "white" }}
-          onClick={() => setShowAdd(v => !v)}>
-          <Plus className="w-3.5 h-3.5" /> 추가
-        </Button>
-      </div>
-      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-        직접 제작한 사이트나 CMS에 Webhook으로 글을 자동 전달합니다
-      </p>
-
-      {/* 등록된 사이트 목록 */}
-      {accounts.length > 0 && (
-        <div className="space-y-2 mb-4">
-          {accounts.map((acc, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 rounded-lg"
-              style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-2 min-w-0">
-                <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: "var(--color-emerald)" }} />
-                <div className="min-w-0">
-                  <p className="text-sm text-foreground truncate">{acc._name}</p>
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                    도메인: {acc.custom_domain || acc._name}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                    헤더: {acc.webhook_auth_header || "Authorization"}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => remove(idx)}
-                className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-500/20"
-                style={{ color: "var(--muted-foreground)" }}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 추가 폼 */}
-      {showAdd && (
-        <div className="space-y-3 p-4 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-          {/* 커스텀 도메인 */}
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
-              커스텀 도메인
-            </label>
-            <Input value={customDomain} onChange={e => setCustomDomain(e.target.value)}
-              placeholder="mysite.com 또는 blog.mysite.com" className="text-sm" />
-            <p className="text-xs mt-1.5" style={{ color: "var(--muted-foreground)" }}>
-              관리자 페이지 커스텀 도메인과 같은 값으로 저장됩니다. 웹페이지 발송 시 이 도메인을 기준으로 표시해요.
-            </p>
-          </div>
-
-          {/* Webhook URL */}
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
-              Webhook URL
-            </label>
-            <Input value={url} onChange={e => setUrl(e.target.value)}
-              placeholder="https://mysite.com/api/posts" className="text-sm" />
-          </div>
-
-          {/* 인증 헤더 선택 */}
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
-              인증 헤더 방식
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {AUTH_HEADER_OPTIONS.map(opt => (
-                <button key={opt.value}
-                  className="rounded-lg px-3 py-2 text-left transition-all"
-                  style={{
-                    background: authHeader === opt.value ? "oklch(0.696 0.17 162.48/12%)" : "var(--card)",
-                    border: `1px solid ${authHeader === opt.value ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
-                  }}
-                  onClick={() => setAuthHeader(opt.value)}>
-                  <p className="text-xs font-semibold text-foreground">{opt.label}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.example}</p>
-                </button>
-              ))}
-            </div>
-            {authHeader !== "none" && (
-              <div className="mt-2 px-3 py-2 rounded-lg text-xs"
-                style={{ background: "oklch(0.696 0.17 162.48/8%)", color: "var(--color-emerald)" }}>
-                전송 형식: <code>{authHeader}: {authHeader === "Authorization" ? "Bearer {인증키}" : "{인증키}"}</code>
-              </div>
-            )}
-          </div>
-
-          {/* 인증 키 */}
-          {authHeader !== "none" && (
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
-                인증 키 값
-              </label>
-              <div className="relative">
-                <Input type={showKey ? "text" : "password"} value={authKey}
-                  onChange={e => setAuthKey(e.target.value)}
-                  placeholder={selectedAuth?.example || "인증 키 입력"}
-                  className="text-sm font-mono pr-10" />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "var(--muted-foreground)" }}
-                  onClick={() => setShowKey(v => !v)}>
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button className="gap-2 flex-1"
-              style={{ background: saved ? "var(--color-emerald)" : "oklch(0.65 0.28 350)", color: "white" }}
-              onClick={handleSave}>
-              <CheckCircle2 className="w-4 h-4" /> 저장
-            </Button>
-            <Button variant="outline" onClick={() => { setShowAdd(false); setUrl(""); setAuthKey(""); }}>취소</Button>
-          </div>
-        </div>
-      )}
-
-      {accounts.length === 0 && !showAdd && (
-        <p className="text-xs text-center py-2" style={{ color: "var(--muted-foreground)" }}>
-          추가 버튼을 눌러 웹사이트를 등록하세요
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ── 다중 플랫폼 섹션 컴포넌트 ──────────────────────
-function PlatformSection({ title, color, logo, type, desc, link, fields }: {
-  title: string; color: string; logo: string; type: string; desc: string; link: string;
-  fields: { label: string; key: string; placeholder: string; secret?: boolean; isAuthHeader?: boolean }[];
-}) {
-  const STORAGE_KEY = `platform_${type}_list`;
-  const [accounts, setAccounts] = React.useState<Record<string, string>[]>(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
-  });
-  const [showAdd, setShowAdd] = React.useState(false);
-  const [form, setForm] = React.useState<Record<string, string>>({});
-  const [showSecrets, setShowSecrets] = React.useState<Record<string, boolean>>({});
-  const [savedIdx, setSavedIdx] = React.useState<number | null>(null);
-
-  const save = () => {
-    const required = fields.filter(f => !f.secret || f === fields[0]);
-    for (const f of required) {
-      if (!form[f.key]?.trim()) { toast.error(`${f.label}을 입력해주세요`); return; }
-    }
-    const name = form[fields[0].key] || `${title} ${accounts.length + 1}`;
-    const entry = { ...form, _name: name, _type: type };
-    const updated = [...accounts, entry];
-    setAccounts(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    // 배포 플랫폼 목록도 업데이트
-    const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
-    platforms.push({ id: Math.random().toString(36).slice(2), type, name });
-    localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
-    setForm({});
-    setShowAdd(false);
-    toast.success(`${title} 추가됨`);
-  };
-
-  const remove = (idx: number) => {
-    const updated = accounts.filter((_, i) => i !== idx);
-    setAccounts(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    toast.success("삭제됨");
-  };
-
-  return (
-    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-            style={{ background: color }}>{logo}</div>
-          <h3 className="font-semibold text-foreground">{title}</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          {link && (
-            <a href={link} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs hover:underline" style={{ color }}>
-              발급받기 <ExternalLink className="w-3 h-3" />
-            </a>
-          )}
-          <Button size="sm" className="gap-1.5 text-xs h-7"
-            style={{ background: color, color: "white" }}
-            onClick={() => setShowAdd(v => !v)}>
-            <Plus className="w-3.5 h-3.5" /> 추가
-          </Button>
-        </div>
-      </div>
-      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>{desc}</p>
-
-      {/* 등록된 계정 목록 */}
-      {accounts.length > 0 && (
-        <div className="space-y-2 mb-4">
-          {accounts.map((account, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 rounded-lg"
-              style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                <span className="text-sm text-foreground">{account._name || `${title} ${idx + 1}`}</span>
-              </div>
-              <button onClick={() => remove(idx)}
-                className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-500/20 transition-colors"
-                style={{ color: "var(--muted-foreground)" }}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 추가 폼 */}
-      {showAdd && (
-        <div className="space-y-3 p-4 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-          {fields.map(field => (
-            <div key={field.key}>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
-                {field.label}
-              </label>
-              {field.secret ? (
-                <div className="relative">
-                  <Input className="text-sm font-mono pr-10"
-                    type={showSecrets[field.key] ? "text" : "password"}
-                    placeholder={field.placeholder}
-                    value={form[field.key] || ""}
-                    onChange={e => setForm(prev => ({ ...prev, [field.key]: e.target.value }))} />
-                  <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-                    onClick={() => setShowSecrets(prev => ({ ...prev, [field.key]: !prev[field.key] }))}>
-                    {showSecrets[field.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              ) : (
-                <Input className="text-sm" placeholder={field.placeholder}
-                  value={form[field.key] || ""}
-                  onChange={e => setForm(prev => ({ ...prev, [field.key]: e.target.value }))} />
-              )}
-            </div>
-          ))}
-          <div className="flex gap-2">
-            <Button className="gap-2 flex-1" style={{ background: color, color: "white" }} onClick={save}>
-              <CheckCircle2 className="w-4 h-4" /> 저장
-            </Button>
-            <Button variant="outline" onClick={() => { setShowAdd(false); setForm({}); }}>취소</Button>
-          </div>
-        </div>
-      )}
-
-      {accounts.length === 0 && !showAdd && (
-        <p className="text-xs text-center py-2" style={{ color: "var(--muted-foreground)" }}>
-          추가 버튼을 눌러 {title} 계정을 등록하세요
-        </p>
-      )}
-    </div>
-  );
-}
-
-export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
-  // 로그인 유저 직접 읽기 (순환 import 방지)
-  const [user] = useState<{id:string;name:string;email:string}|null>(() => {
-    try { return JSON.parse(localStorage.getItem("ba_user") || "null"); } catch { return null; }
-  });
+// ── API 헬퍼 ─────────────────────────────────────────
+async function adminApi(action: string, extra: Record<string, any> = {}) {
   const token = localStorage.getItem("ba_token") || "";
-  const [adPlatform, setAdPlatform] = React.useState(() => userGetSettingsValue("selected_ad_platform") || "both");
+  try {
+    const r = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action, ...extra }),
+    });
+    return await r.json();
+  } catch { return { ok: false, error: "네트워크 오류" }; }
+}
 
-  const saveAllToServer = async (settings: Record<string,string>) => {
-    if (!token) return;
-    try {
-      await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: "saveSettings", settings }),
-      });
-    } catch {}
-  };
+// ── 파일 → base64 ──────────────────────────────────
+function toBase64(file: File): Promise<string> {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file); });
+}
 
-  const loadFromServer = async (): Promise<Record<string,string>> => {
-    if (!token) return {};
-    try {
-      const r = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: "loadSettings" }),
-      });
-      const d = await r.json();
-      return d.settings || {};
-    } catch { return {}; }
-  };
-  const [contentLang, setContentLang] = useState(
-    () => userGetSettingsValue(SETTINGS_KEYS.CONTENT_LANG, "ko")
-  );
+// ── OG 타입 ─────────────────────────────────────────
+interface OGSettings {
+  siteTitle: string; siteDesc: string; siteImage: string;
+  siteName: string; twitterCard: string;
+  postImages: { id: string; title: string; image: string; url: string }[];
+}
+function loadOG(): OGSettings {
+  try { const r = localStorage.getItem(OG_KEY); if (r) return JSON.parse(r); } catch {}
+  return { siteTitle: "BlogAuto Pro - AI 블로그 자동화", siteDesc: "AI로 블로그 글을 자동 생성하고 수익을 극대화하세요", siteImage: "", siteName: "BlogAuto Pro", twitterCard: "summary_large_image", postImages: [] };
+}
+function saveOG(d: OGSettings) { try { localStorage.setItem(OG_KEY, JSON.stringify(d)); } catch {} }
+
+// ── 전체 API 키 섹션 정의 (설정 페이지와 완전 동일) ──
+const ICON_MAP: Record<string, any> = { Bot, Image, Search, BarChart3, FileText, Send, ShoppingCart, Globe, Link };
+
+const API_SECTIONS = [
+  {
+    title: "글 생성 AI", icon: "Bot", color: "#10b981", grad: "linear-gradient(135deg,#10b981,#059669)",
+    desc: "Gemini·Groq 무료, Claude·GPT 유료",
+    fields: [
+      { label: "Gemini API Key", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "무료", badgeColor: "#10b981" },
+      { label: "Groq API Key (Llama 3)", key: "groq_api_key", placeholder: "gsk_...", link: "https://console.groq.com/keys", badge: "무료", badgeColor: "#10b981" },
+      { label: "Claude API Key", key: "claude_api_key", placeholder: "sk-ant-...", link: "https://console.anthropic.com/", badge: "유료", badgeColor: "#f59e0b" },
+      { label: "OpenAI API Key (GPT-4o)", key: "openai_api_key", placeholder: "sk-...", link: "https://platform.openai.com/api-keys", badge: "유료", badgeColor: "#f59e0b" },
+    ],
+  },
+  {
+    title: "이미지 생성 AI", icon: "Image", color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)",
+    desc: "OpenAI · Replicate",
+    fields: [
+      { label: "Gemini API Key (글쓰기 공용)", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "글쓰기용", badgeColor: "#4285F4" },
+      { label: "OpenAI API Key (DALL-E 3)", key: "openai_api_key", placeholder: "sk-...", link: "https://platform.openai.com/api-keys", badge: "유료", badgeColor: "#f59e0b" },
+      { label: "Replicate API Token (Flux)", key: "replicate_api_token", placeholder: "r8_...", link: "https://replicate.com/account/api-tokens", badge: "일부무료", badgeColor: "#10b981" },
+    ],
+  },
+  {
+    title: "네이버 검색광고 API", icon: "Search", color: "#03C75A", grad: "linear-gradient(135deg,#03C75A,#02a44a)",
+    desc: "키워드 수집 · 검색량 조회",
+    fields: [
+      { label: "API License", key: "naver_access_license", placeholder: "License Key", link: "https://searchad.naver.com", badge: "", badgeColor: "" },
+      { label: "Secret Key", key: "naver_secret_key", placeholder: "Secret Key", link: "", badge: "", badgeColor: "" },
+      { label: "Customer ID", key: "naver_customer_id", placeholder: "Customer ID", link: "", badge: "", badgeColor: "" },
+    ],
+  },
+  {
+    title: "네이버 데이터랩", icon: "BarChart3", color: "#06b6d4", grad: "linear-gradient(135deg,#06b6d4,#0284c7)",
+    desc: "트렌드 · 검색 인사이트",
+    fields: [
+      { label: "Client ID", key: "naver_datalab_client_id", placeholder: "Client ID", link: "https://developers.naver.com/apps", badge: "", badgeColor: "" },
+      { label: "Client Secret", key: "naver_datalab_client_secret", placeholder: "Client Secret", link: "", badge: "", badgeColor: "" },
+    ],
+  },
+  {
+    title: "네이버 블로그", icon: "FileText", color: "#22c55e", grad: "linear-gradient(135deg,#22c55e,#16a34a)",
+    desc: "네이버 블로그 복사 발행",
+    fields: [
+      { label: "블로그 ID", key: "naver_blog_id", placeholder: "myblog (naver.com/myblog)", link: "", badge: "", badgeColor: "" },
+      { label: "Access Token", key: "naver_blog_access_token", placeholder: "OAuth Access Token", link: "", badge: "", badgeColor: "" },
+    ],
+  },
+  {
+    title: "티스토리", icon: "Send", color: "#FF6300", grad: "linear-gradient(135deg,#FF6300,#cc4f00)",
+    desc: "애드센스 자동 발행",
+    fields: [
+      { label: "Client ID", key: "tistory_client_id", placeholder: "Client ID", link: "https://www.tistory.com/guide/api/manage/register", badge: "", badgeColor: "" },
+      { label: "Client Secret", key: "tistory_client_secret", placeholder: "Client Secret", link: "", badge: "", badgeColor: "" },
+      { label: "Access Token", key: "tistory_access_token", placeholder: "OAuth Access Token", link: "", badge: "", badgeColor: "" },
+      { label: "블로그 이름", key: "tistory_blog_name", placeholder: "myblog", link: "", badge: "", badgeColor: "" },
+    ],
+  },
+  {
+    title: "쿠팡파트너스", icon: "ShoppingCart", color: "#C00F0C", grad: "linear-gradient(135deg,#C00F0C,#9a0b09)",
+    desc: "상품 링크 자동 삽입 → 수익",
+    fields: [
+      { label: "Access Key", key: "coupang_access_key", placeholder: "Access Key", link: "https://partners.coupang.com", badge: "", badgeColor: "" },
+      { label: "Secret Key", key: "coupang_secret_key", placeholder: "Secret Key", link: "", badge: "", badgeColor: "" },
+      { label: "Sub ID (선택)", key: "coupang_sub_id", placeholder: "Sub ID", link: "", badge: "", badgeColor: "" },
+    ],
+  },
+  {
+    title: "워드프레스", icon: "Globe", color: "#21759B", grad: "linear-gradient(135deg,#21759B,#1a5d7a)",
+    desc: "자체 도메인 자동 발행",
+    fields: [
+      { label: "사이트 URL", key: "wp_url", placeholder: "https://myblog.com", link: "", badge: "", badgeColor: "" },
+      { label: "사용자명", key: "wp_username", placeholder: "admin", link: "", badge: "", badgeColor: "" },
+      { label: "앱 비밀번호", key: "wp_app_password", placeholder: "xxxx xxxx xxxx xxxx", link: "https://wordpress.com/support/application-passwords/", badge: "", badgeColor: "" },
+    ],
+  },
+  {
+    title: "Webhook (커스텀)", icon: "Link", color: "#6366f1", grad: "linear-gradient(135deg,#6366f1,#4f46e5)",
+    desc: "커스텀 사이트 자동 발행",
+    fields: [
+      { label: "Webhook URL", key: "webhook_url", placeholder: "https://mysite.com/api/posts", link: "", badge: "", badgeColor: "" },
+      { label: "Auth Key", key: "webhook_auth_key", placeholder: "Bearer Token 또는 API 키", link: "", badge: "", badgeColor: "" },
+      {
+        label: "Auth Header 방식", key: "webhook_auth_header", placeholder: "Authorization",
+        link: "", badge: "", badgeColor: "",
+        type: "select",
+        options: [
+          { value: "Authorization", label: "Authorization (Bearer Token)" },
+          { value: "X-API-Key", label: "X-API-Key" },
+          { value: "X-Auth-Token", label: "X-Auth-Token" },
+          { value: "X-Custom-Auth", label: "X-Custom-Auth" },
+          { value: "none", label: "인증 없음 (공개 API)" },
+        ],
+      },
+    ],
+  },
+];
+
+// ─────────────────────────────────────────────────────
+// API 키 관리 컴포넌트
+// ─────────────────────────────────────────────────────
+function ApiKeyManager() {
+  // AI 선택 상태
   const [contentAI, setContentAI] = useState<ContentAIProvider>(
-    () => (userGetSettingsValue(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
+    () => (userGet(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
   );
   const [imageAI, setImageAI] = useState<ImageAIProvider>(
-    () => (userGetSettingsValue(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "replicate"
+    () => (userGet(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "gemini"
   );
-  const [naverLicense, setNaverLicense] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_LICENSE));
-  const [naverSecret, setNaverSecret] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_SECRET));
-  const [naverCustomer, setNaverCustomer] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_CUSTOMER));
-  const [showNaverSecret, setShowNaverSecret] = useState(false);
-  const [naverSaved, setNaverSaved] = useState(false);
-  const [wpUrl, setWpUrl] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WP_URL));
-  const [wpUser, setWpUser] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WP_USER));
-  const [wpPass, setWpPass] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WP_PASS));
-  const [showWpPass, setShowWpPass] = useState(false);
-  const [wpSaved, setWpSaved] = useState(false);
-
-  // 네이버 블로그 배포
-  const [naverBlogId, setNaverBlogId] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_BLOG_ID));
-  const [naverBlogToken, setNaverBlogToken] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_BLOG_TOKEN));
-  const [showNaverBlogToken, setShowNaverBlogToken] = useState(false);
-  const [naverBlogSaved, setNaverBlogSaved] = useState(false);
-
-  // 데이터랩 키는 관리자 페이지 전용
-  const [datalabId, setDatalabId] = useState("");
-  const [datalabSecret, setDatalabSecret] = useState("");
-  const [datalabSaved, setDatalabSaved] = useState(false);
-  const [showDatalabSecret, setShowDatalabSecret] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_URL));
-  const [webhookKey, setWebhookKey] = useState(() => userGetSettingsValue(SETTINGS_KEYS.WEBHOOK_KEY));
-  const [showWebhookKey, setShowWebhookKey] = useState(false);
-  const [webhookSaved, setWebhookSaved] = useState(false);
-  const [notifications, setNotifications] = useState({
-    email: true, deploy: true, revenue: true, error: true, weekly: false,
-  });
 
   const handleSelectContentAI = (v: ContentAIProvider) => {
     setContentAI(v);
     userSet(SETTINGS_KEYS.CONTENT_AI, v);
-    const s1 = { [SETTINGS_KEYS.CONTENT_AI]: v };
-    saveSettingsToServer(s1); saveAllToServer(s1);
+    saveSettingsToServer({ [SETTINGS_KEYS.CONTENT_AI]: v });
     toast.success(`글 생성 AI: ${CONTENT_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
   };
-
   const handleSelectImageAI = (v: ImageAIProvider) => {
     setImageAI(v);
     userSet(SETTINGS_KEYS.IMAGE_AI, v);
-    const s2 = { [SETTINGS_KEYS.IMAGE_AI]: v };
-    saveSettingsToServer(s2); saveAllToServer(s2);
-    toast.success(`이미지 생성 AI: ${IMAGE_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
+    saveSettingsToServer({ [SETTINGS_KEYS.IMAGE_AI]: v });
+    toast.success(`이미지 AI: ${IMAGE_AI_OPTIONS.find(o => o.value === v)?.label} 선택됨`);
   };
 
-  const handleSaveDatalab = () => {
-    setDatalabSaved(true);
-    toast.info("데이터랩 키는 관리자 페이지에서만 저장됩니다.");
-    setTimeout(() => setDatalabSaved(false), 3000);
-  };
+  // 모든 키 초기값 로드
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    API_SECTIONS.forEach(s => s.fields.forEach(f => {
+      init[f.key] = userGet(f.key);
+    }));
+    return init;
+  });
+  const [showMap, setShowMap] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ "글 생성 AI": true });
 
-  const handleSaveNaver = () => {
-    if (!naverLicense || !naverSecret || !naverCustomer) {
-      toast.error("네이버 API 정보를 모두 입력해주세요"); return;
-    }
-    userSet(SETTINGS_KEYS.NAVER_LICENSE, naverLicense);
-    userSet(SETTINGS_KEYS.NAVER_SECRET, naverSecret);
-    userSet(SETTINGS_KEYS.NAVER_CUSTOMER, naverCustomer);
-    const sn = { [SETTINGS_KEYS.NAVER_LICENSE]: naverLicense, [SETTINGS_KEYS.NAVER_SECRET]: naverSecret, [SETTINGS_KEYS.NAVER_CUSTOMER]: naverCustomer };
-    saveSettingsToServer(sn); saveAllToServer(sn);
-    setNaverSaved(true);
-    toast.success("네이버 검색광고 API 저장됨 ✅ 모든 기기 자동 적용");
-    setTimeout(() => setNaverSaved(false), 3000);
-  };
+  const handleSaveAll = async () => {
+    setSaving(true);
+    const toSave: Record<string, string> = {};
 
-  const handleSaveWordPress = () => {
-    if (!wpUrl || !wpUser || !wpPass) {
-      toast.error("WordPress 정보를 모두 입력해주세요"); return;
-    }
-    userSet(SETTINGS_KEYS.WP_URL, wpUrl);
-    userSet(SETTINGS_KEYS.WP_USER, wpUser);
-    userSet(SETTINGS_KEYS.WP_PASS, wpPass);
-    const sw = { [SETTINGS_KEYS.WP_URL]: wpUrl, [SETTINGS_KEYS.WP_USER]: wpUser, [SETTINGS_KEYS.WP_PASS]: wpPass };
-    saveSettingsToServer(sw); saveAllToServer(sw);
-    setWpSaved(true);
-    toast.success("WordPress 설정 저장됨 ✅ 모든 기기 자동 적용");
-    setTimeout(() => setWpSaved(false), 3000);
-  };
+    // AI 선택값도 함께 저장
+    userSet(SETTINGS_KEYS.CONTENT_AI, contentAI);
+    userSet(SETTINGS_KEYS.IMAGE_AI, imageAI);
+    toSave[SETTINGS_KEYS.CONTENT_AI] = contentAI;
+    toSave[SETTINGS_KEYS.IMAGE_AI] = imageAI;
 
-  const handleSaveNaverBlog = () => {
-    if (!naverBlogId || !naverBlogToken) {
-      toast.error("네이버 블로그 정보를 모두 입력해주세요"); return;
-    }
-    userSet(SETTINGS_KEYS.NAVER_BLOG_ID, naverBlogId);
-    userSet(SETTINGS_KEYS.NAVER_BLOG_TOKEN, naverBlogToken);
-    const snb = { [SETTINGS_KEYS.NAVER_BLOG_ID]: naverBlogId, [SETTINGS_KEYS.NAVER_BLOG_TOKEN]: naverBlogToken };
-    saveSettingsToServer(snb); saveAllToServer(snb);
-    setNaverBlogSaved(true);
-    toast.success("네이버 블로그 설정 저장됨 ✅ 모든 기기 자동 적용");
-    setTimeout(() => setNaverBlogSaved(false), 3000);
-  };
+    // API 키 저장 (중복 키 처리)
+    const seen = new Set<string>();
+    API_SECTIONS.forEach(s => s.fields.forEach(f => {
+      if (!seen.has(f.key)) {
+        seen.add(f.key);
+        const v = values[f.key];
+        if (v?.trim()) {
+          userSet(f.key, v.trim());
+          toSave[f.key] = v.trim();
+        }
+      }
+    }));
 
-  const handleSaveWebhook = () => {
-    if (!webhookUrl) {
-      toast.error("Webhook URL을 입력해주세요"); return;
-    }
-    userSet(SETTINGS_KEYS.WEBHOOK_URL, webhookUrl);
-    userSet(SETTINGS_KEYS.WEBHOOK_KEY, webhookKey);
-    const shk = { [SETTINGS_KEYS.WEBHOOK_URL]: webhookUrl, [SETTINGS_KEYS.WEBHOOK_KEY]: webhookKey };
-    saveSettingsToServer(shk); saveAllToServer(shk);
-    setWebhookSaved(true);
-    toast.success("웹사이트 설정 저장됨 ✅ 모든 기기 자동 적용");
-    setTimeout(() => setWebhookSaved(false), 3000);
-  };
-
-  // API 키 관리: 글 생성 AI 키 + 이미지 AI 키 (중복 제거)
-  const requiredKeys = Array.from(
-    new Map(
-      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI), IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
-        .filter(Boolean)
-        .filter(o => o!.keyStorageKey)
-        .map(o => [o!.keyStorageKey, o!])
-    ).values()
-  );
-
-  // 모바일 동기화
-  const [syncCode, setSyncCode] = useState("");
-  const [importCode, setImportCode] = useState("");
-  const [showImport, setShowImport] = useState(false);
-
-  const handleExportSettings = () => {
-    const keys = Object.values(SETTINGS_KEYS);
-    const data: Record<string, string> = {};
-    keys.forEach(k => { const v = userGetSettingsValue(k); if (v) data[k] = v; });
-    const code = btoa(JSON.stringify(data));
-    setSyncCode(code);
-    navigator.clipboard.writeText(code).then(() => toast.success("설정 코드가 클립보드에 복사됐어요!"));
-  };
-
-  const handleImportSettings = () => {
-    try {
-      const data = JSON.parse(atob(importCode.trim()));
-      Object.entries(data).forEach(([k, v]) => userSet(k, v as string));
-      toast.success("설정이 가져와졌어요! 페이지를 새로고침해주세요.");
-      setShowImport(false);
-      setImportCode("");
-    } catch {
-      toast.error("올바르지 않은 코드예요");
-    }
+    await saveSettingsToServer(toSave);
+    setSaving(false);
+    toast.success("✅ 관리자 페이지에 저장 완료!");
   };
 
   return (
-    <Layout>
-      <div className="p-6"><div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
-        <div className="space-y-6 min-w-0">
+    <div className="space-y-3">
+      {/* 안내 배너 */}
+      <div className="rounded-2xl p-4 flex items-start gap-3" style={{ background: "linear-gradient(135deg, #10b98115, #05966905)", border: "1px solid #10b98130" }}>
+        <Shield className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#10b981" }} />
         <div>
-          <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            설정
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-            AI 툴, API 키, 발행 설정을 관리합니다
+          <p className="text-sm font-semibold text-foreground">관리자 API 키 관리</p>
+          <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+            관리자 계정(admin)의 API 키를 저장합니다. 네이버 데이터랩 키는 관리자 페이지에서만 저장되고, 일반 설정에는 표시되지 않아요.
           </p>
         </div>
+      </div>
 
-        {/* 글 생성 AI 선택 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Bot className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
-            <h3 className="font-semibold text-foreground">글 생성 AI 선택</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {CONTENT_AI_OPTIONS.map((opt) => (
+      {/* ── 글 생성 AI 선택 ── */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
+          <Bot className="w-4 h-4" style={{ color: "#10b981" }} />
+          <span className="font-semibold text-sm text-foreground">글 생성 AI 선택</span>
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{ background: "#10b98120", color: "#10b981" }}>
+            현재: {CONTENT_AI_OPTIONS.find(o => o.value === contentAI)?.label}
+          </span>
+        </div>
+        <div className="p-3 grid grid-cols-2 gap-2">
+          {CONTENT_AI_OPTIONS.map(opt => {
+            const active = contentAI === opt.value;
+            const hasKey = !!values[opt.keyStorageKey]?.trim();
+            return (
               <button key={opt.value}
-                className="rounded-xl p-4 text-left transition-all active:scale-[0.97] relative overflow-hidden"
+                className="rounded-xl p-3 text-left transition-all active:scale-[0.97] relative overflow-hidden"
                 style={{
-                  background: contentAI === opt.value ? `${opt.logoColor}18` : "var(--background)",
-                  border: `2px solid ${contentAI === opt.value ? opt.logoColor : "var(--border)"}`,
-                  boxShadow: contentAI === opt.value ? `0 0 20px ${opt.logoColor}30` : "none",
-                  outline: contentAI === opt.value ? `2px solid ${opt.logoColor}50` : "none",
+                  background: active ? `${opt.logoColor}18` : "var(--background)",
+                  border: `2px solid ${active ? opt.logoColor : "var(--border)"}`,
+                  boxShadow: active ? `0 0 20px ${opt.logoColor}30` : "none",
+                  outline: active ? `2px solid ${opt.logoColor}50` : "none",
                   outlineOffset: "2px",
                 }}
                 onClick={() => handleSelectContentAI(opt.value)}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black text-white"
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
                     style={{ background: opt.logoColor }}>{opt.logo}</div>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                    style={{ background: opt.badge === "무료" ? "oklch(0.696 0.17 162.48 / 20%)" : "oklch(0.769 0.188 70.08 / 20%)", color: opt.badge === "무료" ? "var(--color-emerald)" : "var(--color-amber-brand)" }}>
-                    {opt.badge}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    {active && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: opt.logoColor }} />}
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ background: opt.badge === "무료" ? "#10b98118" : "#f59e0b18", color: opt.badge === "무료" ? "#10b981" : "#f59e0b" }}>
+                      {opt.badge}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-sm font-semibold text-foreground">{opt.label}</div>
+                <div className="text-xs font-semibold text-foreground">{opt.label}</div>
                 <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</div>
-                {contentAI === opt.value && (
-                  <div className="mt-2 flex items-center gap-1 text-xs" style={{ color: "var(--color-emerald)" }}>
-                    <CheckCircle2 className="w-3.5 h-3.5" /> 선택됨
-                  </div>
-                )}
+                {/* 키 입력 여부 표시 */}
+                <div className="mt-1.5 text-xs flex items-center gap-1"
+                  style={{ color: hasKey ? "#10b981" : "#f59e0b" }}>
+                  {hasKey ? <><CheckCircle2 className="w-3 h-3" />키 있음</> : "⚠ 키 없음"}
+                </div>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
+      </div>
 
-        {/* 이미지 생성 AI 선택 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Wand2 className="w-5 h-5" style={{ color: "oklch(0.75 0.12 300)" }} />
-            <h3 className="font-semibold text-foreground">이미지 생성 AI 선택</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {IMAGE_AI_OPTIONS.map((opt: any) => {
-              const selected = imageAI === opt.value;
-              return (
-                <button key={opt.value}
-                  className="rounded-2xl p-4 text-left transition-all relative overflow-hidden active:scale-[0.97]"
-                  style={{
-                    background: selected ? `${opt.logoColor}18` : "var(--background)",
-                    border: `2px solid ${selected ? opt.logoColor : "var(--border)"}`,
-                    boxShadow: selected ? `0 0 24px ${opt.logoColor}40` : "none",
-                    outline: selected ? `2px solid ${opt.logoColor}60` : "none",
-                    outlineOffset: "2px",
-                  }}
-                  onClick={() => handleSelectImageAI(opt.value)}>
-                  {selected && (
-                    <div className="absolute inset-0 opacity-10 pointer-events-none"
-                      style={{ background: `linear-gradient(135deg, ${opt.logoColor}, transparent)` }} />
-                  )}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-white"
-                        style={{ background: opt.logoColor }}>{opt.logo}</div>
-                      <div>
-                        <div className="text-sm font-bold text-foreground">{opt.label}</div>
-                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                          style={{
-                            background: opt.badgeColor + "25",
-                            color: opt.badgeColor,
-                          }}>
-                          {opt.badge}
-                        </span>
-                      </div>
-                    </div>
-                    {selected && (
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center"
-                        style={{ background: opt.logoColor }}>
-                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                      </div>
-                    )}
+      {/* ── 이미지 생성 AI 선택 ── */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
+          <Image className="w-4 h-4" style={{ color: "#a78bfa" }} />
+          <span className="font-semibold text-sm text-foreground">이미지 생성 AI 선택</span>
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{ background: "#a78bfa20", color: "#a78bfa" }}>
+            현재: {IMAGE_AI_OPTIONS.find(o => o.value === imageAI)?.label}
+          </span>
+        </div>
+        <div className="p-3 grid grid-cols-2 gap-2">
+          {IMAGE_AI_OPTIONS.map((opt: any) => {
+            const active = imageAI === opt.value;
+            const hasKey = !opt.keyStorageKey || !!values[opt.keyStorageKey]?.trim();
+            return (
+              <button key={opt.value}
+                className="rounded-xl p-3 text-left transition-all active:scale-[0.97] overflow-hidden"
+                style={{
+                  background: active ? `${opt.logoColor}18` : "var(--background)",
+                  border: `2px solid ${active ? opt.logoColor : "var(--border)"}`,
+                  boxShadow: active ? `0 0 20px ${opt.logoColor}30` : "none",
+                  outline: active ? `2px solid ${opt.logoColor}50` : "none",
+                  outlineOffset: "2px",
+                }}
+                onClick={() => handleSelectImageAI(opt.value)}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+                    style={{ background: opt.logoColor }}>{opt.logo}</div>
+                  <div className="flex items-center gap-1">
+                    {active && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: opt.logoColor }} />}
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ background: "#10b98118", color: "#10b981" }}>
+                      {opt.badge}
+                    </span>
                   </div>
+                </div>
+                <div className="text-xs font-semibold text-foreground">{opt.label}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</div>
+                <div className="mt-1.5 text-xs flex items-center gap-1"
+                  style={{ color: hasKey ? "#10b981" : "#f59e0b" }}>
+                  {hasKey ? <><CheckCircle2 className="w-3 h-3" />사용 가능</> : "⚠ 키 없음"}
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
-                  {/* 설명 */}
-                  <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</p>
-
-                  {/* 장단점 */}
-                  {opt.pros && (
-                    <div className="space-y-1">
-                      <div className="flex items-start gap-1.5">
-                        <span className="text-xs mt-0.5" style={{ color: "var(--color-emerald)" }}>✓</span>
-                        <span className="text-xs" style={{ color: "var(--color-emerald)" }}>{opt.pros}</span>
-                      </div>
-                      <div className="flex items-start gap-1.5">
-                        <span className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.22 25)" }}>✗</span>
-                        <span className="text-xs" style={{ color: "oklch(0.65 0.22 25)" }}>{opt.cons}</span>
-                      </div>
-                    </div>
+        {/* 선택된 이미지 AI 키 입력 */}
+        {(() => {
+          const opt = IMAGE_AI_OPTIONS.find(o => o.value === imageAI);
+          if (!opt?.keyStorageKey) return null;
+          const uid = opt.keyStorageKey + "_img";
+          return (
+            <div className="px-3 pb-3">
+              <div className="p-3 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-foreground">{opt.keyLabel}</span>
+                  {opt.keyLink && (
+                    <a href={opt.keyLink} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs hover:underline" style={{ color: "#a78bfa" }}>
+                      발급받기 <ExternalLink className="w-3 h-3" />
+                    </a>
                   )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* API 키 관리 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-1">
-            <Key className="w-5 h-5" style={{ color: "var(--color-amber-brand)" }} />
-            <h3 className="font-semibold text-foreground">API 키 관리</h3>
-          </div>
-          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            선택한 AI에 필요한 키만 표시됩니다. 키는 브라우저에 저장됩니다.
-          </p>
-
-
-          <div className="space-y-4">
-            {requiredKeys.map((opt) => (
-              <ApiKeyInput key={opt.keyStorageKey} label={opt.keyLabel}
-                placeholder={opt.keyPlaceholder} storageKey={opt.keyStorageKey} link={opt.keyLink} />
-            ))}
-          </div>
-        </div>
-
-        {/* 네이버 검색광고 API */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Zap className="w-5 h-5" style={{ color: "#03C75A" }} />
-              <h3 className="font-semibold text-foreground">네이버 검색광고 API</h3>
-            </div>
-            <a href="https://manage.searchad.naver.com" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs hover:underline"
-              style={{ color: "#03C75A" }}>
-              발급받기 <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            키워드 수집용 · 로그인 후 우측 상단 계정명 → API 관리
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Access License</label>
-              <Input className="text-sm font-mono" placeholder="발급된 라이선스 키"
-                value={naverLicense} onChange={e => setNaverLicense(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Secret Key</label>
-              <div className="relative">
-                <Input className="text-sm font-mono pr-10" type={showNaverSecret ? "text" : "password"}
-                  placeholder="시크릿 키" value={naverSecret} onChange={e => setNaverSecret(e.target.value)} />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-                  onClick={() => setShowNaverSecret(v => !v)}>
-                  {showNaverSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showMap[uid] ? "text" : "password"}
+                    placeholder={opt.keyPlaceholder}
+                    value={values[opt.keyStorageKey] || ""}
+                    onChange={e => setValues(p => ({ ...p, [opt.keyStorageKey!]: e.target.value }))}
+                    className="pr-10 font-mono text-sm h-10"
+                    style={{ borderColor: values[opt.keyStorageKey]?.trim() ? "#a78bfa60" : undefined }}
+                  />
+                  <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+                    style={{ color: "var(--muted-foreground)" }}
+                    onClick={() => setShowMap(p => ({ ...p, [uid]: !p[uid] }))}>
+                    {showMap[uid] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                {values[opt.keyStorageKey]?.trim() && (
+                  <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#a78bfa" }}>
+                    <CheckCircle2 className="w-3 h-3" /> 키 입력됨
+                  </p>
+                )}
               </div>
             </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Customer ID</label>
-              <Input className="text-sm font-mono" placeholder="고객 ID (숫자)"
-                value={naverCustomer} onChange={e => setNaverCustomer(e.target.value)} />
-            </div>
-            <Button className="gap-2"
-              style={{ background: naverSaved ? "var(--color-emerald)" : "#03C75A", color: "white" }}
-              onClick={handleSaveNaver}>
-              {naverSaved ? <CheckCircle2 className="w-4 h-4" /> : <Key className="w-4 h-4" />}
-              {naverSaved ? "저장됨" : "네이버 API 저장"}
-            </Button>
-          </div>
-        </div>
+          );
+        })()}
+      </div>
+      <button
+        className="w-full h-12 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+        style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #10b981, #059669)" }}
+        onClick={handleSaveAll} disabled={saving}>
+        {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+        {saving ? "저장 중..." : "관리자 키 저장"}
+      </button>
 
-        {/* 네이버 데이터랩 API */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5" style={{ color: "oklch(0.75 0.18 200)" }} />
-              <h3 className="font-semibold text-foreground">네이버 데이터랩 API</h3>
-            </div>
-            <a href="https://developers.naver.com/apps/#/register" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs hover:underline"
-              style={{ color: "oklch(0.75 0.18 200)" }}>
-              발급받기 <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            키워드 디바이스·성별·연령 분석용 · 네이버 개발자센터에서 앱 등록 후 발급
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client ID</label>
-              <Input className="text-sm font-mono" placeholder="네이버 Client ID"
-                value={datalabId} onChange={e => setDatalabId(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client Secret</label>
-              <div className="relative">
-                <Input className="text-sm font-mono pr-10" type={showDatalabSecret ? "text" : "password"}
-                  placeholder="Client Secret" value={datalabSecret} onChange={e => setDatalabSecret(e.target.value)} />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-                  onClick={() => setShowDatalabSecret(v => !v)}>
-                  {showDatalabSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+      {/* 섹션별 키 입력 */}
+      {API_SECTIONS.map(({ title, icon: iconName, color, grad, desc, fields }) => {
+        const Icon = ICON_MAP[iconName] || Key;
+        const isOpen = openSections[title] !== false;
+        // 중복 키 제거 후 실제 입력 필드 수
+        const uniqueKeys = [...new Set(fields.map(f => f.key))];
+        const filledCount = uniqueKeys.filter(k => values[k]?.trim()).length;
+        const total = uniqueKeys.length;
+
+        return (
+          <div key={title} className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            {/* 헤더 */}
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-accent/10"
+              onClick={() => setOpenSections(p => ({ ...p, [title]: !isOpen }))}>
+              {/* 아이콘 */}
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: grad }}>
+                <Icon className="w-5 h-5 text-white" />
               </div>
-            </div>
-            <Button className="gap-2"
-              style={{ background: datalabSaved ? "var(--color-emerald)" : "oklch(0.75 0.18 200)", color: "white" }}
-              onClick={handleSaveDatalab}>
-              {datalabSaved ? <CheckCircle2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-              {datalabSaved ? "관리자 전용" : "관리자 페이지에서 설정"}
-            </Button>
-          </div>
-        </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="font-semibold text-sm text-foreground">{title}</div>
+                <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>{desc}</div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {/* 입력 진행률 */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: total }).map((_, i) => (
+                    <div key={i} className="w-1.5 h-1.5 rounded-full"
+                      style={{ background: i < filledCount ? color : "var(--border)" }} />
+                  ))}
+                </div>
+                <span className="text-xs font-medium" style={{ color: filledCount === total ? color : "var(--muted-foreground)" }}>
+                  {filledCount}/{total}
+                </span>
+                <ChevronDown className="w-4 h-4 transition-transform" style={{ color: "var(--muted-foreground)", transform: isOpen ? "rotate(180deg)" : "" }} />
+              </div>
+            </button>
 
-        {/* ── 수익 플랫폼 선택 (글/이미지 최적화) ── */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.769 0.188 70.08/30%)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5" style={{ color: "var(--color-amber-brand)" }} />
-            <h3 className="font-semibold text-foreground">수익 플랫폼 최적화</h3>
-          </div>
-          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            선택한 플랫폼에 맞게 글 스타일과 이미지가 자동 최적화됩니다
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { id: "adsense", label: "Google AdSense", desc: "CPC 최적화 · 클릭 유도형 글", color: "#4285F4", logo: "G",
-                tip: "정보성 키워드 밀도 높게, 광고 친화적 단락" },
-              { id: "adpost", label: "Naver AdPost", desc: "CPM 최적화 · 체류시간 늘리기", color: "#03C75A", logo: "N",
-                tip: "감성적 스토리, 이미지 풍부하게, 공감 유도" },
-              { id: "both", label: "둘 다", desc: "통합 최적화", color: "oklch(0.75 0.12 300)", logo: "★",
-                tip: "균형잡힌 구성으로 양쪽 모두 최적화" },
-            ].map(platform => {
-              const selected = adPlatform === platform.id;
-              return (
-                <button key={platform.id}
-                  className="rounded-xl p-4 text-left transition-all"
-                  style={{
-                    background: selected ? `${platform.color}15` : "var(--background)",
-                    border: `2px solid ${selected ? platform.color + "80" : "var(--border)"}`,
-                  }}
-                  onClick={() => {
-                    userSet("selected_ad_platform", platform.id);
-                    setAdPlatform(platform.id);
-                    saveSettingsToServer({ selected_ad_platform: platform.id });
-                    toast.success(`${platform.label} 최적화 모드로 설정됐어요!`);
-                  }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black text-white"
-                      style={{ background: platform.color }}>{platform.logo}</div>
-                    {selected && <CheckCircle2 className="w-4 h-4" style={{ color: platform.color }} />}
-                  </div>
-                  <div className="text-sm font-semibold text-foreground">{platform.label}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{platform.desc}</div>
-                  <div className="text-xs mt-1.5 px-2 py-1 rounded-lg"
-                    style={{ background: `${platform.color}10`, color: platform.color }}>
-                    {platform.tip}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+            {/* 내용 */}
+            {isOpen && (
+              <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--border)" }}>
+                <div className="pt-3 space-y-3">
+                  {fields.map(({ label, key, placeholder, link, badge, badgeColor, type, options }: any) => {
+                    const uid = key + label;
+                    const filled = !!values[key]?.trim();
 
-        {/* ─── 배포 대상 설정 (다중 추가 가능) ─── */}
-        <div className="rounded-xl p-5" style={{ background: "oklch(0.696 0.17 162.48 / 6%)", border: "2px solid oklch(0.696 0.17 162.48 / 25%)" }}>
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Send className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
-              <h3 className="font-semibold text-foreground">배포 대상 설정</h3>
-            </div>
-          </div>
-          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-            각 플랫폼마다 여러 개 추가 가능 · 배포 페이지에서 선택해서 발행
-          </p>
-        </div>
+                    // ── Select 드롭다운 타입 ──
+                    if (type === "select" && options) {
+                      return (
+                        <div key={uid}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-medium text-foreground">{label}</span>
+                          </div>
+                          <Select
+                            value={values[key] || options[0]?.value || ""}
+                            onValueChange={v => setValues(p => ({ ...p, [key]: v }))}>
+                            <SelectTrigger className="h-11 text-sm" style={{ borderColor: filled ? `${color}60` : undefined }}>
+                              <SelectValue placeholder={placeholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {options.map((opt: { value: string; label: string }) => (
+                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {filled && (
+                            <p className="text-xs mt-1 flex items-center gap-1" style={{ color }}>
+                              <CheckCircle2 className="w-3 h-3" /> {options.find((o: any) => o.value === values[key])?.label}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
 
-        {/* 네이버 블로그 - 자동발행 불가 안내 */}
-        <PlatformSection
-          title="네이버 블로그 (원클릭 복사)" color="#03C75A" logo="N" type="naver"
-          desc="⚠️ 네이버 API 정책상 자동 발행 불가 · 배포 관리에서 '네이버 복사' 버튼으로 원클릭 복사 후 붙여넣기"
-          link=""
-          fields={[
-            { label: "블로그 ID", key: "naver_blog_id", placeholder: "myblog (naver.com/myblog)" },
-            { label: "Access Token", key: "naver_blog_access_token", placeholder: "네이버 OAuth Access Token", secret: true },
-          ]}
-        />
-
-        {/* 일반 웹사이트 */}
-        {/* 커스텀 웹사이트 - 인증 방식 선택 포함 */}
-        <CustomWebhookSection />
-
-        {/* WordPress */}
-        <PlatformSection
-          title="WordPress" color="#21759B" logo="WP" type="wordpress"
-          desc="WordPress 관리자 → 사용자 → 애플리케이션 비밀번호에서 발급"
-          link=""
-          fields={[
-            { label: "사이트 URL", key: "wp_url", placeholder: "https://myblog.com" },
-            { label: "사용자명", key: "wp_username", placeholder: "admin" },
-            { label: "앱 비밀번호", key: "wp_app_password", placeholder: "xxxx xxxx xxxx", secret: true },
-          ]}
-        />
-
-        {/* 티스토리 */}
-        <TistorySection />
-
-        {/* 쿠팡파트너스 */}
-        <CoupangSection />
-
-        {/* 모바일 ↔ PC 자동 동기화 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
-          <div className="flex items-center gap-2 mb-1">
-            <Smartphone className="w-5 h-5" style={{ color: "oklch(0.6 0.15 220)" }} />
-            <h3 className="font-semibold text-foreground">모바일 ↔ PC 설정 자동 동기화</h3>
-          </div>
-          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-            같은 계정으로 로그인하면 모든 설정이 자동으로 동기화됩니다.
-          </p>
-
-          {user ? (
-            <div className="space-y-3">
-              {/* 로그인 상태 표시 */}
-              <div className="rounded-xl p-4 flex items-center gap-3"
-                style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg font-black text-white"
-                  style={{ background: "var(--color-emerald)" }}>✓</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold" style={{ color: "var(--color-emerald)" }}>
-                    자동 동기화 활성화됨
-                  </p>
-                  <p className="text-xs mt-0.5 truncate" style={{ color: "var(--muted-foreground)" }}>
-                    <strong style={{ color: "var(--foreground)" }}>{user.name}</strong> 계정 · 설정 저장 시 서버에 자동 백업
-                  </p>
+                    // ── 기본 Input 타입 ──
+                    return (
+                      <div key={uid}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-medium text-foreground">{label}</span>
+                            {badge && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ background: `${badgeColor}18`, color: badgeColor }}>
+                                {badge}
+                              </span>
+                            )}
+                          </div>
+                          {link && (
+                            <a href={link} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs hover:underline"
+                              style={{ color }}>
+                              발급받기 <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <Input
+                            type={showMap[uid] ? "text" : "password"}
+                            placeholder={placeholder}
+                            value={values[key] || ""}
+                            onChange={e => setValues(p => ({ ...p, [key]: e.target.value }))}
+                            className="pr-20 font-mono text-sm h-11"
+                            style={{ borderColor: filled ? `${color}60` : undefined }}
+                          />
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <button className="p-1.5 rounded-lg hover:bg-accent/30"
+                              style={{ color: "var(--muted-foreground)" }}
+                              onClick={() => setShowMap(p => ({ ...p, [uid]: !p[uid] }))}>
+                              {showMap[uid] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            {filled && (
+                              <button className="p-1.5 rounded-lg hover:bg-accent/30"
+                                style={{ color: "var(--muted-foreground)" }}
+                                onClick={() => { navigator.clipboard.writeText(values[key]); toast.success("복사됨"); }}>
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {filled && (
+                          <p className="text-xs mt-1 flex items-center gap-1" style={{ color }}>
+                            <CheckCircle2 className="w-3 h-3" /> 저장된 키 있음
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+            )}
+          </div>
+        );
+      })}
 
-              {/* 지금 바로 전체 저장 */}
-              <Button className="w-full gap-2 h-11 font-semibold"
-                style={{ background: "oklch(0.6 0.15 220)", color: "white" }}
-                onClick={async () => {
-                  const allData: Record<string,string> = {};
-                  Object.values(SETTINGS_KEYS).forEach(k => {
-                    const v = userGetSettingsValue(k); if (v) allData[k] = v;
-                  });
-                  await saveAllToServer(allData);
-                  toast.success("✅ 모든 설정이 서버에 저장됐어요! 다른 기기에서 로그인하면 자동 적용됩니다");
-                }}>
-                <Upload className="w-4 h-4" /> 지금 모든 설정 서버에 저장하기
-              </Button>
+      {/* 하단 저장 버튼 */}
+      <button
+        className="w-full h-12 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+        style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #10b981, #059669)" }}
+        onClick={handleSaveAll} disabled={saving}>
+        {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+        {saving ? "저장 중..." : "관리자 키 저장"}
+      </button>
+    </div>
+  );
+}
 
-              {/* 서버에서 불러오기 */}
-              <Button variant="outline" className="w-full gap-2 h-11 font-semibold"
-                onClick={async () => {
-                  const settings = await loadFromServer();
-                  if (!settings || Object.keys(settings).length === 0) {
-                    toast.info("서버에 저장된 설정이 없어요. 위 버튼으로 먼저 저장해주세요");
-                    return;
-                  }
-                  Object.entries(settings).forEach(([k,v]) => userSet(k, v as string));
-                  toast.success("✅ 서버에서 최신 설정을 불러왔어요!");
-                  setTimeout(() => window.location.reload(), 1200);
-                }}>
-                <RefreshCw className="w-4 h-4" /> 서버에서 최신 설정 불러오기
-              </Button>
+// ─────────────────────────────────────────────────────
+// 회원 목록 관리
+// ─────────────────────────────────────────────────────
+interface UserRow { id: string; name: string; email: string; role: string; createdAt: string; postCount: number; }
 
-              <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
-                💡 API 키 저장 시 서버에도 자동 백업돼요. 모바일에서 로그인만 하면 자동 적용됩니다.
+function UserManager() {
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [changing, setChanging] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const d = await adminApi("listUsers");
+    if (d.ok) setUsers(d.users || []);
+    else toast.error(d.error || "불러오기 실패");
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const changeRole = async (userId: string, newRole: string) => {
+    setChanging(userId);
+    const d = await adminApi("changeUserRole", { targetUserId: userId, newRole });
+    if (d.ok) { toast.success("등급 변경 완료"); await load(); }
+    else toast.error(d.error || "변경 실패");
+    setChanging(null);
+  };
+
+  const deleteUser = async (userId: string, name: string) => {
+    if (!confirm(`"${name}" 회원을 삭제할까요?`)) return;
+    const d = await adminApi("deleteUser", { targetUserId: userId });
+    if (d.ok) { toast.success("삭제 완료"); await load(); }
+    else toast.error(d.error || "삭제 실패");
+  };
+
+  const formatDate = (s: string) => {
+    if (!s) return "-";
+    try { return new Date(s).toLocaleDateString("ko-KR", { month: "short", day: "numeric", year: "2-digit" }); } catch { return s; }
+  };
+
+  const ROLE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+    admin: { bg: "#f59e0b20", text: "#f59e0b", label: "👑 관리자" },
+    user:  { bg: "#6366f120", text: "#6366f1", label: "일반" },
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-sm font-semibold text-foreground">총 {users.length}명</div>
+          <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>가입 회원 전체 목록</div>
+        </div>
+        <button className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-medium transition-all active:scale-95"
+          style={{ background: "var(--muted)", color: "var(--muted-foreground)" }} onClick={load}>
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> 새로고침
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-16 flex flex-col items-center gap-3">
+          <RefreshCw className="w-8 h-8 animate-spin" style={{ color: "var(--muted-foreground)" }} />
+          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>불러오는 중...</p>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="py-16 text-center rounded-2xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <Users className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: "var(--muted-foreground)" }} />
+          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>아직 가입한 회원이 없어요</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {users.map(u => {
+            const rc = ROLE_COLORS[u.role] || ROLE_COLORS.user;
+            const avatarGrad = u.role === "admin"
+              ? "linear-gradient(135deg,#f59e0b,#d97706)"
+              : "linear-gradient(135deg,#6366f1,#4f46e5)";
+            return (
+              <div key={u.id} className="rounded-2xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0"
+                    style={{ background: avatarGrad }}>
+                    {u.name[0]?.toUpperCase() || "U"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-foreground">{u.name}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: rc.bg, color: rc.text }}>{rc.label}</span>
+                    </div>
+                    <div className="text-xs mt-0.5 truncate" style={{ color: "var(--muted-foreground)" }}>
+                      {u.id} · {u.email}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="rounded-xl px-3 py-2" style={{ background: "var(--background)" }}>
+                    <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>가입일</div>
+                    <div className="text-xs font-medium text-foreground mt-0.5">{formatDate(u.createdAt)}</div>
+                  </div>
+                  <div className="rounded-xl px-3 py-2" style={{ background: "var(--background)" }}>
+                    <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>발행 글</div>
+                    <div className="text-xs font-medium text-foreground mt-0.5">{u.postCount}개</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    className="flex-1 h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                    style={{
+                      background: u.role === "admin" ? "#6366f118" : "#f59e0b18",
+                      color: u.role === "admin" ? "#6366f1" : "#f59e0b",
+                      border: `1px solid ${u.role === "admin" ? "#6366f130" : "#f59e0b30"}`,
+                    }}
+                    disabled={changing === u.id}
+                    onClick={() => changeRole(u.id, u.role === "admin" ? "user" : "admin")}>
+                    {changing === u.id
+                      ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      : <Crown className="w-3.5 h-3.5" />}
+                    {u.role === "admin" ? "일반으로 변경" : "관리자 승급"}
+                  </button>
+                  <button
+                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
+                    style={{ background: "#ef444418", color: "#ef4444", border: "1px solid #ef444430" }}
+                    onClick={() => deleteUser(u.id, u.name)}>
+                    <UserX className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// 보안 (비밀번호 변경 + 시스템 현황)
+// ─────────────────────────────────────────────────────
+function SecurityPanel() {
+  const [cur, setCur] = useState(""); const [nw, setNw] = useState(""); const [conf, setConf] = useState("");
+  const [showCur, setShowCur] = useState(false); const [showNw, setShowNw] = useState(false); const [showConf, setShowConf] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const strength = nw.length === 0 ? null
+    : nw.length < 4 ? { label: "너무 짧음", color: "#ef4444", score: 1 }
+    : nw.length < 6 ? { label: "약함", color: "#f59e0b", score: 2 }
+    : nw.length < 8 ? { label: "보통", color: "#6366f1", score: 3 }
+    : { label: "강함", color: "#10b981", score: 4 };
+
+  const handle = async () => {
+    if (!cur) { toast.error("현재 비밀번호를 입력해주세요"); return; }
+    if (!nw || nw.length < 4) { toast.error("새 비밀번호는 4자 이상이어야 해요"); return; }
+    if (nw !== conf) { toast.error("새 비밀번호가 일치하지 않아요"); return; }
+    setLoading(true);
+    const d = await adminApi("changeAdminPassword", { currentPassword: cur, newPassword: nw });
+    if (d.ok) {
+      toast.success("✅ 비밀번호 변경 완료! 서버에 저장됩니다.");
+      setCur(""); setNw(""); setConf("");
+      setTimeout(() => { sessionStorage.removeItem(SESSION_KEY); window.location.reload(); }, 1500);
+    } else {
+      toast.error(d.error || "변경 실패");
+    }
+    setLoading(false);
+  };
+
+  const sysMetrics = [
+    { label: "CPU", value: 34, color: "#10b981", icon: Cpu },
+    { label: "메모리", value: 67, color: "#f59e0b", icon: HardDrive },
+    { label: "API 호출", value: 78, color: "#6366f1", icon: Wifi },
+    { label: "디스크", value: 45, color: "#a78bfa", icon: Database },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* 비밀번호 변경 */}
+      <div className="rounded-2xl p-5 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}>
+            <Key className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <div className="font-semibold text-foreground">비밀번호 변경</div>
+            <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>변경 후 서버 저장 → 배포해도 유지</div>
+          </div>
+        </div>
+
+        {([
+          { label: "현재 비밀번호", val: cur, set: setCur, show: showCur, setShow: setShowCur },
+          { label: "새 비밀번호", val: nw, set: setNw, show: showNw, setShow: setShowNw },
+          { label: "새 비밀번호 확인", val: conf, set: setConf, show: showConf, setShow: setShowConf },
+        ] as const).map(({ label, val, set, show, setShow }) => (
+          <div key={label}>
+            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>{label}</label>
+            <div className="relative">
+              <Input type={show ? "text" : "password"} placeholder={label} value={val}
+                onChange={e => (set as any)(e.target.value)} className="pr-10 h-11" autoComplete="new-password" />
+              <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
+                onClick={() => (setShow as any)((v: boolean) => !v)}>
+                {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {label === "새 비밀번호" && strength && (
+              <div className="mt-2">
+                <div className="flex gap-1 mb-1">
+                  {[1,2,3,4].map(i => <div key={i} className="flex-1 h-1.5 rounded-full" style={{ background: i <= strength.score ? strength.color : "var(--border)" }} />)}
+                </div>
+                <span className="text-xs font-medium" style={{ color: strength.color }}>{strength.label}</span>
+              </div>
+            )}
+            {label === "새 비밀번호 확인" && conf.length > 0 && (
+              <p className="text-xs mt-1 flex items-center gap-1" style={{ color: nw === conf ? "#10b981" : "#ef4444" }}>
+                {nw === conf ? <><CheckCircle2 className="w-3 h-3" />일치</> : "⚠ 불일치"}
               </p>
+            )}
+          </div>
+        ))}
+
+        <button
+          className="w-full h-11 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+          style={{ background: loading ? "var(--muted)" : "linear-gradient(135deg,#10b981,#059669)" }}
+          onClick={handle} disabled={loading}>
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+          {loading ? "변경 중..." : "비밀번호 변경"}
+        </button>
+      </div>
+
+      {/* 시스템 현황 */}
+      <div className="rounded-2xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-4 h-4" style={{ color: "#6366f1" }} />
+          <span className="font-semibold text-sm text-foreground">시스템 현황</span>
+        </div>
+        <div className="space-y-3">
+          {sysMetrics.map(m => (
+            <div key={m.label} className="flex items-center gap-3">
+              <m.icon className="w-4 h-4 shrink-0" style={{ color: m.color }} />
+              <span className="text-xs w-14 text-foreground">{m.label}</span>
+              <div className="flex-1 h-2 rounded-full" style={{ background: "var(--muted)" }}>
+                <div className="h-2 rounded-full transition-all" style={{ width: `${m.value}%`, background: m.color }} />
+              </div>
+              <span className="text-xs w-8 text-right font-medium" style={{ color: m.color }}>{m.value}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// OG 이미지 관리
+// ─────────────────────────────────────────────────────
+function OGManager() {
+  const [og, setOg] = useState<OGSettings>(loadOG);
+  const [newPost, setNewPost] = useState({ title: "", url: "", image: "" });
+  const [showAdd, setShowAdd] = useState(false);
+  const [drag, setDrag] = useState(false);
+  const siteRef = useRef<HTMLInputElement>(null);
+  const postRef = useRef<HTMLInputElement>(null);
+
+  const uploadSite = async (file: File) => {
+    if (!file.type.startsWith("image/")) { toast.error("이미지 파일만 가능합니다"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("5MB 이하만 가능합니다"); return; }
+    const b64 = await toBase64(file);
+    const u = { ...og, siteImage: b64 }; setOg(u); saveOG(u);
+    toast.success("OG 이미지 설정 완료!");
+  };
+
+  const save = () => {
+    saveOG(og);
+    const setMeta = (prop: string, val: string) => {
+      let el = document.querySelector(`meta[property="${prop}"]`) as HTMLMetaElement;
+      if (!el) { el = document.createElement("meta"); el.setAttribute("property", prop); document.head.appendChild(el); }
+      el.setAttribute("content", val);
+    };
+    setMeta("og:title", og.siteTitle); setMeta("og:description", og.siteDesc); setMeta("og:site_name", og.siteName);
+    document.title = og.siteTitle;
+    toast.success("✅ OG 설정 저장 완료!");
+  };
+
+  const code = `<meta property="og:title" content="${og.siteTitle}" />\n<meta property="og:description" content="${og.siteDesc}" />\n<meta property="og:site_name" content="${og.siteName}" />\n<meta property="og:image" content="https://YOUR_DOMAIN/og-image.jpg" />\n<meta name="twitter:card" content="${og.twitterCard}" />`;
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="px-4 py-4 border-b flex items-center gap-3" style={{ borderColor: "var(--border)" }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }}>
+            <Globe className="w-4.5 h-4.5 text-white" />
+          </div>
+          <div>
+            <div className="font-semibold text-sm text-foreground">앱 전체 OG 이미지</div>
+            <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>카카오톡/SNS 링크 공유 시 표시</div>
+          </div>
+        </div>
+        <div className="p-4 space-y-4">
+          {og.siteImage ? (
+            <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "1200/630", maxHeight: 180 }}>
+              <img src={og.siteImage} alt="OG" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/0 hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 hover:opacity-100">
+                <button className="px-3 py-2 rounded-lg text-xs text-white font-medium" style={{ background: "rgba(255,255,255,0.2)" }} onClick={() => siteRef.current?.click()}><Upload className="w-3.5 h-3.5 inline mr-1" />변경</button>
+                <button className="px-3 py-2 rounded-lg text-xs text-white font-medium" style={{ background: "rgba(239,68,68,0.7)" }} onClick={() => { const u = { ...og, siteImage: "" }; setOg(u); saveOG(u); }}><X className="w-3.5 h-3.5 inline mr-1" />삭제</button>
+              </div>
             </div>
           ) : (
-            <div className="rounded-xl p-5 flex items-start gap-4"
-              style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/30%)" }}>
-              <div className="text-2xl">🔒</div>
-              <div>
-                <p className="text-sm font-semibold mb-1" style={{ color: "var(--color-amber-brand)" }}>
-                  로그인하면 자동 동기화
-                </p>
-                <p className="text-xs leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-                  로그인하면 API 키와 모든 설정이 서버에 저장되고,
-                  모바일에서 로그인하면 자동으로 적용돼요. 링크나 코드 입력 불필요!
-                </p>
-                <Button size="sm" className="mt-3 gap-1.5"
-                  style={{ background: "var(--color-amber-brand)", color: "white" }}
-                  onClick={() => window.location.href = "/login"}>
-                  로그인하러 가기
-                </Button>
-              </div>
-            </div>
+            <button className="w-full rounded-xl flex flex-col items-center justify-center gap-2 py-8 transition-all"
+              style={{ border: `2px dashed ${drag ? "#6366f1" : "var(--border)"}`, background: drag ? "#6366f108" : "var(--background)", maxHeight: 160 }}
+              onClick={() => siteRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDrag(true); }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={async e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) await uploadSite(f); }}>
+              <Upload className="w-8 h-8 opacity-30" style={{ color: "var(--muted-foreground)" }} />
+              <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>1200×630 권장 · 최대 5MB</span>
+            </button>
           )}
-        </div>
-
-        {/* 테마 설정 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Palette className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
-            <h3 className="font-semibold text-foreground">테마 설정</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { value: "dark", label: "다크 모드", icon: Moon, desc: "어두운 배경" },
-              { value: "light", label: "라이트 모드", icon: Sun, desc: "밝은 배경" },
-              { value: "system", label: "시스템 설정", icon: Monitor, desc: "OS 따라가기" },
-            ].map((t) => (
-              <button key={t.value}
-                className="rounded-xl p-4 text-left transition-all"
-                style={{
-                  background: theme === t.value ? "oklch(0.696 0.17 162.48 / 15%)" : "var(--background)",
-                  border: `2px solid ${theme === t.value ? "oklch(0.696 0.17 162.48 / 60%)" : "var(--border)"}`,
-                }}
-                onClick={() => {
-                  if (t.value !== "system") { setTheme(t.value as "dark" | "light"); toast.success(`${t.label}으로 변경됨`); }
-                  else toast.info("시스템 모드 준비 중");
-                }}>
-                <t.icon className="w-6 h-6 mb-2"
-                  style={{ color: theme === t.value ? "var(--color-emerald)" : "var(--muted-foreground)" }} />
-                <div className="text-sm font-semibold text-foreground">{t.label}</div>
-                <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{t.desc}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 콘텐츠 언어 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Globe className="w-5 h-5" style={{ color: "var(--color-amber-brand)" }} />
-            <h3 className="font-semibold text-foreground">콘텐츠 생성 언어</h3>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {LANGUAGES.map((lang) => (
-              <button key={lang.code}
-                className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-all"
-                style={{
-                  background: contentLang === lang.code ? "oklch(0.769 0.188 70.08 / 15%)" : "var(--background)",
-                  border: `1px solid ${contentLang === lang.code ? "oklch(0.769 0.188 70.08 / 50%)" : "var(--border)"}`,
-                  color: contentLang === lang.code ? "var(--color-amber-brand)" : "var(--foreground)",
-                }}
-                onClick={() => {
-                  setContentLang(lang.code);
-                  userSet(SETTINGS_KEYS.CONTENT_LANG, lang.code);
-                  toast.success(`콘텐츠 언어: ${lang.label}`);
-                }}>
-                <span>{lang.flag}</span>
-                <span className="font-medium">{lang.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 알림 설정 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Bell className="w-5 h-5" style={{ color: "oklch(0.6 0.15 220)" }} />
-            <h3 className="font-semibold text-foreground">알림 설정</h3>
-          </div>
+          <input ref={siteRef} type="file" accept="image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) await uploadSite(f); e.target.value = ""; }} />
           <div className="space-y-3">
-            {[
-              { key: "email", label: "이메일 알림", desc: "중요 이벤트를 이메일로 수신" },
-              { key: "deploy", label: "배포 완료 알림", desc: "글 발행 성공/실패 시 알림" },
-              { key: "revenue", label: "수익 알림", desc: "일일 수익 현황 알림" },
-              { key: "error", label: "오류 알림", desc: "시스템 오류 발생 시 즉시 알림" },
-              { key: "weekly", label: "주간 리포트", desc: "매주 월요일 성과 리포트 발송" },
-            ].map((notif) => (
-              <div key={notif.key}
-                className="flex items-center justify-between p-3 rounded-lg"
-                style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-                <div>
-                  <div className="text-sm font-medium text-foreground">{notif.label}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{notif.desc}</div>
-                </div>
-                <Switch
-                  checked={notifications[notif.key as keyof typeof notifications]}
-                  onCheckedChange={(checked) => {
-                    setNotifications(prev => ({ ...prev, [notif.key]: checked }));
-                    toast.success(`${notif.label} ${checked ? "활성화" : "비활성화"}됨`);
-                  }} />
-              </div>
-            ))}
+            <div><label className="text-xs font-medium mb-1 block" style={{ color: "var(--muted-foreground)" }}>사이트 제목</label><Input value={og.siteTitle} onChange={e => setOg(p => ({ ...p, siteTitle: e.target.value }))} className="h-11 text-sm" /></div>
+            <div><label className="text-xs font-medium mb-1 block" style={{ color: "var(--muted-foreground)" }}>사이트명</label><Input value={og.siteName} onChange={e => setOg(p => ({ ...p, siteName: e.target.value }))} className="h-11 text-sm" /></div>
+            <div><label className="text-xs font-medium mb-1 block" style={{ color: "var(--muted-foreground)" }}>설명</label><Textarea value={og.siteDesc} onChange={e => setOg(p => ({ ...p, siteDesc: e.target.value }))} className="text-sm resize-none min-h-[80px]" /></div>
+          </div>
+          <button className="w-full h-11 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+            style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }} onClick={save}>
+            <CheckCircle2 className="w-4 h-4" /> OG 설정 저장
+          </button>
+          <div className="rounded-xl p-3" style={{ background: "oklch(0.12 0.005 285)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold" style={{ color: "#10b981" }}>index.html 코드</span>
+              <button className="text-xs px-2.5 py-1 rounded-lg flex items-center gap-1" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
+                onClick={() => { navigator.clipboard.writeText(code); toast.success("복사됐어요!"); }}>
+                <Copy className="w-3 h-3" /> 복사
+              </button>
+            </div>
+            <pre className="text-xs overflow-x-auto whitespace-pre-wrap" style={{ color: "#6ee7b7", lineHeight: 1.7 }}>{code}</pre>
           </div>
         </div>
+      </div>
 
-        {/* 내보내기 */}
-        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Download className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
-            <h3 className="font-semibold text-foreground">내보내기 & 다운로드</h3>
-          </div>
-          <div className="space-y-3">
-            {[
-              { label: "전체 프로젝트 ZIP 다운로드", desc: "모든 설정, 콘텐츠, 이미지를 ZIP으로 다운로드" },
-              { label: "콘텐츠 CSV 내보내기", desc: "생성된 모든 글 목록을 CSV로" },
-              { label: "키워드 데이터 내보내기", desc: "수집된 키워드 데이터를 Excel로" },
-            ].map((item) => (
-              <div key={item.label}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/20 transition-colors cursor-pointer"
-                style={{ background: "var(--background)", border: "1px solid var(--border)" }}
-                onClick={() => toast.info(`${item.label} 준비 중`)}>
-                <div>
-                  <div className="text-sm font-medium text-foreground">{item.label}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{item.desc}</div>
-                </div>
-                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "var(--muted-foreground)" }} />
-              </div>
-            ))}
-          </div>
-        </div>
-        </div>
-
-        <aside className="hidden xl:block">
-          <div className="sticky top-6 space-y-4">
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg, oklch(0.696 0.17 162.48/10%), oklch(0.75 0.12 300/10%))", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4" style={{ color: "oklch(0.75 0.12 300)" }} />
-                <h3 className="font-semibold text-foreground">작업 대시보드</h3>
-              </div>
-              <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>오른쪽 공간을 작업 요약 공간으로 채웠어요. 현재 선택된 AI와 연결 상태를 한눈에 볼 수 있습니다.</p>
-              <div className="space-y-3">
-                <div className="rounded-xl p-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  <div className="text-xs mb-1" style={{ color: "var(--muted-foreground)" }}>글 생성 AI</div>
-                  <div className="text-sm font-semibold text-foreground">{CONTENT_AI_OPTIONS.find(opt => opt.value === contentAI)?.label || "미선택"}</div>
-                </div>
-                <div className="rounded-xl p-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  <div className="text-xs mb-1" style={{ color: "var(--muted-foreground)" }}>이미지 생성 AI</div>
-                  <div className="text-sm font-semibold text-foreground">{IMAGE_AI_OPTIONS.find(opt => opt.value === imageAI)?.label || "미선택"}</div>
-                </div>
-                <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold" style={{ color: "var(--muted-foreground)" }}>연결 상태</span>
-                    <span className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/15%)", color: "var(--color-emerald)" }}>준비 완료</span>
-                  </div>
-                  <div className="space-y-2">
-                    {[
-                      ["네이버 블로그", !!userGetSettingsValue("naver_blog_id")],
-                      ["웹사이트", !!userGetSettingsValue("webhook_url")],
-                      ["WordPress", !!userGetSettingsValue("wp_url")],
-                    ].map(([label, ok]) => (
-                      <div key={String(label)} className="flex items-center justify-between text-sm">
-                        <span style={{ color: "var(--muted-foreground)" }}>{label}</span>
-                        <span style={{ color: ok ? "var(--color-emerald)" : "var(--color-amber-brand)" }}>{ok ? "연결" : "설정 필요"}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+      {/* 글별 OG */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#a78bfa,#7c3aed)" }}>
+              <Link className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <div className="font-semibold text-sm text-foreground">글별 OG 이미지</div>
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>{og.postImages.length}개 등록</div>
             </div>
           </div>
-        </aside>
-      </div></div>
+          <button className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all active:scale-95"
+            style={{ background: "linear-gradient(135deg,#a78bfa,#7c3aed)" }} onClick={() => setShowAdd(v => !v)}>
+            + 추가
+          </button>
+        </div>
+        {showAdd && (
+          <div className="p-4 border-b space-y-3" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+            <Input value={newPost.title} onChange={e => setNewPost(p => ({ ...p, title: e.target.value }))} placeholder="글 제목" className="h-11 text-sm" />
+            <Input value={newPost.url} onChange={e => setNewPost(p => ({ ...p, url: e.target.value }))} placeholder="글 URL (선택)" className="h-11 text-sm" />
+            {newPost.image ? (
+              <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "1200/630", maxHeight: 140 }}>
+                <img src={newPost.image} alt="미리보기" className="w-full h-full object-cover" />
+                <button className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setNewPost(p => ({ ...p, image: "" }))}><X className="w-3.5 h-3.5 text-white" /></button>
+              </div>
+            ) : (
+              <button className="w-full rounded-xl flex items-center justify-center gap-2 py-5 transition-all" style={{ border: "2px dashed var(--border)", background: "var(--card)" }} onClick={() => postRef.current?.click()}>
+                <Upload className="w-5 h-5 opacity-30" style={{ color: "var(--muted-foreground)" }} />
+                <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>이미지 업로드</span>
+              </button>
+            )}
+            <input ref={postRef} type="file" accept="image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) { const b64 = await toBase64(f); setNewPost(p => ({ ...p, image: b64 })); } e.target.value = ""; }} />
+            <div className="flex gap-2">
+              <button className="flex-1 h-11 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
+                style={{ background: "linear-gradient(135deg,#a78bfa,#7c3aed)" }}
+                onClick={() => {
+                  if (!newPost.title.trim()) { toast.error("글 제목을 입력해주세요"); return; }
+                  if (!newPost.image) { toast.error("OG 이미지를 업로드해주세요"); return; }
+                  const u = { ...og, postImages: [...og.postImages, { id: Date.now().toString(), ...newPost }] };
+                  setOg(u); saveOG(u); setNewPost({ title: "", url: "", image: "" }); setShowAdd(false);
+                  toast.success("추가됐어요!");
+                }}>추가</button>
+              <button className="px-4 h-11 rounded-xl text-sm font-medium" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }} onClick={() => { setShowAdd(false); setNewPost({ title: "", url: "", image: "" }); }}>취소</button>
+            </div>
+          </div>
+        )}
+        {og.postImages.length === 0 && !showAdd ? (
+          <div className="py-10 text-center"><p className="text-sm" style={{ color: "var(--muted-foreground)" }}>글별 OG 이미지를 추가해주세요</p></div>
+        ) : (
+          <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+            {og.postImages.map(post => (
+              <div key={post.id} className="flex items-center gap-3 p-3">
+                <div className="w-16 h-10 rounded-lg overflow-hidden shrink-0" style={{ border: "1px solid var(--border)" }}><img src={post.image} alt={post.title} className="w-full h-full object-cover" /></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{post.title}</p>
+                  {post.url && <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>{post.url}</p>}
+                </div>
+                <button className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: "#ef4444" }}
+                  onClick={() => { const u = { ...og, postImages: og.postImages.filter(p => p.id !== post.id) }; setOg(u); saveOG(u); toast.success("삭제됐어요"); }}>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// 관리자 대시보드
+// ─────────────────────────────────────────────────────
+const TABS = [
+  { id: "apikeys", label: "API 키", icon: Key, color: "#10b981", grad: "linear-gradient(135deg,#10b981,#059669)" },
+  { id: "users",   label: "회원",   icon: Users, color: "#6366f1", grad: "linear-gradient(135deg,#6366f1,#4f46e5)" },
+  { id: "security",label: "보안",   icon: Shield, color: "#f59e0b", grad: "linear-gradient(135deg,#f59e0b,#d97706)" },
+  { id: "og",      label: "OG",    icon: Image, color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)" },
+] as const;
+type TabId = typeof TABS[number]["id"];
+
+function AdminDashboard() {
+  const [tab, setTab] = useState<TabId>("apikeys");
+  const handleLogout = () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem("ba_token");
+    localStorage.removeItem("ba_user");
+    window.location.reload();
+  };
+  const activeTab = TABS.find(t => t.id === tab)!;
+
+  return (
+    <Layout>
+      <div className="pb-24">
+        {/* 헤더 */}
+        <div className="px-4 pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: activeTab.grad }}>
+                <activeTab.icon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-black text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>운영자 패널</h1>
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{activeTab.label} 관리</p>
+              </div>
+            </div>
+            <button className="text-xs px-3 py-2 rounded-xl font-medium transition-all active:scale-95"
+              style={{ background: "var(--muted)", color: "var(--muted-foreground)" }} onClick={handleLogout}>
+              잠금
+            </button>
+          </div>
+        </div>
+
+        {/* 탭 콘텐츠 */}
+        <div className="px-4">
+          {tab === "apikeys"  && <ApiKeyManager />}
+          {tab === "users"    && <UserManager />}
+          {tab === "security" && <SecurityPanel />}
+          {tab === "og"       && <OGManager />}
+        </div>
+      </div>
+
+      {/* 하단 탭바 */}
+      <div className="fixed bottom-0 left-0 right-0 z-50"
+        style={{ background: "var(--background)", borderTop: "1px solid var(--border)" }}>
+        <div className="flex items-center px-2 py-2 gap-1">
+          {TABS.map(t => {
+            const active = tab === t.id;
+            return (
+              <button key={t.id}
+                className="flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-2xl transition-all active:scale-95"
+                style={{ background: active ? `${t.color}18` : "transparent" }}
+                onClick={() => setTab(t.id)}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: active ? t.grad : "transparent" }}>
+                  <t.icon className="w-4 h-4" style={{ color: active ? "white" : "var(--muted-foreground)" }} />
+                </div>
+                <span className="text-[10px] font-semibold" style={{ color: active ? t.color : "var(--muted-foreground)" }}>
+                  {t.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </Layout>
   );
+}
+
+// ─────────────────────────────────────────────────────
+// 비밀번호 게이트
+// ─────────────────────────────────────────────────────
+function AdminGate({ onAuth }: { onAuth: () => void }) {
+  const [pw, setPw] = useState("");
+  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!pw.trim()) return;
+    setLoading(true);
+    try {
+      const r = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", userId: "admin", password: pw }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        localStorage.setItem("ba_token", d.token);
+        localStorage.setItem("ba_user", JSON.stringify(d.user));
+        sessionStorage.setItem(SESSION_KEY, d.token);
+        // 서버 설정 로드
+        const sr = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${d.token}` },
+          body: JSON.stringify({ action: "loadSettings" }),
+        });
+        const sd = await sr.json();
+        if (sd.ok && sd.settings) {
+          Object.entries(sd.settings).forEach(([k, v]) => {
+            if (typeof v === "string") localStorage.setItem(`u:admin:${k}`, v);
+          });
+        }
+        onAuth();
+      } else {
+        toast.error("비밀번호가 올바르지 않아요");
+        setPw("");
+      }
+    } catch { toast.error("네트워크 오류"); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+        <button className="flex items-center gap-2 text-sm font-medium opacity-70 hover:opacity-100" style={{ color: "var(--foreground)" }} onClick={() => window.location.href = "/"}>
+          <Home className="w-4 h-4" /> 홈으로
+        </button>
+        <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "#10b98115", color: "#10b981" }}>운영자 전용</span>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 relative"
+              style={{ background: "linear-gradient(135deg, #10b981, #6366f1)" }}>
+              <Shield className="w-10 h-10 text-white" />
+              <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: "#f59e0b" }}>
+                <Lock className="w-3.5 h-3.5 text-white" />
+              </div>
+            </div>
+            <h1 className="text-2xl font-black text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>관리자 인증</h1>
+            <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>운영자 전용 관리 패널</p>
+          </div>
+
+          <div className="rounded-2xl p-6 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="relative">
+              <Input
+                type={show ? "text" : "password"}
+                placeholder="관리자 비밀번호"
+                value={pw}
+                onChange={e => setPw(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                className="h-12 pr-12 text-base"
+                name="blogauto-admin-passcode"
+                autoComplete="new-password"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                inputMode="text"
+              />
+              <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1" style={{ color: "var(--muted-foreground)" }} onClick={() => setShow(v => !v)}>
+                {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            <button
+              className="w-full h-12 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+              style={{ background: loading ? "var(--muted)" : "linear-gradient(135deg, #10b981, #6366f1)" }}
+              onClick={handleSubmit} disabled={loading}>
+              {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+              {loading ? "인증 중..." : "접속하기"}
+            </button>
+          </div>
+          <button className="w-full mt-4 text-sm text-center hover:underline" style={{ color: "var(--muted-foreground)" }} onClick={() => window.location.href = "/dashboard"}>
+            대시보드로 이동
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// 메인
+// ─────────────────────────────────────────────────────
+export default function SuperAdminPage() {
+  const [authed, setAuthed] = useState(() => {
+    const s = sessionStorage.getItem(SESSION_KEY);
+    return !!s && !!localStorage.getItem("ba_token");
+  });
+  if (!authed) return <AdminGate onAuth={() => setAuthed(true)} />;
+  return <AdminDashboard />;
 }
 //fix
