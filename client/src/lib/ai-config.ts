@@ -1,7 +1,7 @@
 import { userGet, SETTINGS_KEYS } from "./user-storage";
 
 export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
-export type ImageAIProvider = "openai" | "gemini" | "replicate";
+export type ImageAIProvider = "openai" | "replicate";
 
 // userGet 자체에 admin 폴백이 포함되어 있음 (user-storage.ts 참고)
 export function getContentProvider(): ContentAIProvider {
@@ -75,20 +75,32 @@ export const CONTENT_AI_OPTIONS = [
 
 export const IMAGE_AI_OPTIONS = [
   {
-    value: "gemini" as ImageAIProvider,
-    label: "Gemini Image",
-    badge: "일부 무료",
-    badgeColor: "#4F7CFF",
-    desc: "Google AI · 일부 무료 사용 후 유료 결제",
-    pros: "Gemini 생태계 연동 · 일부 무료 사용 가능 · 한국어 프롬프트 대응",
-    cons: "사용량 초과 시 유료 결제 필요",
-    logo: "G", logoColor: "#4F7CFF",
-    keyLabel: "Gemini API Key", keyPlaceholder: "AIza...",
-    keyStorageKey: SETTINGS_KEYS.GEMINI_KEY,
-    keyLink: "https://aistudio.google.com/app/apikey",
+    value: "openai" as ImageAIProvider,
+    label: "GPT Image",
+    badge: "유료",
+    badgeColor: "oklch(0.75 0.12 300)",
+    desc: "OpenAI · 최고 품질 이미지",
+    pros: "최고 품질 이미지 · 정확한 프롬프트 이해",
+    cons: "유료 · 이미지당 비용 발생",
+    logo: "O", logoColor: "oklch(0.75 0.12 300)",
+    keyLabel: "OpenAI API Key", keyPlaceholder: "sk-...",
+    keyStorageKey: SETTINGS_KEYS.OPENAI_KEY,
+    keyLink: "https://platform.openai.com/api-keys",
   },
   {
-    value: "openai" as ImageAIProvider,
+    value: "replicate" as ImageAIProvider,
+    label: "Replicate (Flux)",
+    badge: "일부 무료",
+    badgeColor: "oklch(0.769 0.188 70.08)",
+    desc: "Replicate · 가입 시 무료 크레딧 제공",
+    pros: "가입 시 무료 크레딧 · Flux 고품질 · 이미지당 약 3~25원",
+    cons: "무료 크레딧 소진 후 유료 전환",
+    logo: "R", logoColor: "oklch(0.769 0.188 70.08)",
+    keyLabel: "Replicate API Token", keyPlaceholder: "r8_...",
+    keyStorageKey: SETTINGS_KEYS.REPLICATE_KEY,
+    keyLink: "https://replicate.com/account/api-tokens",
+  },
+];
     label: "GPT Image",
     badge: "유료",
     badgeColor: "oklch(0.75 0.12 300)",
