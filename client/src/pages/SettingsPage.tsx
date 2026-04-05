@@ -1536,6 +1536,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </>) /* 동기화 탭 끝 */}
+        </div>
 
         </aside>
       </div></div>
