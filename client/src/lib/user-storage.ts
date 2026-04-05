@@ -183,6 +183,7 @@ export const SETTINGS_KEYS = {
   GROQ_KEY:           "groq_api_key",
   FLUX_KEY:           "flux_api_key",
   HUGGING_KEY:        "huggingface_api_key",
+  REPLICATE_KEY:      "replicate_api_token",
   // 네이버 검색광고
   NAVER_LICENSE:      "naver_access_license",
   NAVER_SECRET:       "naver_secret_key",
