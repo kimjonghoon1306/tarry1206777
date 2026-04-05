@@ -1025,7 +1025,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        </div>}
+        </div>
+        }
 
         {settingsTab === "platform" && <div className="space-y-6">
         {/* 네이버 검색광고 API */}
@@ -1212,7 +1213,8 @@ export default function SettingsPage() {
         {/* 쿠팡파트너스 */}
         <CoupangSection />
 
-        </div>}
+        </div>
+        }
 
         {settingsTab === "sync" && <div className="space-y-6">
         {/* 모바일 ↔ PC 자동 동기화 */}
@@ -1412,9 +1414,9 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
-        </div>
 
-        </div>}
+        </div>
+        }
 
         <aside className="hidden xl:block">
           <div className="sticky top-6 space-y-4">
