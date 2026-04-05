@@ -3,6 +3,35 @@
 // ✅ OpenAI DALL-E 3 지원
 // ✅ Replicate Flux Schnell 지원
 // ✅ POST 방식으로 통일
+// ✅ imgbb 자동 업로드 (영구 URL)
+
+// imgbb에 이미지 업로드 → 영구 URL 반환
+async function uploadToImgbb(imgbbKey, imageData) {
+  if (!imgbbKey) return imageData; // 키 없으면 원본 반환
+  try {
+    // base64 또는 URL 모두 처리
+    const isBase64 = imageData.startsWith("data:");
+    const base64Data = isBase64 ? imageData.split(",")[1] : null;
+    const formData = new URLSearchParams();
+    formData.append("key", imgbbKey);
+    if (base64Data) {
+      formData.append("image", base64Data);
+    } else {
+      formData.append("image", imageData); // URL
+    }
+    const resp = await fetch("https://api.imgbb.com/1/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await resp.json();
+    if (data.success && data.data?.url) {
+      return data.data.url; // 영구 URL
+    }
+    return imageData; // 실패 시 원본 반환
+  } catch {
+    return imageData; // 오류 시 원본 반환
+  }
+}
 
 // size → Gemini aspectRatio 변환
 function toAspectRatio(size) {
@@ -24,7 +53,7 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST만 지원합니다" });
 
-  const { provider, apiKey, prompt, size = "1024x1024", count = 1 } = req.body || {};
+  const { provider, apiKey, prompt, size = "1024x1024", count = 1, imgbbKey = "" } = req.body || {};
 
   if (!provider || !apiKey || !prompt) {
     return res.status(400).json({ error: "provider, apiKey, prompt 필수입니다" });
@@ -82,7 +111,8 @@ export default async function handler(req, res) {
       if (images.length === 0) {
         throw new Error("Gemini 이미지 생성 실패. AI Studio 키는 이미지 생성이 제한될 수 있습니다. Replicate를 사용해보세요.");
       }
-      return res.json({ ok: true, images, provider: "gemini" });
+      const geminiUploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
+      return res.json({ ok: true, images: geminiUploaded, provider: "gemini" });
 
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -139,7 +169,8 @@ export default async function handler(req, res) {
       }
 
       if (images.length === 0) throw new Error("이미지가 생성되지 않았습니다.");
-      return res.json({ ok: true, images, provider: "openai" });
+      const openaiUploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
+      return res.json({ ok: true, images: openaiUploaded, provider: "openai" });
 
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -240,7 +271,8 @@ export default async function handler(req, res) {
       }
 
       if (!images || images.length === 0) throw new Error("이미지가 생성되지 않았습니다.");
-      return res.json({ ok: true, images, provider: "replicate" });
+      const replicateUploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
+      return res.json({ ok: true, images: replicateUploaded, provider: "replicate" });
 
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -249,4 +281,3 @@ export default async function handler(req, res) {
 
   return res.status(400).json({ error: "지원하지 않는 provider입니다 (gemini / openai / replicate)" });
 }
-
