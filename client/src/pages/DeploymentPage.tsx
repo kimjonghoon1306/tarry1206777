@@ -430,6 +430,27 @@ function PublishPanel({
         </div>
       </div>
 
+      {/* 카테고리 선택 */}
+      {categories.length > 0 && (
+        <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
+            <span className="text-sm font-semibold text-foreground">카테고리 선택</span>
+          </div>
+          <select
+            className="w-full h-11 rounded-xl px-3 text-sm"
+            style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+          >
+            <option value="">카테고리 선택 (선택 안 하면 미분류)</option>
+            {categories.map((cat, idx) => (
+              <option key={idx} value={cat}>{idx + 1}. {cat}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* 발행 방식 */}
       <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         <div className="flex items-center gap-2 mb-4">
@@ -614,6 +635,8 @@ export default function DeploymentPage() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [publishMode, setPublishMode] = useState<"instant" | "scheduled">("instant");
   const [scheduleDate, setScheduleDate] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const categories: string[] = (() => { try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; } })();
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -1039,6 +1062,7 @@ export default function DeploymentPage() {
       tags: tagStr,
       slug: slugBase,
       excerpt: buildFinalContent().slice(0, 160),
+      category: selectedCategory || "",
       status: publishMode === "scheduled" ? "scheduled" : "published",
       publish_at: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
       scheduledAt: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
