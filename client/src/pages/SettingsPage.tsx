@@ -709,7 +709,7 @@ export default function SettingsPage() {
     () => (userGetSettingsValue(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
   );
   const [imageAI, setImageAI] = useState<ImageAIProvider>(
-    () => (userGetSettingsValue(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "gemini"
+    () => (userGetSettingsValue(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "replicate"
   );
   const [naverLicense, setNaverLicense] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_LICENSE));
   const [naverSecret, setNaverSecret] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_SECRET));
@@ -817,17 +817,7 @@ export default function SettingsPage() {
     setTimeout(() => setWebhookSaved(false), 3000);
   };
 
-  // 글 생성 AI 키 (글 생성 AI 섹션에서만 사용)
-  const contentRequiredKeys = Array.from(
-    new Map(
-      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI)]
-        .filter(Boolean)
-        .filter(o => o!.keyStorageKey)
-        .map(o => [o!.keyStorageKey, o!])
-    ).values()
-  );
-
-  // 이미지 AI 키 (이미지 AI 섹션에서만 사용, 글 생성 AI 키와 같으면 중복 제거)
+  // 이미지 AI 선택에 필요한 키만 표시
   const imageRequiredKeys = Array.from(
     new Map(
       [IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
@@ -837,12 +827,18 @@ export default function SettingsPage() {
     ).values()
   );
 
-  // API 키 관리 섹션에는 중복 없이 둘 다 표시
-  const requiredKeys = Array.from(
+  // 글 생성 AI 키 (별도 섹션에서 사용)
+  const contentRequiredKeys = Array.from(
     new Map(
-      [...contentRequiredKeys, ...imageRequiredKeys].map(o => [o.keyStorageKey, o])
+      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI)]
+        .filter(Boolean)
+        .filter(o => o!.keyStorageKey)
+        .map(o => [o!.keyStorageKey, o!])
     ).values()
   );
+
+  // API 키 관리 섹션 = 이미지 AI 키만 (글 생성 AI 키와 같으면 한 번만)
+  const requiredKeys = imageRequiredKeys;
 
   // 모바일 동기화
   const [syncCode, setSyncCode] = useState("");
