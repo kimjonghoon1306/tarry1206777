@@ -779,6 +779,110 @@ function SecurityPanel() {
 }
 
 // ─────────────────────────────────────────────────────
+// 카테고리 관리
+// ─────────────────────────────────────────────────────
+function CategoryManager() {
+  const [categories, setCategories] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; }
+  });
+  const [newCat, setNewCat] = useState("");
+
+  const save = (list: string[]) => {
+    setCategories(list);
+    localStorage.setItem("blogauto_categories", JSON.stringify(list));
+    saveSettingsToServer({ blogauto_categories: JSON.stringify(list) });
+  };
+
+  const add = () => {
+    const trimmed = newCat.trim();
+    if (!trimmed) { toast.error("카테고리명을 입력해주세요"); return; }
+    if (categories.includes(trimmed)) { toast.error("이미 있는 카테고리예요"); return; }
+    save([...categories, trimmed]);
+    setNewCat("");
+    toast.success(`"${trimmed}" 추가됐어요`);
+  };
+
+  const remove = (idx: number) => {
+    save(categories.filter((_, i) => i !== idx));
+    toast.success("삭제됐어요");
+  };
+
+  const moveUp = (idx: number) => {
+    if (idx === 0) return;
+    const list = [...categories];
+    [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
+    save(list);
+  };
+
+  const moveDown = (idx: number) => {
+    if (idx === categories.length - 1) return;
+    const list = [...categories];
+    [list[idx], list[idx + 1]] = [list[idx + 1], list[idx]];
+    save(list);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
+          <span className="font-semibold text-sm text-foreground">카테고리 관리</span>
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full" style={{ background: "#06b6d420", color: "#06b6d4" }}>
+            {categories.length}개
+          </span>
+        </div>
+        <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+          배포 시 카테고리 선택 목록이에요. 순서대로 1번, 2번으로 표시돼요.
+        </p>
+
+        {/* 카테고리 목록 */}
+        <div className="space-y-2 mb-4">
+          {categories.length === 0 && (
+            <p className="text-xs text-center py-4" style={{ color: "var(--muted-foreground)" }}>카테고리가 없어요. 추가해주세요.</p>
+          )}
+          {categories.map((cat, idx) => (
+            <div key={idx} className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+              <span className="text-xs font-bold w-6 text-center" style={{ color: "#06b6d4" }}>{idx + 1}</span>
+              <span className="flex-1 text-sm text-foreground">{cat}</span>
+              <div className="flex items-center gap-1">
+                <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent/20"
+                  style={{ color: "var(--muted-foreground)" }} onClick={() => moveUp(idx)}>
+                  <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                </button>
+                <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent/20"
+                  style={{ color: "var(--muted-foreground)" }} onClick={() => moveDown(idx)}>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+                <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/20"
+                  style={{ color: "#ef4444" }} onClick={() => remove(idx)}>
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 카테고리 추가 */}
+        <div className="flex gap-2">
+          <Input
+            value={newCat}
+            onChange={e => setNewCat(e.target.value)}
+            placeholder="카테고리명 입력 (예: 생활, 여행, 음식)"
+            className="h-11 text-sm flex-1"
+            onKeyDown={e => e.key === "Enter" && add()}
+          />
+          <button className="h-11 px-4 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
+            style={{ background: "linear-gradient(135deg,#06b6d4,#0284c7)" }}
+            onClick={add}>
+            추가
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
 // OG 이미지 관리
 // ─────────────────────────────────────────────────────
 function OGManager() {
@@ -944,6 +1048,7 @@ const TABS = [
   { id: "apikeys", label: "API 키", icon: Key, color: "#10b981", grad: "linear-gradient(135deg,#10b981,#059669)" },
   { id: "users",   label: "회원",   icon: Users, color: "#6366f1", grad: "linear-gradient(135deg,#6366f1,#4f46e5)" },
   { id: "security",label: "보안",   icon: Shield, color: "#f59e0b", grad: "linear-gradient(135deg,#f59e0b,#d97706)" },
+  { id: "category",label: "카테고리", icon: FileText, color: "#06b6d4", grad: "linear-gradient(135deg,#06b6d4,#0284c7)" },
   { id: "og",      label: "OG",    icon: Image, color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)" },
 ] as const;
 type TabId = typeof TABS[number]["id"];
@@ -985,6 +1090,7 @@ function AdminDashboard() {
           {tab === "apikeys"  && <ApiKeyManager />}
           {tab === "users"    && <UserManager />}
           {tab === "security" && <SecurityPanel />}
+          {tab === "category" && <CategoryManager />}
           {tab === "og"       && <OGManager />}
         </div>
       </div>
