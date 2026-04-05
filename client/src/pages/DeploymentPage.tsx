@@ -739,7 +739,6 @@ export default function DeploymentPage() {
 
   // ── 자동 이미지 삽입 (균등 배치) ──
   function triggerAutoInsert(images: { id: number; src: string; alt?: string }[]) {
-    const imgs = images.slice(0, 20);
     const textOnly = blocks.filter(
       (b) => b.type === "text" || (b.type === "image" && b.source === "manual")
     );
@@ -749,11 +748,15 @@ export default function DeploymentPage() {
       return;
     }
 
-    // ── 단락 3개당 이미지 1장 균등 배치 ──
+    // ── 단락 3개당 이미지 1장, 남는 이미지 없이 딱 맞게 ──
     const textBlockCount = textBlocks.length;
-    const maxInline = Math.floor(textBlockCount / 3); // 글 중간에 들어갈 최대 이미지 수
-    const inlineImgs = imgs.slice(0, maxInline);      // 글 중간 배치용
-    const remainImgs = imgs.slice(maxInline);          // 나머지 → 끝에 2열 갤러리
+    const maxImages = Math.floor(textBlockCount / 3); // 글에 들어갈 수 있는 최대 이미지 수
+    const imgs = images.slice(0, maxImages);           // 딱 맞는 수만 사용
+
+    if (imgs.length === 0) {
+      toast.error("글 단락이 너무 짧아요. 글을 더 길게 작성해주세요.");
+      return;
+    }
 
     const result: ContentBlock[] = [];
     let imgIdx = 0;
@@ -764,14 +767,15 @@ export default function DeploymentPage() {
 
       if (textOnly[i].type === "text") {
         textCount++;
-        // 3단락마다 이미지 1장 삽입
-        if (textCount % 3 === 0 && imgIdx < inlineImgs.length) {
+        // 3단락마다 이미지 1장 삽입 (전체 너비)
+        if (textCount % 3 === 0 && imgIdx < imgs.length) {
           result.push({
             type: "image",
             id: uid(),
-            src: inlineImgs[imgIdx].src,
-            alt: inlineImgs[imgIdx].alt || `이미지 ${imgIdx + 1}`,
+            src: imgs[imgIdx].src,
+            alt: imgs[imgIdx].alt || `이미지 ${imgIdx + 1}`,
             position: "center",
+            width: "full",
             source: "auto",
           } as ContentBlock);
           imgIdx++;
@@ -779,38 +783,9 @@ export default function DeploymentPage() {
       }
     }
 
-    // ── 남은 이미지 → 글 끝에 2열 갤러리로 배치 ──
-    let rIdx = 0;
-    while (rIdx < remainImgs.length) {
-      if (rIdx + 1 < remainImgs.length) {
-        result.push({
-          type: "image-pair",
-          id: uid(),
-          images: [
-            { src: remainImgs[rIdx].src, alt: remainImgs[rIdx].alt || `이미지` },
-            { src: remainImgs[rIdx + 1].src, alt: remainImgs[rIdx + 1].alt || `이미지` },
-          ],
-          source: "auto",
-        } as ContentBlock);
-        rIdx += 2;
-      } else {
-        result.push({
-          type: "image",
-          id: uid(),
-          src: remainImgs[rIdx].src,
-          alt: remainImgs[rIdx].alt || `이미지`,
-          position: "center",
-          source: "auto",
-        } as ContentBlock);
-        rIdx++;
-      }
-    }
-
     setBlocks(result);
     setAutoInserted(true);
-    toast.success(
-      `이미지 ${imgs.length}개 배치 완료! (본문 ${inlineImgs.length}장 + 끝 갤러리 ${remainImgs.length}장)`
-    );
+    toast.success(`이미지 ${imgs.length}장 균등 배치 완료! (단락 3개당 1장)`);
   }
 
   function handleAutoInsert() {
