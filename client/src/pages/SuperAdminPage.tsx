@@ -328,9 +328,49 @@ function ApiKeyManager() {
             );
           })}
         </div>
-      </div>
 
-      {/* 전체 저장 버튼 */}
+        {/* 선택된 이미지 AI 키 입력 */}
+        {(() => {
+          const opt = IMAGE_AI_OPTIONS.find(o => o.value === imageAI);
+          if (!opt?.keyStorageKey) return null;
+          const uid = opt.keyStorageKey + "_img";
+          return (
+            <div className="px-3 pb-3">
+              <div className="p-3 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-foreground">{opt.keyLabel}</span>
+                  {opt.keyLink && (
+                    <a href={opt.keyLink} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs hover:underline" style={{ color: "#a78bfa" }}>
+                      발급받기 <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showMap[uid] ? "text" : "password"}
+                    placeholder={opt.keyPlaceholder}
+                    value={values[opt.keyStorageKey] || ""}
+                    onChange={e => setValues(p => ({ ...p, [opt.keyStorageKey!]: e.target.value }))}
+                    className="pr-10 font-mono text-sm h-10"
+                    style={{ borderColor: values[opt.keyStorageKey]?.trim() ? "#a78bfa60" : undefined }}
+                  />
+                  <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+                    style={{ color: "var(--muted-foreground)" }}
+                    onClick={() => setShowMap(p => ({ ...p, [uid]: !p[uid] }))}>
+                    {showMap[uid] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                {values[opt.keyStorageKey]?.trim() && (
+                  <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#a78bfa" }}>
+                    <CheckCircle2 className="w-3 h-3" /> 키 입력됨
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
       <button
         className="w-full h-12 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
         style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #10b981, #059669)" }}
