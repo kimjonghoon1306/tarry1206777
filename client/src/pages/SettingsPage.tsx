@@ -842,7 +842,7 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        {settingsTab === "ai" && <>
+        {settingsTab === "ai" && <React.Fragment>
         {/* 글 생성 AI 선택 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-4">
@@ -992,10 +992,10 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        </>
+        </React.Fragment>
         }
 
-        {settingsTab === "platform" && <>
+        {settingsTab === "platform" && <React.Fragment>
         {/* 네이버 검색광고 API */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between mb-1">
@@ -1188,10 +1188,10 @@ export default function SettingsPage() {
           <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>배포 시 선택할 카테고리 목록을 관리해요.</p>
           <CategorySection />
         </div>
-        </>
+        </React.Fragment>
         }
 
-        {settingsTab === "sync" && <>
+        {settingsTab === "sync" && <React.Fragment>
         {/* 모바일 ↔ PC 자동 동기화 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
           <div className="flex items-center gap-2 mb-1">
@@ -1389,9 +1389,8 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
-        </div>
 
-        </>
+        </React.Fragment>
         }
 
         <aside className="hidden xl:block">
