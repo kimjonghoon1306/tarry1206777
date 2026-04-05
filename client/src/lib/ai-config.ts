@@ -1,7 +1,7 @@
 import { userGet, SETTINGS_KEYS } from "./user-storage";
 
 export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
-export type ImageAIProvider = "openai" | "replicate" | "gemini";
+export type ImageAIProvider = "openai" | "replicate";
 
 // userGet 자체에 admin 폴백이 포함되어 있음 (user-storage.ts 참고)
 export function getContentProvider(): ContentAIProvider {
@@ -75,19 +75,6 @@ export const CONTENT_AI_OPTIONS = [
 
 export const IMAGE_AI_OPTIONS = [
   {
-    value: "gemini" as ImageAIProvider,
-    label: "Gemini Image",
-    badge: "무료 시도",
-    badgeColor: "#4285F4",
-    desc: "Google AI · AI Studio 키로 시도 (무료)",
-    pros: "AI Studio 키 그대로 사용 · 무료 시도 가능",
-    cons: "모델 지원 여부 불확실 · 실패 시 에러 표시",
-    logo: "G", logoColor: "#4285F4",
-    keyLabel: "Gemini API Key", keyPlaceholder: "AIza...",
-    keyStorageKey: SETTINGS_KEYS.GEMINI_KEY,
-    keyLink: "https://aistudio.google.com/app/apikey",
-  },
-  {
     value: "openai" as ImageAIProvider,
     label: "GPT Image",
     badge: "유료",
@@ -103,7 +90,7 @@ export const IMAGE_AI_OPTIONS = [
   {
     value: "replicate" as ImageAIProvider,
     label: "Replicate (Flux)",
-    badge: "일부 무료",
+    badge: "유료",
     badgeColor: "oklch(0.769 0.188 70.08)",
     desc: "Replicate · 가입 시 무료 크레딧 제공",
     pros: "가입 시 무료 크레딧 · Flux 고품질 · 이미지당 약 3~25원",
@@ -114,4 +101,3 @@ export const IMAGE_AI_OPTIONS = [
     keyLink: "https://replicate.com/account/api-tokens",
   },
 ];
-
