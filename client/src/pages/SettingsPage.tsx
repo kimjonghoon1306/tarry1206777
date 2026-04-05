@@ -1495,7 +1495,6 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
-        </div>
 
         <aside className="hidden xl:block">
           <div className="sticky top-6 space-y-4">
