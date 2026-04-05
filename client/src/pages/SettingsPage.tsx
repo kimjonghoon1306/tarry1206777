@@ -416,7 +416,7 @@ function CustomWebhookSection() {
 
   const handleSave = () => {
     if (!url.trim()) { toast.error("Webhook URL을 입력해주세요"); return; }
-    const domain = url.replace(/^https?:\/\//, "").split("/")[0];
+    const domain = url.replace("https://", "").replace("http://", "").split("/")[0];
     const entry = {
       _name: domain, _type: "custom", custom_domain: domain,
       webhook_url: url.trim(), webhook_auth_header: "Authorization", webhook_auth_key: authKey.trim(),
