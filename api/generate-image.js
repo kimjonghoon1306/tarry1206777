@@ -32,57 +32,56 @@ export default async function handler(req, res) {
 
   const numImages = Math.min(parseInt(count) || 1, 10);
 
-  // ── Gemini Imagen 3 ─────────────────────────────────
+  // ── Gemini (gemini-2.0-flash-exp 이미지 생성 시도) ──
   if (provider === "gemini") {
-    const aspectRatio = toAspectRatio(size);
-    // Imagen 3는 1회 최대 4장, 여러 번 요청으로 처리
-    const batchSize = 4;
+    const MODELS = [
+      "gemini-2.0-flash-exp",
+      "gemini-2.0-flash-preview-image-generation",
+    ];
     const images = [];
 
     try {
-      for (let start = 0; start < numImages; start += batchSize) {
-        const batchCount = Math.min(batchSize, numImages - start);
-        const resp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              instances: [{ prompt }],
-              parameters: {
-                sampleCount: batchCount,
-                aspectRatio,
-                language: "auto",
-              },
-            }),
-          }
-        );
+      for (let i = 0; i < numImages; i++) {
+        let generated = false;
+        for (const model of MODELS) {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+              }),
+            }
+          );
 
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          const msg = err?.error?.message || "";
-          if (resp.status === 400 && msg.toLowerCase().includes("billing")) {
-            throw new Error("Gemini Imagen은 유료 API입니다. Google Cloud 결제를 활성화해주세요.");
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            const msg = (err?.error?.message || "").toLowerCase();
+            if (resp.status === 403 || msg.includes("api key")) {
+              throw new Error("Gemini API 키가 잘못되었습니다.");
+            }
+            if (resp.status === 429) throw new Error("Gemini 한도 초과. 잠시 후 다시 시도해주세요.");
+            continue;
           }
-          if (resp.status === 403 || msg.toLowerCase().includes("api key")) {
-            throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
-          }
-          if (resp.status === 429) {
-            throw new Error("Gemini API 한도 초과. 잠시 후 다시 시도해주세요.");
-          }
-          throw new Error(`Gemini 오류 (${resp.status}): ${msg}`);
-        }
 
-        const data = await resp.json();
-        const predictions = data.predictions || [];
-        for (const pred of predictions) {
-          if (pred.bytesBase64Encoded) {
-            images.push(`data:${pred.mimeType || "image/png"};base64,${pred.bytesBase64Encoded}`);
+          const data = await resp.json();
+          const parts = data?.candidates?.[0]?.content?.parts || [];
+          for (const part of parts) {
+            if (part.inlineData?.data) {
+              images.push(`data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`);
+              generated = true;
+              break;
+            }
           }
+          if (generated) break;
         }
       }
 
-      if (images.length === 0) throw new Error("이미지가 생성되지 않았습니다.");
+      if (images.length === 0) {
+        throw new Error("Gemini 이미지 생성 실패. AI Studio 키는 이미지 생성이 제한될 수 있습니다. Replicate를 사용해보세요.");
+      }
       return res.json({ ok: true, images, provider: "gemini" });
 
     } catch (e) {
@@ -90,7 +89,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── OpenAI DALL-E 3 ─────────────────────────────────
+    // ── OpenAI DALL-E 3 ─────────────────────────────────
   // DALL-E 3는 1회 1장만 생성 가능 → 병렬로 여러 번 호출
   if (provider === "openai") {
     // DALL-E 3 지원 사이즈 매핑
