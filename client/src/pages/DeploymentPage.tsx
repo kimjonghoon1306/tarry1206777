@@ -581,6 +581,7 @@ export default function DeploymentPage() {
 
   // ── 상태 ──
   const [title, setTitle] = useState<string>(saved?.title || "");
+  const categories: string[] = (() => { try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; } })();
   const [greeting, setGreeting] = useState<string>(
     () => localStorage.getItem("blogauto_greeting") || ""
   );
@@ -636,7 +637,6 @@ export default function DeploymentPage() {
   const [publishMode, setPublishMode] = useState<"instant" | "scheduled">("instant");
   const [scheduleDate, setScheduleDate] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const categories: string[] = (() => { try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; } })();
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isPublishing, setIsPublishing] = useState(false);
 
