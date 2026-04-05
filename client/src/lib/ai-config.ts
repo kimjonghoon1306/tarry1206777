@@ -21,6 +21,7 @@ export function getAPIKey(provider: string): string {
     groq:        SETTINGS_KEYS.GROQ_KEY,
     replicate:   SETTINGS_KEYS.REPLICATE_KEY,
     huggingface: SETTINGS_KEYS.HUGGING_KEY,
+    imgbb:       SETTINGS_KEYS.IMGBB_KEY,
   };
   const k = keyMap[provider];
   return k ? userGet(k) : "";
