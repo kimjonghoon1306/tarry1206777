@@ -520,24 +520,26 @@ function PublishPanel({
       </div>
 
       {/* 발행 버튼 */}
-      <button
-        className="w-full relative overflow-hidden h-12 text-base font-semibold gap-2 rounded-xl text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
-        style={{ background: publishBg, boxShadow: isPublishing || selectedPlatforms.length === 0 ? "none" : "0 6px 24px oklch(0.696 0.17 162.48 / 40%)" }}
+      <Button
+        className="w-full h-12 text-base font-semibold gap-2"
+        style={{ background: publishBg, color: "white" }}
         disabled={isPublishing || selectedPlatforms.length === 0}
         onClick={onPublish}
       >
-        {(!isPublishing && selectedPlatforms.length > 0) && (
-          <div className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{ background: "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform: "skewX(-20deg) translateX(-100%)", animation: "shimmer 3s infinite" }} />
-        )}
         {isPublishing ? (
-          <><Send className="w-4 h-4 animate-pulse" /><span>발행 중...</span></>
+          <>
+            <Send className="w-4 h-4 animate-pulse" />발행 중...
+          </>
         ) : publishMode === "instant" ? (
-          <><Zap className="w-4 h-4" /><span>즉시 발행하기</span></>
+          <>
+            <Zap className="w-4 h-4" />즉시 발행하기
+          </>
         ) : (
-          <><Calendar className="w-4 h-4" /><span>예약 발행 등록</span></>
+          <>
+            <Calendar className="w-4 h-4" />예약 발행 등록
+          </>
         )}
-      </button>
+      </Button>
 
       {selectedPlatforms.length === 0 && (
         <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
@@ -737,7 +739,7 @@ export default function DeploymentPage() {
 
   // ── 자동 이미지 삽입 (균등 배치) ──
   function triggerAutoInsert(images: { id: number; src: string; alt?: string }[]) {
-    const imgs = images.slice(0, 15);
+    const imgs = images.slice(0, 20);
     const textOnly = blocks.filter(
       (b) => b.type === "text" || (b.type === "image" && b.source === "manual")
     );
@@ -747,44 +749,14 @@ export default function DeploymentPage() {
       return;
     }
 
-    // ── 이미지를 2장씩 쌍으로 그룹화 ──
-    const imageGroups: ContentBlock[] = [];
-    let idx = 0;
-    while (idx < imgs.length) {
-      if (idx + 1 < imgs.length) {
-        imageGroups.push({
-          type: "image-pair",
-          id: uid(),
-          images: [
-            { src: imgs[idx].src, alt: imgs[idx].alt || `이미지 ${idx + 1}` },
-            { src: imgs[idx + 1].src, alt: imgs[idx + 1].alt || `이미지 ${idx + 2}` },
-          ],
-          source: "auto",
-        });
-        idx += 2;
-      } else {
-        imageGroups.push({
-          type: "image",
-          id: uid(),
-          src: imgs[idx].src,
-          alt: imgs[idx].alt || `이미지 ${idx + 1}`,
-          position: "center",
-          source: "auto",
-        });
-        idx += 1;
-      }
-    }
-
-    // ── 균등 배치: 텍스트 N단락마다 이미지 1그룹 삽입 ──
-    // 예) 텍스트 10단락, 이미지 4그룹 → 2단락마다 1그룹
+    // ── 단락 3개당 이미지 1장 균등 배치 ──
     const textBlockCount = textBlocks.length;
-    const groupCount = imageGroups.length;
-
-    // 몇 단락마다 이미지 1개 넣을지 계산 (최소 1)
-    const interval = Math.max(1, Math.floor(textBlockCount / (groupCount + 1)));
+    const maxInline = Math.floor(textBlockCount / 3); // 글 중간에 들어갈 최대 이미지 수
+    const inlineImgs = imgs.slice(0, maxInline);      // 글 중간 배치용
+    const remainImgs = imgs.slice(maxInline);          // 나머지 → 끝에 2열 갤러리
 
     const result: ContentBlock[] = [];
-    let grpIdx = 0;
+    let imgIdx = 0;
     let textCount = 0;
 
     for (let i = 0; i < textOnly.length; i++) {
@@ -792,24 +764,52 @@ export default function DeploymentPage() {
 
       if (textOnly[i].type === "text") {
         textCount++;
-        // interval 단락마다 이미지 그룹 삽입
-        if (textCount % interval === 0 && grpIdx < groupCount) {
-          result.push(imageGroups[grpIdx++]);
+        // 3단락마다 이미지 1장 삽입
+        if (textCount % 3 === 0 && imgIdx < inlineImgs.length) {
+          result.push({
+            type: "image",
+            id: uid(),
+            src: inlineImgs[imgIdx].src,
+            alt: inlineImgs[imgIdx].alt || `이미지 ${imgIdx + 1}`,
+            position: "center",
+            source: "auto",
+          } as ContentBlock);
+          imgIdx++;
         }
       }
     }
 
-    // 남은 이미지 그룹은 맨 끝에 추가
-    while (grpIdx < groupCount) {
-      result.push(imageGroups[grpIdx++]);
+    // ── 남은 이미지 → 글 끝에 2열 갤러리로 배치 ──
+    let rIdx = 0;
+    while (rIdx < remainImgs.length) {
+      if (rIdx + 1 < remainImgs.length) {
+        result.push({
+          type: "image-pair",
+          id: uid(),
+          images: [
+            { src: remainImgs[rIdx].src, alt: remainImgs[rIdx].alt || `이미지` },
+            { src: remainImgs[rIdx + 1].src, alt: remainImgs[rIdx + 1].alt || `이미지` },
+          ],
+          source: "auto",
+        } as ContentBlock);
+        rIdx += 2;
+      } else {
+        result.push({
+          type: "image",
+          id: uid(),
+          src: remainImgs[rIdx].src,
+          alt: remainImgs[rIdx].alt || `이미지`,
+          position: "center",
+          source: "auto",
+        } as ContentBlock);
+        rIdx++;
+      }
     }
 
     setBlocks(result);
     setAutoInserted(true);
-    const pairCount = imageGroups.filter((g) => g.type === "image-pair").length;
-    const singleCount = imageGroups.filter((g) => g.type === "image").length;
     toast.success(
-      `이미지 ${imgs.length}개 균등 배치 완료! (2열 ${pairCount}쌍${singleCount > 0 ? ` + 단독 ${singleCount}` : ""})`
+      `이미지 ${imgs.length}개 배치 완료! (본문 ${inlineImgs.length}장 + 끝 갤러리 ${remainImgs.length}장)`
     );
   }
 
@@ -1829,38 +1829,32 @@ export default function DeploymentPage() {
         {/* 네이버 복사 버튼 - 가장 크게 강조 */}
         <div className="px-3 pt-2">
           <button
-            className="w-full relative overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-[0.97] transition-all"
-            style={{ background: "#03C75A", color: "white", boxShadow: "0 4px 16px #03C75A55" }}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
+            style={{ background: "#03C75A", color: "white" }}
             onClick={copyForNaver}
           >
-            <div className="absolute inset-0 opacity-20 pointer-events-none"
-              style={{ background: "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform: "skewX(-20deg) translateX(-100%)", animation: "shimmer 3s infinite" }} />
             <Copy className="w-4 h-4" />
-            <span>네이버 블로그 복사하기 📋</span>
+            네이버 블로그 복사하기 📋
           </button>
         </div>
         <div className="flex gap-2 px-3 py-2">
           <Button className="flex-1 gap-1.5 h-10" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
             <Eye className="w-4 h-4" /> 미리보기
           </Button>
-          <button
-            className="flex-1 relative overflow-hidden flex items-center justify-center gap-1.5 h-10 rounded-xl font-semibold text-sm text-white transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: publishBtnBg, boxShadow: isPublishing || selectedPlatforms.length === 0 ? "none" : "0 4px 16px oklch(0.696 0.17 162.48 / 40%)" }}
+          <Button
+            className="flex-1 gap-1.5 h-10 font-semibold"
+            style={{ background: publishBtnBg, color: "white" }}
             disabled={isPublishing || selectedPlatforms.length === 0}
             onClick={handlePublish}
           >
-            {(!isPublishing && selectedPlatforms.length > 0) && (
-              <div className="absolute inset-0 opacity-20 pointer-events-none"
-                style={{ background: "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)", transform: "skewX(-20deg) translateX(-100%)", animation: "shimmer 3s infinite" }} />
-            )}
             {isPublishing ? (
-              <><Send className="w-4 h-4 animate-pulse" /><span>발행 중...</span></>
+              <><Send className="w-4 h-4 animate-pulse" />발행 중...</>
             ) : publishMode === "instant" ? (
-              <><Zap className="w-4 h-4" /><span>즉시 발행</span></>
+              <><Zap className="w-4 h-4" />즉시 발행</>
             ) : (
-              <><Calendar className="w-4 h-4" /><span>예약</span></>
+              <><Calendar className="w-4 h-4" />예약</>
             )}
-          </button>
+          </Button>
         </div>
         {selectedPlatforms.length === 0 && (
           <p className="text-xs text-center pb-1" style={{ color: "var(--muted-foreground)" }}>
