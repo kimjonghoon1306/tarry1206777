@@ -898,6 +898,7 @@ export default function SettingsPage() {
             onClick={() => setSettingsTab("sync")}>🔄 동기화</button>
         </div>
 
+        {settingsTab === "ai" && <div className="space-y-6">
         {/* 글 생성 AI 선택 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-4">
@@ -1024,6 +1025,9 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        </div>}
+
+        {settingsTab === "platform" && <div className="space-y-6">
         {/* 네이버 검색광고 API */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between mb-1">
@@ -1208,6 +1212,9 @@ export default function SettingsPage() {
         {/* 쿠팡파트너스 */}
         <CoupangSection />
 
+        </div>}
+
+        {settingsTab === "sync" && <div className="space-y-6">
         {/* 모바일 ↔ PC 자동 동기화 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
           <div className="flex items-center gap-2 mb-1">
@@ -1406,6 +1413,8 @@ export default function SettingsPage() {
           </div>
         </div>
         </div>
+
+        </div>}
 
         <aside className="hidden xl:block">
           <div className="sticky top-6 space-y-4">
