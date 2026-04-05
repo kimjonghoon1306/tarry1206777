@@ -901,7 +901,7 @@ if (provider === "pollinations") {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)\" }}>생성 수량</label>
+                <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>생성 수량</label>
                 {maxImagesFromContent > 0 ? (
                   <div className="rounded-xl px-3 py-2.5 text-sm font-semibold" style={{ background: "oklch(0.75 0.12 300/15%)", border: "1px solid oklch(0.75 0.12 300/40%)", color: "oklch(0.75 0.12 300)" }}>
                     🔒 {count}개 (글에 최적화된 수량)
