@@ -830,7 +830,7 @@ export default function DeploymentPage() {
         if (imgSrc) {
           parts.push(
             `<figure style="margin:16px 0;text-align:center">` +
-            `<img src="${imgSrc}" alt="${b.alt || ""}" style="max-width:100%;border-radius:12px;display:block;margin:0 auto">` +
+            `<img src="${imgSrc}" alt="${b.alt || ""}" style="width:100%;border-radius:12px;display:block">` +
             (b.alt ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:4px">${b.alt}</figcaption>` : "") +
             `</figure>`
           );
@@ -1929,21 +1929,11 @@ export default function DeploymentPage() {
                     );
                   }
                   return block.src ? (
-                    <div
-                      key={block.id}
-                      className={`flex ${
-                        block.position === "center"
-                          ? "justify-center"
-                          : block.position === "right"
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
+                    <div key={block.id}>
                       <img
                         src={block.src}
                         alt={block.alt}
-                        className="max-w-full rounded-xl object-cover"
-                        style={{ maxHeight: 300 }}
+                        className="w-full rounded-xl object-cover"
                       />
                     </div>
                   ) : null;
