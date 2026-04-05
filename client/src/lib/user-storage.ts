@@ -184,6 +184,7 @@ export const SETTINGS_KEYS = {
   FLUX_KEY:           "flux_api_key",
   HUGGING_KEY:        "huggingface_api_key",
   REPLICATE_KEY:      "replicate_api_token",
+  IMGBB_KEY:          "imgbb_api_key",
   // 네이버 검색광고
   NAVER_LICENSE:      "naver_access_license",
   NAVER_SECRET:       "naver_secret_key",
