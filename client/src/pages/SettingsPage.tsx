@@ -15,7 +15,7 @@ import {
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
   Smartphone, Upload, QrCode, Send, Plus, Trash2, RefreshCw,
-  ShoppingCart, Link, DollarSign, Activity, Sparkles, Lock,
+  ShoppingCart, Link, DollarSign, Activity, Sparkles, Lock, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +102,63 @@ function ApiKeyInput({ label, placeholder, storageKey, link }: {
 
 
 // ── 티스토리 연동 섹션 ──────────────────────────────
+function CategorySection() {
+  const [categories, setCategories] = React.useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; }
+  });
+  const [newCat, setNewCat] = React.useState("");
+
+  const save = (list: string[]) => {
+    setCategories(list);
+    localStorage.setItem("blogauto_categories", JSON.stringify(list));
+    saveSettingsToServer({ blogauto_categories: JSON.stringify(list) });
+  };
+
+  const add = () => {
+    const trimmed = newCat.trim();
+    if (!trimmed) { toast.error("카테고리명을 입력해주세요"); return; }
+    if (categories.includes(trimmed)) { toast.error("이미 있는 카테고리예요"); return; }
+    save([...categories, trimmed]);
+    setNewCat("");
+    toast.success(`"${trimmed}" 추가됐어요`);
+  };
+
+  const remove = (idx: number) => {
+    save(categories.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="space-y-3">
+      {categories.length === 0 && (
+        <p className="text-xs text-center py-3" style={{ color: "var(--muted-foreground)" }}>카테고리가 없어요. 추가해주세요.</p>
+      )}
+      {categories.map((cat, idx) => (
+        <div key={idx} className="flex items-center gap-2 p-3 rounded-xl"
+          style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+          <span className="text-xs font-bold w-6 text-center" style={{ color: "#06b6d4" }}>{idx + 1}</span>
+          <span className="flex-1 text-sm text-foreground">{cat}</span>
+          <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/20"
+            style={{ color: "#ef4444" }} onClick={() => remove(idx)}>
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-2 mt-2">
+        <Input
+          value={newCat}
+          onChange={e => setNewCat(e.target.value)}
+          placeholder="카테고리명 입력 (예: 생활, 여행, 음식)"
+          className="h-10 text-sm flex-1"
+          onKeyDown={e => e.key === "Enter" && add()}
+        />
+        <Button size="sm" className="h-10 px-4"
+          style={{ background: "#06b6d4", color: "white" }}
+          onClick={add}>추가</Button>
+      </div>
+    </div>
+  );
+}
+
 function TistorySection() {
   const [clientId, setClientId] = React.useState(() => userGetSettingsValue("tistory_client_id"));
   const [clientSecret, setClientSecret] = React.useState(() => userGetSettingsValue("tistory_client_secret"));
@@ -709,7 +766,7 @@ export default function SettingsPage() {
     () => (userGetSettingsValue(SETTINGS_KEYS.CONTENT_AI) as ContentAIProvider) || "gemini"
   );
   const [imageAI, setImageAI] = useState<ImageAIProvider>(
-    () => (userGetSettingsValue(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "replicate"
+    () => (userGetSettingsValue(SETTINGS_KEYS.IMAGE_AI) as ImageAIProvider) || "pollinations"
   );
   const [naverLicense, setNaverLicense] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_LICENSE));
   const [naverSecret, setNaverSecret] = useState(() => userGetSettingsValue(SETTINGS_KEYS.NAVER_SECRET));
@@ -817,12 +874,11 @@ export default function SettingsPage() {
     setTimeout(() => setWebhookSaved(false), 3000);
   };
 
-  // API 키 관리: 이미지 AI 키만 표시
   const requiredKeys = Array.from(
     new Map(
-      [IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
+      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI), IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
         .filter(Boolean)
-        .filter(o => o!.keyStorageKey)
+        .filter(o => o!.keyStorageKey) // API 키 불필요한 항목 제외 (Pollinations 등)
         .map(o => [o!.keyStorageKey, o!])
     ).values()
   );
@@ -853,10 +909,12 @@ export default function SettingsPage() {
     }
   };
 
+  const [settingsTab, setSettingsTab] = React.useState<"ai" | "platform" | "sync">("ai");
+
   return (
     <Layout>
-      <div className="p-6"><div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
-        <div className="space-y-6 min-w-0">
+      <div className="p-4 sm:p-6"><div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
+        <div className="space-y-4 min-w-0">
         <div>
           <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             설정
@@ -866,6 +924,27 @@ export default function SettingsPage() {
           </p>
         </div>
 
+        {/* 탭 */}
+        <div className="flex gap-2 p-1 rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          {[
+            { id: "ai", label: "AI 설정", icon: "🤖" },
+            { id: "platform", label: "발행 플랫폼", icon: "📤" },
+            { id: "sync", label: "동기화", icon: "🔄" },
+          ].map(tab => (
+            <button key={tab.id}
+              className="flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all"
+              style={{
+                background: settingsTab === tab.id ? "var(--color-emerald)" : "transparent",
+                color: settingsTab === tab.id ? "white" : "var(--muted-foreground)",
+              }}
+              onClick={() => setSettingsTab(tab.id as any)}>
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── AI 설정 탭 ── */}
+        {settingsTab === "ai" && (<>
         {/* 글 생성 AI 선택 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-4">
@@ -875,13 +954,10 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {CONTENT_AI_OPTIONS.map((opt) => (
               <button key={opt.value}
-                className="rounded-xl p-4 text-left transition-all active:scale-[0.97] relative overflow-hidden"
+                className="rounded-xl p-4 text-left transition-all"
                 style={{
-                  background: contentAI === opt.value ? `${opt.logoColor}18` : "var(--background)",
-                  border: `2px solid ${contentAI === opt.value ? opt.logoColor : "var(--border)"}`,
-                  boxShadow: contentAI === opt.value ? `0 0 20px ${opt.logoColor}30` : "none",
-                  outline: contentAI === opt.value ? `2px solid ${opt.logoColor}50` : "none",
-                  outlineOffset: "2px",
+                  background: contentAI === opt.value ? "oklch(0.696 0.17 162.48 / 12%)" : "var(--background)",
+                  border: `2px solid ${contentAI === opt.value ? "oklch(0.696 0.17 162.48 / 60%)" : "var(--border)"}`,
                 }}
                 onClick={() => handleSelectContentAI(opt.value)}>
                 <div className="flex items-center justify-between mb-2">
@@ -902,7 +978,6 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
-
         </div>
 
         {/* 이미지 생성 AI 선택 */}
@@ -916,19 +991,15 @@ export default function SettingsPage() {
               const selected = imageAI === opt.value;
               return (
                 <button key={opt.value}
-                  className="rounded-2xl p-4 text-left transition-all relative overflow-hidden active:scale-[0.97]"
+                  className="rounded-2xl p-4 text-left transition-all relative overflow-hidden"
                   style={{
                     background: selected ? `${opt.logoColor}18` : "var(--background)",
-                    border: `2px solid ${selected ? opt.logoColor : "var(--border)"}`,
-                    boxShadow: selected ? `0 0 24px ${opt.logoColor}40` : "none",
-                    outline: selected ? `2px solid ${opt.logoColor}60` : "none",
-                    outlineOffset: "2px",
+                    border: `2px solid ${selected ? opt.logoColor + "80" : "var(--border)"}`,
+                    boxShadow: selected ? `0 0 20px ${opt.logoColor}20` : "none",
                   }}
                   onClick={() => handleSelectImageAI(opt.value)}>
-                  {selected && (
-                    <div className="absolute inset-0 opacity-10 pointer-events-none"
-                      style={{ background: `linear-gradient(135deg, ${opt.logoColor}, transparent)` }} />
-                  )}
+
+                  {/* 상단: 로고 + 배지 + 선택됨 */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-white"
@@ -984,8 +1055,38 @@ export default function SettingsPage() {
             선택한 AI에 필요한 키만 표시됩니다. 키는 브라우저에 저장됩니다.
           </p>
 
+          {/* Pollinations 선택 시 안내 */}
+          {imageAI === "pollinations" && (
+            <div className="rounded-xl px-4 py-3 flex items-center gap-3 mb-4"
+              style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
+              <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-emerald)" }} />
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "var(--color-emerald)" }}>
+                  Pollinations AI는 API 키가 필요 없어요! 🎉
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                  바로 이미지 생성 페이지에서 사용 가능합니다.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
+            {/* Pollinations 선택 시 - 키 불필요 안내 */}
+            {imageAI === "pollinations" && requiredKeys.length === 0 && (
+              <div className="rounded-xl px-4 py-3 flex items-center gap-3"
+                style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
+                <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-emerald)" }} />
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-emerald)" }}>
+                    Pollinations AI는 API 키가 필요 없어요! 🎉
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                    바로 이미지 생성 페이지에서 사용 가능합니다.
+                  </p>
+                </div>
+              </div>
+            )}
             {requiredKeys.map((opt) => (
               <ApiKeyInput key={opt.keyStorageKey} label={opt.keyLabel}
                 placeholder={opt.keyPlaceholder} storageKey={opt.keyStorageKey} link={opt.keyLink} />
@@ -993,6 +1094,10 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        </>) /* AI 탭 끝 */}
+
+        {/* ── 발행 플랫폼 탭 ── */}
+        {settingsTab === "platform" && (<>
         {/* 네이버 검색광고 API */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between mb-1">
@@ -1177,6 +1282,22 @@ export default function SettingsPage() {
         {/* 쿠팡파트너스 */}
         <CoupangSection />
 
+        {/* 카테고리 관리 */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-5 h-5" style={{ color: "#06b6d4" }} />
+            <h3 className="font-semibold text-foreground">카테고리 관리</h3>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+            배포 시 선택할 카테고리 목록을 관리해요. 순서대로 1번, 2번으로 표시됩니다.
+          </p>
+          <CategorySection />
+        </div>
+
+        </>) /* 플랫폼 탭 끝 */}
+
+        {/* ── 동기화 탭 ── */}
+        {settingsTab === "sync" && (<>
         {/* 모바일 ↔ PC 자동 동기화 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
           <div className="flex items-center gap-2 mb-1">
@@ -1414,6 +1535,8 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </>) /* 동기화 탭 끝 */}
+
         </aside>
       </div></div>
     </Layout>
