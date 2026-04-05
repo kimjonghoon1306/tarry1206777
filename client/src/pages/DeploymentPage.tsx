@@ -258,7 +258,7 @@ function ImageBlock({ block, onRemove, onChange }: ImageBlockProps) {
             <img
               src={block.src}
               alt={block.alt}
-              className="max-h-40 rounded-lg object-cover"
+              className={`rounded-lg object-cover ${isAuto ? "w-full max-h-80" : "max-h-40"}`}
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
               }}
