@@ -817,28 +817,15 @@ export default function SettingsPage() {
     setTimeout(() => setWebhookSaved(false), 3000);
   };
 
-  // 이미지 AI 선택에 필요한 키만 표시
-  const imageRequiredKeys = Array.from(
+  // API 키 관리: 글 생성 AI 키 + 이미지 AI 키 (중복 제거)
+  const requiredKeys = Array.from(
     new Map(
-      [IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
+      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI), IMAGE_AI_OPTIONS.find(o => o.value === imageAI)]
         .filter(Boolean)
         .filter(o => o!.keyStorageKey)
         .map(o => [o!.keyStorageKey, o!])
     ).values()
   );
-
-  // 글 생성 AI 키 (별도 섹션에서 사용)
-  const contentRequiredKeys = Array.from(
-    new Map(
-      [CONTENT_AI_OPTIONS.find(o => o.value === contentAI)]
-        .filter(Boolean)
-        .filter(o => o!.keyStorageKey)
-        .map(o => [o!.keyStorageKey, o!])
-    ).values()
-  );
-
-  // API 키 관리 섹션 = 이미지 AI 키만 (글 생성 AI 키와 같으면 한 번만)
-  const requiredKeys = imageRequiredKeys;
 
   // 모바일 동기화
   const [syncCode, setSyncCode] = useState("");
