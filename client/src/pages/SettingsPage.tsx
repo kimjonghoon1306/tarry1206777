@@ -15,7 +15,7 @@ import {
   Key, Eye, EyeOff, CheckCircle2, Bot,
   Wand2, Zap, ExternalLink, Newspaper,
   Smartphone, Upload, QrCode, Send, Plus, Trash2, RefreshCw,
-  ShoppingCart, Link, DollarSign, Activity, Sparkles, Lock,
+  ShoppingCart, Link, DollarSign, Activity, Sparkles, Lock, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +102,57 @@ function ApiKeyInput({ label, placeholder, storageKey, link }: {
 
 
 // ── 티스토리 연동 섹션 ──────────────────────────────
+function CategoryInline() {
+  const [cats, setCats] = React.useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; }
+  });
+  const [input, setInput] = React.useState("");
+
+  const saveCats = (list: string[]) => {
+    setCats(list);
+    localStorage.setItem("blogauto_categories", JSON.stringify(list));
+    saveSettingsToServer({ blogauto_categories: JSON.stringify(list) });
+  };
+
+  return (
+    <div className="space-y-2">
+      {cats.length === 0 && (
+        <p className="text-xs py-2 text-center" style={{ color: "var(--muted-foreground)" }}>카테고리가 없어요.</p>
+      )}
+      {cats.map((cat, idx) => (
+        <div key={idx} className="flex items-center gap-2 p-2.5 rounded-lg"
+          style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+          <span className="text-xs font-bold w-5 text-center" style={{ color: "#06b6d4" }}>{idx+1}</span>
+          <span className="flex-1 text-sm">{cat}</span>
+          <button onClick={() => saveCats(cats.filter((_, i) => i !== idx))}
+            className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20"
+            style={{ color: "#ef4444" }}>
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-2 pt-1">
+        <Input value={input} onChange={e => setInput(e.target.value)}
+          placeholder="카테고리명 입력" className="h-9 text-sm flex-1"
+          onKeyDown={e => {
+            if (e.key === "Enter" && input.trim()) {
+              if (!cats.includes(input.trim())) saveCats([...cats, input.trim()]);
+              setInput("");
+            }
+          }} />
+        <Button size="sm" className="h-9 px-3"
+          style={{ background: "#06b6d4", color: "white" }}
+          onClick={() => {
+            if (input.trim() && !cats.includes(input.trim())) {
+              saveCats([...cats, input.trim()]);
+              setInput("");
+            }
+          }}>추가</Button>
+      </div>
+    </div>
+  );
+}
+
 function TistorySection() {
   const [clientId, setClientId] = React.useState(() => userGetSettingsValue("tistory_client_id"));
   const [clientSecret, setClientSecret] = React.useState(() => userGetSettingsValue("tistory_client_secret"));
@@ -870,6 +921,8 @@ export default function SettingsPage() {
     }
   };
 
+  const [settingsTab, setSettingsTab] = React.useState<"ai" | "platform" | "sync">("ai");
+
   return (
     <Layout>
       <div className="p-6"><div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
@@ -884,6 +937,20 @@ export default function SettingsPage() {
         </div>
 
         {/* 글 생성 AI 선택 */}
+        {/* 설정 탭 */}
+        <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <button className="flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition-all"
+            style={{ background: settingsTab === "ai" ? "var(--color-emerald)" : "transparent", color: settingsTab === "ai" ? "white" : "var(--muted-foreground)" }}
+            onClick={() => setSettingsTab("ai")}>🤖 AI 설정</button>
+          <button className="flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition-all"
+            style={{ background: settingsTab === "platform" ? "var(--color-emerald)" : "transparent", color: settingsTab === "platform" ? "white" : "var(--muted-foreground)" }}
+            onClick={() => setSettingsTab("platform")}>📤 발행 플랫폼</button>
+          <button className="flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition-all"
+            style={{ background: settingsTab === "sync" ? "var(--color-emerald)" : "transparent", color: settingsTab === "sync" ? "white" : "var(--muted-foreground)" }}
+            onClick={() => setSettingsTab("sync")}>🔄 동기화</button>
+        </div>
+
+        {settingsTab === "ai" && <div className="space-y-6">
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-4">
             <Bot className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
@@ -1023,6 +1090,9 @@ export default function SettingsPage() {
             </a>
           </div>
           <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+        </div>}
+
+        {settingsTab === "platform" && <div className="space-y-6">
             키워드 수집용 · 로그인 후 우측 상단 계정명 → API 관리
           </p>
           <div className="space-y-3">
@@ -1193,6 +1263,17 @@ export default function SettingsPage() {
         {/* 쿠팡파트너스 */}
         <CoupangSection />
 
+        {/* 카테고리 관리 */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">🗂️</span>
+            <h3 className="font-semibold text-foreground">카테고리 관리</h3>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>배포 시 선택할 카테고리 목록이에요.</p>
+          <CategoryInline />
+        </div>
+
+
         {/* 모바일 ↔ PC 자동 동기화 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.6 0.15 220 / 40%)" }}>
           <div className="flex items-center gap-2 mb-1">
@@ -1209,6 +1290,9 @@ export default function SettingsPage() {
               <div className="rounded-xl p-4 flex items-center gap-3"
                 style={{ background: "oklch(0.696 0.17 162.48/10%)", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
                 <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg font-black text-white"
+        </div>}
+
+        {settingsTab === "sync" && <div className="space-y-6">
                   style={{ background: "var(--color-emerald)" }}>✓</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold" style={{ color: "var(--color-emerald)" }}>
@@ -1410,6 +1494,8 @@ export default function SettingsPage() {
                   <div className="text-sm font-semibold text-foreground">{IMAGE_AI_OPTIONS.find(opt => opt.value === imageAI)?.label || "미선택"}</div>
                 </div>
                 <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        </div>}
+
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-semibold" style={{ color: "var(--muted-foreground)" }}>연결 상태</span>
                     <span className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.696 0.17 162.48/15%)", color: "var(--color-emerald)" }}>준비 완료</span>
