@@ -325,6 +325,8 @@ interface PublishPanelProps {
   setScheduleTime: React.Dispatch<React.SetStateAction<string>>;
   isPublishing: boolean;
   onPublish: () => void;
+  selectedCategory: string;
+  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
 }
 
 function PublishPanel({
@@ -339,6 +341,8 @@ function PublishPanel({
   setScheduleTime,
   isPublishing,
   onPublish,
+  selectedCategory,
+  setSelectedCategory,
 }: PublishPanelProps) {
   function togglePlatform(id: string) {
     setSelectedPlatforms((prev) =>
@@ -352,6 +356,8 @@ function PublishPanel({
     if (type === "tistory") return "#FF6300";
     return "oklch(0.65 0.28 350)";
   };
+
+  const categories: string[] = (() => { try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; } })();
 
   const platformLabel = (type: string) => {
     if (type === "naver") return "N";
@@ -581,7 +587,6 @@ export default function DeploymentPage() {
 
   // ── 상태 ──
   const [title, setTitle] = useState<string>(saved?.title || "");
-  const categories: string[] = (() => { try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; } })();
   const [greeting, setGreeting] = useState<string>(
     () => localStorage.getItem("blogauto_greeting") || ""
   );
@@ -1308,6 +1313,8 @@ export default function DeploymentPage() {
                   setScheduleTime={setScheduleTime}
                   isPublishing={isPublishing}
                   onPublish={handlePublish}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
                 />
               </div>
             )}
@@ -1814,6 +1821,8 @@ export default function DeploymentPage() {
                 setScheduleTime={setScheduleTime}
                 isPublishing={isPublishing}
                 onPublish={handlePublish}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
               />
             </div>
           </div>
