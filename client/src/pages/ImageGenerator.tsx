@@ -576,12 +576,13 @@ if (provider === "pollinations") {
     } else {
       // 다른 API provider
       const apiKey = getAPIKey(provider);
+      const imgbbKey = getAPIKey("imgbb");
       const interval = setInterval(() => setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 18), 500);
       try {
         const resp = await fetch("/api/generate-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: numImages, style }),
+          body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: numImages, style, imgbbKey }),
         });
         clearInterval(interval);
         if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "API 오류"); }
