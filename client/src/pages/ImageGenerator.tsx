@@ -398,6 +398,7 @@ export default function ImageGenerator() {
   const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const autoPrompt = params?.get("prompt") || "";
   const fromContent = !!autoPrompt;
+  const maxImagesFromContent = params?.get("maxImages") ? parseInt(params.get("maxImages")!) : 0;
 
   const [prompt, setPrompt] = useState(() => {
     // URL 파라미터(콘텐츠 생성에서 넘어온 키워드)가 있으면 항상 우선 적용
@@ -411,12 +412,13 @@ export default function ImageGenerator() {
     try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").size || "1024x1024"; } catch { return "1024x1024"; }
   });
   const [count, setCount] = useState(() => {
+    // 콘텐츠에서 넘어온 경우 단락 기반 최적 수량으로 고정
+    if (maxImagesFromContent > 0) return String(maxImagesFromContent);
     try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").count || "4"; } catch { return "4"; }
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [translatedPrompt, setTranslatedPrompt] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedImages, setSelectedImages] = useState<number[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>(() => {
@@ -685,7 +687,6 @@ if (provider === "pollinations") {
 
     // 한국어 자동 번역
     const translatedPrompt = await autoTranslatePrompt(prompt.trim());
-    setTranslatedPrompt(translatedPrompt);
     const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
     const fullPrompt = `${translatedPrompt}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
     const [w, h] = (size || "1024x1024").split("x").map(Number);
@@ -869,12 +870,6 @@ if (provider === "pollinations") {
                   💡 한글 입력 시 AI가 자동으로 영문 이미지 프롬프트로 변환해요
                 </p>
               )}
-              {translatedPrompt && (
-                <div className="mt-2 p-2.5 rounded-lg text-xs" style={{ background: "var(--muted)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>
-                  <span className="font-semibold" style={{ color: "var(--color-emerald)" }}>🔤 변환된 영문: </span>
-                  {translatedPrompt}
-                </div>
-              )}
             </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>이미지 스타일</label>
@@ -906,7 +901,12 @@ if (provider === "pollinations") {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>생성 수량</label>
+                <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)\" }}>생성 수량</label>
+                {maxImagesFromContent > 0 ? (
+                  <div className="rounded-xl px-3 py-2.5 text-sm font-semibold" style={{ background: "oklch(0.75 0.12 300/15%)", border: "1px solid oklch(0.75 0.12 300/40%)", color: "oklch(0.75 0.12 300)" }}>
+                    🔒 {count}개 (글에 최적화된 수량)
+                  </div>
+                ) : (
                 <Select value={count} onValueChange={setCount}>
                   <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -920,6 +920,7 @@ if (provider === "pollinations") {
                     <SelectItem value="50">50개</SelectItem>
                   </SelectContent>
                 </Select>
+                )}
               </div>
             </div>
 
