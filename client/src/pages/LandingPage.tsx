@@ -5,6 +5,7 @@
  * Hero section with CTA, feature highlights, platform overview
  */
 
+import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,184 @@ const KEYWORD_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5
 const CONTENT_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/ai-content-generation-aRDuHC7gHwMgLJAjFXjdyv.webp";
 const IMAGE_GEN_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/image-generation-visual-Y2GnT3gv3AaEqJvBKP7dSz.webp";
 const DEPLOY_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/deployment-visual-Df9Tr6zMZqCfL6CgepL5hz.webp";
+
+// ── 3D Deep Green Hero Canvas ──────────────────────────────────────────────
+function HeroCanvas({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    let animId: number;
+
+    function initThree() {
+      const THREE = (window as any).THREE;
+      if (!THREE || !canvasRef.current) return;
+
+      const canvas = canvasRef.current!
+    const W = canvas.parentElement!.offsetWidth;
+    const H = Math.max(window.innerHeight - 64, 560);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(W, H);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050a12);
+
+    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+    camera.position.set(0, 0, 5);
+
+    scene.add(new THREE.AmbientLight(0x0a2a15, 0.8));
+    const l1 = new THREE.DirectionalLight(0x2ecc71, 3); l1.position.set(5, 5, 5); scene.add(l1);
+    const l2 = new THREE.DirectionalLight(0x1a7a4a, 2); l2.position.set(-5, -3, 2); scene.add(l2);
+    const l3 = new THREE.PointLight(0x2ecc71, 2, 20); l3.position.set(2, 3, 4); scene.add(l3);
+    const l4 = new THREE.PointLight(0x0f6e3a, 3, 15); l4.position.set(-3, 2, -2); scene.add(l4);
+
+    const mat = new THREE.MeshStandardMaterial({ color: 0x1a7a4a, metalness: 0.95, roughness: 0.08 });
+    const group = new THREE.Group(); scene.add(group);
+    group.add(new THREE.Mesh(new THREE.TorusKnotGeometry(1.1, 0.32, 200, 32, 2, 3), mat));
+
+    const r1 = new THREE.Mesh(
+      new THREE.TorusGeometry(1.9, 0.04, 16, 120),
+      new THREE.MeshStandardMaterial({ color: 0x2ecc71, metalness: 1, roughness: 0.1, transparent: true, opacity: 0.7 })
+    );
+    r1.rotation.x = Math.PI / 4; group.add(r1);
+
+    const r2 = new THREE.Mesh(
+      new THREE.TorusGeometry(2.2, 0.03, 16, 120),
+      new THREE.MeshStandardMaterial({ color: 0x0f6e3a, metalness: 1, roughness: 0.1, transparent: true, opacity: 0.5 })
+    );
+    r2.rotation.x = -Math.PI / 5; r2.rotation.y = Math.PI / 3; group.add(r2);
+
+    const pg = new THREE.BufferGeometry();
+    const pp = new Float32Array(300 * 3);
+    for (let i = 0; i < 300 * 3; i++) pp[i] = (Math.random() - 0.5) * 12;
+    pg.setAttribute("position", new THREE.BufferAttribute(pp, 3));
+    const pts = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x2ecc71, size: 0.03, transparent: true, opacity: 0.5 }));
+    scene.add(pts);
+
+    let mx = 0, my = 0, t = 0;
+    const onMove = (e: MouseEvent) => {
+      const r = canvas.getBoundingClientRect();
+      mx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      my = -((e.clientY - r.top) / r.height - 0.5) * 2;
+    };
+    sectionRef.current?.addEventListener("mousemove", onMove);
+
+    const animate = () => {
+      animId = requestAnimationFrame(animate);
+      t += 0.008;
+      group.rotation.x += (my * 0.5 - group.rotation.x) * 0.05;
+      group.rotation.y += (mx * 0.5 + t * 0.3 - group.rotation.y) * 0.05;
+      r1.rotation.z += 0.005;
+      r2.rotation.z -= 0.003;
+      l3.position.x = Math.sin(t * 0.7) * 4;
+      l3.position.y = Math.cos(t * 0.5) * 3;
+      l4.position.x = Math.cos(t * 0.4) * 4;
+      pts.rotation.y += 0.001;
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    const onResize = () => {
+      const w = canvas.parentElement!.offsetWidth;
+      const h = Math.max(window.innerHeight - 64, 560);
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      renderer.dispose();
+      window.removeEventListener("resize", onResize);
+      sectionRef.current?.removeEventListener("mousemove", onMove);
+    };
+    } // end initThree
+
+    // Three.js 동적 로딩
+    if ((window as any).THREE) {
+      initThree();
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+      script.onload = () => initThree();
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  return (
+    <>
+      <section
+        ref={sectionRef}
+        style={{ position: "relative", width: "100%", minHeight: "calc(100vh - 64px)", overflow: "hidden", background: "#050a12", marginTop: "64px" }}
+      >
+        <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
+
+        {/* 비네트 */}
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 40%, #020d07 100%)", zIndex: 5, pointerEvents: "none" }} />
+
+        {/* 오버레이 */}
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 10, pointerEvents: "none", textAlign: "center", padding: "0 20px" }}>
+
+          {/* 뱃지 */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", borderRadius: "9999px", padding: "6px 16px", fontSize: "14px", fontWeight: 600, marginBottom: "24px", background: "rgba(46,204,113,0.15)", border: "1px solid rgba(46,204,113,0.3)", color: "#2ecc71" }}>
+            <Zap style={{ width: 14, height: 14 }} />
+            AI 기반 블로그 완전 자동화
+          </div>
+
+          {/* 제목 */}
+          <h1 style={{ fontFamily: "'Space Grotesk', 'Segoe UI', sans-serif", fontSize: "clamp(36px, 6vw, 72px)", fontWeight: 900, color: "#ffffff", letterSpacing: "-0.03em", textShadow: "0 2px 20px rgba(0,0,0,0.95)", marginBottom: "20px", lineHeight: 1.1 }}>
+            블로그 수익을<br />
+            <span style={{ color: "#2ecc71" }}>자동으로 극대화</span>
+          </h1>
+
+          {/* 부제목 */}
+          <p style={{ fontFamily: "'Segoe UI', sans-serif", fontSize: "clamp(15px, 2vw, 20px)", color: "rgba(255,255,255,0.8)", marginBottom: "40px", lineHeight: 1.7 }}>
+            키워드 수집부터 콘텐츠 작성, 이미지 생성, 자동 배포까지<br />
+            블로그 운영의 모든 과정을 AI가 완전 자동화합니다
+          </p>
+
+          {/* 버튼 */}
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center", pointerEvents: "all" }}>
+            <button
+              onClick={() => onNavigate("/dashboard")}
+              style={{ padding: "14px 38px", borderRadius: "50px", border: "none", background: "#2ecc71", color: "#ffffff", fontSize: "16px", fontWeight: 800, cursor: "pointer", letterSpacing: "0.5px", boxShadow: "0 4px 24px rgba(46,204,113,0.4)", transition: "all 0.22s", display: "flex", alignItems: "center", gap: "8px" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1.05)"; (e.currentTarget as HTMLElement).style.background = "#27ae60"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; (e.currentTarget as HTMLElement).style.background = "#2ecc71"; }}
+            >
+              <Bot style={{ width: 18, height: 18 }} />
+              무료로 시작하기
+            </button>
+            <button
+              onClick={() => onNavigate("/login")}
+              style={{ padding: "14px 38px", borderRadius: "50px", border: "2px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.1)", color: "#ffffff", fontSize: "16px", fontWeight: 700, cursor: "pointer", backdropFilter: "blur(10px)", transition: "all 0.22s", display: "flex", alignItems: "center", gap: "8px" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.2)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"; }}
+            >
+              <BarChart3 style={{ width: 18, height: 18 }} />
+              로그인
+            </button>
+          </div>
+
+          {/* Trust badges */}
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "16px", marginTop: "48px" }}>
+            {["애드센스 최적화 키워드", "애드포스트 최적화 키워드", "워드프레스 자동 배포", "커스텀 사이트 Webhook 배포", "네이버 블로그 원클릭 복사", "8개국 언어 지원"].map(text => (
+              <div key={text} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "rgba(255,255,255,0.8)" }}>
+                <CheckCircle2 style={{ width: 14, height: 14, color: "#2ecc71" }} />
+                {text}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+// ───────────────────────────────────────────────────────────────────────────
 
 const FEATURES = [
   {
@@ -133,91 +312,8 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section
-        className="relative flex items-center justify-center overflow-hidden"
-        style={{ minHeight: "100vh", paddingTop: "64px" }}
-      >
-        {/* Background image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${HERO_BG})` }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.75) 50%, var(--background) 100%)" }}
-        />
-
-        {/* Hero content */}
-        <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          {/* Badge */}
-          <div
-            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium mb-6"
-            style={{
-              background: "oklch(0.696 0.17 162.48 / 15%)",
-              border: "1px solid oklch(0.696 0.17 162.48 / 30%)",
-              color: "var(--color-emerald)",
-            }}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            AI 기반 블로그 완전 자동화
-          </div>
-
-          <h1
-            className="text-5xl lg:text-7xl font-black mb-6 leading-tight text-white"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.03em" }}
-          >
-            블로그 수익을
-            <br />
-            <span className="gradient-text">자동으로 극대화</span>
-          </h1>
-
-          <p className="text-lg lg:text-xl mb-10 max-w-2xl mx-auto text-white/80">
-            키워드 수집부터 콘텐츠 작성, 이미지 생성, 자동 배포까지
-            <br className="hidden sm:block" />
-            블로그 운영의 모든 과정을 AI가 완전 자동화합니다
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="gap-2 text-base px-8 py-6 glow-emerald"
-              style={{ background: "var(--color-emerald)", color: "white" }}
-              onClick={() => navigate("/signup")}
-            >
-              <Bot className="w-5 h-5" />
-              무료로 시작하기
-            </Button>
-            <Button
-              size="lg"
-              className="gap-2 text-base px-8 py-6"
-              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)" }}
-              onClick={() => navigate("/login")}
-            >
-              <BarChart3 className="w-5 h-5" />
-              로그인
-            </Button>
-          </div>
-
-          {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-12">
-            {[
-              { text: "애드센스 최적화 키워드", ok: true },
-              { text: "애드포스트 최적화 키워드", ok: true },
-              { text: "워드프레스 자동 배포", ok: true },
-              { text: "커스텀 사이트 Webhook 배포", ok: true },
-              { text: "네이버 블로그 원클릭 복사", ok: true },
-              { text: "8개국 언어 지원", ok: true },
-            ].map((item) => (
-              <div key={item.text} className="flex items-center gap-1.5 text-sm"
-                style={{ color: "rgba(255,255,255,0.8)" }}>
-                <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                {item.text}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Hero Section - 3D Deep Green */}
+      <HeroCanvas onNavigate={navigate} />
 
       {/* Stats Section */}
       <section className="py-16 px-6" style={{ background: "var(--card)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
