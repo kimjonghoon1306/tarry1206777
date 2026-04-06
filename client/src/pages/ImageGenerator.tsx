@@ -344,6 +344,7 @@ type GalleryItem = {
   _w?: number;
   _h?: number;
   _seed?: number;
+  _provider?: string;
 };
 
 // ── 개별 이미지 카드 ──────────────────────────────────
@@ -583,30 +584,26 @@ export default function ImageGenerator() {
     const provider = getImageProvider();
     const startTime = Date.now();
 
-if (provider === "pollinations") {
+    if (provider === "pollinations") {
       const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
 
       if (!existingIds) {
-        // 신규 생성: placeholder 추가
         setGallery(prev => [
           ...placeholderIds.map(id => ({
             id, src: "", title: `${prompt.slice(0, 20)}...`,
             keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
             loading: true, failed: false,
-            _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999),
+            _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999), _provider: provider,
           })),
           ...prev,
         ]);
         setSelectedImages([]);
       } else {
-        // 재시도: 기존 아이템을 loading 상태로 복원
         setGallery(prev => prev.map(item =>
-          existingIds.includes(item.id) ? { ...item, src: "", loading: true, failed: false } : item
+          existingIds.includes(item.id) ? { ...item, src: "", loading: true, failed: false, _provider: provider } : item
         ));
       }
 
-      // Pollinations는 URL만 만든다고 끝이 아니라 실제 이미지 로드를 확인해야 함
-      // 동시에 너무 많이 때리면 실패율이 올라가서 2개씩 배치로 검증
       let successCount = 0;
       const batchSize = 2;
 
@@ -633,6 +630,7 @@ if (provider === "pollinations") {
                 _w: w,
                 _h: h,
                 _seed: seed,
+                _provider: provider,
               };
             }));
 
@@ -659,130 +657,199 @@ if (provider === "pollinations") {
         toast.error("이미지 로드에 모두 실패했습니다. 잠시 후 다시 시도해주세요.", { id: "imggen" });
       }
       return successCount;
+    }
+
+    // ── Replicate / Gemini / OpenAI ──
+    const apiKey = getAPIKey(provider);
+    const imgbbKey = getAPIKey("imgbb");
+    const placeholderIds = existingIds ?? Array.from({ length: numImages }, (_, i) => Date.now() + i);
+
+    if (!existingIds) {
+      setGallery(prev => [
+        ...placeholderIds.map(id => ({
+          id, src: "", title: `${prompt.slice(0, 20)}...`,
+          keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
+          loading: true, failed: false,
+          _prompt: fullPrompt, _w: w, _h: h, _provider: provider,
+        })),
+        ...prev,
+      ]);
+      setSelectedImages([]);
     } else {
-      // ── Replicate / Gemini / OpenAI ──
-      const apiKey = getAPIKey(provider);
-      const imgbbKey = getAPIKey("imgbb");
-      const interval = setInterval(() => setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 8), 800);
+      setGallery(prev => prev.map(item =>
+        existingIds.includes(item.id) ? { ...item, src: "", loading: true, failed: false, _provider: provider } : item
+      ));
+    }
 
-      try {
-        const allImages: string[] = [];
+    const markPlaceholders = (images: string[]) => {
+      setGallery(prev => {
+        let imageIndex = 0;
+        return prev.map(item => {
+          if (!placeholderIds.includes(item.id)) return item;
+          const nextSrc = images[imageIndex] || "";
+          imageIndex += 1;
+          return {
+            ...item,
+            src: nextSrc,
+            loading: false,
+            failed: !nextSrc,
+            _prompt: fullPrompt,
+            _w: w,
+            _h: h,
+            _provider: provider,
+          };
+        });
+      });
+    };
 
-        // Replicate: 브라우저 직접 폴링 (Vercel 타임아웃 완전 우회)
-        if (provider === "replicate") {
-          const batchSize = 4;
-          const batches = Math.ceil(numImages / batchSize);
+    const markAllFailed = () => {
+      setGallery(prev => prev.map(item =>
+        placeholderIds.includes(item.id)
+          ? { ...item, src: "", loading: false, failed: true, _prompt: fullPrompt, _w: w, _h: h, _provider: provider }
+          : item
+      ));
+    };
 
-          for (let b = 0; b < batches; b++) {
-            const batchCount = Math.min(batchSize, numImages - b * batchSize);
-            toast.loading(`이미지 생성 요청 중... (${b + 1}/${batches})`, { id: "imggen" });
-            setProgress(Math.round((b / batches) * 30)); // 시작 시 진행률 표시
+    const interval = setInterval(() => setProgress(prev => prev >= 92 ? 92 : prev + Math.random() * 6), 800);
 
-            // 1단계: 예측 시작 → prediction ID 받기
-            const startResp = await fetch("/api/generate-image", {
+    try {
+      const allImages: string[] = [];
+
+      if (provider === "replicate") {
+        const batchSize = 4;
+        const batches = Math.ceil(numImages / batchSize);
+
+        for (let b = 0; b < batches; b++) {
+          const batchCount = Math.min(batchSize, numImages - b * batchSize);
+          toast.loading(`이미지 생성 요청 중... (${b + 1}/${batches})`, { id: "imggen" });
+          setProgress(Math.max(5, Math.round((b / batches) * 25)));
+
+          const startResp = await fetch("/api/generate-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              provider, apiKey, prompt: fullPrompt,
+              size: sizeStr, count: batchCount, imgbbKey,
+              action: "start",
+            }),
+          });
+
+          const startData = await startResp.json().catch(() => ({}));
+          if (!startResp.ok) throw new Error(startData.error || "API 오류");
+
+          if (startData.done && startData.images?.length > 0) {
+            allImages.push(...startData.images);
+            setProgress(Math.round(((b + 1) / batches) * 90));
+            continue;
+          }
+
+          const predictionId = startData.predictionId;
+          if (!predictionId) throw new Error("Replicate 예측 ID를 받지 못했습니다");
+
+          toast.loading(`이미지 생성 중... (${b + 1}/${batches}) ⏳`, { id: "imggen" });
+          const deadline = Date.now() + 120000;
+          let done = false;
+          let pollCount = 0;
+
+          while (Date.now() < deadline && !done) {
+            await new Promise(r => setTimeout(r, 2500));
+            pollCount++;
+            const batchBase = 20 + Math.round((b / batches) * 55);
+            setProgress(Math.min(90, batchBase + pollCount * 3));
+
+            const pollResp = await fetch("/api/generate-image", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                provider, apiKey, prompt: fullPrompt,
-                size: sizeStr, count: batchCount, imgbbKey,
-                action: "start",
+                provider, apiKey, imgbbKey,
+                action: "poll",
+                predictionId,
               }),
             });
-            if (!startResp.ok) {
-              const err = await startResp.json();
-              throw new Error(err.error || "API 오류");
-            }
-            const startData = await startResp.json();
 
-            // 즉시 완료된 경우
-            if (startData.done && startData.images?.length > 0) {
-              allImages.push(...startData.images);
-              setProgress(Math.round(((b + 1) / batches) * 90));
-              continue;
+            const pollData = await pollResp.json().catch(() => ({}));
+            if (!pollResp.ok) {
+              const statusText = pollData?.error || `폴링 오류 (${pollResp.status})`;
+              throw new Error(statusText);
             }
 
-            // 2단계: 브라우저에서 직접 폴링 (최대 3분)
-            const predictionId = startData.predictionId;
-            if (!predictionId) throw new Error("Replicate 예측 ID를 받지 못했습니다");
-
-            toast.loading(`이미지 생성 중... (${b + 1}/${batches}) ⏳`, { id: "imggen" });
-            const deadline = Date.now() + 180000; // 3분
-            let done = false;
-            let pollCount = 0;
-            while (Date.now() < deadline && !done) {
-              await new Promise(r => setTimeout(r, 3000));
-              pollCount++;
-              // 폴링 중 progress 30~85% 사이로 서서히 올리기
-              setProgress(Math.round((b / batches) * 85 + Math.min(pollCount * 5, 50)));
-              const pollResp = await fetch("/api/generate-image", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  provider, apiKey, imgbbKey,
-                  action: "poll",
-                  predictionId,
-                }),
-              });
-              if (!pollResp.ok) continue;
-              const pollData = await pollResp.json();
-
-              if (pollData.status === "succeeded" && pollData.images?.length > 0) {
-                allImages.push(...pollData.images);
+            if (pollData.status === "succeeded") {
+              const imgs = Array.isArray(pollData.images) ? pollData.images.filter(Boolean) : [];
+              if (imgs.length > 0) {
+                allImages.push(...imgs);
                 done = true;
-              } else if (pollData.status === "failed") {
-                throw new Error(pollData.error || "Replicate 생성 실패");
+                break;
               }
             }
-            if (!done) throw new Error("이미지 생성 시간이 너무 오래 걸립니다. 다시 시도해주세요.");
-            setProgress(Math.round(((b + 1) / batches) * 90));
-          }
 
-        } else {
-          // Gemini / OpenAI — 기존 방식
-          for (let i = 0; i < numImages; i++) {
-            if (i > 0) {
-              toast.loading(`이미지 생성 중... (${allImages.length}/${numImages}개 완료)`, { id: "imggen" });
-              await new Promise(r => setTimeout(r, 3000));
+            if (pollData.status === "failed" || pollData.error) {
+              throw new Error(pollData.error || "Replicate 생성 실패");
             }
-            const resp = await fetch("/api/generate-image", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: 1, imgbbKey }),
-            });
-            if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "API 오류"); }
-            const data = await resp.json();
-            allImages.push(...(data.images || []));
           }
-        }
 
-        clearInterval(interval);
-        if (allImages.length === 0) throw new Error("이미지 생성 결과가 없습니다");
-        const elapsed = (Date.now() - startTime) / 1000;
-        setStats(prev => {
-          const u = { ...prev, todayCount: prev.todayCount + allImages.length, monthCount: prev.monthCount + allImages.length, times: [...(prev.times || []), elapsed].slice(-20) };
-          saveStats(u);
-          return u;
-        });
-        setGallery(prev => [
-          ...allImages.map((src, i) => ({ id: Date.now() + i, src, title: `${prompt.slice(0, 20)}...`, keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false, failed: false })),
-          ...prev,
-        ]);
-        setProgress(100);
-        toast.success(`이미지 ${allImages.length}개 완성!`, { id: "imggen" });
-        return allImages.length;
-      } catch (e: any) {
-        clearInterval(interval);
-        let msg = e.message || "";
-        if (msg.includes("429") || msg.includes("throttled") || msg.includes("rate limit")) {
-          msg = "요청이 너무 빨라요. 잠시 후 다시 시도해주세요.";
-        } else if (msg.includes("402") || msg.includes("credit")) {
-          msg = "Replicate 크레딧이 부족해요. replicate.com에서 충전해주세요.";
-        } else if (msg.includes("401")) {
-          msg = "API 키가 잘못됐어요. 설정을 확인해주세요.";
+          if (!done) throw new Error("이미지 생성 시간이 너무 오래 걸립니다. 다시 시도해주세요.");
+          setProgress(Math.round(((b + 1) / batches) * 90));
         }
-        toast.error(`생성 실패: ${msg}`, { id: "imggen" });
-        return 0;
+      } else {
+        for (let i = 0; i < numImages; i++) {
+          if (i > 0) {
+            toast.loading(`이미지 생성 중... (${allImages.length}/${numImages}개 완료)`, { id: "imggen" });
+            await new Promise(r => setTimeout(r, 2000));
+          }
+
+          const resp = await fetch("/api/generate-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: 1, imgbbKey }),
+          });
+
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(data.error || "API 오류");
+
+          const images = Array.isArray(data.images) ? data.images.filter(Boolean) : [];
+          allImages.push(...images);
+          setProgress(Math.round(((i + 1) / numImages) * 90));
+        }
       }
+
+      clearInterval(interval);
+
+      const finalImages = allImages.filter(Boolean).slice(0, placeholderIds.length);
+      if (finalImages.length === 0) {
+        markAllFailed();
+        throw new Error("이미지 생성 결과가 없습니다");
+      }
+
+      markPlaceholders(finalImages);
+
+      const elapsed = (Date.now() - startTime) / 1000;
+      setStats(prev => {
+        const u = {
+          ...prev,
+          todayCount: prev.todayCount + finalImages.length,
+          monthCount: prev.monthCount + finalImages.length,
+          times: [...(prev.times || []), elapsed].slice(-20),
+        };
+        saveStats(u);
+        return u;
+      });
+
+      setProgress(100);
+      toast.success(`이미지 ${finalImages.length}개 완성!`, { id: "imggen" });
+      return finalImages.length;
+    } catch (e: any) {
+      clearInterval(interval);
+      markAllFailed();
+      let msg = e?.message || "알 수 없는 오류";
+      if (msg.includes("429") || msg.includes("throttled") || msg.includes("rate limit")) {
+        msg = "요청이 너무 빨라요. 잠시 후 다시 시도해주세요.";
+      } else if (msg.includes("402") || msg.includes("credit")) {
+        msg = "Replicate 크레딧이 부족해요. replicate.com에서 충전해주세요.";
+      } else if (msg.includes("401") || msg.toLowerCase().includes("api key")) {
+        msg = "API 키가 잘못됐어요. 설정을 확인해주세요.";
+      }
+      toast.error(`생성 실패: ${msg}`, { id: "imggen" });
+      return 0;
     }
   };
 
@@ -799,7 +866,7 @@ if (provider === "pollinations") {
       return `${p}, ${NP}, professional photography, 8K ultra realistic`;
     }
 
-    const baseKeyword = autoKeyword.trim() || p;
+    const baseKeyword = extractKeyword(p) || p;
 
     // ── Step 1: 전용 번역 API ───────────
     const aiProvider = getContentProvider();
@@ -857,83 +924,67 @@ if (provider === "pollinations") {
   const handleGenerate = async () => {
     const provider = getImageProvider();
     const apiKey = getAPIKey(provider);
-    if (provider !== "pollinations" && !apiKey) { 
-      toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`); 
-      return; 
+    if (provider !== "pollinations" && !apiKey) {
+      toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`);
+      return;
     }
-    if (!prompt.trim()) { toast.error("프롬프트를 입력해주세요"); return; }
+    if (!prompt.trim()) {
+      toast.error("프롬프트를 입력해주세요");
+      return;
+    }
 
     setIsGenerating(true);
     setProgress(0);
-    const numImages = parseInt(count) || 1;
 
-    // 한국어 자동 번역 (이미 번역된 것 있으면 사용)
-    const translated = translatedPrompt || await autoTranslatePrompt(prompt.trim());
-    setTranslatedPrompt(translated);
-    const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
-    const fullPrompt = `${translated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
-    const [w, h] = (size || "1024x1024").split("x").map(Number);
-    const styleLabel = STYLES.find(s => s.value === style)?.label || style;
+    try {
+      const numImages = parseInt(count) || 1;
+      const translated = translatedPrompt || await autoTranslatePrompt(prompt.trim());
+      setTranslatedPrompt(translated);
+      const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
+      const fullPrompt = `${translated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
+      const [w, h] = (size || "1024x1024").split("x").map(Number);
+      const styleLabel = STYLES.find(s => s.value === style)?.label || style;
 
-    toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
-    await generateImages(numImages, fullPrompt, w || 1024, h || 1024, styleLabel, size);
-    setIsGenerating(false);
+      toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
+      await generateImages(numImages, fullPrompt, w || 1024, h || 1024, styleLabel, size);
+    } catch (e: any) {
+      toast.error(`생성 실패: ${e?.message || "알 수 없는 오류"}`, { id: "imggen" });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // ── 실패 항목 전체 재시도 ─────────────────────────
   const handleRetryAll = async () => {
     const failed = gallery.filter(g => !g.loading && (g.failed || !g.src) && g._prompt);
-    if (failed.length === 0) { toast.info("재시도할 실패 이미지가 없어요"); return; }
+    if (failed.length === 0) {
+      toast.info("재시도할 실패 이미지가 없어요");
+      return;
+    }
 
     setIsRetrying(true);
     setProgress(0);
     toast.loading(`실패 이미지 ${failed.length}개 재시도 중...`, { id: "imggen" });
 
-    // 실패 항목을 loading 상태로 복원
-    setGallery(prev => prev.map(item =>
-      failed.some(f => f.id === item.id) ? { ...item, loading: true, src: "", failed: false } : item
-    ));
-
     let successCount = 0;
-    const batchSize = 2;
 
-    for (let start = 0; start < failed.length; start += batchSize) {
-      const batch = failed.slice(start, start + batchSize);
+    try {
+      for (let i = 0; i < failed.length; i++) {
+        const item = failed[i];
+        const ok = await generateImages(1, item._prompt!, item._w || 1024, item._h || 1024, item.style, item.size, [item.id]);
+        if (ok > 0) successCount += ok;
+        setProgress(Math.round(((i + 1) / failed.length) * 100));
+      }
 
-      await Promise.all(
-        batch.map(async (item, batchIndex) => {
-          const globalIndex = start + batchIndex;
-          const seed = Math.floor(Math.random() * 999999) + globalIndex * 1000 + Date.now();
-          const src = generatePollinationsUrl(
-            item._prompt!,
-            item._w || 1024,
-            item._h || 1024,
-            seed
-          );
-          const ok = await testImageUrl(src, 15000);
-
-          if (ok) successCount++;
-
-          setGallery(prev => prev.map(g => g.id === item.id ? {
-            ...g,
-            src: ok ? src : "",
-            loading: false,
-            failed: !ok,
-            _seed: seed
-          } : g));
-
-          setProgress(Math.round(((globalIndex + 1) / failed.length) * 100));
-        })
+      toast[successCount > 0 ? "success" : "error"](
+        successCount > 0
+          ? `✅ ${successCount}/${failed.length}개 복구 완료!`
+          : "재시도 후에도 이미지 생성에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        { id: "imggen" }
       );
+    } finally {
+      setIsRetrying(false);
     }
-
-    toast[successCount > 0 ? "success" : "error"](
-      successCount > 0
-        ? `✅ ${successCount}/${failed.length}개 복구 완료!`
-        : "재시도 후에도 이미지 로드에 실패했습니다. 잠시 후 다시 시도해주세요.",
-      { id: "imggen" }
-    );
-    setIsRetrying(false);
   };
 
   // ── 개별 이미지 재시도 ────────────────────────────
@@ -941,18 +992,16 @@ if (provider === "pollinations") {
     const item = gallery.find(g => g.id === id);
     if (!item || !item._prompt) return;
 
-    setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: true, src: "", failed: false } : g));
-    const seed = Math.floor(Math.random() * 999999) + Date.now();
-
-    const src = generatePollinationsUrl(item._prompt, item._w || 1024, item._h || 1024, seed);
-    const ok = await testImageUrl(src, 15000);
-
-    if (ok) {
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, src, loading: false, failed: false, _seed: seed } : g));
-      toast.success("이미지 복구 완료!");
-    } else {
-      setGallery(prev => prev.map(g => g.id === id ? { ...g, loading: false, src: "", failed: true } : g));
-      toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
+    setIsRetrying(true);
+    try {
+      const ok = await generateImages(1, item._prompt, item._w || 1024, item._h || 1024, item.style, item.size, [item.id]);
+      if (ok > 0) {
+        toast.success("이미지 복구 완료!");
+      } else {
+        toast.error("재시도 실패. 잠시 후 다시 시도해주세요.");
+      }
+    } finally {
+      setIsRetrying(false);
     }
   };
 
