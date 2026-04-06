@@ -984,12 +984,20 @@ export default function DeploymentPage() {
         if (m) links.push({ name: m[1].trim(), desc: m[2].trim(), url: m[3].trim() });
       });
       if (links.length > 0) {
-        refHtml = `<div style="margin:40px 0">
-  <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">🔗 참고자료 및 링크</h2>
-  ${links.map(({name, desc, url}) => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;margin-bottom:10px;padding:16px 20px;background:#f0f9ff;border-radius:12px;border:1px solid #bae6fd;text-decoration:none">
-    <div style="font-weight:700;color:#0369a1;font-size:15px;margin-bottom:4px">${name}</div>
-    <div style="color:#64748b;font-size:13px">${desc}</div>
+        refHtml = `<div style="margin:48px 0 32px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+    <div style="width:4px;height:24px;background:linear-gradient(180deg,#2ecc71,#27ae60);border-radius:2px"></div>
+    <h2 style="font-size:18px;font-weight:800;color:#1a1a1a;margin:0">관련 사이트 바로가기</h2>
+  </div>
+  <div style="display:grid;gap:10px">
+  ${links.map(({name, desc, url}) => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#ffffff;border-radius:14px;border:1px solid #e8e8eb;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06);transition:all 0.2s">
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:700;color:#1a1a1a;font-size:15px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+      <div style="color:#86868b;font-size:13px;line-height:1.5">${desc}</div>
+    </div>
+    <div style="flex-shrink:0;margin-left:12px;width:32px;height:32px;border-radius:50%;background:#f5f5f7;display:flex;align-items:center;justify-content:center;font-size:14px">→</div>
   </a>`).join("")}
+  </div>
 </div>`;
       }
     }
