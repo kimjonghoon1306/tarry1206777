@@ -670,12 +670,13 @@ if (provider === "pollinations") {
 
         // Replicate: 브라우저 직접 폴링 (Vercel 타임아웃 완전 우회)
         if (provider === "replicate") {
-          const batchSize = 4; // Flux Schnell 최대 4장
+          const batchSize = 4;
           const batches = Math.ceil(numImages / batchSize);
 
           for (let b = 0; b < batches; b++) {
             const batchCount = Math.min(batchSize, numImages - b * batchSize);
-            toast.loading(`이미지 생성 중... (배치 ${b + 1}/${batches})`, { id: "imggen" });
+            toast.loading(`이미지 생성 요청 중... (${b + 1}/${batches})`, { id: "imggen" });
+            setProgress(Math.round((b / batches) * 30)); // 시작 시 진행률 표시
 
             // 1단계: 예측 시작 → prediction ID 받기
             const startResp = await fetch("/api/generate-image", {
@@ -704,10 +705,15 @@ if (provider === "pollinations") {
             const predictionId = startData.predictionId;
             if (!predictionId) throw new Error("Replicate 예측 ID를 받지 못했습니다");
 
+            toast.loading(`이미지 생성 중... (${b + 1}/${batches}) ⏳`, { id: "imggen" });
             const deadline = Date.now() + 180000; // 3분
             let done = false;
+            let pollCount = 0;
             while (Date.now() < deadline && !done) {
-              await new Promise(r => setTimeout(r, 3000)); // 3초마다 확인
+              await new Promise(r => setTimeout(r, 3000));
+              pollCount++;
+              // 폴링 중 progress 30~85% 사이로 서서히 올리기
+              setProgress(Math.round((b / batches) * 85 + Math.min(pollCount * 5, 50)));
               const pollResp = await fetch("/api/generate-image", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -726,7 +732,6 @@ if (provider === "pollinations") {
               } else if (pollData.status === "failed") {
                 throw new Error(pollData.error || "Replicate 생성 실패");
               }
-              // processing/starting 상태면 계속 폴링
             }
             if (!done) throw new Error("이미지 생성 시간이 너무 오래 걸립니다. 다시 시도해주세요.");
             setProgress(Math.round(((b + 1) / batches) * 90));
