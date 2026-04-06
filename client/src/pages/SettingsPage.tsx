@@ -658,6 +658,80 @@ function PlatformSection({ title, color, logo, type, desc, link, fields }: {
   );
 }
 
+// ── 카테고리 관리 컴포넌트 (Settings + Admin 공용) ──
+export function CategoryManager() {
+  const [categories, setCategories] = React.useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; }
+  });
+  const [input, setInput] = React.useState("");
+
+  function save(list: string[]) {
+    setCategories(list);
+    localStorage.setItem("blogauto_categories", JSON.stringify(list));
+    saveSettingsToServer({ blogauto_categories: JSON.stringify(list) });
+  }
+  function add() {
+    const v = input.trim();
+    if (!v || categories.includes(v)) { toast.error("이미 있거나 빈 값이에요"); return; }
+    save([...categories, v]);
+    setInput("");
+    toast.success(`카테고리 "${v}" 추가됨`);
+  }
+  function remove(cat: string) {
+    save(categories.filter(c => c !== cat));
+    toast.success(`"${cat}" 삭제됨`);
+  }
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">🗂️</span>
+        <h3 className="font-semibold text-foreground">카테고리 관리</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium ml-auto"
+          style={{ background: "oklch(0.6 0.15 220/15%)", color: "oklch(0.6 0.15 220)" }}>
+          {categories.length}개
+        </span>
+      </div>
+      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+        배포 페이지에서 글 발행 시 카테고리를 선택할 수 있어요. 내 사이트 카테고리와 동일하게 입력하세요.
+      </p>
+      {/* 입력 */}
+      <div className="flex gap-2 mb-4">
+        <Input
+          placeholder="카테고리명 입력 (예: 생활정보, IT, 맛집)"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && add()}
+          className="h-10 text-sm"
+        />
+        <Button onClick={add} className="h-10 px-4 shrink-0"
+          style={{ background: "oklch(0.6 0.15 220)", color: "white" }}>
+          <Plus className="w-4 h-4" />
+        </Button>
+      </div>
+      {/* 목록 */}
+      {categories.length === 0 ? (
+        <div className="text-center py-6 rounded-lg" style={{ background: "var(--background)", border: "1px dashed var(--border)" }}>
+          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>아직 카테고리가 없어요</p>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {categories.map((cat, i) => (
+            <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
+              style={{ background: "oklch(0.6 0.15 220/12%)", border: "1px solid oklch(0.6 0.15 220/30%)", color: "var(--foreground)" }}>
+              {cat}
+              <button onClick={() => remove(cat)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors"
+                style={{ color: "var(--muted-foreground)" }}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   // 로그인 유저 직접 읽기 (순환 import 방지)
@@ -1347,6 +1421,9 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
+
+        {/* 카테고리 관리 */}
+        <CategoryManager />
 
         {/* 알림 설정 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
