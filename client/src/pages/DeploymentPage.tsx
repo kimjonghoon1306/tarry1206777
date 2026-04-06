@@ -901,6 +901,15 @@ export default function DeploymentPage() {
     }
 
     const parts: string[] = [];
+
+    // ✅ 썸네일을 content 맨 앞에 삽입 (사이트에서 글 위에 표시)
+    const thumbUrl = thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
+    if (thumbUrl) {
+      parts.push(`<figure style="margin:0 0 24px;text-align:center">
+  <img src="${thumbUrl}" alt="썸네일" style="width:100%;max-width:100%;border-radius:12px;display:block">
+</figure>`);
+    }
+
     blocks.forEach((b: any) => {
       if (b.type === "text") {
         const lines = b.content.split("\n");
@@ -944,7 +953,7 @@ export default function DeploymentPage() {
       return text.slice(s + startTag.length, e).trim();
     }
 
-    // FAQ 파싱
+    // FAQ
     const faqRaw = extractSection(fullText, "[FAQ시작]", "[FAQ끝]");
     let faqHtml = "";
     if (faqRaw) {
@@ -952,21 +961,18 @@ export default function DeploymentPage() {
       const lines = faqRaw.split("\n").map(l => l.trim()).filter(Boolean);
       for (let i = 0; i < lines.length; i++) {
         const qMatch = lines[i].match(/^Q\d+:\s*(.+)/);
-        const aMatch = lines[i].match(/^A\d+:\s*(.+)/);
         if (qMatch && lines[i+1]) {
           const aNext = lines[i+1].match(/^A\d+:\s*(.+)/);
-          if (aNext) qaPairs.push({ q: qMatch[1], a: aNext[1] });
+          if (aNext) { qaPairs.push({ q: qMatch[1], a: aNext[1] }); i++; }
         }
       }
       if (qaPairs.length > 0) {
-        faqHtml = `
-<div style="margin:40px 0;padding:28px;background:#f8f9ff;border-radius:16px;border:1px solid #e0e4ff">
+        faqHtml = `<div style="margin:40px 0;padding:28px;background:#f8f9ff;border-radius:16px;border:1px solid #e0e4ff">
   <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 20px;display:flex;align-items:center;gap:8px">
     <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#6366f1;border-radius:8px;color:white;font-size:16px">Q</span>
     자주 묻는 질문
   </h2>
-  ${qaPairs.map(({q, a}) => `
-  <div style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid #e0e4ff">
+  ${qaPairs.map(({q, a}) => `<div style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid #e0e4ff">
     <div style="background:#6366f1;color:white;padding:14px 18px;font-weight:700;font-size:15px">Q. ${q}</div>
     <div style="background:white;padding:14px 18px;color:#444;font-size:14px;line-height:1.8">A. ${a}</div>
   </div>`).join("")}
@@ -974,24 +980,19 @@ export default function DeploymentPage() {
       }
     }
 
-    // 참고자료 파싱
+    // 참고자료
     const refRaw = extractSection(fullText, "[참고자료시작]", "[참고자료끝]");
     let refHtml = "";
     if (refRaw) {
       const links: {name: string; desc: string; url: string}[] = [];
       refRaw.split("\n").forEach(line => {
-        const m = line.match(/^LINK\d+:\s*(.+)\|(.+)\|(.+)/);
+        const m = line.match(/^LINK\d+:\s*(.+?)\|(.+?)\|(.+)/);
         if (m) links.push({ name: m[1].trim(), desc: m[2].trim(), url: m[3].trim() });
       });
       if (links.length > 0) {
-        refHtml = `
-<div style="margin:40px 0">
-  <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px;display:flex;align-items:center;gap:8px">
-    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#0ea5e9;border-radius:8px;color:white;font-size:14px">🔗</span>
-    참고자료 및 링크
-  </h2>
-  ${links.map(({name, desc, url}) => `
-  <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;margin-bottom:10px;padding:16px 20px;background:#f0f9ff;border-radius:12px;border:1px solid #bae6fd;text-decoration:none;transition:all 0.2s">
+        refHtml = `<div style="margin:40px 0">
+  <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">🔗 참고자료 및 링크</h2>
+  ${links.map(({name, desc, url}) => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;margin-bottom:10px;padding:16px 20px;background:#f0f9ff;border-radius:12px;border:1px solid #bae6fd;text-decoration:none">
     <div style="font-weight:700;color:#0369a1;font-size:15px;margin-bottom:4px">${name}</div>
     <div style="color:#64748b;font-size:13px">${desc}</div>
   </a>`).join("")}
@@ -999,22 +1000,20 @@ export default function DeploymentPage() {
       }
     }
 
-    // 관련글 파싱
+    // 관련글
     const postRaw = extractSection(fullText, "[관련글시작]", "[관련글끝]");
     let postHtml = "";
     if (postRaw) {
       const posts: {title: string; desc: string}[] = [];
       postRaw.split("\n").forEach(line => {
-        const m = line.match(/^POST\d+:\s*(.+)\|(.+)/);
+        const m = line.match(/^POST\d+:\s*(.+?)\|(.+)/);
         if (m) posts.push({ title: m[1].trim(), desc: m[2].trim() });
       });
       if (posts.length > 0) {
-        postHtml = `
-<div style="margin:40px 0">
+        postHtml = `<div style="margin:40px 0">
   <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">관련 글</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-    ${posts.map(({title, desc}) => `
-    <div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+    ${posts.map(({title, desc}) => `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
       <div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:8px;line-height:1.5">${title}</div>
       <div style="color:#64748b;font-size:12px;line-height:1.6">${desc}</div>
     </div>`).join("")}
@@ -1023,7 +1022,7 @@ export default function DeploymentPage() {
       }
     }
 
-    // 섹션 마커 제거 후 특별 섹션 HTML 추가
+    // 섹션 마커 제거 후 특별 섹션 추가
     const cleanHtml = fullText
       .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
       .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
