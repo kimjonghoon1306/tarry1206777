@@ -592,15 +592,16 @@ if (provider === "pollinations") {
       const interval = setInterval(() => setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 18), 500);
       try {
         const allImages: string[] = [];
-        const batchSize = 4;
-        const batches = Math.ceil(numImages / batchSize);
 
-        for (let b = 0; b < batches; b++) {
-          const batchCount = Math.min(batchSize, numImages - b * batchSize);
+        for (let i = 0; i < numImages; i++) {
+          if (i > 0) {
+            toast.loading(`이미지 생성 중... (${allImages.length}/${numImages}개 완료)`, { id: "imggen" });
+            await new Promise(r => setTimeout(r, 11000));
+          }
           const resp = await fetch("/api/generate-image", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: batchCount, style, imgbbKey }),
+            body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: 1, style, imgbbKey }),
           });
           if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "API 오류"); }
           const data = await resp.json();
@@ -624,7 +625,15 @@ if (provider === "pollinations") {
         return allImages.length;
       } catch (e: any) {
         clearInterval(interval);
-        toast.error(`생성 실패: ${e.message}`, { id: "imggen" });
+        let msg = e.message || "";
+        if (msg.includes("429") || msg.includes("throttled") || msg.includes("rate limit")) {
+          msg = "요청이 너무 빨라요. 잠시 후 다시 시도해주세요.";
+        } else if (msg.includes("402") || msg.includes("credit")) {
+          msg = "Replicate 크레딧이 부족해요. replicate.com에서 충전해주세요.";
+        } else if (msg.includes("401")) {
+          msg = "API 키가 잘못됐어요. 설정을 확인해주세요.";
+        }
+        toast.error(`생성 실패: ${msg}`, { id: "imggen" });
         return 0;
       }
     }
