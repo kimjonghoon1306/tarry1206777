@@ -1,4 +1,7 @@
-// BlogAuto Pro - generate-image v5.0
+// BlogAuto Pro - generate-image v5.1
+// ✅ Vercel 타임아웃 60초로 확장
+export const config = { maxDuration: 60 };
+
 // ✅ Gemini Imagen 3 지원
 // ✅ OpenAI DALL-E 3 지원
 // ✅ Replicate Flux Schnell 지원
@@ -177,38 +180,54 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── Replicate (Flux Schnell - 빠르고 저렴) ──────────
+  // ── Replicate (Flux Schnell) ──────────────────────────
+  // ✅ 브라우저 직접 폴링 방식 — Vercel 타임아웃 완전 해결
   if (provider === "replicate") {
     const [w, h] = (size || "1024x1024").split("x").map(Number);
     const width = w || 1024;
     const height = h || 1024;
+    const action = req.body?.action || "start";
 
-    async function pollResult(url, token, maxWait = 25000) {
-      const deadline = Date.now() + maxWait;
-      while (Date.now() < deadline) {
-        await new Promise(r => setTimeout(r, 1500));
-        const r = await fetch(url, { headers: { Authorization: `Token ${token}` } });
+    // ── 폴링: 브라우저가 상태 확인 요청 ──
+    if (action === "poll") {
+      const predictionId = req.body?.predictionId;
+      if (!predictionId) return res.status(400).json({ error: "predictionId 필요" });
+      try {
+        const r = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
+          headers: { Authorization: `Token ${apiKey}` },
+        });
         const d = await r.json();
-        if (d.status === "succeeded") return d.output || [];
-        if (d.status === "failed") throw new Error(d.error || "Replicate 생성 실패");
+        const images = d.status === "succeeded"
+          ? (Array.isArray(d.output) ? d.output : [d.output].filter(Boolean))
+          : [];
+        const uploaded = (d.status === "succeeded" && imgbbKey)
+          ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img)))
+          : images;
+        return res.json({
+          ok: true,
+          status: d.status,
+          images: uploaded,
+          error: d.status === "failed" ? (d.error || "생성 실패") : null,
+        });
+      } catch (e) {
+        return res.status(500).json({ error: e.message });
       }
-      throw new Error("Replicate 응답 시간 초과. 잠시 후 다시 시도해주세요.");
     }
 
+    // ── 시작: 예측 요청 후 ID 반환 ──
     try {
       const resp = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Token ${apiKey}`,
-          Prefer: "wait=5",
         },
         body: JSON.stringify({
           input: {
             prompt,
             width,
             height,
-            num_outputs: Math.min(numImages, 4), // Flux Schnell 최대 4장
+            num_outputs: Math.min(numImages, 4),
             num_inference_steps: 4,
             output_format: "webp",
             output_quality: 90,
@@ -219,65 +238,30 @@ export default async function handler(req, res) {
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         const msg = err?.detail || err?.error || "";
-        if (resp.status === 401) throw new Error("Replicate API 토큰이 잘못되었습니다. replicate.com에서 확인해주세요.");
+        if (resp.status === 401) throw new Error("Replicate API 토큰이 잘못되었습니다.");
         if (resp.status === 402) throw new Error("Replicate 크레딧이 부족합니다. replicate.com에서 충전해주세요.");
         throw new Error(`Replicate 오류 (${resp.status}): ${msg}`);
       }
 
       const data = await resp.json();
-      let images = [];
 
+      // 즉시 완료된 경우
       if (data.status === "succeeded") {
-        images = Array.isArray(data.output) ? data.output : [data.output].filter(Boolean);
-      } else if (data.id) {
-        // 폴링으로 결과 대기
-        images = await pollResult(
-          `https://api.replicate.com/v1/predictions/${data.id}`,
-          apiKey
-        );
+        const images = Array.isArray(data.output) ? data.output : [data.output].filter(Boolean);
+        const uploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
+        return res.json({ ok: true, images: uploaded, provider: "replicate", done: true });
       }
 
-      // 4장 이하 요청인데 더 필요하면 추가 요청
-      if (numImages > 4) {
-        const remaining = numImages - 4;
-        const resp2 = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${apiKey}`,
-            Prefer: "wait=5",
-          },
-          body: JSON.stringify({
-            input: {
-              prompt,
-              width,
-              height,
-              num_outputs: Math.min(remaining, 4),
-              num_inference_steps: 4,
-              output_format: "webp",
-              output_quality: 90,
-            },
-          }),
-        });
-        if (resp2.ok) {
-          const data2 = await resp2.json();
-          if (data2.status === "succeeded" && data2.output) {
-            images = [...images, ...(Array.isArray(data2.output) ? data2.output : [data2.output])];
-          } else if (data2.id) {
-            const more = await pollResult(`https://api.replicate.com/v1/predictions/${data2.id}`, apiKey);
-            images = [...images, ...more];
-          }
-        }
+      // 처리 중 → ID 반환, 브라우저가 폴링
+      if (data.id) {
+        return res.json({ ok: true, predictionId: data.id, done: false, provider: "replicate" });
       }
 
-      if (!images || images.length === 0) throw new Error("이미지가 생성되지 않았습니다.");
-      const replicateUploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
-      return res.json({ ok: true, images: replicateUploaded, provider: "replicate" });
-
+      throw new Error("Replicate 예측 시작 실패");
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
   }
 
-  return res.status(400).json({ error: "지원하지 않는 provider입니다 (gemini / openai / replicate)" });
+    return res.status(400).json({ error: "지원하지 않는 provider입니다 (gemini / openai / replicate)" });
 }
