@@ -106,20 +106,18 @@ export default function LandingPage() {
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-9 h-9">
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { window.location.href = "/login"; }}
+          <a href="/login"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 h-9 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            style={{ textDecoration: "none", color: "var(--foreground)" }}
           >
             로그인
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => navigate("/signup")}
-            style={{ background: "var(--color-emerald)", color: "white" }}
+          </a>
+          <a href="/signup"
+            className="inline-flex items-center justify-center rounded-md px-3 h-9 text-sm font-medium transition-colors"
+            style={{ background: "var(--color-emerald)", color: "white", textDecoration: "none" }}
           >
             시작하기 <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
+          </a>
           {/* 운영자 전용 톱니바퀴 - 다크/라이트 모두 보이도록 */}
           <button
             title="운영자"
@@ -187,15 +185,13 @@ export default function LandingPage() {
               <Bot className="w-5 h-5" />
               무료로 시작하기
             </Button>
-            <Button
-              size="lg"
-              className="gap-2 text-base px-8 py-6"
-              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)" }}
-              onClick={() => { window.location.href = "/login"; }}
+            <a href="/login"
+              className="inline-flex items-center gap-2 text-base px-8 py-4 rounded-lg font-medium transition-colors"
+              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", textDecoration: "none", backdropFilter: "blur(10px)" }}
             >
               <BarChart3 className="w-5 h-5" />
               로그인
-            </Button>
+            </a>
           </div>
 
           {/* Trust badges */}
