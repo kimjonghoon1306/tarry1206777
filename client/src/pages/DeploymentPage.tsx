@@ -357,7 +357,25 @@ function PublishPanel({
     return "oklch(0.65 0.28 350)";
   };
 
-  const categories: string[] = (() => { try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; } })();
+  const [categories, setCategories] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; }
+  });
+  const [newCat, setNewCat] = useState("");
+
+  function addCategory() {
+    const v = newCat.trim();
+    if (!v || categories.includes(v)) return;
+    const updated = [...categories, v];
+    setCategories(updated);
+    localStorage.setItem("blogauto_categories", JSON.stringify(updated));
+    setNewCat("");
+  }
+  function removeCategory(cat: string) {
+    const updated = categories.filter(c => c !== cat);
+    setCategories(updated);
+    localStorage.setItem("blogauto_categories", JSON.stringify(updated));
+    if (selectedCategory === cat) setSelectedCategory("");
+  }
 
   const platformLabel = (type: string) => {
     if (type === "naver") return "N";
@@ -437,25 +455,55 @@ function PublishPanel({
       </div>
 
       {/* 카테고리 선택 */}
-      {categories.length > 0 && (
-        <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
-            <span className="text-sm font-semibold text-foreground">카테고리 선택</span>
-          </div>
-          <select
-            className="w-full h-11 rounded-xl px-3 text-sm"
-            style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-            value={selectedCategory}
-            onChange={e => setSelectedCategory(e.target.value)}
-          >
-            <option value="">카테고리 선택 (선택 안 하면 미분류)</option>
-            {categories.map((cat, idx) => (
-              <option key={idx} value={cat}>{idx + 1}. {cat}</option>
-            ))}
-          </select>
+      <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
+          <span className="text-sm font-semibold text-foreground">카테고리</span>
         </div>
-      )}
+        {/* 카테고리 추가 입력 */}
+        <div className="flex gap-2 mb-3">
+          <input
+            className="flex-1 h-9 rounded-lg px-3 text-sm"
+            style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+            placeholder="카테고리 추가..."
+            value={newCat}
+            onChange={e => setNewCat(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && addCategory()}
+          />
+          <button
+            className="h-9 px-3 rounded-lg text-sm font-medium text-white"
+            style={{ background: "#06b6d4" }}
+            onClick={addCategory}
+          >추가</button>
+        </div>
+        {/* 카테고리 목록 */}
+        {categories.length > 0 ? (
+          <>
+            <select
+              className="w-full h-10 rounded-lg px-3 text-sm mb-2"
+              style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+            >
+              <option value="">선택 안 함 (미분류)</option>
+              {categories.map((cat, idx) => (
+                <option key={idx} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <div className="flex flex-wrap gap-1.5">
+              {categories.map((cat, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full"
+                  style={{ background: selectedCategory === cat ? "#06b6d420" : "var(--background)", border: `1px solid ${selectedCategory === cat ? "#06b6d4" : "var(--border)"}`, color: "var(--foreground)" }}>
+                  {cat}
+                  <button onClick={() => removeCategory(cat)} style={{ color: "var(--muted-foreground)" }}>×</button>
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>위에서 카테고리를 추가해주세요</p>
+        )}
+      </div>
 
       {/* 발행 방식 */}
       <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -592,7 +640,14 @@ export default function DeploymentPage() {
   );
   const [hashtags, setHashtags] = useState<string[]>(saved?.hashtags || []);
   const [newTag, setNewTag] = useState("");
-  const [thumbnail, setThumbnail] = useState<string>(saved?.thumbnail || "");
+  const [thumbnail, setThumbnail] = useState<string>(() => {
+    return saved?.thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
+  });
+  // thumbnail 변경 시 localStorage 동기화
+  useEffect(() => {
+    if (thumbnail) localStorage.setItem("blogauto_thumbnail", thumbnail);
+    else localStorage.removeItem("blogauto_thumbnail");
+  }, [thumbnail]);
   const [imageMode, setImageMode] = useState<"auto" | "manual">("auto");
   const [autoInserted, setAutoInserted] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -834,12 +889,44 @@ export default function DeploymentPage() {
 
   // ── 콘텐츠 빌드 ──
   function buildHtmlContent(): string {
+    function inlineFormat(text: string): string {
+      return text
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .replace(/`(.+?)`/g, `<code style="background:#f4f4f4;padding:2px 6px;border-radius:4px;font-size:13px">$1</code>`);
+    }
+    function mdLineToHtml(line: string): string {
+      if (/^### /.test(line)) return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2ecc71;padding-left:10px">${inlineFormat(line.slice(4))}</h3>`;
+      if (/^## /.test(line)) return `<h2 style="font-size:22px;font-weight:800;margin:32px 0 12px;color:#111;border-bottom:2px solid #eee;padding-bottom:8px">${inlineFormat(line.slice(3))}</h2>`;
+      if (/^# /.test(line)) return `<h1 style="font-size:26px;font-weight:900;margin:0 0 24px;color:#111">${inlineFormat(line.slice(2))}</h1>`;
+      if (/^---+$/.test(line.trim())) return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
+      if (/^[-*] /.test(line)) return `<li style="margin:6px 0;line-height:1.8">${inlineFormat(line.slice(2))}</li>`;
+      if (/^\d+\. /.test(line)) return `<li style="margin:6px 0;line-height:1.8">${inlineFormat(line.replace(/^\d+\. /, ""))}</li>`;
+      if (!line.trim()) return "";
+      return `<p style="line-height:1.9;margin:0 0 14px;color:#333;font-size:15px">${inlineFormat(line)}</p>`;
+    }
+    function groupLines(lines: string[]): string {
+      const result: string[] = [];
+      let inUl = false, inOl = false;
+      for (const line of lines) {
+        const isUl = /^[-*] /.test(line);
+        const isOl = /^\d+\. /.test(line);
+        if (!isUl && inUl) { result.push("</ul>"); inUl = false; }
+        if (!isOl && inOl) { result.push("</ol>"); inOl = false; }
+        if (isUl && !inUl) { result.push('<ul style="margin:12px 0 12px 24px;padding:0">'); inUl = true; }
+        if (isOl && !inOl) { result.push('<ol style="margin:12px 0 12px 24px;padding:0">'); inOl = true; }
+        result.push(mdLineToHtml(line));
+      }
+      if (inUl) result.push("</ul>");
+      if (inOl) result.push("</ol>");
+      return result.join("\n");
+    }
+
     const parts: string[] = [];
     blocks.forEach((b: any) => {
       if (b.type === "text") {
-        const paras = b.content.split("\n\n").filter((p: string) => p.trim());
-        const html = paras.map((p: string) => "<p style=\"line-height:1.8;margin:0 0 16px 0\">" + p.split("\n").join("<br>") + "</p>").join("");
-        parts.push(html);
+        const lines = b.content.split("\n");
+        parts.push(groupLines(lines));
       } else if (b.type === "image-pair") {
         // image-pair: src 필드 사용 (url 아님)
         const validImgs = b.images.filter((img: any) => img.src && img.src.trim() !== "");
@@ -1057,7 +1144,7 @@ export default function DeploymentPage() {
 
     if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트를 등록해주세요.");
     // CORS 우회: Vercel 서버를 프록시로 사용
-    const thumbnailUrl = localStorage.getItem("blogauto_thumbnail") || "";
+    const thumbnailUrl = thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
     const tagStr = hashtags.map((t: string) => t.replace("#", "")).join(", ");
     const slugBase = title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").slice(0, 80);
     const payload = {
