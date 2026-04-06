@@ -58,6 +58,53 @@ function loadOG(): OGSettings {
 }
 function saveOG(d: OGSettings) { try { localStorage.setItem(OG_KEY, JSON.stringify(d)); } catch {} }
 
+// ✅ OG 설정 KV 서버에 저장
+async function saveOGToServer(og: OGSettings) {
+  saveOG(og); // localStorage에도 저장
+  const token = localStorage.getItem("ba_token") || "";
+  try {
+    await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "saveSettings", settings: { blogauto_og_settings: JSON.stringify(og) } }),
+    });
+  } catch {}
+}
+
+// ✅ OG 설정 KV 서버에서 불러오기
+async function loadOGFromServer(): Promise<OGSettings | null> {
+  const token = localStorage.getItem("ba_token") || "";
+  try {
+    const r = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "loadSettings" }),
+    });
+    const d = await r.json();
+    if (d.ok && d.settings?.blogauto_og_settings) {
+      const og = JSON.parse(d.settings.blogauto_og_settings);
+      saveOG(og); // 로컬에도 캐시
+      return og;
+    }
+  } catch {}
+  return null;
+}
+
+// ✅ imgbb에 이미지 업로드 → 영구 URL 반환
+async function uploadImageToImgbb(file: File): Promise<string> {
+  const imgbbKey = userGet("imgbb_api_key");
+  if (!imgbbKey) throw new Error("imgbb API 키가 없습니다. 이미지 생성 AI 섹션에서 설정해주세요.");
+  const b64 = await toBase64(file);
+  const base64Data = b64.split(",")[1];
+  const form = new URLSearchParams();
+  form.append("key", imgbbKey);
+  form.append("image", base64Data);
+  const resp = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: form });
+  const data = await resp.json();
+  if (data.success && data.data?.url) return data.data.url;
+  throw new Error("imgbb 업로드 실패");
+}
+
 // ── 전체 API 키 섹션 정의 (설정 페이지와 완전 동일) ──
 const ICON_MAP: Record<string, any> = { Bot, Image, Search, BarChart3, FileText, Send, ShoppingCart, Globe, Link };
 
@@ -153,7 +200,6 @@ const API_SECTIONS = [
           { value: "none", label: "인증 없음 (공개 API)" },
         ],
       },
-      { label: "카테고리 (쉼표로 구분)", key: "webhook_categories", placeholder: "생활정보, IT, 맛집, 여행", link: "", badge: "발행시 선택", badgeColor: "#6366f1", note: "내 사이트 카테고리명과 동일하게 입력하세요. 발행 시 드롭다운으로 선택할 수 있어요." },
     ],
   },
 ];
@@ -214,11 +260,6 @@ function ApiKeyManager() {
         if (v?.trim()) {
           userSet(f.key, v.trim());
           toSave[f.key] = v.trim();
-          // ✅ 카테고리는 고정 키로 추가 저장 (superadmin 로그인 여부 무관)
-          if (f.key === "webhook_categories") {
-            localStorage.setItem("admin_webhook_categories", v.trim());
-            localStorage.setItem("u:admin:webhook_categories", v.trim());
-          }
         }
       }
     }));
@@ -896,19 +937,35 @@ function OGManager() {
   const [newPost, setNewPost] = useState({ title: "", url: "", image: "" });
   const [showAdd, setShowAdd] = useState(false);
   const [drag, setDrag] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const siteRef = useRef<HTMLInputElement>(null);
   const postRef = useRef<HTMLInputElement>(null);
+
+  // ✅ 마운트 시 서버에서 최신 OG 설정 불러오기
+  useEffect(() => {
+    loadOGFromServer().then(serverOg => {
+      if (serverOg) setOg(serverOg);
+    });
+  }, []);
 
   const uploadSite = async (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("이미지 파일만 가능합니다"); return; }
     if (file.size > 5 * 1024 * 1024) { toast.error("5MB 이하만 가능합니다"); return; }
-    const b64 = await toBase64(file);
-    const u = { ...og, siteImage: b64 }; setOg(u); saveOG(u);
-    toast.success("OG 이미지 설정 완료!");
+    setUploading(true);
+    try {
+      const url = await uploadImageToImgbb(file);
+      const u = { ...og, siteImage: url };
+      setOg(u);
+      await saveOGToServer(u);
+      toast.success("✅ OG 이미지 업로드 완료! 모든 기기에서 공유됩니다.");
+    } catch (e: any) {
+      toast.error(e.message || "이미지 업로드 실패");
+    }
+    setUploading(false);
   };
 
-  const save = () => {
-    saveOG(og);
+  const save = async () => {
+    await saveOGToServer(og);
     const setMeta = (prop: string, val: string) => {
       let el = document.querySelector(`meta[property="${prop}"]`) as HTMLMetaElement;
       if (!el) { el = document.createElement("meta"); el.setAttribute("property", prop); document.head.appendChild(el); }
@@ -916,7 +973,7 @@ function OGManager() {
     };
     setMeta("og:title", og.siteTitle); setMeta("og:description", og.siteDesc); setMeta("og:site_name", og.siteName);
     document.title = og.siteTitle;
-    toast.success("✅ OG 설정 저장 완료!");
+    toast.success("✅ OG 설정 저장 완료! 모든 기기에서 적용됩니다.");
   };
 
   const code = `<meta property="og:title" content="${og.siteTitle}" />\n<meta property="og:description" content="${og.siteDesc}" />\n<meta property="og:site_name" content="${og.siteName}" />\n<meta property="og:image" content="https://YOUR_DOMAIN/og-image.jpg" />\n<meta name="twitter:card" content="${og.twitterCard}" />`;
@@ -939,7 +996,7 @@ function OGManager() {
               <img src={og.siteImage} alt="OG" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/0 hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 hover:opacity-100">
                 <button className="px-3 py-2 rounded-lg text-xs text-white font-medium" style={{ background: "rgba(255,255,255,0.2)" }} onClick={() => siteRef.current?.click()}><Upload className="w-3.5 h-3.5 inline mr-1" />변경</button>
-                <button className="px-3 py-2 rounded-lg text-xs text-white font-medium" style={{ background: "rgba(239,68,68,0.7)" }} onClick={() => { const u = { ...og, siteImage: "" }; setOg(u); saveOG(u); }}><X className="w-3.5 h-3.5 inline mr-1" />삭제</button>
+                <button className="px-3 py-2 rounded-lg text-xs text-white font-medium" style={{ background: "rgba(239,68,68,0.7)" }} onClick={async () => { const u = { ...og, siteImage: "" }; setOg(u); await saveOGToServer(u); }}><X className="w-3.5 h-3.5 inline mr-1" />삭제</button>
               </div>
             </div>
           ) : (
@@ -950,7 +1007,7 @@ function OGManager() {
               onDragLeave={() => setDrag(false)}
               onDrop={async e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) await uploadSite(f); }}>
               <Upload className="w-8 h-8 opacity-30" style={{ color: "var(--muted-foreground)" }} />
-              <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>1200×630 권장 · 최대 5MB</span>
+              <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>{uploading ? "업로드 중..." : "1200×630 권장 · 최대 5MB"}</span>
             </button>
           )}
           <input ref={siteRef} type="file" accept="image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) await uploadSite(f); e.target.value = ""; }} />
