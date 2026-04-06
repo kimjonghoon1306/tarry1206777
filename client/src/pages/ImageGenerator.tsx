@@ -419,6 +419,7 @@ export default function ImageGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [translatedPrompt, setTranslatedPrompt] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedImages, setSelectedImages] = useState<number[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>(() => {
@@ -449,6 +450,17 @@ export default function ImageGenerator() {
   useEffect(() => {
     try { localStorage.setItem("imggen_state", JSON.stringify({ prompt, style, size, count })); } catch {}
   }, [prompt, style, size, count]);
+
+  useEffect(() => {
+    if (maxImagesFromContent > 0) {
+      setTimeout(() => {
+        toast.info(`📊 이 글엔 ${maxImagesFromContent}장이 적합합니다`, { duration: 4000 });
+      }, 500);
+      setTimeout(() => {
+        toast.info("✏️ 원하시면 수량을 임의로 변경하실 수 있어요", { duration: 4000 });
+      }, 1500);
+    }
+  }, []);
 
   const successGallery = gallery.filter(g => !g.loading && !!g.src && !g.failed);
   const lightboxImg = lightboxIndex !== null ? successGallery[lightboxIndex] ?? null : null;
@@ -686,10 +698,11 @@ if (provider === "pollinations") {
     setProgress(0);
     const numImages = parseInt(count) || 1;
 
-    // 한국어 자동 번역
-    const translatedPrompt = await autoTranslatePrompt(prompt.trim());
+    // 한국어 자동 번역 (이미 번역된 것 있으면 사용)
+    const translated = translatedPrompt || await autoTranslatePrompt(prompt.trim());
+    setTranslatedPrompt(translated);
     const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
-    const fullPrompt = `${translatedPrompt}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
+    const fullPrompt = `${translated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
     const [w, h] = (size || "1024x1024").split("x").map(Number);
     const styleLabel = STYLES.find(s => s.value === style)?.label || style;
 
@@ -871,6 +884,18 @@ if (provider === "pollinations") {
                   💡 한글 입력 시 AI가 자동으로 영문 이미지 프롬프트로 변환해요
                 </p>
               )}
+              {translatedPrompt && (
+                <div className="mt-2">
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "#10b981" }}>🔤 변환된 영문 프롬프트 (수정 가능)</label>
+                  <textarea
+                    value={translatedPrompt}
+                    onChange={e => setTranslatedPrompt(e.target.value)}
+                    className="w-full text-xs rounded-lg p-2.5 resize-none font-mono"
+                    rows={3}
+                    style={{ background: "var(--background)", border: "1px solid #10b98150", color: "var(--foreground)" }}
+                  />
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>이미지 스타일</label>
@@ -903,11 +928,11 @@ if (provider === "pollinations") {
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>생성 수량</label>
-                {maxImagesFromContent > 0 ? (
-                  <div className="rounded-xl px-3 py-2.5 text-sm font-semibold" style={{ background: "oklch(0.75 0.12 300/15%)", border: "1px solid oklch(0.75 0.12 300/40%)", color: "oklch(0.75 0.12 300)" }}>
-                    🔒 {count}개 (글에 최적화된 수량)
-                  </div>
-                ) : (
+                {maxImagesFromContent > 0 && (
+                  <p className="text-xs mb-1.5" style={{ color: "oklch(0.75 0.12 300)" }}>
+                    💡 글 기준 추천: {maxImagesFromContent}개 (변경 가능)
+                  </p>
+                )}
                 <Select value={count} onValueChange={setCount}>
                   <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -915,13 +940,9 @@ if (provider === "pollinations") {
                     <SelectItem value="4">4개</SelectItem>
                     <SelectItem value="8">8개</SelectItem>
                     <SelectItem value="10">10개</SelectItem>
-                    <SelectItem value="15">15개 (블로그 최적)</SelectItem>
-                    <SelectItem value="20">20개</SelectItem>
-                    <SelectItem value="30">30개</SelectItem>
-                    <SelectItem value="50">50개</SelectItem>
+                    <SelectItem value="15">15개</SelectItem>
                   </SelectContent>
                 </Select>
-                )}
               </div>
             </div>
 
