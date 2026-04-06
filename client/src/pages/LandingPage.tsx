@@ -109,8 +109,7 @@ export default function LandingPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate("/login")}
-            className="hidden sm:flex"
+            onClick={() => { window.location.href = "/login"; }}
           >
             로그인
           </Button>
@@ -192,7 +191,7 @@ export default function LandingPage() {
               size="lg"
               className="gap-2 text-base px-8 py-6"
               style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)" }}
-              onClick={() => navigate("/login")}
+              onClick={() => { window.location.href = "/login"; }}
             >
               <BarChart3 className="w-5 h-5" />
               로그인
