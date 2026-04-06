@@ -156,7 +156,12 @@ export default async function handler(req, res) {
 
   // ── 로그인 ──────────────────────────────────────────
   if (action === "login") {
-    const { userId, password } = body;
+    let { userId, email, password } = body;
+    // 이메일로 로그인 시도 시 userId 조회
+    if (!userId && email) {
+      userId = await getUserIdByEmail(email.trim());
+      if (!userId) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
+    }
     const u = await getUser(userId);
     if (!u) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
     if (u.password !== b64(password)) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
