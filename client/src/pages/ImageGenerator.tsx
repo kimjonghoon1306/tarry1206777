@@ -397,6 +397,7 @@ export default function ImageGenerator() {
   const [, navigate] = useLocation();
   const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const autoPrompt = params?.get("prompt") || "";
+  const autoKeyword = params?.get("keyword") || "";  // ✅ 키워드 별도 수신
   const fromContent = !!autoPrompt;
   const maxImagesFromContent = params?.get("maxImages") ? parseInt(params.get("maxImages")!) : 0;
 
@@ -436,8 +437,16 @@ export default function ImageGenerator() {
   // 갤러리 변경시 localStorage 저장 (URL 이미지만)
   useEffect(() => {
     try {
-      const toSave = gallery.filter(g => !g.loading && g.src && !g.failed && !g.src.startsWith("data:"));
-      localStorage.setItem("imggen_gallery", JSON.stringify(toSave.slice(0, 50)));
+      const urlImages = gallery.filter(g => !g.loading && g.src && !g.failed && !g.src.startsWith("data:"));
+      const base64Images = gallery.filter(g => !g.loading && g.src && !g.failed && g.src.startsWith("data:"));
+      // base64 이미지 있으면 경고 (imgbb 키 미설정)
+      if (base64Images.length > 0) {
+        const imgbbKey = getAPIKey("imgbb");
+        if (!imgbbKey) {
+          toast.warning(`⚠️ imgbb 키 미설정 — ${base64Images.length}개 이미지는 새로고침 후 사라집니다. 설정에서 imgbb 키를 입력해주세요.`, { id: "imgbb-warn", duration: 6000 });
+        }
+      }
+      localStorage.setItem("imggen_gallery", JSON.stringify(urlImages.slice(0, 50)));
     } catch {}
   }, [gallery]);
 
@@ -452,15 +461,17 @@ export default function ImageGenerator() {
   }, [prompt, style, size, count]);
 
   useEffect(() => {
-    if (maxImagesFromContent > 0) {
-      setTimeout(() => {
-        toast.info(`📊 이 글엔 ${maxImagesFromContent}장이 적합합니다`, { duration: 4000 });
-      }, 500);
-      setTimeout(() => {
+    const n = maxImagesFromContent;
+    if (n > 0) {
+      const t1 = setTimeout(() => {
+        toast.info(`📊 이 글엔 ${n}장이 적합합니다`, { duration: 4000 });
+      }, 800);
+      const t2 = setTimeout(() => {
         toast.info("✏️ 원하시면 수량을 임의로 변경하실 수 있어요", { duration: 4000 });
-      }, 1500);
+      }, 2000);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
     }
-  }, []);
+  }, [maxImagesFromContent]);
 
   const successGallery = gallery.filter(g => !g.loading && !!g.src && !g.failed);
   const lightboxImg = lightboxIndex !== null ? successGallery[lightboxIndex] ?? null : null;
@@ -651,7 +662,11 @@ if (provider === "pollinations") {
       return `${p}, professional photography, 8K ultra realistic`;
     }
 
-    // ── Step 1: 전용 번역 API (어떤 주제든 정확) ───────────
+    // ── Step 1: keyword URL 파라미터를 맨 먼저 활용 ────────────────
+    // ContentGenerator에서 넘어온 순수 키워드가 있으면 그걸로 번역
+    const baseKeyword = autoKeyword.trim() || p;
+
+    // ── Step 2: 전용 번역 API (AI가 주제 파악 → 정확한 이미지 프롬프트) ──
     const aiProvider = getContentProvider();
     const aiKey = getAPIKey(aiProvider);
     if (aiKey) {
@@ -659,7 +674,7 @@ if (provider === "pollinations") {
         const resp = await fetch("/api/translate-prompt", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: p }),
+          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: baseKeyword }),
         });
         const data = await resp.json();
         if (data.ok && data.prompt && data.prompt.length > 5) {
@@ -668,34 +683,44 @@ if (provider === "pollinations") {
       } catch {}
     }
 
-    // ── Step 2: KO_EN_MAP 매핑 ───────────────────────────
-    for (const [ko, en] of Object.entries(KO_EN_MAP)) {
+    // ── Step 3: KO_EN_MAP 매핑 (길이 긴 것 우선) ─────────────────
+    const sortedEntries = Object.entries(KO_EN_MAP).sort((a, b) => b[0].length - a[0].length);
+    for (const [ko, en] of sortedEntries) {
+      if (baseKeyword.includes(ko)) {
+        return `${en}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
+      }
+    }
+    // 원래 prompt에서도 재시도
+    for (const [ko, en] of sortedEntries) {
       if (p.includes(ko)) {
         return `${en}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
       }
     }
 
-    // ── Step 3: 카테고리 폴백 ──────────────────────────────
-    if (/절약|저축|재테크|투자|사회초년생|직장인|월급|금융|경제/.test(p))
+    // ── Step 4: 카테고리 폴백 ──────────────────────────────────────
+    const target = baseKeyword + " " + p;
+    if (/절약|저축|재테크|투자|사회초년생|직장인|월급|금융|경제/.test(target))
       return "young Korean professional saving money, coins wallet desk, warm optimistic lighting, lifestyle photography, 8K";
-    if (/맛집|음식|카페|식당|요리|커피|치킨|스테이크|라면/.test(p))
+    if (/맛집|음식|카페|식당|요리|커피|치킨|스테이크|라면/.test(target))
       return "delicious Korean food photography, beautiful plating, restaurant setting, warm lighting, 8K";
-    if (/여행|관광|제주|부산|호텔|해외/.test(p))
+    if (/여행|관광|제주|부산|호텔|해외/.test(target))
       return "beautiful travel destination landscape, scenic view, golden hour lighting, professional photography, 8K";
-    if (/다이어트|운동|헬스|요가|건강|피트니스/.test(p))
+    if (/다이어트|운동|헬스|요가|건강|피트니스/.test(target))
       return "healthy active lifestyle, fitness motivation, natural lighting, energetic atmosphere, 8K";
-    if (/패션|뷰티|스킨케어|메이크업|옷/.test(p))
+    if (/패션|뷰티|스킨케어|메이크업|옷/.test(target))
       return "fashion lifestyle photography, stylish aesthetic, professional editorial, beautiful lighting, 8K";
-    if (/육아|아이|아기|가족/.test(p))
+    if (/육아|아이|아기|가족/.test(target))
       return "happy family moments, children playing, warm home atmosphere, joyful lifestyle photography, 8K";
-    if (/IT|앱|AI|테크|컴퓨터|블로그/.test(p))
+    if (/IT|앱|AI|테크|컴퓨터|블로그/.test(target))
       return "modern technology workspace, sleek laptop setup, clean desk, professional tech photography, 8K";
-    if (/취업|공부|학생|수능/.test(p))
+    if (/취업|공부|학생|수능/.test(target))
       return "Korean student studying, bright desk workspace, hopeful atmosphere, professional photography, 8K";
-    if (/강아지|고양이|반려동물/.test(p))
+    if (/강아지|고양이|반려동물/.test(target))
       return "adorable pet animal portrait, natural lighting, cute expression, bokeh background, pet photography, 8K";
-    if (/인테리어|집|거실|홈/.test(p))
+    if (/인테리어|집|거실|홈/.test(target))
       return "modern interior design, cozy living room, minimalist aesthetic, natural light, architectural photography, 8K";
+    if (/부동산|아파트|원룸|전세|월세/.test(target))
+      return "modern apartment building exterior, real estate property, blue sky, professional architectural photography, 8K";
 
     // 완전 최후 수단
     return "modern Korean lifestyle blog photography, professional quality, natural lighting, vivid colors, 8K";
