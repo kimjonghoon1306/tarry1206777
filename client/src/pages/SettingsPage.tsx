@@ -359,10 +359,13 @@ function CustomWebhookSection() {
   const [authKey, setAuthKey] = React.useState("");
   const [showKey, setShowKey] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
+  const [categoryInput, setCategoryInput] = React.useState(""); // ✅ 카테고리 입력
 
   const handleSave = () => {
     if (!url.trim()) { toast.error("Webhook URL을 입력해주세요"); return; }
     const normalizedDomain = (customDomain.trim() || url.replace(/^https?:\/\//, "").split("/")[0]).trim();
+    // ✅ 카테고리 파싱 (쉼표 구분)
+    const categories = categoryInput.split(",").map(c => c.trim()).filter(Boolean);
     const entry = {
       _name: normalizedDomain || url.replace("https://", "").split("/")[0],
       _type: "custom",
@@ -370,11 +373,11 @@ function CustomWebhookSection() {
       webhook_url: url.trim(),
       webhook_auth_header: authHeader,
       webhook_auth_key: authKey.trim(),
+      categories: JSON.stringify(categories), // ✅ 사이트별 카테고리 저장
     };
     const updated = [...accounts, entry];
     setAccounts(updated);
     localStorage.setItem("platform_custom_list", JSON.stringify(updated));
-    // 기존 키도 저장 (호환성)
     userSet(SETTINGS_KEYS.WEBHOOK_URL, url.trim());
     userSet(SETTINGS_KEYS.WEBHOOK_KEY, authKey.trim());
     userSet("webhook_auth_header", authHeader);
@@ -382,7 +385,6 @@ function CustomWebhookSection() {
     localStorage.setItem("custom_domain", normalizedDomain);
     localStorage.setItem("admin_custom_domain", normalizedDomain);
     localStorage.setItem("blogauto_custom_domain", normalizedDomain);
-    // 배포 플랫폼 목록 업데이트
     const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
     platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
     localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
@@ -390,7 +392,7 @@ function CustomWebhookSection() {
     setSaved(true);
     setShowAdd(false);
     setCustomDomain(normalizedDomain);
-    setUrl(""); setAuthKey(""); setAuthHeader("Authorization");
+    setUrl(""); setAuthKey(""); setAuthHeader("Authorization"); setCategoryInput("");
     toast.success("✅ 웹사이트 등록됐어요!");
     setTimeout(() => setSaved(false), 3000);
   };
@@ -438,6 +440,11 @@ function CustomWebhookSection() {
                   <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                     헤더: {acc.webhook_auth_header || "Authorization"}
                   </p>
+                  {acc.categories && JSON.parse(acc.categories || "[]").length > 0 && (
+                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                      카테고리: {JSON.parse(acc.categories).join(", ")}
+                    </p>
+                  )}
                 </div>
               </div>
               <button onClick={() => remove(idx)}
@@ -508,6 +515,18 @@ function CustomWebhookSection() {
               </div>
             </div>
           )}
+
+          {/* 카테고리 */}
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>
+              카테고리 (쉼표로 구분)
+            </label>
+            <Input value={categoryInput} onChange={e => setCategoryInput(e.target.value)}
+              placeholder="생활정보, IT, 맛집, 여행" className="text-sm" />
+            <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>
+              내 사이트 카테고리명과 동일하게 입력 · 발행 시 드롭다운으로 선택
+            </p>
+          </div>
 
           <div className="flex gap-2">
             <Button className="gap-2 flex-1"
@@ -653,80 +672,6 @@ function PlatformSection({ title, color, logo, type, desc, link, fields }: {
         <p className="text-xs text-center py-2" style={{ color: "var(--muted-foreground)" }}>
           추가 버튼을 눌러 {title} 계정을 등록하세요
         </p>
-      )}
-    </div>
-  );
-}
-
-// ── 카테고리 관리 컴포넌트 (Settings + Admin 공용) ──
-export function CategoryManager() {
-  const [categories, setCategories] = React.useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; }
-  });
-  const [input, setInput] = React.useState("");
-
-  function save(list: string[]) {
-    setCategories(list);
-    localStorage.setItem("blogauto_categories", JSON.stringify(list));
-    saveSettingsToServer({ blogauto_categories: JSON.stringify(list) });
-  }
-  function add() {
-    const v = input.trim();
-    if (!v || categories.includes(v)) { toast.error("이미 있거나 빈 값이에요"); return; }
-    save([...categories, v]);
-    setInput("");
-    toast.success(`카테고리 "${v}" 추가됨`);
-  }
-  function remove(cat: string) {
-    save(categories.filter(c => c !== cat));
-    toast.success(`"${cat}" 삭제됨`);
-  }
-
-  return (
-    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-lg">🗂️</span>
-        <h3 className="font-semibold text-foreground">카테고리 관리</h3>
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium ml-auto"
-          style={{ background: "oklch(0.6 0.15 220/15%)", color: "oklch(0.6 0.15 220)" }}>
-          {categories.length}개
-        </span>
-      </div>
-      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-        배포 페이지에서 글 발행 시 카테고리를 선택할 수 있어요. 내 사이트 카테고리와 동일하게 입력하세요.
-      </p>
-      {/* 입력 */}
-      <div className="flex gap-2 mb-4">
-        <Input
-          placeholder="카테고리명 입력 (예: 생활정보, IT, 맛집)"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && add()}
-          className="h-10 text-sm"
-        />
-        <Button onClick={add} className="h-10 px-4 shrink-0"
-          style={{ background: "oklch(0.6 0.15 220)", color: "white" }}>
-          <Plus className="w-4 h-4" />
-        </Button>
-      </div>
-      {/* 목록 */}
-      {categories.length === 0 ? (
-        <div className="text-center py-6 rounded-lg" style={{ background: "var(--background)", border: "1px dashed var(--border)" }}>
-          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>아직 카테고리가 없어요</p>
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {categories.map((cat, i) => (
-            <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
-              style={{ background: "oklch(0.6 0.15 220/12%)", border: "1px solid oklch(0.6 0.15 220/30%)", color: "var(--foreground)" }}>
-              {cat}
-              <button onClick={() => remove(cat)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors"
-                style={{ color: "var(--muted-foreground)" }}>
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );
@@ -1421,9 +1366,6 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
-
-        {/* 카테고리 관리 */}
-        <CategoryManager />
 
         {/* 알림 설정 */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
