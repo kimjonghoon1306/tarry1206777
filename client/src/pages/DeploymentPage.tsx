@@ -357,20 +357,24 @@ function PublishPanel({
     return "oklch(0.65 0.28 350)";
   };
 
-  const [categories, setCategories] = useState<string[]>(() => {
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
     try {
-      // 관리자 고정 키 우선 (superadmin 저장 방식)
       const adminCats =
         localStorage.getItem("admin_webhook_categories") ||
         localStorage.getItem("u:admin:webhook_categories") ||
         userGet("webhook_categories") || "";
-      if (adminCats.trim()) return adminCats.split(",").map(c => c.trim()).filter(Boolean);
-      // 일반 유저 - platform_custom_list에서 카테고리
+      if (adminCats.trim()) {
+        setCategories(adminCats.split(",").map(c => c.trim()).filter(Boolean));
+        return;
+      }
       const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
-      if (customList.length > 0 && customList[0].categories) return JSON.parse(customList[0].categories || "[]");
-      return [];
-    } catch { return []; }
-  });
+      if (customList.length > 0 && customList[0].categories) {
+        setCategories(JSON.parse(customList[0].categories || "[]"));
+      }
+    } catch {}
+  }, []);
 
   const platformLabel = (type: string) => {
     if (type === "naver") return "N";
