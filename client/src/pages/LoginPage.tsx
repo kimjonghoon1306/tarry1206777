@@ -26,7 +26,7 @@ export default function LoginPage() {
       const resp = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "login", email: email.trim(), password }),
+        body: JSON.stringify({ action: "login", email: email.trim(), userId: email.trim(), password }),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -37,6 +37,15 @@ export default function LoginPage() {
       localStorage.setItem("ba_token", data.token);
       localStorage.setItem("ba_user", JSON.stringify(data.user));
       await applyServerSettings();
+      // ✅ platform_custom_list 별도 복원
+      const settings = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.token}` },
+        body: JSON.stringify({ action: "loadSettings" }),
+      }).then(r => r.json()).catch(() => ({}));
+      if (settings.ok && settings.settings?.platform_custom_list) {
+        localStorage.setItem("platform_custom_list", settings.settings.platform_custom_list);
+      }
       toast.success(`환영합니다, ${data.user?.name || data.user?.email}!`);
       const params = new URLSearchParams(window.location.search);
       const redirect = params.get("redirect") || "/dashboard";
