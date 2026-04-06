@@ -106,18 +106,21 @@ export default function LandingPage() {
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-9 h-9">
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
-          <a href="/login"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 h-9 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-            style={{ textDecoration: "none", color: "var(--foreground)" }}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/login")}
+            style={{ whiteSpace: "nowrap" }}
           >
             로그인
-          </a>
-          <a href="/signup"
-            className="inline-flex items-center justify-center rounded-md px-3 h-9 text-sm font-medium transition-colors"
-            style={{ background: "var(--color-emerald)", color: "white", textDecoration: "none" }}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => navigate("/signup")}
+            style={{ background: "var(--color-emerald)", color: "white" }}
           >
             시작하기 <ArrowRight className="w-4 h-4 ml-1" />
-          </a>
+          </Button>
           {/* 운영자 전용 톱니바퀴 - 다크/라이트 모두 보이도록 */}
           <button
             title="운영자"
@@ -175,23 +178,25 @@ export default function LandingPage() {
             블로그 운영의 모든 과정을 AI가 완전 자동화합니다
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-row gap-3 justify-center">
             <Button
               size="lg"
-              className="gap-2 text-base px-8 py-6 glow-emerald"
-              style={{ background: "var(--color-emerald)", color: "white" }}
+              className="gap-2 text-base px-6 py-5 glow-emerald"
+              style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap" }}
               onClick={() => navigate("/signup")}
             >
               <Bot className="w-5 h-5" />
               무료로 시작하기
             </Button>
-            <a href="/login"
-              className="inline-flex items-center gap-2 text-base px-8 py-4 rounded-lg font-medium transition-colors"
-              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", textDecoration: "none", backdropFilter: "blur(10px)" }}
+            <Button
+              size="lg"
+              className="gap-2 text-base px-6 py-5"
+              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}
+              onClick={() => navigate("/login")}
             >
               <BarChart3 className="w-5 h-5" />
               로그인
-            </a>
+            </Button>
           </div>
 
           {/* Trust badges */}
