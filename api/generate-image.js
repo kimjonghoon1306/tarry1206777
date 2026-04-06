@@ -56,10 +56,39 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST만 지원합니다" });
 
-  const { provider, apiKey, prompt, size = "1024x1024", count = 1, imgbbKey = "" } = req.body || {};
+  const { provider, apiKey, prompt, size = "1024x1024", count = 1, imgbbKey = "", action = "start", predictionId } = req.body || {};
 
-  if (!provider || !apiKey || !prompt) {
-    return res.status(400).json({ error: "provider, apiKey, prompt 필수입니다" });
+  if (!provider || !apiKey) {
+    return res.status(400).json({ error: "provider, apiKey 필수입니다" });
+  }
+
+  // poll 요청은 prompt 없이 predictionId만으로 처리 (맨 위에서 바로 처리)
+  if (provider === "replicate" && action === "poll") {
+    if (!predictionId) return res.status(400).json({ error: "predictionId 필요" });
+    try {
+      const r = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
+        headers: { Authorization: `Token ${apiKey}` },
+      });
+      const d = await r.json();
+      const images = d.status === "succeeded"
+        ? (Array.isArray(d.output) ? d.output : [d.output].filter(Boolean))
+        : [];
+      const uploaded = (d.status === "succeeded" && imgbbKey)
+        ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img)))
+        : images;
+      return res.json({
+        ok: true,
+        status: d.status,
+        images: uploaded,
+        error: d.status === "failed" ? (d.error || "생성 실패") : null,
+      });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  if (!prompt) {
+    return res.status(400).json({ error: "prompt 필수입니다" });
   }
 
   const numImages = Math.min(parseInt(count) || 1, 10);
@@ -186,34 +215,6 @@ export default async function handler(req, res) {
     const [w, h] = (size || "1024x1024").split("x").map(Number);
     const width = w || 1024;
     const height = h || 1024;
-    const action = req.body?.action || "start";
-
-    // ── 폴링: 브라우저가 상태 확인 요청 ──
-    if (action === "poll") {
-      const predictionId = req.body?.predictionId;
-      if (!predictionId) return res.status(400).json({ error: "predictionId 필요" });
-      try {
-        const r = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
-          headers: { Authorization: `Token ${apiKey}` },
-        });
-        const d = await r.json();
-        const images = d.status === "succeeded"
-          ? (Array.isArray(d.output) ? d.output : [d.output].filter(Boolean))
-          : [];
-        const uploaded = (d.status === "succeeded" && imgbbKey)
-          ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img)))
-          : images;
-        return res.json({
-          ok: true,
-          status: d.status,
-          images: uploaded,
-          error: d.status === "failed" ? (d.error || "생성 실패") : null,
-        });
-      } catch (e) {
-        return res.status(500).json({ error: e.message });
-      }
-    }
-
     // ── 시작: 예측 요청 후 ID 반환 ──
     try {
       const resp = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
