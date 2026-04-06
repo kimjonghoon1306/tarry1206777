@@ -361,6 +361,7 @@ function PublishPanel({
 
   useEffect(() => {
     try {
+      // 1. 관리자 Webhook 섹션 카테고리
       const adminCats =
         localStorage.getItem("admin_webhook_categories") ||
         localStorage.getItem("u:admin:webhook_categories") ||
@@ -369,6 +370,16 @@ function PublishPanel({
         setCategories(adminCats.split(",").map(c => c.trim()).filter(Boolean));
         return;
       }
+      // 2. 관리자 카테고리 탭 (blogauto_categories - JSON 배열)
+      const catTab = localStorage.getItem("blogauto_categories");
+      if (catTab) {
+        const parsed = JSON.parse(catTab);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCategories(parsed);
+          return;
+        }
+      }
+      // 3. 일반 유저 - platform_custom_list
       const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
       if (customList.length > 0 && customList[0].categories) {
         setCategories(JSON.parse(customList[0].categories || "[]"));
