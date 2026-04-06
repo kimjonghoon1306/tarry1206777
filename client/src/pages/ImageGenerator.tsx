@@ -586,34 +586,42 @@ if (provider === "pollinations") {
       }
       return successCount;
     } else {
-      // 다른 API provider
+      // 다른 API provider - 4장씩 나눠서 요청
       const apiKey = getAPIKey(provider);
       const imgbbKey = getAPIKey("imgbb");
       const interval = setInterval(() => setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 18), 500);
       try {
-        const resp = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: numImages, style, imgbbKey }),
-        });
+        const allImages: string[] = [];
+        const batchSize = 4;
+        const batches = Math.ceil(numImages / batchSize);
+
+        for (let b = 0; b < batches; b++) {
+          const batchCount = Math.min(batchSize, numImages - b * batchSize);
+          const resp = await fetch("/api/generate-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: batchCount, style, imgbbKey }),
+          });
+          if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "API 오류"); }
+          const data = await resp.json();
+          allImages.push(...(data.images || []));
+        }
+
         clearInterval(interval);
-        if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "API 오류"); }
-        const data = await resp.json();
-        const images: string[] = data.images || [];
-        if (images.length === 0) throw new Error("이미지 생성 결과가 없습니다");
+        if (allImages.length === 0) throw new Error("이미지 생성 결과가 없습니다");
         const elapsed = (Date.now() - startTime) / 1000;
         setStats(prev => {
-          const u = { ...prev, todayCount: prev.todayCount + images.length, monthCount: prev.monthCount + images.length, times: [...(prev.times || []), elapsed].slice(-20) };
+          const u = { ...prev, todayCount: prev.todayCount + allImages.length, monthCount: prev.monthCount + allImages.length, times: [...(prev.times || []), elapsed].slice(-20) };
           saveStats(u);
           return u;
         });
         setGallery(prev => [
-          ...images.map((src, i) => ({ id: Date.now() + i, src, title: `${prompt.slice(0, 20)}...`, keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false, failed: false })),
+          ...allImages.map((src, i) => ({ id: Date.now() + i, src, title: `${prompt.slice(0, 20)}...`, keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr, loading: false, failed: false })),
           ...prev,
         ]);
         setProgress(100);
-        toast.success(`이미지 ${images.length}개 완성!`, { id: "imggen" });
-        return images.length;
+        toast.success(`이미지 ${allImages.length}개 완성!`, { id: "imggen" });
+        return allImages.length;
       } catch (e: any) {
         clearInterval(interval);
         toast.error(`생성 실패: ${e.message}`, { id: "imggen" });
