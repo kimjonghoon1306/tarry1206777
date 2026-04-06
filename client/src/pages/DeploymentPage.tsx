@@ -453,51 +453,19 @@ function PublishPanel({
       <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         <div className="flex items-center gap-2 mb-3">
           <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
-          <span className="text-sm font-semibold text-foreground">카테고리</span>
+          <span className="text-sm font-semibold text-foreground">카테고리 선택</span>
         </div>
-        {/* 카테고리 추가 입력 */}
-        <div className="flex gap-2 mb-3">
-          <input
-            className="flex-1 h-9 rounded-lg px-3 text-sm"
-            style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-            placeholder="카테고리 추가..."
-            value={newCat}
-            onChange={e => setNewCat(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && addCategory()}
-          />
-          <button
-            className="h-9 px-3 rounded-lg text-sm font-medium text-white"
-            style={{ background: "#06b6d4" }}
-            onClick={addCategory}
-          >추가</button>
-        </div>
-        {/* 카테고리 목록 */}
-        {categories.length > 0 ? (
-          <>
-            <select
-              className="w-full h-10 rounded-lg px-3 text-sm mb-2"
-              style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-            >
-              <option value="">선택 안 함 (미분류)</option>
-              {categories.map((cat, idx) => (
-                <option key={idx} value={cat}>{cat}</option>
-              ))}
-            </select>
-            <div className="flex flex-wrap gap-1.5">
-              {categories.map((cat, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full"
-                  style={{ background: selectedCategory === cat ? "#06b6d420" : "var(--background)", border: `1px solid ${selectedCategory === cat ? "#06b6d4" : "var(--border)"}`, color: "var(--foreground)" }}>
-                  {cat}
-                  <button onClick={() => removeCategory(cat)} style={{ color: "var(--muted-foreground)" }}>×</button>
-                </span>
-              ))}
-            </div>
-          </>
-        ) : (
-          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>위에서 카테고리를 추가해주세요</p>
-        )}
+        <select
+          className="w-full h-10 rounded-lg px-3 text-sm"
+          style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+          value={selectedCategory}
+          onChange={e => setSelectedCategory(e.target.value)}
+        >
+          <option value="">선택 안 함 (미분류)</option>
+          {categories.map((cat, idx) => (
+            <option key={idx} value={cat}>{cat}</option>
+          ))}
+        </select>
       </div>
 
       {/* 발행 방식 */}
