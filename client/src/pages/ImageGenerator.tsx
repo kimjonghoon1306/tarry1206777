@@ -39,7 +39,177 @@ async function testImageUrl(url: string, timeoutMs = 12000): Promise<boolean> {
 // ── 한국어 → 영어 키워드 매핑 (확장판) ──────────────────────
 const KO_EN_MAP: Record<string, string> = {
   // ── 부동산/주거 ──
-  단기월세: "modern cozy studio apartment interior, stylish furniture, city view",
+  단기월세: "cozy studio apartment interior furniture city view, no people",
+  주택가이드: "modern house exterior real estate neighborhood blue sky, no people",
+  주택: "modern house exterior beautiful garden real estate, no people",
+  아파트가이드: "luxury apartment building exterior modern architecture skyline, no people",
+  전월세가이드: "apartment keys contract document real estate, no people",
+  부동산가이드: "real estate property house for sale sign, no people",
+  임대주택: "apartment complex residential building exterior, no people",
+  원룸가이드: "cozy studio apartment interior minimal design, no people",
+  월세: "apartment interior room keys rental document, no people",
+  전세: "korean apartment lease contract document keys, no people",
+  부동산: "real estate apartment building document keys, no people",
+  아파트: "apartment building modern exterior architecture, no people",
+  원룸: "studio apartment interior cozy minimal, no people",
+  오피스텔: "officetel apartment interior modern, no people",
+  빌라: "villa house exterior residential, no people",
+  임대: "rental property apartment building sign, no people",
+  분양: "new apartment complex building construction, no people",
+  인테리어: "interior design home modern beautiful furniture, no people",
+  리모델링: "home renovation interior remodel tools materials, no people",
+  이사: "moving boxes cardboard packing tape, no people",
+  전월세: "apartment contract document keys desk, no people",
+  집: "home house interior cozy warm furniture, no people",
+  방: "bedroom interior modern clean furniture, no people",
+  // ── 음식/맛집 ──
+  맛집: "delicious food dish gourmet plating restaurant table, no people",
+  음식: "delicious food dish gourmet beautiful plating, no people",
+  요리: "cooking ingredients vegetables cutting board kitchen tools, no people",
+  카페: "cozy cafe coffee shop interior warm lighting cups, no people",
+  빵: "fresh bread bakery artisan loaf pastry, no people",
+  디저트: "dessert sweet cake pastry beautiful plate, no people",
+  케이크: "celebration cake dessert beautiful slice, no people",
+  커피: "coffee latte art cup cafe morning steam, no people",
+  치킨: "crispy fried chicken korean food plate, no people",
+  피자: "pizza italian food restaurant slice, no people",
+  라면: "ramen noodle bowl hot steam korean, no people",
+  삼겹살: "korean bbq pork belly grill smoke sizzling, no people",
+  회: "sashimi japanese fresh fish seafood plate, no people",
+  초밥: "sushi japanese restaurant fresh plate, no people",
+  파스타: "pasta italian food restaurant plate, no people",
+  브런치: "brunch cafe food table morning light plate, no people",
+  술집: "bar drinks night glass bottles, no people",
+  와인: "wine glass red white elegant bottle vineyard, no people",
+  맥주: "beer mug glass cold refreshing foam, no people",
+  막걸리: "korean traditional rice wine makgeolli bottle cup, no people",
+  소주: "korean soju drink glass bottle table, no people",
+  칵테일: "cocktail bar drink colorful glass, no people",
+  스테이크: "steak beef grill plate fine dining, no people",
+  햄버거: "hamburger burger fast food plate, no people",
+  샐러드: "salad healthy fresh vegetables colorful bowl, no people",
+  김치: "kimchi korean fermented food jar bowl, no people",
+  // ── 여행 ──
+  여행: "travel destination scenic beautiful landscape landmark, no people",
+  관광: "tourism sightseeing famous landmark architecture, no people",
+  호텔: "luxury hotel room interior elegant bed, no people",
+  숙소: "accommodation cozy room interior bed, no people",
+  해외여행: "international travel airplane airport passport suitcase, no people",
+  국내여행: "domestic travel korea scenic nature, no people",
+  제주: "jeju island scenic ocean cliffs korea nature, no people",
+  서울: "seoul city skyline modern korea architecture, no people",
+  부산: "busan beach ocean sunset korea, no people",
+  강원: "gangwon mountains nature korea forest, no people",
+  제주도: "jeju island beach volcanic landscape nature, no people",
+  경주: "gyeongju historic temple korea architecture, no people",
+  전주: "jeonju hanok village traditional korea architecture, no people",
+  여수: "yeosu ocean night view korea bridge, no people",
+  속초: "sokcho beach mountains east sea korea, no people",
+  캠핑: "camping outdoor tent campfire nature stars, no people",
+  글램핑: "glamping luxury tent outdoor nature, no people",
+  펜션: "pension guesthouse cozy countryside exterior, no people",
+  리조트: "resort pool luxury tropical exterior, no people",
+  해변: "beach ocean waves sand summer sunset, no people",
+  산: "mountain hiking trail scenic peak nature, no people",
+  계곡: "valley stream nature cool water rocks, no people",
+  // ── 건강/뷰티/다이어트 ──
+  건강: "health wellness vitamins supplements healthy food, no people",
+  다이어트: "diet healthy food vegetables scale measuring tape, no people",
+  운동: "exercise equipment gym weights dumbbells, no people",
+  헬스: "gym fitness equipment weights machines, no people",
+  요가: "yoga mat meditation calm nature, no people",
+  필라테스: "pilates equipment reformer exercise, no people",
+  뷰티: "beauty makeup cosmetics products palette, no people",
+  피부: "skincare face cream product bottles beauty, no people",
+  헤어: "hair care products shampoo salon tools, no people",
+  메이크업: "makeup beauty cosmetics products brush palette, no people",
+  스킨케어: "skincare routine beauty products bottles cream, no people",
+  탈모: "hair care treatment products scalp, no people",
+  영양제: "supplements vitamins capsules pills health, no people",
+  // ── 재테크/경제/금융 ──
+  재테크: "coins stacked financial growth chart graph piggy bank, no people",
+  주식: "stock market graph chart trading screen monitor, no people",
+  코인: "cryptocurrency bitcoin gold coins digital, no people",
+  돈: "money cash banknotes coins wallet, no people",
+  절약: "coins jar saving money budget piggy bank, no people",
+  대출: "bank building exterior loan document contract pen coins, no people",
+  신용대출: "bank building credit card document financial paper, no people",
+  부업: "laptop desk home office work tools, no people",
+  ETF: "ETF investment chart graph financial document, no people",
+  펀드: "fund investment chart portfolio document, no people",
+  청약: "apartment application document form pen, no people",
+  연금: "pension retirement savings coins calendar, no people",
+  보험: "insurance document contract protection umbrella, no people",
+  세금: "tax document finance accounting calculator, no people",
+  경제: "economy finance graph chart growth, no people",
+  금융: "financial bank building money coins chart, no people",
+  신용점수: "credit score chart document financial, no people",
+  카드: "credit card payment finance plastic, no people",
+  // ── IT/기술 ──
+  AI: "artificial intelligence circuit board technology digital, no people",
+  챗GPT: "chatgpt AI interface laptop screen digital, no people",
+  인공지능: "artificial intelligence technology circuit digital, no people",
+  앱: "mobile app smartphone screen interface, no people",
+  스마트폰: "smartphone mobile technology screen, no people",
+  노트북: "laptop computer work desk keyboard, no people",
+  컴퓨터: "computer desktop technology monitor setup, no people",
+  유튜브: "youtube video content studio camera equipment, no people",
+  블로그: "blog writing laptop desk workspace keyboard, no people",
+  소셜미디어: "social media app icons phone screen, no people",
+  게임: "gaming controller screen setup monitor, no people",
+  코딩: "coding programming laptop dark screen code, no people",
+  // ── 생활/육아/교육 ──
+  육아: "baby toys nursery room crib stroller, no people",
+  아이: "children toys playground equipment colorful, no people",
+  임신: "pregnancy maternity baby items clothes, no people",
+  출산: "newborn baby hospital items clothes, no people",
+  청소: "cleaning supplies mop bucket spray, no people",
+  정리: "organizing storage boxes shelves neat, no people",
+  공부: "study books desk lamp stationery, no people",
+  영어: "english learning books dictionary study desk, no people",
+  취업: "job resume document briefcase office desk, no people",
+  자격증: "certificate diploma document education, no people",
+  대학생: "college campus books lecture hall study materials, no people",
+  취준생: "resume document laptop study books, no people",
+  // ── 자동차/교통 ──
+  자동차: "car automobile exterior road highway, no people",
+  중고차: "used car dealership lot exterior, no people",
+  전기차: "electric vehicle car charging station, no people",
+  오토바이: "motorcycle bike road exterior, no people",
+  // ── 반려동물 ──
+  강아지: "dog puppy cute playing toy bowl",
+  고양이: "cat kitten cute indoor toy bowl",
+  반려동물: "pet animal companion home toys food bowl",
+  햄스터: "hamster small pet cage wheel cute",
+  // ── 패션/쇼핑 ──
+  패션: "fashion clothing outfit clothes rack display, no people",
+  쇼핑: "shopping retail store bags display, no people",
+  명품: "luxury brand fashion handbag display, no people",
+  코디: "outfit coordination clothes display rack, no people",
+  // ── 자연/계절 ──
+  꽃: "flowers colorful nature bloom spring garden, no people",
+  바다: "ocean sea beach waves sunset landscape, no people",
+  숲: "forest trees nature green peaceful path, no people",
+  봄: "spring flowers bloom nature cherry blossom, no people",
+  여름: "summer beach ocean sun vacation, no people",
+  가을: "autumn fall leaves colorful nature, no people",
+  겨울: "winter snow cold white landscape, no people",
+  // ── 기타 생활정보 ──
+  정부지원: "government official document form pen desk, no people",
+  지원금: "financial support benefit document money, no people",
+  연말정산: "tax return document form calculator, no people",
+  결혼: "wedding flowers decoration venue ceremony setup, no people",
+  이혼: "legal document court paper pen, no people",
+  취미: "hobby leisure activity tools materials, no people",
+  독서: "reading books library shelf, no people",
+  음악: "music instrument guitar piano headphones, no people",
+  영화: "movie cinema popcorn screen ticket, no people",
+  드라마: "tv entertainment remote screen couch, no people",
+  // ── 비즈니스 ──
+  창업: "startup business office desk equipment plan, no people",
+  마케팅: "marketing digital strategy graph chart, no people",
+  sns마케팅: "social media marketing content strategy icons, no people",
+};
   주택가이드: "beautiful house exterior real estate, suburban neighborhood, blue sky",
   주택: "modern house exterior, beautiful garden, real estate property",
   아파트가이드: "luxury apartment building exterior, modern architecture, city skyline",
@@ -397,7 +567,6 @@ export default function ImageGenerator() {
   const [, navigate] = useLocation();
   const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const autoPrompt = params?.get("prompt") || "";
-  const autoKeyword = params?.get("keyword") || "";  // ✅ 키워드 별도 수신
   const fromContent = !!autoPrompt;
   const maxImagesFromContent = params?.get("maxImages") ? parseInt(params.get("maxImages")!) : 0;
 
@@ -437,16 +606,8 @@ export default function ImageGenerator() {
   // 갤러리 변경시 localStorage 저장 (URL 이미지만)
   useEffect(() => {
     try {
-      const urlImages = gallery.filter(g => !g.loading && g.src && !g.failed && !g.src.startsWith("data:"));
-      const base64Images = gallery.filter(g => !g.loading && g.src && !g.failed && g.src.startsWith("data:"));
-      // base64 이미지 있으면 경고 (imgbb 키 미설정)
-      if (base64Images.length > 0) {
-        const imgbbKey = getAPIKey("imgbb");
-        if (!imgbbKey) {
-          toast.warning(`⚠️ imgbb 키 미설정 — ${base64Images.length}개 이미지는 새로고침 후 사라집니다. 설정에서 imgbb 키를 입력해주세요.`, { id: "imgbb-warn", duration: 6000 });
-        }
-      }
-      localStorage.setItem("imggen_gallery", JSON.stringify(urlImages.slice(0, 50)));
+      const toSave = gallery.filter(g => !g.loading && g.src && !g.failed && !g.src.startsWith("data:"));
+      localStorage.setItem("imggen_gallery", JSON.stringify(toSave.slice(0, 50)));
     } catch {}
   }, [gallery]);
 
@@ -461,17 +622,15 @@ export default function ImageGenerator() {
   }, [prompt, style, size, count]);
 
   useEffect(() => {
-    const n = maxImagesFromContent;
-    if (n > 0) {
-      const t1 = setTimeout(() => {
-        toast.info(`📊 이 글엔 ${n}장이 적합합니다`, { duration: 4000 });
-      }, 800);
-      const t2 = setTimeout(() => {
+    if (maxImagesFromContent > 0) {
+      setTimeout(() => {
+        toast.info(`📊 이 글엔 ${maxImagesFromContent}장이 적합합니다`, { duration: 4000 });
+      }, 500);
+      setTimeout(() => {
         toast.info("✏️ 원하시면 수량을 임의로 변경하실 수 있어요", { duration: 4000 });
-      }, 2000);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
+      }, 1500);
     }
-  }, [maxImagesFromContent]);
+  }, []);
 
   const successGallery = gallery.filter(g => !g.loading && !!g.src && !g.failed);
   const lightboxImg = lightboxIndex !== null ? successGallery[lightboxIndex] ?? null : null;
@@ -656,17 +815,16 @@ if (provider === "pollinations") {
   // 전용 translate-prompt API 사용 → 어떤 주제든 정확하게 변환
   const autoTranslatePrompt = async (koreanPrompt: string): Promise<string> => {
     const p = koreanPrompt.trim();
+    const NP = "no people, no portrait, no face, object focused";
 
-    // 이미 영문이면 그대로
+    // 이미 영문이면 그대로 + no people 추가
     if (!/[가-힣]/.test(p)) {
-      return `${p}, professional photography, 8K ultra realistic`;
+      return `${p}, ${NP}, professional photography, 8K ultra realistic`;
     }
 
-    // ── Step 1: keyword URL 파라미터를 맨 먼저 활용 ────────────────
-    // ContentGenerator에서 넘어온 순수 키워드가 있으면 그걸로 번역
     const baseKeyword = autoKeyword.trim() || p;
 
-    // ── Step 2: 전용 번역 API (AI가 주제 파악 → 정확한 이미지 프롬프트) ──
+    // ── Step 1: 전용 번역 API ───────────
     const aiProvider = getContentProvider();
     const aiKey = getAPIKey(aiProvider);
     if (aiKey) {
@@ -678,52 +836,44 @@ if (provider === "pollinations") {
         });
         const data = await resp.json();
         if (data.ok && data.prompt && data.prompt.length > 5) {
-          return `${data.prompt}, professional photography, 8K ultra realistic`;
+          return `${data.prompt}, ${NP}, professional photography, 8K ultra realistic`;
         }
       } catch {}
     }
 
-    // ── Step 3: KO_EN_MAP 매핑 (길이 긴 것 우선) ─────────────────
+    // ── Step 2: KO_EN_MAP 매핑 (길이 긴 것 우선) ───────────────────
     const sortedEntries = Object.entries(KO_EN_MAP).sort((a, b) => b[0].length - a[0].length);
     for (const [ko, en] of sortedEntries) {
-      if (baseKeyword.includes(ko)) {
-        return `${en}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
-      }
-    }
-    // 원래 prompt에서도 재시도
-    for (const [ko, en] of sortedEntries) {
-      if (p.includes(ko)) {
-        return `${en}, beautiful photography, professional quality, natural lighting, 8K ultra realistic`;
+      if (baseKeyword.includes(ko) || p.includes(ko)) {
+        return `${en}, professional photography, natural lighting, 8K ultra realistic`;
       }
     }
 
-    // ── Step 4: 카테고리 폴백 ──────────────────────────────────────
+    // ── Step 3: 카테고리 폴백 (no people 적용) ──────────────────────
     const target = baseKeyword + " " + p;
-    if (/절약|저축|재테크|투자|사회초년생|직장인|월급|금융|경제/.test(target))
-      return "young Korean professional saving money, coins wallet desk, warm optimistic lighting, lifestyle photography, 8K";
+    if (/절약|저축|재테크|투자|사회초년생|직장인|월급|금융|경제|대출|신용/.test(target))
+      return `coins stacked piggy bank savings jar financial document, ${NP}, professional photography, 8K`;
     if (/맛집|음식|카페|식당|요리|커피|치킨|스테이크|라면/.test(target))
-      return "delicious Korean food photography, beautiful plating, restaurant setting, warm lighting, 8K";
+      return `delicious Korean food beautiful plating restaurant table, ${NP}, professional photography, 8K`;
     if (/여행|관광|제주|부산|호텔|해외/.test(target))
-      return "beautiful travel destination landscape, scenic view, golden hour lighting, professional photography, 8K";
+      return `beautiful travel destination landscape scenic view golden hour, ${NP}, professional photography, 8K`;
     if (/다이어트|운동|헬스|요가|건강|피트니스/.test(target))
-      return "healthy active lifestyle, fitness motivation, natural lighting, energetic atmosphere, 8K";
+      return `gym equipment weights healthy food vegetables, ${NP}, professional photography, 8K`;
     if (/패션|뷰티|스킨케어|메이크업|옷/.test(target))
-      return "fashion lifestyle photography, stylish aesthetic, professional editorial, beautiful lighting, 8K";
+      return `cosmetics products skincare bottles beauty items, ${NP}, professional photography, 8K`;
     if (/육아|아이|아기|가족/.test(target))
-      return "happy family moments, children playing, warm home atmosphere, joyful lifestyle photography, 8K";
+      return `baby toys nursery room stroller crib, ${NP}, professional photography, 8K`;
     if (/IT|앱|AI|테크|컴퓨터|블로그/.test(target))
-      return "modern technology workspace, sleek laptop setup, clean desk, professional tech photography, 8K";
+      return `laptop screen code monitor technology desk, ${NP}, professional photography, 8K`;
     if (/취업|공부|학생|수능/.test(target))
-      return "Korean student studying, bright desk workspace, hopeful atmosphere, professional photography, 8K";
+      return `study books desk lamp stationery notebook, ${NP}, professional photography, 8K`;
     if (/강아지|고양이|반려동물/.test(target))
-      return "adorable pet animal portrait, natural lighting, cute expression, bokeh background, pet photography, 8K";
-    if (/인테리어|집|거실|홈/.test(target))
-      return "modern interior design, cozy living room, minimalist aesthetic, natural light, architectural photography, 8K";
-    if (/부동산|아파트|원룸|전세|월세/.test(target))
-      return "modern apartment building exterior, real estate property, blue sky, professional architectural photography, 8K";
+      return `dog puppy cat kitten playing toy bowl cute`;
+    if (/인테리어|집|거실|홈|부동산|아파트/.test(target))
+      return `modern interior design living room minimalist aesthetic, ${NP}, professional photography, 8K`;
 
     // 완전 최후 수단
-    return "modern Korean lifestyle blog photography, professional quality, natural lighting, vivid colors, 8K";
+    return `informational blog object still life clean background, ${NP}, professional photography, 8K`;
   };
 
 
