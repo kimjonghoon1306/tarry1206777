@@ -902,13 +902,7 @@ export default function DeploymentPage() {
 
     const parts: string[] = [];
 
-    // ✅ 썸네일을 content 맨 앞에 삽입 (사이트에서 글 위에 표시)
-    const thumbUrl = thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
-    if (thumbUrl) {
-      parts.push(`<figure style="margin:0 0 24px;text-align:center">
-  <img src="${thumbUrl}" alt="썸네일" style="width:100%;max-width:100%;border-radius:12px;display:block">
-</figure>`);
-    }
+    // ✅ 썸네일은 payload의 thumbnail 필드로 별도 전송 - content에 중복 삽입 안 함
 
     blocks.forEach((b: any) => {
       if (b.type === "text") {
