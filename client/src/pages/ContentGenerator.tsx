@@ -734,7 +734,9 @@ export default function ContentGenerator() {
                     style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
                     onClick={() => {
                       const autoPrompt = title ? `${keyword} ${title}` : keyword;
-                      navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}`);
+                      const paragraphCount2 = generatedContent ? generatedContent.split(/\n\n+/).filter((p: string) => p.trim().length > 10).length : 0;
+                    const maxImgs2 = Math.max(1, Math.floor(paragraphCount2 / 3));
+                    navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}&maxImages=${maxImgs2}`);
                     }}>
                     <Sparkles className="w-3.5 h-3.5" /> AI생성
                   </Button>
@@ -833,4 +835,3 @@ export default function ContentGenerator() {
   );
 }
 //fix
-
