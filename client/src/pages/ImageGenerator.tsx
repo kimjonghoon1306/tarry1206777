@@ -660,26 +660,94 @@ if (provider === "pollinations") {
       }
       return successCount;
     } else {
-      // 다른 API provider - 4장씩 나눠서 요청
+      // ── Replicate / Gemini / OpenAI ──
       const apiKey = getAPIKey(provider);
       const imgbbKey = getAPIKey("imgbb");
-      const interval = setInterval(() => setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 18), 500);
+      const interval = setInterval(() => setProgress(prev => prev >= 85 ? 85 : prev + Math.random() * 8), 800);
+
       try {
         const allImages: string[] = [];
 
-        for (let i = 0; i < numImages; i++) {
-          if (i > 0) {
-            toast.loading(`이미지 생성 중... (${allImages.length}/${numImages}개 완료)`, { id: "imggen" });
-            await new Promise(r => setTimeout(r, 11000));
+        // Replicate: 브라우저 직접 폴링 (Vercel 타임아웃 완전 우회)
+        if (provider === "replicate") {
+          const batchSize = 4; // Flux Schnell 최대 4장
+          const batches = Math.ceil(numImages / batchSize);
+
+          for (let b = 0; b < batches; b++) {
+            const batchCount = Math.min(batchSize, numImages - b * batchSize);
+            toast.loading(`이미지 생성 중... (배치 ${b + 1}/${batches})`, { id: "imggen" });
+
+            // 1단계: 예측 시작 → prediction ID 받기
+            const startResp = await fetch("/api/generate-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                provider, apiKey, prompt: fullPrompt,
+                size: sizeStr, count: batchCount, imgbbKey,
+                action: "start",
+              }),
+            });
+            if (!startResp.ok) {
+              const err = await startResp.json();
+              throw new Error(err.error || "API 오류");
+            }
+            const startData = await startResp.json();
+
+            // 즉시 완료된 경우
+            if (startData.done && startData.images?.length > 0) {
+              allImages.push(...startData.images);
+              setProgress(Math.round(((b + 1) / batches) * 90));
+              continue;
+            }
+
+            // 2단계: 브라우저에서 직접 폴링 (최대 3분)
+            const predictionId = startData.predictionId;
+            if (!predictionId) throw new Error("Replicate 예측 ID를 받지 못했습니다");
+
+            const deadline = Date.now() + 180000; // 3분
+            let done = false;
+            while (Date.now() < deadline && !done) {
+              await new Promise(r => setTimeout(r, 3000)); // 3초마다 확인
+              const pollResp = await fetch("/api/generate-image", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  provider, apiKey, imgbbKey,
+                  action: "poll",
+                  predictionId,
+                }),
+              });
+              if (!pollResp.ok) continue;
+              const pollData = await pollResp.json();
+
+              if (pollData.status === "succeeded" && pollData.images?.length > 0) {
+                allImages.push(...pollData.images);
+                done = true;
+              } else if (pollData.status === "failed") {
+                throw new Error(pollData.error || "Replicate 생성 실패");
+              }
+              // processing/starting 상태면 계속 폴링
+            }
+            if (!done) throw new Error("이미지 생성 시간이 너무 오래 걸립니다. 다시 시도해주세요.");
+            setProgress(Math.round(((b + 1) / batches) * 90));
           }
-          const resp = await fetch("/api/generate-image", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: 1, style, imgbbKey }),
-          });
-          if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "API 오류"); }
-          const data = await resp.json();
-          allImages.push(...(data.images || []));
+
+        } else {
+          // Gemini / OpenAI — 기존 방식
+          for (let i = 0; i < numImages; i++) {
+            if (i > 0) {
+              toast.loading(`이미지 생성 중... (${allImages.length}/${numImages}개 완료)`, { id: "imggen" });
+              await new Promise(r => setTimeout(r, 3000));
+            }
+            const resp = await fetch("/api/generate-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ provider, apiKey, prompt: fullPrompt, size: sizeStr, count: 1, imgbbKey }),
+            });
+            if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "API 오류"); }
+            const data = await resp.json();
+            allImages.push(...(data.images || []));
+          }
         }
 
         clearInterval(interval);
