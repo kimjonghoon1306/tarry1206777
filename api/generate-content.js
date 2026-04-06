@@ -1,7 +1,12 @@
 // BlogAuto Pro - generate-content v4.0
 // 한자/외국문자/마크다운 기호 강제 제거
 function removeNonKorean(text) {
-  return text
+  // 섹션 마커 보존
+  const markers = ["[참고자료시작]","[참고자료끝]","[FAQ시작]","[FAQ끝]"];
+  const placeholders = markers.map((m, i) => [`XSECMARK${i}X`, m]);
+  placeholders.forEach(([key, val]) => { text = text.split(val).join(key); });
+
+  text = text
     .replace(/[一-鿿㐀-䶿]/g, "")           // 한자 (CJK)
     .replace(/[぀-ゟ゠-ヿ]/g, "")           // 일본어 히라가나/가타카나
     .replace(/[가-힣a-zA-Z0-9\s.,!?;:()\-'"'""\[\]%@#&+=/\\~`|<>{}^_$*\n]/g, (c) => c) // 허용 문자
@@ -13,9 +18,12 @@ function removeNonKorean(text) {
     .replace(/_{2,}/g, "")                 // __밑줄__ 제거
     .replace(/`{1,3}[^`]*`{1,3}/g, "")    // `코드` 제거
     .replace(/ {2,}/g, " ")                // 연속 공백 정리
-    .replace(/\n{3,}/g, "\n\n")            // 빈 줄 3개 이상 → 2개
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
+  // 마커 복원
+  placeholders.forEach(([key, val]) => { text = text.split(key).join(val); });
+  return text;
 }
 
 function ensureMinChars(text, minChars, keyword, title) {
@@ -214,7 +222,25 @@ ${categoryGuide}
 - 모든 단락의 길이를 비슷하게 유지 (한 단락이 다른 단락보다 2배 이상 길어지지 않게)
 - SEO: 키워드 자연스럽게 7회 이상 포함
 - 절대 한자, 중국어, 일본어, 베트남어 등 외국 문자 사용 금지
-- 오직 한글, 영어, 숫자만 사용${styleGuide}`;
+- 오직 한글, 영어, 숫자만 사용${styleGuide}
+
+[필수 섹션 - 본문 끝에 반드시 추가]
+본문을 다 쓴 후, 아래 형식으로 2개 섹션을 반드시 추가해줘.
+
+[참고자료시작]
+LINK1: (관련 공식기관 또는 신뢰할 수 있는 실제 사이트 이름)|(간단한 설명 한 줄)|(https://실제로 존재하는URL)
+LINK2: (사이트 이름)|(설명)|(https://실제URL)
+LINK3: (사이트 이름)|(설명)|(https://실제URL)
+[참고자료끝]
+
+[FAQ시작]
+Q1: (독자가 가장 많이 궁금해하는 질문 1)
+A1: (구체적이고 실용적인 답변)
+Q2: (질문 2)
+A2: (답변)
+Q3: (질문 3)
+A3: (답변)
+[FAQ끝]`;
 
   try {
 
@@ -313,7 +339,7 @@ ${categoryGuide}
         throw new Error(`Claude 오류: ${resp.status}`);
       }
       const data = await resp.json();
-      return res.json({ content: data.content?.[0]?.text || "" });
+      return res.json({ content: removeNonKorean(data.content?.[0]?.text || "") });
     }
 
     // ── OpenAI ────────────────────────────────────────────
@@ -337,7 +363,7 @@ ${categoryGuide}
         throw new Error(`OpenAI 오류: ${resp.status}`);
       }
       const data = await resp.json();
-      return res.json({ content: data.choices?.[0]?.message?.content || "" });
+      return res.json({ content: removeNonKorean(data.choices?.[0]?.message?.content || "") });
     }
 
     // ── Groq (완전 무료) ──────────────────────────────────
