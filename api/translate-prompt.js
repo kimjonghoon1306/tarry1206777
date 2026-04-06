@@ -19,20 +19,29 @@ export default async function handler(req, res) {
 Your task: Convert ANY Korean blog topic into a vivid, specific English image generation prompt.
 
 Rules:
-1. Describe a CONCRETE visual scene that represents the topic's ESSENCE
-2. Include: main subject, environment/setting, mood/atmosphere, lighting, visual style
-3. Make it photorealistic and blog-thumbnail-worthy
-4. MAXIMUM 30 words
-5. Output ONLY the English prompt - nothing else, no quotes, no explanation
-6. NEVER output Korean characters
+1. CAREFULLY analyze the Korean topic's EXACT meaning and subject matter
+2. Describe a CONCRETE visual scene that DIRECTLY represents the topic
+3. If topic is about food → show that specific food
+4. If topic is about people/jobs → show relevant people in context
+5. If topic is about places → show that location
+6. If topic is about health/fitness → show relevant activities
+7. If topic is about money/finance → show financial context
+8. Include: main subject, environment/setting, mood/atmosphere, lighting
+9. Make it photorealistic and blog-thumbnail-worthy
+10. MAXIMUM 35 words
+11. Output ONLY the English prompt - nothing else, no quotes, no explanation
+12. NEVER output Korean characters
+13. NEVER use generic images that don't match the topic
 
 Examples:
-- "사회초년생 절약법" → "young Korean office worker counting coins, piggy bank on desk, budgeting notebook, warm home office lighting, hopeful atmosphere"
-- "강남 맛집 추천" → "elegant Korean restaurant interior, beautifully plated Korean cuisine, warm amber lighting, wooden tables, inviting atmosphere"
-- "겨울 여행지 추천" → "scenic snowy mountain landscape, traditional Korean village, pine trees, golden hour sunset, travel destination photography"
-- "주식 투자 초보" → "financial charts on laptop screen, coffee cup, investment books, modern desk setup, focused professional atmosphere"
-- "다이어트 식단 짜기" → "colorful healthy meal prep containers, fresh vegetables fruits, clean kitchen counter, bright natural lighting, fitness lifestyle"
-- "강아지 훈련 방법" → "adorable golden retriever puppy doing trick, outdoor garden, happy trainer, warm sunlight, bonding moment"`;
+- "사회초년생 절약법" → "young Korean office worker counting coins at desk, piggy bank, budget notebook, warm home lighting, hopeful atmosphere"
+- "강남 맛집 추천" → "upscale Korean restaurant in Gangnam, beautifully plated Korean dishes, warm ambient lighting, elegant interior"
+- "경력단절여성 취업" → "Korean woman in professional attire preparing resume, laptop, job interview setting, determined expression, bright office"
+- "배달음식 꿀팁" → "Korean delivery food spread on table, smartphone with delivery app, chopsticks, cozy home setting, evening atmosphere"
+- "겨울 여행지" → "scenic Korean winter landscape, snow-covered mountains, traditional village, golden hour, travel photography style"
+- "주식 투자 초보" → "stock market charts on monitor, Korean investor taking notes, financial books, modern home office, focused atmosphere"
+- "강아지 훈련" → "Korean person training adorable dog outdoors, treat reward, sunny park, bonding moment, warm afternoon light"
+- "다이어트 식단" → "healthy Korean meal prep bowls, fresh vegetables, lean protein, clean kitchen counter, bright natural lighting"`;
 
   const userMsg = `Korean blog topic: "${topic}"\n\nConvert to English image prompt:`;
 
