@@ -107,7 +107,7 @@ export async function generateContent(
     es: "Español", fr: "Français", de: "Deutsch", pt: "Português",
   };
   const langLabel = langMap[language] || "한국어";
-  const maxTokens = Math.max(6000, Math.ceil(minChars * 2.5)); // ✅ FAQ/참고자료/관련글 섹션 포함으로 증가
+  const maxTokens = Math.max(4000, Math.ceil(minChars * 1.8)); // ✅ 섹션 포함 적정 토큰
   const titleInstruction = title
     ? `글 제목은 반드시 "${title}" 으로 시작해줘.`
     : `글 제목은 키워드 "${keyword}"를 포함한 클릭률 높은 제목으로 만들어줘.`;
@@ -155,7 +155,7 @@ ${categoryGuide}
 - 독자에게 말 걸기: "혹시 이런 거 고민해보셨나요?", "아마 많이들 궁금하셨을 텐데"
 - 막연한 표현 금지 → 구체적 수치, 가격, 기간, 날짜로
 - 문장 끝 다양하게: "~해요", "~거든요", "~더라고요", "~잖아요"
-- 반드시 ${minChars}자 이상
+- 반드시 ${minChars}자 이상, ${Math.floor(minChars * 1.4)}자 이하로 작성 (초과 금지)
 - ⚠️ 별표(*) 절대 사용 금지 — **강조**, *이탤릭* 전부 금지
 - ⚠️ 샵(#) 절대 사용 금지 — ## 제목, ### 소제목 전부 금지
 - ⚠️ 대시(-) 목록 절대 금지 — - 항목 전부 금지
@@ -199,7 +199,7 @@ POST3: (연관 주제 블로그 제목 3)|(이유)
       "gemini-2.0-flash",
       "gemini-2.0-flash-lite",
     ];
-    const maxTok = Math.min(8192, Math.max(6000, Math.ceil(minChars * 2.5)));
+    const maxTok = Math.min(8192, Math.max(4000, Math.ceil(minChars * 1.8)));
     let lastErr = "";
     for (const model of GEMINI_MODELS) {
       try {
