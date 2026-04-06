@@ -214,6 +214,11 @@ function ApiKeyManager() {
         if (v?.trim()) {
           userSet(f.key, v.trim());
           toSave[f.key] = v.trim();
+          // ✅ 카테고리는 고정 키로 추가 저장 (superadmin 로그인 여부 무관)
+          if (f.key === "webhook_categories") {
+            localStorage.setItem("admin_webhook_categories", v.trim());
+            localStorage.setItem("u:admin:webhook_categories", v.trim());
+          }
         }
       }
     }));
