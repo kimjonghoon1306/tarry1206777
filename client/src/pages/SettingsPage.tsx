@@ -388,7 +388,7 @@ function CustomWebhookSection() {
     const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
     platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
     localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
-    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain });
+    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain, platform_custom_list: JSON.stringify(updated) });
     setSaved(true);
     setShowAdd(false);
     setCustomDomain(normalizedDomain);
