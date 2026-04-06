@@ -7,18 +7,33 @@
 
 // ── 한자/외국문자/마크다운 기호 강제 제거 ──────────────────────────────
 function removeNonKorean(text: string): string {
-  return text
-    .replace(/[一-鿿㐀-䶿]/g, "")           // 한자 (CJK)
-    .replace(/[\u3040-\u30FF]/g, "")       // 일본어 히라가나/가타카나
-    .replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s.,!?;:()\-\'\"\.\[\]%@#&+=/\\~`|<>{}^_$\n]/g, "") // 그 외 제거
-    .replace(/\*{2,}/g, "")                 // **볼드** 제거
-    .replace(/#{1,6}\s+/g, "")             // ## 헤더 제거
-    .replace(/^[-*]\s+/gm, "")             // - 목록 기호 제거
-    .replace(/^\d+\.\s+/gm, "")           // 1. 번호 목록 제거
-    .replace(/_{2,}/g, "")                 // __밑줄__ 제거
-    .replace(/ {2,}/g, " ")                // 연속 공백 정리
-    .replace(/\n{3,}/g, "\n\n")            // 빈 줄 3개 이상 → 2개
+  // ✅ 섹션 마커 먼저 추출해서 보존
+  const markers = ["[FAQ시작]","[FAQ끝]","[참고자료시작]","[참고자료끝]","[관련글시작]","[관련글끝]"];
+  const placeholder: Record<string, string> = {};
+  markers.forEach((m, i) => {
+    const key = `__MARKER${i}__`;
+    placeholder[key] = m;
+    text = text.split(m).join(key);
+  });
+
+  text = text
+    .replace(/[一-鿿㐀-䶿]/g, "")
+    .replace(/[\u3040-\u30FF]/g, "")
+    .replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s.,!?;:()\-\'\"\.\[\]%@#&+=/\\~`|<>{}^_$\n]/g, "")
+    .replace(/\*{2,}/g, "")
+    .replace(/#{1,6}\s+/g, "")
+    .replace(/^[-*]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .replace(/_{2,}/g, "")
+    .replace(/ {2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
+
+  // 마커 복원
+  Object.entries(placeholder).forEach(([key, val]) => {
+    text = text.split(key).join(val);
+  });
+  return text;
 }
 // ── 공통 에러 파싱 ────────────────────────────────────
 function parseError(provider: string, status: number, msg: string): string {
@@ -150,7 +165,33 @@ ${categoryGuide}
 - 순수 텍스트, 자연스러운 단락 구분
 - SEO: 키워드 자연스럽게 7회 이상
 - 절대 한자, 중국어, 일본어, 베트남어 등 외국 문자 금지
-- 오직 한글, 영어, 숫자만 사용${styleInstruction}`
+- 오직 한글, 영어, 숫자만 사용${styleInstruction}
+
+[필수 섹션 - 본문 끝에 반드시 추가]
+본문을 다 쓴 후, 아래 형식으로 3개 섹션을 반드시 추가해줘.
+
+[FAQ시작]
+Q1: (독자가 가장 많이 궁금해하는 질문 1)
+A1: (구체적이고 실용적인 답변)
+Q2: (질문 2)
+A2: (답변)
+Q3: (질문 3)
+A3: (답변)
+Q4: (질문 4)
+A4: (답변)
+[FAQ끝]
+
+[참고자료시작]
+LINK1: (관련 공식기관 또는 신뢰할 수 있는 사이트 이름)|(간단한 설명 한 줄)|(https://실제URL)
+LINK2: (사이트 이름)|(설명)|(https://실제URL)
+LINK3: (사이트 이름)|(설명)|(https://실제URL)
+[참고자료끝]
+
+[관련글시작]
+POST1: (연관 주제 블로그 제목 1)|(이 글을 읽으면 좋은 이유 한 줄)
+POST2: (연관 주제 블로그 제목 2)|(이유)
+POST3: (연관 주제 블로그 제목 3)|(이유)
+[관련글끝]`
 
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
