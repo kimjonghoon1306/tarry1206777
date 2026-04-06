@@ -36,6 +36,21 @@ async function uploadToImgbb(imgbbKey, imageData) {
   }
 }
 
+function normalizeReplicateOutput(output) {
+  if (!output) return [];
+  const items = Array.isArray(output) ? output : [output];
+  return items
+    .map((item) => {
+      if (!item) return null;
+      if (typeof item === "string") return item;
+      if (typeof item === "object") {
+        return item.url || item.uri || item.href || item.output || null;
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
 // size → Gemini aspectRatio 변환
 function toAspectRatio(size) {
   if (!size) return "1:1";
@@ -71,7 +86,7 @@ export default async function handler(req, res) {
       });
       const d = await r.json();
       const images = d.status === "succeeded"
-        ? (Array.isArray(d.output) ? d.output : [d.output].filter(Boolean))
+        ? normalizeReplicateOutput(d.output)
         : [];
       const uploaded = (d.status === "succeeded" && imgbbKey)
         ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img)))
@@ -248,14 +263,14 @@ export default async function handler(req, res) {
 
       // 즉시 완료된 경우
       if (data.status === "succeeded") {
-        const images = Array.isArray(data.output) ? data.output : [data.output].filter(Boolean);
+        const images = normalizeReplicateOutput(data.output);
         const uploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
         return res.json({ ok: true, images: uploaded, provider: "replicate", done: true });
       }
 
       // 처리 중 → ID 반환, 브라우저가 폴링
       if (data.id) {
-        return res.json({ ok: true, predictionId: data.id, done: false, provider: "replicate" });
+        return res.json({ ok: true, predictionId: data.id, status: data.status || "starting", done: false, provider: "replicate" });
       }
 
       throw new Error("Replicate 예측 시작 실패");
