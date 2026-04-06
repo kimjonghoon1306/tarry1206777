@@ -7,13 +7,11 @@
 
 // ── 한자/외국문자/마크다운 기호 강제 제거 ──────────────────────────────
 function removeNonKorean(text: string): string {
-  // ✅ 섹션 마커 먼저 추출해서 보존
+  // ✅ 섹션 마커 먼저 추출해서 보존 (언더바 없는 플레이스홀더 사용)
   const markers = ["[FAQ시작]","[FAQ끝]","[참고자료시작]","[참고자료끝]","[관련글시작]","[관련글끝]"];
-  const placeholder: Record<string, string> = {};
-  markers.forEach((m, i) => {
-    const key = `__MARKER${i}__`;
-    placeholder[key] = m;
-    text = text.split(m).join(key);
+  const placeholders: [string, string][] = markers.map((m, i) => [`XSECMARK${i}X`, m]);
+  placeholders.forEach(([key, val]) => {
+    text = text.split(val).join(key);
   });
 
   text = text
@@ -30,7 +28,7 @@ function removeNonKorean(text: string): string {
     .trim();
 
   // 마커 복원
-  Object.entries(placeholder).forEach(([key, val]) => {
+  placeholders.forEach(([key, val]) => {
     text = text.split(key).join(val);
   });
   return text;
@@ -109,7 +107,7 @@ export async function generateContent(
     es: "Español", fr: "Français", de: "Deutsch", pt: "Português",
   };
   const langLabel = langMap[language] || "한국어";
-  const maxTokens = Math.max(4000, Math.ceil(minChars * 2));
+  const maxTokens = Math.max(6000, Math.ceil(minChars * 2.5)); // ✅ FAQ/참고자료/관련글 섹션 포함으로 증가
   const titleInstruction = title
     ? `글 제목은 반드시 "${title}" 으로 시작해줘.`
     : `글 제목은 키워드 "${keyword}"를 포함한 클릭률 높은 제목으로 만들어줘.`;
@@ -201,7 +199,7 @@ POST3: (연관 주제 블로그 제목 3)|(이유)
       "gemini-2.0-flash",
       "gemini-2.0-flash-lite",
     ];
-    const maxTok = Math.min(8192, Math.max(4000, Math.ceil(minChars * 2)));
+    const maxTok = Math.min(8192, Math.max(6000, Math.ceil(minChars * 2.5)));
     let lastErr = "";
     for (const model of GEMINI_MODELS) {
       try {
