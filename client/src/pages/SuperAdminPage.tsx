@@ -78,7 +78,7 @@ const API_SECTIONS = [
     fields: [
       { label: "Gemini API Key (글쓰기 공용)", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "글쓰기용", badgeColor: "#4285F4" },
       { label: "OpenAI API Key (DALL-E 3)", key: "openai_api_key", placeholder: "sk-...", link: "https://platform.openai.com/api-keys", badge: "유료", badgeColor: "#f59e0b" },
-      { label: "Replicate API Token (Flux)", key: "replicate_api_token", placeholder: "r8_...", link: "https://replicate.com/account/api-tokens", badge: "유료", badgeColor: "#f59e0b", note: "⚠️ 크레딧 $5 미만 시 속도 제한 — 이미지 1장씩 순차 생성됩니다. $5 이상 충전하면 빠른 병렬 생성이 가능합니다." },
+      { label: "Replicate API Token (Flux)", key: "replicate_api_token", placeholder: "r8_...", link: "https://replicate.com/account/api-tokens", badge: "유료", badgeColor: "#f59e0b" },
       { label: "imgbb API Key (이미지 영구 저장)", key: "imgbb_api_key", placeholder: "imgbb API 키...", link: "https://api.imgbb.com", badge: "무료", badgeColor: "#10b981" },
     ],
   },
@@ -424,8 +424,7 @@ function ApiKeyManager() {
             {isOpen && (
               <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--border)" }}>
                 <div className="pt-3 space-y-3">
-                  {fields.map((field: any) => {
-                    const { label, key, placeholder, link, badge, badgeColor, type, options } = field;
+                  {fields.map(({ label, key, placeholder, link, badge, badgeColor, type, options }: any) => {
                     const uid = key + label;
                     const filled = !!values[key]?.trim();
 
@@ -505,11 +504,6 @@ function ApiKeyManager() {
                         {filled && (
                           <p className="text-xs mt-1 flex items-center gap-1" style={{ color }}>
                             <CheckCircle2 className="w-3 h-3" /> 저장된 키 있음
-                          </p>
-                        )}
-                        {(field as any).note && (
-                          <p className="text-xs mt-1.5 px-2 py-1.5 rounded-lg" style={{ background: "#f59e0b18", color: "#b45309" }}>
-                            {(field as any).note}
                           </p>
                         )}
                       </div>
