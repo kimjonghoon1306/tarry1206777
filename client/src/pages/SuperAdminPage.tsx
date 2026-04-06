@@ -153,6 +153,7 @@ const API_SECTIONS = [
           { value: "none", label: "인증 없음 (공개 API)" },
         ],
       },
+      { label: "카테고리 (쉼표로 구분)", key: "webhook_categories", placeholder: "생활정보, IT, 맛집, 여행", link: "", badge: "발행시 선택", badgeColor: "#6366f1", note: "내 사이트 카테고리명과 동일하게 입력하세요. 발행 시 드롭다운으로 선택할 수 있어요." },
     ],
   },
 ];
