@@ -358,7 +358,15 @@ function PublishPanel({
   };
 
   const [categories, setCategories] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; }
+    try {
+      // 관리자가 설정한 webhook_categories 우선
+      const adminCats = localStorage.getItem("u:admin:webhook_categories") || userGet("webhook_categories") || "";
+      if (adminCats.trim()) return adminCats.split(",").map(c => c.trim()).filter(Boolean);
+      // platform_custom_list에서 선택된 사이트 카테고리
+      const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+      if (customList.length > 0 && customList[0].categories) return JSON.parse(customList[0].categories || "[]");
+      return [];
+    } catch { return []; }
   });
   const [newCat, setNewCat] = useState("");
 
