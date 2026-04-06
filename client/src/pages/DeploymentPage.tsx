@@ -359,31 +359,18 @@ function PublishPanel({
 
   const [categories, setCategories] = useState<string[]>(() => {
     try {
-      // 관리자가 설정한 webhook_categories 우선
-      const adminCats = localStorage.getItem("u:admin:webhook_categories") || userGet("webhook_categories") || "";
+      // 관리자 고정 키 우선 (superadmin 저장 방식)
+      const adminCats =
+        localStorage.getItem("admin_webhook_categories") ||
+        localStorage.getItem("u:admin:webhook_categories") ||
+        userGet("webhook_categories") || "";
       if (adminCats.trim()) return adminCats.split(",").map(c => c.trim()).filter(Boolean);
-      // platform_custom_list에서 선택된 사이트 카테고리
+      // 일반 유저 - platform_custom_list에서 카테고리
       const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
       if (customList.length > 0 && customList[0].categories) return JSON.parse(customList[0].categories || "[]");
       return [];
     } catch { return []; }
   });
-  const [newCat, setNewCat] = useState("");
-
-  function addCategory() {
-    const v = newCat.trim();
-    if (!v || categories.includes(v)) return;
-    const updated = [...categories, v];
-    setCategories(updated);
-    localStorage.setItem("blogauto_categories", JSON.stringify(updated));
-    setNewCat("");
-  }
-  function removeCategory(cat: string) {
-    const updated = categories.filter(c => c !== cat);
-    setCategories(updated);
-    localStorage.setItem("blogauto_categories", JSON.stringify(updated));
-    if (selectedCategory === cat) setSelectedCategory("");
-  }
 
   const platformLabel = (type: string) => {
     if (type === "naver") return "N";
