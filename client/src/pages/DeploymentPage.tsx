@@ -957,10 +957,8 @@ export default function DeploymentPage() {
     setThumbnail("");
     setHashtags([]);
     setBlocks([{ type: "text", id: uid(), content: "" }]);
-    setDeployImages([]);
     setAutoInserted(false);
     localStorage.removeItem("blogauto_deploy_blocks");
-    localStorage.removeItem("blogauto_deploy_images");
     toast.success("전체 초기화 완료!");
   }
 
@@ -975,8 +973,6 @@ export default function DeploymentPage() {
   function handleResetImages() {
     setBlocks((prev) => prev.filter((b) => b.type === "text"));
     setThumbnail("");
-    setDeployImages([]);
-    localStorage.removeItem("blogauto_deploy_images");
     setAutoInserted(false);
     toast.success("이미지 전체 초기화 완료!");
   }
