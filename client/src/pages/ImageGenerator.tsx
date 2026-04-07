@@ -853,22 +853,16 @@ export default function ImageGenerator() {
     }
   };
 
-  // ── 신규 생성 ──────────────────────────────────────
-  // 한국어 → 영어 이미지 프롬프트 자동 변환
   // ── 한국어 → 영어 이미지 프롬프트 자동 변환 ──────────────
-  // 전용 translate-prompt API 사용 → 어떤 주제든 정확하게 변환
   const autoTranslatePrompt = async (koreanPrompt: string): Promise<string> => {
     const p = koreanPrompt.trim();
     const NP = "no people, no portrait, no face, object focused";
 
-    // 이미 영문이면 그대로 + no people 추가
     if (!/[가-힣]/.test(p)) {
       return `${p}, ${NP}, professional photography, 8K ultra realistic`;
     }
 
-    const baseKeyword = extractKeyword(p) || p;
-
-    // ── Step 1: 전용 번역 API ───────────
+    // ── Step 1: AI 번역 API ───────────
     const aiProvider = getContentProvider();
     const aiKey = getAPIKey(aiProvider);
     if (aiKey) {
@@ -876,48 +870,68 @@ export default function ImageGenerator() {
         const resp = await fetch("/api/translate-prompt", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: baseKeyword }),
+          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: p }),
         });
         const data = await resp.json();
-        if (data.ok && data.prompt && data.prompt.length > 5) {
+        if (data.ok && data.prompt && data.prompt.length > 10) {
           return `${data.prompt}, ${NP}, professional photography, 8K ultra realistic`;
         }
       } catch {}
     }
 
-    // ── Step 2: KO_EN_MAP 매핑 (길이 긴 것 우선) ───────────────────
+    // ── Step 2: KO_EN_MAP 매핑 (길이 긴 것 우선) ──────────
     const sortedEntries = Object.entries(KO_EN_MAP).sort((a, b) => b[0].length - a[0].length);
     for (const [ko, en] of sortedEntries) {
-      if (baseKeyword.includes(ko) || p.includes(ko)) {
+      if (p.includes(ko)) {
         return `${en}, professional photography, natural lighting, 8K ultra realistic`;
       }
     }
 
-    // ── Step 3: 카테고리 폴백 (no people 적용) ──────────────────────
-    const target = baseKeyword + " " + p;
-    if (/절약|저축|재테크|투자|사회초년생|직장인|월급|금융|경제|대출|신용/.test(target))
-      return `coins stacked piggy bank savings jar financial document, ${NP}, professional photography, 8K`;
-    if (/맛집|음식|카페|식당|요리|커피|치킨|스테이크|라면/.test(target))
-      return `delicious Korean food beautiful plating restaurant table, ${NP}, professional photography, 8K`;
-    if (/여행|관광|제주|부산|호텔|해외/.test(target))
-      return `beautiful travel destination landscape scenic view golden hour, ${NP}, professional photography, 8K`;
-    if (/다이어트|운동|헬스|요가|건강|피트니스/.test(target))
-      return `gym equipment weights healthy food vegetables, ${NP}, professional photography, 8K`;
-    if (/패션|뷰티|스킨케어|메이크업|옷/.test(target))
-      return `cosmetics products skincare bottles beauty items, ${NP}, professional photography, 8K`;
-    if (/육아|아이|아기|가족/.test(target))
-      return `baby toys nursery room stroller crib, ${NP}, professional photography, 8K`;
-    if (/IT|앱|AI|테크|컴퓨터|블로그/.test(target))
-      return `laptop screen code monitor technology desk, ${NP}, professional photography, 8K`;
-    if (/취업|공부|학생|수능/.test(target))
-      return `study books desk lamp stationery notebook, ${NP}, professional photography, 8K`;
-    if (/강아지|고양이|반려동물/.test(target))
-      return `dog puppy cat kitten playing toy bowl cute`;
-    if (/인테리어|집|거실|홈|부동산|아파트/.test(target))
-      return `modern interior design living room minimalist aesthetic, ${NP}, professional photography, 8K`;
+    // ── Step 3: 키워드 기반 정밀 카테고리 폴백 ──────────────
+    const t = p.toLowerCase();
+    if (/유튜브|유튜버|채널|구독|조회수|쇼츠|알고리즘/.test(t))
+      return `youtube creator studio setup camera ring light tripod microphone desk equipment, ${NP}, professional photography, 8K`;
+    if (/넷플릭스|왓챠|티빙|구독서비스|ott/.test(t))
+      return `streaming service remote control television couch living room entertainment, ${NP}, professional photography, 8K`;
+    if (/블로그|글쓰기|seo|포스팅|네이버|티스토리/.test(t))
+      return `laptop keyboard blog writing desk coffee notebook pen creative workspace, ${NP}, professional photography, 8K`;
+    if (/주식|코인|비트코인|투자|etf|펀드|증권/.test(t))
+      return `stock market trading chart graph monitor financial investment growth, ${NP}, professional photography, 8K`;
+    if (/재테크|절약|저축|월급|통장|가계부/.test(t))
+      return `coins piggy bank savings jar financial document budget planner, ${NP}, professional photography, 8K`;
+    if (/부동산|아파트|전세|월세|청약|분양|주택/.test(t))
+      return `modern apartment building exterior real estate document keys, ${NP}, professional photography, 8K`;
+    if (/다이어트|체중|살빼기|헬스|요가|필라테스/.test(t))
+      return `healthy food vegetables salad measuring tape scale gym equipment, ${NP}, professional photography, 8K`;
+    if (/건강|의학|병원|약|증상|치료|수면|탈모/.test(t))
+      return `health wellness vitamins supplements capsules herbs natural, ${NP}, professional photography, 8K`;
+    if (/여행|관광|해외|제주|부산|호텔|숙소/.test(t))
+      return `beautiful travel destination scenic landscape landmark golden hour, ${NP}, professional photography, 8K`;
+    if (/맛집|음식|요리|카페|식당|커피|치킨|라면/.test(t))
+      return `delicious gourmet food beautiful plating restaurant table warm lighting, ${NP}, professional photography, 8K`;
+    if (/취업|이직|면접|자소서|직장|알바|취준/.test(t))
+      return `resume document briefcase office desk laptop professional workspace, ${NP}, professional photography, 8K`;
+    if (/육아|아기|임신|출산|아이|엄마|육아용품/.test(t))
+      return `baby toys nursery room soft pastel crib stroller, ${NP}, professional photography, 8K`;
+    if (/패션|뷰티|스킨케어|메이크업|화장품|옷|쇼핑/.test(t))
+      return `skincare beauty cosmetics products bottles cream elegant background, ${NP}, professional photography, 8K`;
+    if (/it|앱|ai|인공지능|테크|프로그래밍|코딩|개발/.test(t))
+      return `technology digital circuit board AI chip laptop code screen, ${NP}, professional photography, 8K`;
+    if (/자동차|차량|전기차|중고차|드라이브/.test(t))
+      return `car automobile road exterior modern sleek design, ${NP}, professional photography, 8K`;
+    if (/공부|학습|수능|영어|자격증|시험|독서/.test(t))
+      return `study books notebook desk lamp stationery learning workspace, ${NP}, professional photography, 8K`;
+    if (/인테리어|홈|거실|침실|리모델링|청소|정리/.test(t))
+      return `modern interior design living room minimalist furniture aesthetic, ${NP}, professional photography, 8K`;
+    if (/강아지|고양이|반려동물|펫|햄스터/.test(t))
+      return `cute pet dog puppy playing toy indoor cozy home`;
+    if (/창업|사업|마케팅|비즈니스|스타트업/.test(t))
+      return `startup business office modern desk strategy board growth chart, ${NP}, professional photography, 8K`;
+    if (/운동|피트니스|스포츠|근육|트레이닝/.test(t))
+      return `gym fitness equipment weights dumbbells training, ${NP}, professional photography, 8K`;
 
-    // 완전 최후 수단
-    return `informational blog object still life clean background, ${NP}, professional photography, 8K`;
+    // ── 최후 수단 ──
+    return `lifestyle concept object flat lay minimal clean background, ${NP}, professional photography, 8K`;
   };
 
 
