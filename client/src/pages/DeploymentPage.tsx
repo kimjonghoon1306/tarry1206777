@@ -1242,8 +1242,7 @@ export default function DeploymentPage() {
       const firstIsImage = firstBlock && (firstBlock.type === "image" || firstBlock.type === "image-pair");
       if (firstIsImage && parts.length > 0) {
         const [firstPart, ...restParts] = parts;
-        return firstPart + tocHtml + restParts.join("
-") + tailHtml;
+        return firstPart + tocHtml + restParts.join("\n") + tailHtml;
       }
     }
 
