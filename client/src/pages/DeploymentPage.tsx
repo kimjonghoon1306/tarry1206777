@@ -911,7 +911,33 @@ export default function DeploymentPage() {
       if (/^### /.test(line)) return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:10px">${inlineFormat(line.slice(4))}</h3>`;
       if (/^---+$/.test(line.trim())) return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
       if (!line.trim()) return "";
-      return `<p style="line-height:1.9;margin:0 0 16px;color:#333333;font-size:16px">${inlineFormat(line)}</p>`;
+
+      const text = inlineFormat(line);
+
+      // 🔵 팁/핵심/포인트 → 파란 박스
+      if (/^(tip|팁|포인트|핵심|check|체크|꿀팁)[:\s!]/i.test(line.trim())) {
+        return `<div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#1e3a8a;line-height:1.7">💡 ${text}</div>`;
+      }
+      // 🟡 주의/경고 → 노란 박스
+      if (/^(주의|경고|warning|caution|조심)[:\s!]/i.test(line.trim())) {
+        return `<div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#78350f;line-height:1.7">⚠️ ${text}</div>`;
+      }
+      // 🟢 중요/필수/반드시 → 초록 박스
+      if (/^(중요|필수|반드시|꼭|key|핵심 정리)[:\s!]/i.test(line.trim())) {
+        return `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#14532d;line-height:1.7">✅ ${text}</div>`;
+      }
+      // 문장 내 중요 키워드 감지 → 자동 색상 박스
+      if (/반드시|꼭 확인|주의해야|절대|가장 중요|핵심은|정리하면|요약하면/.test(line) && line.length < 150) {
+        return `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 10px 10px 0;padding:12px 16px;margin:16px 0;font-size:15px;color:#14532d;line-height:1.7">✅ ${text}</div>`;
+      }
+      if (/주의|조심|실수|틀리기|헷갈리|오해|잘못/.test(line) && line.length < 150) {
+        return `<div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:12px 16px;margin:16px 0;font-size:15px;color:#78350f;line-height:1.7">⚠️ ${text}</div>`;
+      }
+      if (/팁|꿀팁|비법|비결|노하우|포인트|추천/.test(line) && line.length < 150) {
+        return `<div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 10px 10px 0;padding:12px 16px;margin:16px 0;font-size:15px;color:#1e3a8a;line-height:1.7">💡 ${text}</div>`;
+      }
+
+      return `<p style="line-height:1.9;margin:0 0 16px;color:#333333;font-size:16px">${text}</p>`;
     }
 
     function groupLines(lines: string[]): string {
