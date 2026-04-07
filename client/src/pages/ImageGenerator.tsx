@@ -314,11 +314,51 @@ const STYLE_PROMPTS: Record<string, string> = {
 };
 
 const STYLES = [
-  { value: "realistic", label: "📸 실사 사진", desc: "최상급 퀄리티 리얼 사진" },
-  { value: "commercial", label: "✨ 광고/상업", desc: "구매욕 자극하는 매력적 사진" },
-  { value: "lifestyle", label: "🏠 라이프스타일", desc: "살고싶은 인테리어/일상" },
-  { value: "illustration", label: "🎨 일러스트", desc: "감각적인 디지털 아트" },
+  { value: "realistic", label: "📸 애드센스 최적 실사", desc: "주제와 상관없이 가장 안전한 프리미엄 블로그 사진" },
+  { value: "commercial", label: "✨ 광고/상업", desc: "보조 옵션" },
+  { value: "lifestyle", label: "🏠 라이프스타일", desc: "보조 옵션" },
+  { value: "illustration", label: "🎨 일러스트", desc: "권장 안 함" },
 ];
+
+
+const ADSENSE_STYLE_VALUE = "realistic";
+const ADSENSE_STYLE_LABEL = "📸 애드센스 최적 실사";
+const ADSENSE_QUALITY_BOOST = [
+  "premium editorial blog photography",
+  "ultra realistic DSLR photo",
+  "natural lighting",
+  "clean composition",
+  "trustworthy blog article image",
+  "high quality magazine style",
+  "sharp focus",
+  "rich natural colors"
+].join(", ");
+const ADSENSE_NEGATIVE_PROMPT = [
+  "no infographic",
+  "no diagram",
+  "no chart",
+  "no graph",
+  "no screenshot",
+  "no user interface",
+  "no UI",
+  "no app screen",
+  "no dashboard",
+  "no text overlay",
+  "no poster",
+  "no banner",
+  "no watermark",
+  "no logo",
+  "no brand text",
+  "no white studio background",
+  "no isolated product cutout",
+  "no 3d render",
+  "no cartoon",
+  "no illustration"
+].join(", ");
+
+function buildAdsenseSafePrompt(basePrompt: string): string {
+  return `${basePrompt}, ${STYLE_PROMPTS.realistic}, ${ADSENSE_QUALITY_BOOST}, ${ADSENSE_NEGATIVE_PROMPT}`;
+}
 
 const STATS_KEY = "img_stats";
 function loadStats() {
@@ -484,9 +524,7 @@ export default function ImageGenerator() {
     if (autoPrompt) return autoPrompt;
     try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").prompt || "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명"; } catch { return "서울 강남 맛집, 고급 레스토랑 내부, 아름다운 음식 플레이팅, 따뜻한 조명"; }
   });
-  const [style, setStyle] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").style || "realistic"; } catch { return "realistic"; }
-  });
+  const [style, setStyle] = useState<string>("realistic");
   const [size, setSize] = useState(() => {
     try { return JSON.parse(localStorage.getItem("imggen_state") || "{}").size || "1024x1024"; } catch { return "1024x1024"; }
   });
@@ -524,6 +562,11 @@ export default function ImageGenerator() {
   useEffect(() => {
     if (autoPrompt) setPrompt(autoPrompt);
   }, [autoPrompt]);
+
+  // 애드센스용 기본 스타일은 항상 실사 고정
+  useEffect(() => {
+    if (style !== ADSENSE_STYLE_VALUE) setStyle(ADSENSE_STYLE_VALUE);
+  }, [style]);
 
   // 설정 변경시 localStorage 저장
   useEffect(() => {
@@ -863,7 +906,7 @@ export default function ImageGenerator() {
     const NP = "no people, no portrait, no face, object focused";
 
     if (!/[가-힣]/.test(p)) {
-      return `${p}, ${NP}, professional photography, 8K ultra realistic`;
+      return `${p}, ${NP}, editorial blog photo, natural lighting, professional photography, 8K ultra realistic`;
     }
 
     // ── Step 1: AI 번역 API ───────────
@@ -878,7 +921,7 @@ export default function ImageGenerator() {
         });
         const data = await resp.json();
         if (data.ok && data.prompt && data.prompt.length > 10) {
-          return `${data.prompt}, ${NP}, professional photography, 8K ultra realistic`;
+          return `${data.prompt}, ${NP}, natural real-world scene, editorial blog photo, 8K ultra realistic`;
         }
       } catch {}
     }
@@ -887,7 +930,7 @@ export default function ImageGenerator() {
     const sortedEntries = Object.entries(KO_EN_MAP).sort((a, b) => b[0].length - a[0].length);
     for (const [ko, en] of sortedEntries) {
       if (p.includes(ko)) {
-        return `${en}, professional photography, natural lighting, 8K ultra realistic`;
+        return `${en}, natural real-world scene, editorial blog photo, natural lighting, 8K ultra realistic`;
       }
     }
     // 공백/특수문자로 분리된 단어도 매핑 시도
@@ -895,7 +938,7 @@ export default function ImageGenerator() {
     for (const word of words) {
       for (const [ko, en] of sortedEntries) {
         if (word.includes(ko) || ko.includes(word)) {
-          return `${en}, professional photography, natural lighting, 8K ultra realistic`;
+          return `${en}, natural real-world scene, editorial blog photo, natural lighting, 8K ultra realistic`;
         }
       }
     }
@@ -903,52 +946,52 @@ export default function ImageGenerator() {
     // ── Step 3: 키워드 기반 정밀 카테고리 폴백 ──────────────
     const t = p.toLowerCase();
     if (/캠핑|아웃도어|등산|트레킹|백패킹|텐트|캠핑용품|글램핑/.test(t))
-      return `camping gear equipment tent outdoor backpack sleeping bag nature, ${NP}, professional photography, 8K`;
+      return `camping gear equipment tent outdoor backpack sleeping bag nature, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/도매|wholesale|공급|유통|벌크|대량구매/.test(t))
-      return `wholesale warehouse products boxes storage supply chain, ${NP}, professional photography, 8K`;
+      return `wholesale warehouse products boxes storage supply chain, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/유튜브|유튜버|채널|구독|조회수|쇼츠|알고리즘/.test(t))
-      return `youtube creator studio setup camera ring light tripod microphone desk equipment, ${NP}, professional photography, 8K`;
+      return `youtube creator studio setup camera ring light tripod microphone desk equipment, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/넷플릭스|왓챠|티빙|구독서비스|ott/.test(t))
-      return `streaming service remote control television couch living room entertainment, ${NP}, professional photography, 8K`;
+      return `streaming service remote control television couch living room entertainment, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/블로그|글쓰기|seo|포스팅|네이버|티스토리/.test(t))
-      return `laptop keyboard blog writing desk coffee notebook pen creative workspace, ${NP}, professional photography, 8K`;
+      return `laptop keyboard blog writing desk coffee notebook pen creative workspace, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/주식|코인|비트코인|투자|etf|펀드|증권/.test(t))
-      return `stock market trading chart graph monitor financial investment growth, ${NP}, professional photography, 8K`;
+      return `stock market trading chart graph monitor financial investment growth, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/재테크|절약|저축|월급|통장|가계부/.test(t))
-      return `coins piggy bank savings jar financial document budget planner, ${NP}, professional photography, 8K`;
+      return `coins piggy bank savings jar financial document budget planner, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/부동산|아파트|전세|월세|청약|분양|주택/.test(t))
-      return `modern apartment building exterior real estate document keys, ${NP}, professional photography, 8K`;
+      return `modern apartment building exterior real estate document keys, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/다이어트|체중|살빼기|헬스|요가|필라테스/.test(t))
-      return `healthy food vegetables salad measuring tape scale gym equipment, ${NP}, professional photography, 8K`;
+      return `healthy food vegetables salad measuring tape scale gym equipment, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/건강|의학|병원|약|증상|치료|수면|탈모/.test(t))
-      return `health wellness vitamins supplements capsules herbs natural, ${NP}, professional photography, 8K`;
+      return `health wellness vitamins supplements capsules herbs natural, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/여행|관광|해외|제주|부산|호텔|숙소/.test(t))
-      return `beautiful travel destination scenic landscape landmark golden hour, ${NP}, professional photography, 8K`;
+      return `beautiful travel destination scenic landscape landmark golden hour, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/맛집|음식|요리|카페|식당|커피|치킨|라면/.test(t))
-      return `delicious gourmet food beautiful plating restaurant table warm lighting, ${NP}, professional photography, 8K`;
+      return `delicious gourmet food beautiful plating restaurant table warm lighting, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/취업|이직|면접|자소서|직장|알바|취준/.test(t))
-      return `resume document briefcase office desk laptop professional workspace, ${NP}, professional photography, 8K`;
+      return `resume document briefcase office desk laptop professional workspace, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/육아|아기|임신|출산|아이|엄마|육아용품/.test(t))
-      return `baby toys nursery room soft pastel crib stroller, ${NP}, professional photography, 8K`;
+      return `baby toys nursery room soft pastel crib stroller, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/패션|뷰티|스킨케어|메이크업|화장품|옷|쇼핑/.test(t))
-      return `skincare beauty cosmetics products bottles cream elegant background, ${NP}, professional photography, 8K`;
+      return `skincare beauty cosmetics products bottles cream elegant background, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/it|앱|ai|인공지능|테크|프로그래밍|코딩|개발/.test(t))
-      return `technology digital circuit board AI chip laptop code screen, ${NP}, professional photography, 8K`;
+      return `technology digital circuit board AI chip laptop code screen, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/자동차|차량|전기차|중고차|드라이브/.test(t))
-      return `car automobile road exterior modern sleek design, ${NP}, professional photography, 8K`;
+      return `car automobile road exterior modern sleek design, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/공부|학습|수능|영어|자격증|시험|독서/.test(t))
-      return `study books notebook desk lamp stationery learning workspace, ${NP}, professional photography, 8K`;
+      return `study books notebook desk lamp stationery learning workspace, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/인테리어|홈|거실|침실|리모델링|청소|정리/.test(t))
-      return `modern interior design living room minimalist furniture aesthetic, ${NP}, professional photography, 8K`;
+      return `modern interior design living room minimalist furniture aesthetic, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/강아지|고양이|반려동물|펫|햄스터/.test(t))
       return `cute pet dog puppy playing toy indoor cozy home`;
     if (/창업|사업|마케팅|비즈니스|스타트업/.test(t))
-      return `startup business office modern desk strategy board growth chart, ${NP}, professional photography, 8K`;
+      return `startup business office modern desk strategy board growth chart, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
     if (/운동|피트니스|스포츠|근육|트레이닝/.test(t))
-      return `gym fitness equipment weights dumbbells training, ${NP}, professional photography, 8K`;
+      return `gym fitness equipment weights dumbbells training, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
 
     // ── 최후 수단 ──
-    return `lifestyle concept object flat lay minimal clean background, ${NP}, professional photography, 8K`;
+    return `lifestyle concept object flat lay minimal clean background, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
   };
 
 
@@ -972,10 +1015,9 @@ export default function ImageGenerator() {
       // 첫 번째 variation만 캐시, 나머지는 매번 다르게
       const firstTranslated = translatedPrompt || await autoTranslatePrompt(prompt.trim(), 0);
       if (!translatedPrompt) setTranslatedPrompt(firstTranslated);
-      const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
-      const fullPrompt = `${firstTranslated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
+      const fullPrompt = buildAdsenseSafePrompt(firstTranslated);
       const [w, h] = (size || "1024x1024").split("x").map(Number);
-      const styleLabel = STYLES.find(s => s.value === style)?.label || style;
+      const styleLabel = ADSENSE_STYLE_LABEL;
 
       toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
 
@@ -983,13 +1025,11 @@ export default function ImageGenerator() {
         await generateImages(1, fullPrompt, w || 1024, h || 1024, styleLabel, size);
       } else {
         // 여러 장 생성 시 각각 다른 variation 프롬프트 사용
-        const aiProvider = getContentProvider();
-        const aiKey = getAPIKey(aiProvider);
-        const prompts: string[] = [fullPrompt]; // 첫 번째는 이미 생성됨
+                const prompts: string[] = [fullPrompt]; // 첫 번째는 이미 생성됨
         for (let vi = 1; vi < numImages; vi++) {
           try {
             const varTranslated = await autoTranslatePrompt(prompt.trim(), vi);
-            prompts.push(`${varTranslated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`);
+            prompts.push(buildAdsenseSafePrompt(varTranslated));
           } catch {
             prompts.push(fullPrompt);
           }
@@ -1071,11 +1111,11 @@ export default function ImageGenerator() {
   };
   const toggleSelect = (id: number) => setSelectedImages(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  // ── 15개 제한 배포 이동 ───────────────────────────
-  const MAX_DEPLOY = 15;
+  // ── 전체 이미지 배포 이동 ───────────────────────────
+  const MAX_DEPLOY = 999;
 
   const sendToDeploy = (images: GalleryItem[]) => {
-    const final = images.slice(0, MAX_DEPLOY);
+    const final = images;
     try {
       localStorage.setItem("blogauto_deploy_images", JSON.stringify(
         final.map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
@@ -1085,7 +1125,7 @@ export default function ImageGenerator() {
         final.filter(i => !i.src.startsWith("data:")).map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
       ));
     }
-    toast.success(`이미지 ${final.length}개 배포 페이지로 이동합니다!`);
+    toast.success(`이미지 ${final.length}개 전체를 배포 페이지로 이동합니다!`);
     navigate("/deploy?autoInsert=true");
   };
 
@@ -1168,19 +1208,26 @@ export default function ImageGenerator() {
               )}
             </div>
             <div>
-              <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>이미지 스타일</label>
+              <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: "var(--muted-foreground)" }}>생성 모드</label>
               <div className="grid grid-cols-2 gap-2">
                 {STYLES.map((s) => (
                   <button key={s.value} className="rounded-lg p-2.5 text-left transition-all"
                     style={{
-                      background: style === s.value ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)",
-                      border: `1px solid ${style === s.value ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
+                      background: s.value === ADSENSE_STYLE_VALUE ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)",
+                      border: `1px solid ${s.value === ADSENSE_STYLE_VALUE ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
+                      opacity: s.value === ADSENSE_STYLE_VALUE ? 1 : 0.5,
                     }}
-                    onClick={() => setStyle(s.value)}>
+                    onClick={() => {
+                      setStyle(ADSENSE_STYLE_VALUE);
+                      toast.info("애드센스 기준으로 실사 모드가 기본 적용됩니다");
+                    }}>
                     <div className="text-xs font-semibold text-foreground">{s.label}</div>
                     <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{s.desc}</div>
                   </button>
                 ))}
+                <p className="text-xs mt-2" style={{ color: "var(--muted-foreground)" }}>
+                  애드센스 통과를 위해 항상 실사형 프리미엄 블로그 이미지로 생성됩니다.
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1211,6 +1258,8 @@ export default function ImageGenerator() {
                     <SelectItem value="8">8개</SelectItem>
                     <SelectItem value="10">10개</SelectItem>
                     <SelectItem value="15">15개</SelectItem>
+                    <SelectItem value="20">20개</SelectItem>
+                    <SelectItem value="30">30개</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1613,13 +1662,13 @@ export default function ImageGenerator() {
             <div className="flex items-center justify-between px-4 py-3 border-b shrink-0"
               style={{ background: "var(--card)", borderColor: "var(--border)" }}>
               <div>
-                <h2 className="font-bold text-foreground">배포할 이미지 15개 선택</h2>
+                <h2 className="font-bold text-foreground">배포할 이미지 전체 선택</h2>
                 <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-                  네이버 블로그 최적: 15장 · 현재 {selectedImages.length}/15 선택됨
+                  현재 {selectedImages.length}개 선택됨 · 전체 전송 가능
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {selectedImages.length > 0 && selectedImages.length <= 15 && (
+                {selectedImages.length > 0 && (
                   <Button className="gap-1.5 h-9"
                     style={{ background: "var(--color-emerald)", color: "white" }}
                     onClick={() => {
@@ -1642,13 +1691,11 @@ export default function ImageGenerator() {
 
             {/* 안내 배너 */}
             <div className="px-4 py-2 shrink-0"
-              style={{ background: selectedImages.length === 15 ? "oklch(0.696 0.17 162.48/10%)" : selectedImages.length > 15 ? "oklch(0.65 0.22 25/10%)" : "oklch(0.769 0.188 70.08/10%)" }}>
+              style={{ background: selectedImages.length > 0 ? "oklch(0.696 0.17 162.48/10%)" : "oklch(0.769 0.188 70.08/10%)" }}>
               <p className="text-xs font-medium text-center"
-                style={{ color: selectedImages.length === 15 ? "var(--color-emerald)" : selectedImages.length > 15 ? "oklch(0.65 0.22 25)" : "var(--color-amber-brand)" }}>
-                {selectedImages.length === 0 && "이미지를 클릭해서 선택하세요 (최대 15개)"}
-                {selectedImages.length > 0 && selectedImages.length < 15 && `${15 - selectedImages.length}개 더 선택 가능`}
-                {selectedImages.length === 15 && "✅ 15개 선택 완료! 위 '배포' 버튼을 눌러주세요"}
-                {selectedImages.length > 15 && `⚠ ${selectedImages.length - 15}개 초과 — 15개까지만 선택 가능합니다`}
+                style={{ color: selectedImages.length > 0 ? "var(--color-emerald)" : "var(--color-amber-brand)" }}>
+                {selectedImages.length === 0 && "이미지를 클릭해서 선택하세요 (전체 선택 가능)"}
+                {selectedImages.length > 0 && `✅ ${selectedImages.length}개 선택 완료! 위 '배포' 버튼을 눌러주세요`}
               </p>
             </div>
 
@@ -1657,7 +1704,7 @@ export default function ImageGenerator() {
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {successGallery.map((img, idx) => {
                   const isSelected = selectedImages.includes(img.id);
-                  const isDisabled = !isSelected && selectedImages.length >= 15;
+                  const isDisabled = false;
                   return (
                     <div key={img.id}
                       className="relative rounded-xl overflow-hidden cursor-pointer transition-all"
@@ -1667,7 +1714,7 @@ export default function ImageGenerator() {
                         opacity: isDisabled ? 0.35 : 1,
                       }}
                       onClick={() => {
-                        if (isDisabled) { toast.error("최대 15개까지 선택 가능합니다"); return; }
+                        
                         toggleSelect(img.id);
                       }}>
                       <img src={img.src} alt={img.title} className="w-full h-full object-cover" />
