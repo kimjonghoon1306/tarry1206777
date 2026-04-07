@@ -252,10 +252,173 @@ function extractKeyword(prompt: string): string {
   return "clear topic-centered article scene";
 }
 
+
+function extractCoreTopicTokens(rawPrompt: string): string[] {
+  return rawPrompt
+    .replace(/[\[\]\(\)\{\}"'“”‘’!?.,:;|/\\]+/g, " ")
+    .split(/\s+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .filter(s => s.length >= 2)
+    .filter(s => !/^(모든것|모든|정리|가이드|후기|추천|비교|방법|리뷰|소개|총정리|스트레스|날리는|도시|탈출)$/i.test(s))
+    .slice(0, 6);
+}
+
+function isGenericTranslatedPrompt(value: string): boolean {
+  const v = value.toLowerCase().trim();
+  if (!v) return true;
+  const genericSignals = [
+    "clear topic-centered article scene",
+    "information concept",
+    "minimal clean desk document",
+    "lifestyle concept",
+    "editorial blog photo",
+    "object focused",
+    "natural real-world scene",
+  ];
+  const hitCount = genericSignals.filter(sig => v.includes(sig)).length;
+  return hitCount >= 2 || v.split(",").length <= 3;
+}
+
+function buildLiteralTopicScene(rawPrompt: string): string {
+  const tokens = extractCoreTopicTokens(rawPrompt);
+  const tokenPhrase = tokens.length > 0 ? tokens.join(" ") : rawPrompt.trim();
+  return [
+    tokenPhrase,
+    `literal visual depiction of ${tokenPhrase}`,
+    `article hero image about ${tokenPhrase}`,
+    "subject from the title must be visible and obvious",
+    "single scene only",
+    "no abstract concept",
+    "no unrelated desk prop image",
+    "no generic stock mood photo",
+  ].join(", ");
+}
+
+function buildSceneDirective(rawPrompt: string): string {
+  const p = rawPrompt.trim().toLowerCase();
+
+  if (/맛집|음식|요리|레시피|카페|디저트|치킨|피자|라면|파스타|브런치|삼겹살|초밥|회|커피/.test(p)) {
+    return [
+      "show the real food or drink as the main subject",
+      "restaurant table or cafe context",
+      "close-up appetizing composition",
+      "no random desk objects",
+      "no unrelated room scene",
+    ].join(", ");
+  }
+
+  if (/숙소|호텔|펜션|리조트|오피스텔|원룸|아파트|전세|월세|부동산|주택|빌라|방/.test(p)) {
+    return [
+      "show the actual accommodation or property as the main subject",
+      "hotel room interior, bedroom interior, apartment exterior, or keys with contract depending on the title",
+      "clean empty space, no people present",
+      "travel lodging or real estate context must be obvious",
+      "no generic lifestyle desk photo",
+    ].join(", ");
+  }
+
+  if (/여행|관광|제주|서울|부산|강원|경주|전주|여수|속초|해외여행|국내여행|공항|비행기/.test(p)) {
+    return [
+      "show the actual destination or travel environment",
+      "landmark, city view, beach, mountain, hotel exterior, or airport scene depending on the title",
+      "wide editorial travel composition",
+      "no generic home interior",
+    ].join(", ");
+  }
+
+  if (/다이어트|건강|운동|헬스|요가|필라테스|영양제|스킨케어|메이크업|뷰티|피부|헤어/.test(p)) {
+    return [
+      "show the real health, fitness, or beauty subject from the article",
+      "healthy meal, gym equipment, skincare products, or beauty routine tools depending on the title",
+      "clear product or activity context",
+      "no abstract concept image",
+    ].join(", ");
+  }
+
+  if (/재테크|주식|코인|대출|돈|금융|보험|세금|연금|신용점수|카드|지원금|정부지원|연말정산/.test(p)) {
+    return [
+      "show real financial objects related to the article",
+      "documents, calculator, coins, bank card, contract papers, ledger, or money on desk depending on the title",
+      "clear finance context",
+      "no abstract glowing technology art",
+    ].join(", ");
+  }
+
+  if (/(^|[^a-z])ai([^a-z]|$)|챗gpt|인공지능|앱|스마트폰|노트북|컴퓨터|유튜브|블로그|소셜미디어|게임|코딩|개발/.test(p)) {
+    return [
+      "show the actual tech subject used in the article",
+      "laptop workspace, smartphone screen, coding monitor, or creator desk depending on the title",
+      "clean digital work environment",
+      "no abstract neon concept art",
+    ].join(", ");
+  }
+
+  if (/육아|아이|아기|임신|출산|공부|영어|취업|자격증|대학생|취준생/.test(p)) {
+    return [
+      "show the actual life situation from the article",
+      "nursery items, study desk, resume papers, books, or educational materials depending on the title",
+      "realistic home or study environment",
+      "no generic mood-only image",
+    ].join(", ");
+  }
+
+  if (/자동차|중고차|전기차|오토바이/.test(p)) {
+    return [
+      "show the actual vehicle as the main subject",
+      "road, showroom, charging station, or dealership context depending on the title",
+      "clear exterior detail",
+      "no unrelated indoor scene",
+    ].join(", ");
+  }
+
+  if (/강아지|고양이|반려동물|햄스터/.test(p)) {
+    return [
+      "show the actual pet as the main subject",
+      "home environment with pet items",
+      "cute but realistic editorial pet photo",
+      "no unrelated prop image",
+    ].join(", ");
+  }
+
+  if (/패션|쇼핑|명품|코디/.test(p)) {
+    return [
+      "show the actual fashion or shopping subject from the article",
+      "clothing rack, outfit layout, bag display, or store context depending on the title",
+      "clean commercial editorial style",
+    ].join(", ");
+  }
+
+  if (/창업|마케팅|사업|비즈니스|sns마케팅/.test(p)) {
+    return [
+      "show the actual business subject from the article",
+      "office desk, campaign notes, laptop, presentation board, or product planning materials depending on the title",
+      "clear business context",
+      "no generic decorative desk still life",
+    ].join(", ");
+  }
+
+  if (/꽃|바다|숲|봄|여름|가을|겨울|산|계곡|해변/.test(p)) {
+    return [
+      "show the actual natural subject from the article",
+      "literal landscape or seasonal scene",
+      "no indoor desk image",
+    ].join(", ");
+  }
+
+  return [
+    "show the literal subject of the title in a single realistic scene",
+    "main object or place from the article must be clearly visible",
+    "no generic stock mood image",
+    "no unrelated desk or document prop image",
+  ].join(", ");
+}
+
 function buildTopicLockedPrompt(rawPrompt: string, translatedPrompt: string): string {
   const raw = rawPrompt.trim();
   const translated = translatedPrompt.trim();
   const mapped = extractKeyword(raw);
+  const literalTopic = buildLiteralTopicScene(raw);
   const visibleTopic = raw
     .replace(/[\n\r]+/g, " ")
     .replace(/[,:;|/]+/g, " ")
@@ -267,15 +430,20 @@ function buildTopicLockedPrompt(rawPrompt: string, translatedPrompt: string): st
     ? `the image must clearly depict the article topic "${visibleTopic}" at a glance`
     : "the image must clearly depict the article topic at a glance";
 
+  const safeTranslated = isGenericTranslatedPrompt(translated) ? "" : translated;
+
   return [
+    literalTopic,
     mapped,
-    translated,
+    safeTranslated,
     topicGuard,
     "topic matched subject",
+    "literal title matching scene",
     "single coherent scene",
     "main subject obvious and easy to recognize",
     "avoid generic stock mood image",
     "avoid unrelated decorative scene",
+    "avoid abstract information concept image",
     "editorial article hero image",
   ].filter(Boolean).join(", ");
 }
@@ -950,7 +1118,9 @@ export default function ImageGenerator() {
         const data = await resp.json();
         if (data.ok && data.prompt && data.prompt.length > 10) {
           const mapped = extractKeyword(p);
-          return `${mapped}, ${data.prompt}, ${NP}, natural real-world scene, topic matched subject, editorial blog photo, 8K ultra realistic`;
+          const literalTopic = buildLiteralTopicScene(p);
+          const safePrompt = isGenericTranslatedPrompt(data.prompt) ? "" : data.prompt;
+          return `${literalTopic}, ${mapped}${safePrompt ? `, ${safePrompt}` : ""}, ${NP}, topic matched subject, literal title matching scene, natural real-world scene, editorial blog photo, 8K ultra realistic`;
         }
       } catch {}
     }
@@ -1020,7 +1190,7 @@ export default function ImageGenerator() {
       return `gym fitness equipment weights dumbbells training, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
 
     // ── 최후 수단 ──
-    return `${extractKeyword(p)}, ${NP}, topic matched subject, clear recognizable main object, editorial blog photo, natural lighting, professional photography, 8K`;
+    return `${buildLiteralTopicScene(p)}, ${extractKeyword(p)}, ${NP}, topic matched subject, literal title matching scene, clear recognizable main object, editorial blog photo, natural lighting, professional photography, 8K`;
   };
 
 
@@ -1042,18 +1212,21 @@ export default function ImageGenerator() {
     try {
       const numImages = parseInt(count) || 1;
       const rawTopic = prompt.trim();
-      const firstTranslated = translatedPrompt.trim() || await autoTranslatePrompt(rawTopic, 0);
+      const currentTranslated = translatedPrompt.trim();
+      const firstTranslated = currentTranslated && !isGenericTranslatedPrompt(currentTranslated)
+        ? currentTranslated
+        : await autoTranslatePrompt(rawTopic, 0);
       setTranslatedPrompt(firstTranslated);
       const basePrompt = buildTopicLockedPrompt(rawTopic, firstTranslated);
-      const fullPrompt = buildAdsenseSafePrompt(basePrompt);
+      const fullPrompt = buildAdsenseSafePrompt(`${basePrompt}, exact topic relevance is more important than artistic mood, the viewer should guess the article topic just by looking at the image`);
       const [w, h] = (size || "1024x1024").split("x").map(Number);
       const styleLabel = ADSENSE_STYLE_LABEL;
       const variationShots = [
-        "front three-quarter composition",
-        "close-up detail shot",
-        "wide establishing shot",
-        "natural contextual scene",
-        "clean editorial composition",
+        "front three-quarter composition while keeping the same article subject",
+        "close-up detail shot of the same topic",
+        "wide establishing shot of the same topic",
+        "natural contextual scene of the same topic",
+        "clean editorial composition of the same topic",
       ];
 
       toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
