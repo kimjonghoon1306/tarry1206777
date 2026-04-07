@@ -213,17 +213,6 @@ const KO_EN_MAP: Record<string, string> = {
   창업: "startup business office desk equipment plan, no people",
   마케팅: "marketing digital strategy graph chart, no people",
   sns마케팅: "social media marketing content strategy icons, no people",
-  소상공인인터넷: "small business store interior wifi router counter laptop POS terminal internet service consultation, no people",
-  소상공인: "small business store interior counter laptop POS terminal business workspace, no people",
-  인터넷: "wifi router modem office desk network equipment business internet installation, no people",
-  와이파이: "wifi router wireless internet office store counter network equipment, no people",
-  통신: "telecom internet router modem office desk business network equipment, no people",
-  매장인터넷: "store counter wifi router POS terminal small business internet setup, no people",
-  사업장인터넷: "business office wifi router modem laptop network setup, no people",
-  공유기: "wifi router modem desk network equipment close-up, no people",
-  라우터: "wireless router modem network device office desk, no people",
-  모뎀: "internet modem router network equipment office desk, no people",
-  POS: "store counter POS terminal receipt printer laptop small business setup, no people",
 };
 
 
@@ -271,28 +260,6 @@ function generatePollinationsUrl(
   const encoded = encodeURIComponent(prompt);
   // t= 캐시버스터 제거 → 브라우저 캐시 활용
   return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&seed=${seed}&model=flux&enhance=true`;
-}
-
-
-function buildAdSenseSafePrompt(base: string): string {
-  return [
-    base,
-    "professional editorial blog photography",
-    "premium realistic photo",
-    "natural lighting",
-    "real world scene",
-    "clean composition",
-    "high trust visual",
-    "no infographic",
-    "no diagram",
-    "no chart overlay",
-    "no poster",
-    "no text overlay",
-    "no UI screenshot",
-    "no app interface",
-    "no white isolated background",
-    "no watermark",
-  ].join(", ");
 }
 
 const STYLE_PROMPTS: Record<string, string> = {
@@ -347,11 +314,192 @@ const STYLE_PROMPTS: Record<string, string> = {
 };
 
 const STYLES = [
-  { value: "realistic", label: "📸 애드센스 최적 실사", desc: "주제와 상관없이 가장 안전한 프리미엄 블로그 사진" },
+  { value: "realistic", label: "📸 애드센스 최적 실사", desc: "주제 일치감이 가장 안정한 프리미엄 블로그 사진" },
   { value: "commercial", label: "✨ 광고/상업", desc: "보조 옵션" },
   { value: "lifestyle", label: "🏠 라이프스타일", desc: "보조 옵션" },
   { value: "illustration", label: "🎨 일러스트", desc: "권장 안 함" },
 ];
+
+
+type TopicCategory =
+  | "business"
+  | "tech"
+  | "finance"
+  | "realestate"
+  | "food"
+  | "travel"
+  | "health"
+  | "career"
+  | "living"
+  | "beauty"
+  | "education"
+  | "pet"
+  | "generic";
+
+function detectTopicCategory(prompt: string): TopicCategory {
+  const t = prompt.toLowerCase();
+  if (/소상공인|사업|창업|마케팅|매장|상점|브랜드|운영|홍보|매출|고객/.test(t)) return "business";
+  if (/인터넷|와이파이|통신|라우터|공유기|pos|키오스크|앱|ai|인공지능|테크|it|개발|코딩|스마트폰|노트북/.test(t)) return "tech";
+  if (/재테크|주식|코인|투자|대출|보험|세금|카드|금융|지원금|정부지원|지원금|연말정산|청약/.test(t)) return "finance";
+  if (/부동산|아파트|전세|월세|집|오피스텔|분양|인테리어|리모델링/.test(t)) return "realestate";
+  if (/맛집|음식|카페|요리|식당|커피|디저트|치킨|피자|라면|파스타/.test(t)) return "food";
+  if (/여행|관광|호텔|숙소|공항|비행기|제주|부산|서울|캠핑|리조트/.test(t)) return "travel";
+  if (/건강|운동|다이어트|헬스|요가|필라테스|병원|수면|영양제/.test(t)) return "health";
+  if (/취업|이직|면접|자소서|직장|취준|알바|채용/.test(t)) return "career";
+  if (/생활|청소|정리|살림|육아|아이|임신|출산|결혼|이혼|취미/.test(t)) return "living";
+  if (/뷰티|화장품|스킨케어|메이크업|헤어|패션|쇼핑|코디/.test(t)) return "beauty";
+  if (/공부|학습|영어|시험|수능|자격증|독서|대학생/.test(t)) return "education";
+  if (/강아지|고양이|반려동물|펫|햄스터/.test(t)) return "pet";
+  return "generic";
+}
+
+function getSceneBlueprints(category: TopicCategory, count: number): string[] {
+  const generic = [
+    "hero editorial shot, premium blog cover composition, natural light",
+    "real life usage scene, practical environment, medium shot",
+    "workspace context scene, clean desk, realistic details",
+    "close-up detail shot, tactile textures, shallow depth of field",
+    "comparison or decision-making scene, organized layout",
+    "preparation scene, tools and objects arranged naturally",
+    "caution moment scene, serious atmosphere, realistic setting",
+    "summary scene, calm balanced composition, polished editorial look",
+    "different angle wide shot, same topic context, deeper environment",
+    "overhead shot, structured objects, premium magazine style",
+    "side angle scene, natural window light, lifestyle realism",
+    "final action-focused scene, confident completion mood",
+  ];
+
+  const perCategory: Record<TopicCategory, string[]> = {
+    business: [
+      "storefront or small business interior hero shot, premium realistic blog cover",
+      "counter desk with router, tablet or POS equipment in use environment",
+      "owner workspace with laptop, invoices and network equipment, no visible face",
+      "close-up of modem, router, cable or checkout tools in a neat shop setup",
+      "decision-making scene comparing plans or service options on a desk",
+      "preparation scene with contract paper, calculator, notebook and office tools",
+      "customer-ready business interior with warm lighting and organized setup",
+      "final polished small business environment suggesting smooth operation",
+    ],
+    tech: [
+      "clean technology hero shot, premium realistic editorial composition",
+      "router, laptop and connected workspace in natural real-world environment",
+      "office or home office setup with stable internet and smart devices",
+      "close-up of connected hardware and cables, sleek realistic detail",
+      "service comparison scene on desk with devices and documents",
+      "installation or setup scene, practical and professional",
+      "network stability themed scene with productive workspace mood",
+      "final modern connected environment, premium blog-ready finish",
+    ],
+    finance: [
+      "financial planning hero shot with documents, laptop and organized desk",
+      "real-world application scene with forms, calculator and notebook",
+      "office desk showing budgeting or support application process",
+      "close-up of paperwork, stamp, pen and money-related tools",
+      "comparison scene for benefits or financial options, realistic layout",
+      "preparation scene with required documents in a neat workspace",
+      "caution or checklist mood with focused financial desk setting",
+      "summary scene with calm, trustworthy professional atmosphere",
+    ],
+    realestate: [
+      "premium property hero shot, modern interior or exterior realism",
+      "real contract or consultation desk scene with keys and documents",
+      "practical living environment with cozy but realistic styling",
+      "close-up of house-related details, contract papers or keys",
+      "comparison scene for housing options in a clean workspace",
+      "moving or preparation scene with boxes, plans or notes",
+      "caution-oriented scene suggesting careful review before decision",
+      "final settled home environment with editorial warmth",
+    ],
+    food: [
+      "hero food shot with premium editorial plating and natural realism",
+      "table scene in real cafe or restaurant atmosphere",
+      "wider dining environment shot with same food theme continuity",
+      "close-up detail of texture, steam or ingredients",
+      "selection or menu decision mood in a realistic dining setting",
+      "preparation or serving scene with hands implied but no face focus",
+      "caution-style scene on portion, ingredients or choice context",
+      "final satisfying table scene with cohesive warm tone",
+    ],
+    travel: [
+      "destination hero shot, premium realistic travel editorial",
+      "arrival or planning scene with map, bag or booking setup",
+      "real-world environment scene showing local atmosphere",
+      "close-up detail of travel object, ticket, room or scenery texture",
+      "comparison scene for route or hotel choice on a desk",
+      "preparation scene with luggage and essentials",
+      "caution scene suggesting practical travel planning",
+      "final aspirational travel mood with polished realism",
+    ],
+    health: [
+      "clean wellness hero shot, premium realistic blog photo",
+      "healthy routine scene in everyday environment",
+      "workspace or home setup with health-related tools or foods",
+      "close-up of wellness details, supplements or fitness items",
+      "comparison or choice scene for routines or products",
+      "preparation scene before workout or health management",
+      "caution-aware scene with serious organized atmosphere",
+      "final calm healthy lifestyle scene, trustworthy editorial feel",
+    ],
+    career: [
+      "career hero shot with resume, laptop and professional desk",
+      "application or interview preparation environment",
+      "real office or study setup for job search context",
+      "close-up of document, portfolio, keyboard or notebook details",
+      "comparison scene for job platform or option selection",
+      "preparation scene before interview or submission",
+      "caution-oriented scene about mistakes or careful review",
+      "final confident professional workspace scene",
+    ],
+    living: generic,
+    beauty: [
+      "premium beauty editorial hero shot, realistic products and soft light",
+      "daily routine scene in clean real environment",
+      "organized vanity or shelf scene with believable lifestyle mood",
+      "close-up texture shot of product or beauty tools",
+      "comparison scene for options or routine selection",
+      "preparation scene with practical setup and elegant composition",
+      "caution scene suggesting careful product choice",
+      "final polished beauty lifestyle scene with premium finish",
+    ],
+    education: [
+      "study hero shot with books, laptop and premium editorial composition",
+      "focused real-world study environment scene",
+      "desk setup with learning materials and natural light",
+      "close-up of notes, stationery or reading details",
+      "comparison scene for study methods or resources",
+      "preparation scene before exam or lesson",
+      "caution scene with serious review atmosphere",
+      "final calm success-oriented study setup",
+    ],
+    pet: [
+      "pet hero shot in realistic cozy home environment",
+      "daily care scene with pet objects and natural setting",
+      "wider home environment shot maintaining same pet theme",
+      "close-up detail of toy, bowl or fur texture",
+      "comparison scene for pet products or choices",
+      "preparation scene for pet care routine",
+      "caution scene with organized safety-aware environment",
+      "final warm companion lifestyle scene",
+    ],
+    generic,
+  };
+
+  const base = perCategory[category] || generic;
+  const out: string[] = [];
+  for (let i = 0; i < count; i += 1) out.push(base[i % base.length]);
+  return out;
+}
+
+function buildTopicAnchorPrompt(input: string): string {
+  const clean = input
+    .replace(/[\[\]{}()]/g, " ")
+    .replace(/[#*]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const keyword = extractKeyword(clean);
+  return keyword;
+}
+
 
 const STATS_KEY = "img_stats";
 function loadStats() {
@@ -555,13 +703,10 @@ export default function ImageGenerator() {
 
   // URL 파라미터로 넘어온 경우 prompt 강제 업데이트
   useEffect(() => {
-    if (autoPrompt) {
-      setPrompt(autoPrompt);
-      setTranslatedPrompt("");
-    }
+    if (autoPrompt) setPrompt(autoPrompt);
   }, [autoPrompt]);
 
-  // 프롬프트가 바뀌면 이전 영문 프롬프트를 비워서 주제 어긋남 방지
+  // 프롬프트가 바뀌면 이전 영문 프롬프트를 버려서 주제 불일치를 막음
   useEffect(() => {
     setTranslatedPrompt("");
   }, [prompt]);
@@ -901,11 +1046,31 @@ export default function ImageGenerator() {
   // ── 한국어 → 영어 이미지 프롬프트 자동 변환 ──────────────
   const autoTranslatePrompt = async (koreanPrompt: string, variation: number = 0): Promise<string> => {
     const p = koreanPrompt.trim();
-    const NP = "no people, no portrait, no face, object focused, no infographic, no diagram, no text overlay, no UI, no white isolated background, no watermark";
+    const NP = [
+      "no infographic",
+      "no diagram",
+      "no chart overlay",
+      "no poster",
+      "no brochure",
+      "no ui screen mockup",
+      "no app interface",
+      "no text overlay",
+      "no watermark",
+      "no isolated object on plain white background",
+      "no floating object",
+      "no 3d render look",
+      "no cartoon",
+      "no collage",
+      "no portrait close-up",
+      "no face focus",
+    ].join(", ");
 
     if (!/[가-힣]/.test(p)) {
-      return buildAdSenseSafePrompt(`${p}, ${NP}, 8K ultra realistic`);
+      return `${p}, editorial blog photography, realistic real-world environment, natural lighting, ${NP}`;
     }
+
+    const category = detectTopicCategory(p);
+    const scene = getSceneBlueprints(category, Math.max(variation + 1, 1))[variation] || "realistic editorial blog scene";
 
     // ── Step 1: AI 번역 API ───────────
     const aiProvider = getContentProvider();
@@ -919,81 +1084,35 @@ export default function ImageGenerator() {
         });
         const data = await resp.json();
         if (data.ok && data.prompt && data.prompt.length > 10) {
-          return buildAdSenseSafePrompt(`${data.prompt}, ${NP}, 8K ultra realistic`);
+          return `${data.prompt}, ${scene}, editorial blog photography, realistic real-world environment, natural lighting, ${NP}`;
         }
       } catch {}
     }
 
-    // ── Step 2: KO_EN_MAP 매핑 (길이 긴 것 우선, 단어 분리도 시도) ──────────
-    const sortedEntries = Object.entries(KO_EN_MAP).sort((a, b) => b[0].length - a[0].length);
-    for (const [ko, en] of sortedEntries) {
-      if (p.includes(ko)) {
-        return buildAdSenseSafePrompt(`${en}, 8K ultra realistic`);
-      }
-    }
-    // 공백/특수문자로 분리된 단어도 매핑 시도
-    const words = p.split(/[\s,]+/);
-    for (const word of words) {
-      for (const [ko, en] of sortedEntries) {
-        if (word.includes(ko) || ko.includes(word)) {
-          return buildAdSenseSafePrompt(`${en}, 8K ultra realistic`);
-        }
-      }
+    // ── Step 2: KO_EN_MAP / 키워드 앵커 ───────────
+    const anchor = buildTopicAnchorPrompt(p);
+    if (anchor) {
+      return `${anchor}, ${scene}, editorial blog photography, realistic real-world environment, natural lighting, ${NP}`;
     }
 
-    // ── Step 3: 키워드 기반 정밀 카테고리 폴백 ──────────────
-    const t = p.toLowerCase();
-    if (/소상공인인터넷|매장인터넷|사업장인터넷|소상공인|자영업|가게|매장|점포|사무실/.test(t) && /인터넷|와이파이|wifi|통신|공유기|라우터|모뎀|network|네트워크/.test(t))
-      return buildAdSenseSafePrompt(`small business store interior with wifi router modem POS terminal laptop on counter, business internet service setup, trustworthy real-world commercial space, ${NP}, 8K ultra realistic`);
-    if (/인터넷|와이파이|wifi|통신|공유기|라우터|모뎀|네트워크/.test(t))
-      return buildAdSenseSafePrompt(`wifi router modem network equipment on clean office or store desk, internet service consultation, realistic business environment, ${NP}, 8K ultra realistic`);
-    if (/캠핑|아웃도어|등산|트레킹|백패킹|텐트|캠핑용품|글램핑/.test(t))
-      return buildAdSenseSafePrompt(`camping gear equipment tent outdoor backpack sleeping bag nature, ${NP}, professional photography, 8K`);
-    if (/도매|wholesale|공급|유통|벌크|대량구매/.test(t))
-      return buildAdSenseSafePrompt(`wholesale warehouse products boxes storage supply chain, ${NP}, professional photography, 8K`);
-    if (/유튜브|유튜버|채널|구독|조회수|쇼츠|알고리즘/.test(t))
-      return buildAdSenseSafePrompt(`youtube creator studio setup camera ring light tripod microphone desk equipment, ${NP}, professional photography, 8K`);
-    if (/넷플릭스|왓챠|티빙|구독서비스|ott/.test(t))
-      return buildAdSenseSafePrompt(`streaming service remote control television couch living room entertainment, ${NP}, professional photography, 8K`);
-    if (/블로그|글쓰기|seo|포스팅|네이버|티스토리/.test(t))
-      return buildAdSenseSafePrompt(`laptop keyboard blog writing desk coffee notebook pen creative workspace, ${NP}, professional photography, 8K`);
-    if (/주식|코인|비트코인|투자|etf|펀드|증권/.test(t))
-      return buildAdSenseSafePrompt(`stock market trading chart graph monitor financial investment growth, ${NP}, professional photography, 8K`);
-    if (/재테크|절약|저축|월급|통장|가계부/.test(t))
-      return buildAdSenseSafePrompt(`coins piggy bank savings jar financial document budget planner, ${NP}, professional photography, 8K`);
-    if (/부동산|아파트|전세|월세|청약|분양|주택/.test(t))
-      return buildAdSenseSafePrompt(`modern apartment building exterior real estate document keys, ${NP}, professional photography, 8K`);
-    if (/다이어트|체중|살빼기|헬스|요가|필라테스/.test(t))
-      return buildAdSenseSafePrompt(`healthy food vegetables salad measuring tape scale gym equipment, ${NP}, professional photography, 8K`);
-    if (/건강|의학|병원|약|증상|치료|수면|탈모/.test(t))
-      return buildAdSenseSafePrompt(`health wellness vitamins supplements capsules herbs natural, ${NP}, professional photography, 8K`);
-    if (/여행|관광|해외|제주|부산|호텔|숙소/.test(t))
-      return buildAdSenseSafePrompt(`beautiful travel destination scenic landscape landmark golden hour, ${NP}, professional photography, 8K`);
-    if (/맛집|음식|요리|카페|식당|커피|치킨|라면/.test(t))
-      return buildAdSenseSafePrompt(`delicious gourmet food beautiful plating restaurant table warm lighting, ${NP}, professional photography, 8K`);
-    if (/취업|이직|면접|자소서|직장|알바|취준/.test(t))
-      return buildAdSenseSafePrompt(`resume document briefcase office desk laptop professional workspace, ${NP}, professional photography, 8K`);
-    if (/육아|아기|임신|출산|아이|엄마|육아용품/.test(t))
-      return buildAdSenseSafePrompt(`baby toys nursery room soft pastel crib stroller, ${NP}, professional photography, 8K`);
-    if (/패션|뷰티|스킨케어|메이크업|화장품|옷|쇼핑/.test(t))
-      return buildAdSenseSafePrompt(`skincare beauty cosmetics products bottles cream elegant background, ${NP}, professional photography, 8K`);
-    if (/it|앱|ai|인공지능|테크|프로그래밍|코딩|개발/.test(t))
-      return buildAdSenseSafePrompt(`technology digital circuit board AI chip laptop code screen, ${NP}, professional photography, 8K`);
-    if (/자동차|차량|전기차|중고차|드라이브/.test(t))
-      return buildAdSenseSafePrompt(`car automobile road exterior modern sleek design, ${NP}, professional photography, 8K`);
-    if (/공부|학습|수능|영어|자격증|시험|독서/.test(t))
-      return buildAdSenseSafePrompt(`study books notebook desk lamp stationery learning workspace, ${NP}, professional photography, 8K`);
-    if (/인테리어|홈|거실|침실|리모델링|청소|정리/.test(t))
-      return buildAdSenseSafePrompt(`modern interior design living room minimalist furniture aesthetic, ${NP}, professional photography, 8K`);
-    if (/강아지|고양이|반려동물|펫|햄스터/.test(t))
-      return buildAdSenseSafePrompt(`cute pet dog puppy playing toy indoor cozy home, 8K ultra realistic`);
-    if (/창업|사업|마케팅|비즈니스|스타트업/.test(t))
-      return buildAdSenseSafePrompt(`startup business office modern desk strategy board growth chart, ${NP}, professional photography, 8K`);
-    if (/운동|피트니스|스포츠|근육|트레이닝/.test(t))
-      return buildAdSenseSafePrompt(`gym fitness equipment weights dumbbells training, ${NP}, professional photography, 8K`);
+    // ── Step 3: 카테고리 폴백 ──────────────
+    const fallbackByCategory: Record<TopicCategory, string> = {
+      business: "small business store interior, counter desk, business operation equipment",
+      tech: "connected workspace with router, laptop, network equipment, modern office setup",
+      finance: "financial planning desk, documents, calculator, laptop, trustworthy office environment",
+      realestate: "property consultation desk, keys, contract documents, realistic home or office scene",
+      food: "restaurant or cafe table, premium food presentation, realistic dining environment",
+      travel: "travel planning or destination scene, luggage, booking items, realistic environment",
+      health: "wellness routine setup, healthy objects, clean realistic environment",
+      career: "job search workspace, resume, laptop, professional office or study desk",
+      living: "practical everyday home life scene, realistic clean environment",
+      beauty: "beauty routine setup, premium skincare or styling environment, realistic scene",
+      education: "study desk with books, notes and laptop, realistic learning environment",
+      pet: "pet care home environment with realistic lifestyle mood",
+      generic: "topic-focused realistic editorial blog environment, practical real-world scene",
+    };
 
-    // ── 최후 수단 ──
-    return buildAdSenseSafePrompt(`${extractKeyword(p)}, realistic topic-centered editorial blog photo, natural real-world setting, ${NP}, 8K ultra realistic`);
+    return `${fallbackByCategory[category]}, ${scene}, editorial blog photography, realistic real-world environment, natural lighting, ${NP}`;
   };
 
 
@@ -1014,38 +1133,40 @@ export default function ImageGenerator() {
 
     try {
       const numImages = parseInt(count) || 1;
-      const cleanedPrompt = prompt.trim();
-      const resolvedTranslated = translatedPrompt.trim()
-        ? translatedPrompt.trim()
-        : await autoTranslatePrompt(cleanedPrompt, 0);
-      setTranslatedPrompt(resolvedTranslated);
-      const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting, high trust blog image, topic matched scene";
-      const effectiveStyle = STYLE_PROMPTS.realistic;
-      const fullPrompt = `${resolvedTranslated}, ${effectiveStyle}, ${qualityBoost}`;
+      const normalizedPrompt = prompt.trim();
+      const category = detectTopicCategory(normalizedPrompt);
       const [w, h] = (size || "1024x1024").split("x").map(Number);
-      const styleLabel = "📸 애드센스 최적 실사";
+      const effectiveStyle = style === "illustration" ? "realistic" : style;
+      const styleLabel = STYLES.find(s => s.value === effectiveStyle)?.label || effectiveStyle;
+      const stylePrompt = STYLE_PROMPTS[effectiveStyle] || STYLE_PROMPTS.realistic;
+      const qualityBoost = [
+        "premium editorial blog photography",
+        "high topical relevance",
+        "cohesive visual tone across the image set",
+        "natural real-world environment",
+        "authentic commercial-grade realism",
+        "clean composition",
+        "high detail",
+      ].join(", ");
+
+      const baseTranslated = translatedPrompt.trim()
+        ? translatedPrompt.trim()
+        : await autoTranslatePrompt(normalizedPrompt, 0);
+      setTranslatedPrompt(baseTranslated);
+
+      const scenes = getSceneBlueprints(category, numImages);
+      const prompts: string[] = scenes.map((scene, index) => [
+        baseTranslated,
+        scene,
+        `variation ${index + 1} of ${numImages}`,
+        stylePrompt,
+        qualityBoost,
+      ].join(", "));
 
       toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
 
-      if (numImages === 1) {
-        await generateImages(1, fullPrompt, w || 1024, h || 1024, styleLabel, size);
-      } else {
-        // 여러 장 생성 시 각각 다른 variation 프롬프트 사용
-        const aiProvider = getContentProvider();
-        const aiKey = getAPIKey(aiProvider);
-        const prompts: string[] = [fullPrompt]; // 첫 번째는 이미 생성됨
-        for (let vi = 1; vi < numImages; vi++) {
-          try {
-            const varTranslated = await autoTranslatePrompt(prompt.trim(), vi);
-            prompts.push(`${varTranslated}, ${effectiveStyle}, ${qualityBoost}`);
-          } catch {
-            prompts.push(fullPrompt);
-          }
-        }
-        // 각 프롬프트로 1장씩 순서대로 생성
-        for (const p of prompts) {
-          await generateImages(1, p, w || 1024, h || 1024, styleLabel, size);
-        }
+      for (const scenePrompt of prompts) {
+        await generateImages(1, scenePrompt, w || 1024, h || 1024, styleLabel, size);
       }
     } catch (e: any) {
       toast.error(`생성 실패: ${e?.message || "알 수 없는 오류"}`, { id: "imggen" });
@@ -1119,8 +1240,8 @@ export default function ImageGenerator() {
   };
   const toggleSelect = (id: number) => setSelectedImages(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  // ── 15개 제한 배포 이동 ───────────────────────────
-  const MAX_DEPLOY = 999;
+  // ── 배포 이동 ───────────────────────────
+  const MAX_DEPLOY = 50;
 
   const sendToDeploy = (images: GalleryItem[]) => {
     const final = images.slice(0, MAX_DEPLOY);
@@ -1133,7 +1254,7 @@ export default function ImageGenerator() {
         final.filter(i => !i.src.startsWith("data:")).map(i => ({ id: i.id, src: i.src, alt: i.title, title: i.title, style: i.style, size: i.size, loading: false }))
       ));
     }
-    toast.success(`이미지 ${final.length}개를 모두 배포 페이지로 이동합니다!`);
+    toast.success(`이미지 ${final.length}개 배포 페이지로 이동합니다!`);
     navigate("/deploy?autoInsert=true");
   };
 
@@ -1142,11 +1263,7 @@ export default function ImageGenerator() {
     const toSend = selectedImages.length > 0
       ? successGallery.filter(g => selectedImages.includes(g.id))
       : successGallery;
-    if (toSend.length <= MAX_DEPLOY) {
-      sendToDeploy(toSend);
-    } else {
-      setShowDeployModal(true);
-    }
+    sendToDeploy(toSend);
   };
 
 
@@ -1230,7 +1347,6 @@ export default function ImageGenerator() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs mt-2" style={{ color: "var(--muted-foreground)" }}>애드센스 통과를 위해 항상 실사형 프리미엄 블로그 이미지로 생성됩니다.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1259,9 +1375,9 @@ export default function ImageGenerator() {
                     <SelectItem value="4">4개</SelectItem>
                     <SelectItem value="8">8개</SelectItem>
                     <SelectItem value="10">10개</SelectItem>
+                    <SelectItem value="12">12개</SelectItem>
                     <SelectItem value="15">15개</SelectItem>
                     <SelectItem value="20">20개</SelectItem>
-                    <SelectItem value="30">30개</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1570,8 +1686,8 @@ export default function ImageGenerator() {
                 onClick={goToDeployWithImages}>
                 <Sparkles className="w-5 h-5" />
                 {selectedImages.length > 0
-                  ? `선택한 ${selectedImages.length}개로 배포 진행 (15개 제한)`
-                  : `전체 ${loadedCount}개 중 15개 선택 후 배포`}
+                  ? `선택한 ${selectedImages.length}개로 배포 진행`
+                  : `전체 ${loadedCount}개 배포`}
                 <ArrowRight className="w-5 h-5" />
               </Button>
             )}
