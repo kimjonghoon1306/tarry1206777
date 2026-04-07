@@ -821,8 +821,9 @@ export default function DeploymentPage() {
     const sectionBlocks = markerIdx === -1 ? [] : textOnly.slice(markerIdx);
     const safeTextCount = safeBlocks.filter(b => b.type === "text").length;
 
-    // 첫 이미지 맨 앞 + 3단락마다 1장
-    const maxImages = Math.max(1, Math.floor(safeTextCount / 3) + 1);
+    // 첫 이미지 맨 앞 + 3단락마다 1장, 최대 7장 캡
+    const calcMax = Math.max(1, Math.floor(safeTextCount / 3) + 1);
+    const maxImages = Math.min(calcMax, 7); // 최대 7장
     const imgs = images.slice(0, maxImages);
 
     if (imgs.length === 0) {
