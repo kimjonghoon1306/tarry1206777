@@ -2,7 +2,7 @@
 // 플레인 텍스트 출력 (## 소제목 허용) + FAQ/참고자료 마커 유지
 
 function removeNonKorean(text) {
-  const markers = ["[참고자료시작]","[참고자료끝]","[FAQ시작]","[FAQ끝]"];
+  const markers = ["[참고자료시작]","[참고자료끝]","[FAQ시작]","[FAQ끝]","[팁]","[주의]","[중요]"];
   const placeholders = markers.map((m, i) => [`XSECMARK${i}X`, m]);
   placeholders.forEach(([key, val]) => { text = text.split(val).join(key); });
 
