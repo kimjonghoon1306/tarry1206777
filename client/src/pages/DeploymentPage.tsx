@@ -906,7 +906,7 @@ export default function DeploymentPage() {
         const t = inlineFormat(line.slice(3).trim());
         const idx = h2Titles.length;
         h2Titles.push(line.slice(3).trim());
-        return `<h2 id="section-${idx}" style="font-size:22px;font-weight:800;margin:36px 0 14px;color:#111111;border-bottom:2px solid #e8e8ed;padding-bottom:10px;letter-spacing:-.02em">${t}</h2>`;
+        return `<h2 id="section-${idx}" style="font-size:22px;font-weight:800;margin:36px 0 14px;color:#111111;border-bottom:2px solid #e8e8ed;padding-bottom:10px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#2563eb;color:white;font-size:13px;font-weight:800;flex-shrink:0">${idx + 1}</span>${t}</h2>`;
       }
       if (/^### /.test(line)) return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:10px">${inlineFormat(line.slice(4))}</h3>`;
       if (/^---+$/.test(line.trim())) return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
@@ -2193,7 +2193,7 @@ ${rows.map((row, ri) => {
                 </div>
               )}
 
-              {/* 썸네일 바로 밑 목차 */}
+              {/* 썸네일 유무 상관없이 항상 목차 표시 */}
               {(() => {
                 const allText = blocks.filter(b => b.type === "text").map(b => (b as TextBlock).content).join("\n");
                 const h2s = [...allText.matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
@@ -2201,9 +2201,17 @@ ${rows.map((row, ri) => {
                 return (
                   <div className="rounded-xl p-5 mb-5" style={{ background: "#f0f4ff", border: "1px solid #c7d7fe" }}>
                     <div className="font-bold text-sm mb-3" style={{ color: "#2563eb" }}>📋 목차</div>
-                    <ol className="space-y-1.5 pl-5" style={{ margin: 0 }}>
+                    <ol className="space-y-1.5" style={{ margin: 0, padding: 0, listStyle: "none" }}>
                       {h2s.map((t, i) => (
-                        <li key={i} style={{ color: "#2563eb", fontSize: 14, fontWeight: 500 }}>{t}</li>
+                        <li key={i} className="flex items-center gap-2">
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            width: 22, height: 22, borderRadius: "50%",
+                            background: "#2563eb", color: "white",
+                            fontSize: 11, fontWeight: 700, flexShrink: 0,
+                          }}>{i + 1}</span>
+                          <span style={{ color: "#2563eb", fontSize: 14, fontWeight: 500 }}>{t}</span>
+                        </li>
                       ))}
                     </ol>
                   </div>
