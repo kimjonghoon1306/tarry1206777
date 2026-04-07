@@ -892,57 +892,62 @@ export default function DeploymentPage() {
 
   // ── 콘텐츠 빌드 ──
   function buildHtmlContent(): string {
-    // H2 목록 수집 (TOC 자동 생성용)
     const h2Titles: string[] = [];
 
     function inlineFormat(text: string): string {
       return text
         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>")
-        .replace(/`(.+?)`/g, `<code style="background:#f4f4f4;padding:2px 6px;border-radius:4px;font-size:13px">$1</code>`);
+        .replace(/\*(.+?)\*/g, "<em>$1</em>");
     }
+
     function mdLineToHtml(line: string): string {
       if (/^## /.test(line)) {
-        const t = line.slice(3).trim();
+        const t = inlineFormat(line.slice(3).trim());
         const idx = h2Titles.length;
-        h2Titles.push(t);
-        return `<h2 id="section-${idx}" style="font-size:22px;font-weight:800;margin:36px 0 14px;color:#111;border-bottom:2px solid #e8e8ed;padding-bottom:10px;letter-spacing:-.02em">${inlineFormat(t)}</h2>`;
+        h2Titles.push(line.slice(3).trim());
+        return `<h2 id="section-${idx}" style="font-size:22px;font-weight:800;margin:36px 0 14px;color:#111111;border-bottom:2px solid #e8e8ed;padding-bottom:10px;letter-spacing:-.02em">${t}</h2>`;
       }
       if (/^### /.test(line)) return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:10px">${inlineFormat(line.slice(4))}</h3>`;
-      if (/^# /.test(line)) return `<h1 style="font-size:26px;font-weight:900;margin:0 0 24px;color:#111">${inlineFormat(line.slice(2))}</h1>`;
       if (/^---+$/.test(line.trim())) return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
-      if (/^[-*] /.test(line)) return `<li style="margin:6px 0;line-height:1.8">${inlineFormat(line.slice(2))}</li>`;
-      if (/^\d+\. /.test(line)) return `<li style="margin:6px 0;line-height:1.8">${inlineFormat(line.replace(/^\d+\. /, ""))}</li>`;
       if (!line.trim()) return "";
-      return `<p style="line-height:1.9;margin:0 0 14px;color:#333;font-size:15px">${inlineFormat(line)}</p>`;
+      return `<p style="line-height:1.9;margin:0 0 16px;color:#333333;font-size:16px">${inlineFormat(line)}</p>`;
     }
+
     function groupLines(lines: string[]): string {
-      const result: string[] = [];
-      let inUl = false, inOl = false;
-      for (const line of lines) {
-        const isUl = /^[-*] /.test(line);
-        const isOl = /^\d+\. /.test(line);
-        if (!isUl && inUl) { result.push("</ul>"); inUl = false; }
-        if (!isOl && inOl) { result.push("</ol>"); inOl = false; }
-        if (isUl && !inUl) { result.push('<ul style="margin:12px 0 12px 24px;padding:0">'); inUl = true; }
-        if (isOl && !inOl) { result.push('<ol style="margin:12px 0 12px 24px;padding:0">'); inOl = true; }
-        result.push(mdLineToHtml(line));
-      }
-      if (inUl) result.push("</ul>");
-      if (inOl) result.push("</ol>");
-      return result.join("\n");
+      return lines.map(mdLineToHtml).filter(Boolean).join("\n");
     }
+
+    function extractSection(text: string, startTag: string, endTag: string): string {
+      const s = text.indexOf(startTag);
+      const e = text.indexOf(endTag);
+      if (s === -1 || e === -1) return "";
+      return text.slice(s + startTag.length, e).trim();
+    }
+
+    // ✅ 핵심: HTML 변환 전 원본 텍스트에서 마커 먼저 추출
+    const allRawText = blocks
+      .filter((b: any) => b.type === "text")
+      .map((b: any) => (b as TextBlock).content)
+      .join("\n\n");
+
+    const faqRaw = extractSection(allRawText, "[FAQ시작]", "[FAQ끝]");
+    const refRaw = extractSection(allRawText, "[참고자료시작]", "[참고자료끝]");
+    const postRaw = extractSection(allRawText, "[관련글시작]", "[관련글끝]");
 
     const parts: string[] = [];
 
-    // ✅ 썸네일은 payload의 thumbnail 필드로 별도 전송 - content에 중복 삽입 안 함
-
     blocks.forEach((b: any) => {
       if (b.type === "text") {
-        const lines = b.content.split("\n");
-        parts.push(groupLines(lines));
+        // 마커 섹션 제거 후 HTML 변환
+        const cleaned = b.content
+          .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
+          .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
+          .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, "")
+          .trim();
+        if (cleaned) {
+          parts.push(groupLines(cleaned.split("\n")));
+        }
       } else if (b.type === "image-pair") {
-        // image-pair: src 필드 사용 (url 아님)
         const validImgs = b.images.filter((img: any) => img.src && img.src.trim() !== "");
         if (validImgs.length > 0) {
           const imgHtml = validImgs.map((img: any) =>
@@ -954,38 +959,29 @@ export default function DeploymentPage() {
           parts.push(`<div style="margin:16px 0;line-height:0">${imgHtml}</div>`);
         }
       } else if (b.type === "image") {
-        // 단일 이미지: src 필드 사용 (url 아님)
         const imgSrc = b.src || b.url || "";
         if (imgSrc) {
           parts.push(
-            `<figure style="margin:16px 0;text-align:center">` +
+            `<figure style="margin:20px 0;text-align:center">` +
             `<img src="${imgSrc}" alt="${b.alt || ""}" style="width:100%;border-radius:12px;display:block">` +
-            (b.alt ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:4px">${b.alt}</figcaption>` : "") +
+            (b.alt ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:6px">${b.alt}</figcaption>` : "") +
             `</figure>`
           );
         }
       }
     });
+
     if (hashtags.length > 0) {
       parts.push(`<p style="margin-top:24px;color:#888;font-size:14px">${hashtags.join(" ")}</p>`);
     }
 
-    // ── 섹션 파싱 (FAQ / 참고자료 / 관련글) ──────────────
-    const fullText = parts.join("\n");
+    const bodyHtml = parts.join("\n");
 
-    function extractSection(text: string, startTag: string, endTag: string): string {
-      const s = text.indexOf(startTag);
-      const e = text.indexOf(endTag);
-      if (s === -1 || e === -1) return "";
-      return text.slice(s + startTag.length, e).trim();
-    }
-
-    // FAQ
-    const faqRaw = extractSection(fullText, "[FAQ시작]", "[FAQ끝]");
+    // ── FAQ HTML ──
     let faqHtml = "";
     if (faqRaw) {
       const qaPairs: {q: string; a: string}[] = [];
-      const lines = faqRaw.split("\n").map(l => l.trim()).filter(Boolean);
+      const lines = faqRaw.split("\n").map((l: string) => l.trim()).filter(Boolean);
       for (let i = 0; i < lines.length; i++) {
         const qMatch = lines[i].match(/^Q\d+:\s*(.+)/);
         if (qMatch && lines[i+1]) {
@@ -996,10 +992,10 @@ export default function DeploymentPage() {
       if (qaPairs.length > 0) {
         faqHtml = `<div id="faq-section" style="margin:48px 0 32px;padding:28px;background:#f8f9ff;border-radius:16px;border:1px solid #e0e4ff">
   <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 20px;display:flex;align-items:center;gap:8px">
-    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#6366f1;border-radius:8px;color:white;font-size:16px">Q</span>
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#6366f1;border-radius:8px;color:white;font-size:16px;flex-shrink:0">Q</span>
     자주 묻는 질문
   </h2>
-  ${qaPairs.map(({q, a}) => `<div style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid #e0e4ff">
+  ${qaPairs.map(({q, a}: {q:string;a:string}) => `<div style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid #e0e4ff">
     <div style="background:#6366f1;color:white;padding:14px 18px;font-weight:700;font-size:15px">Q. ${q}</div>
     <div style="background:white;padding:14px 18px;color:#444;font-size:14px;line-height:1.8">A. ${a}</div>
   </div>`).join("")}
@@ -1007,23 +1003,23 @@ export default function DeploymentPage() {
       }
     }
 
-    // 참고자료
-    const refRaw = extractSection(fullText, "[참고자료시작]", "[참고자료끝]");
+    // ── 참고자료 HTML ──
     let refHtml = "";
     if (refRaw) {
       const links: {name: string; desc: string; url: string}[] = [];
-      refRaw.split("\n").forEach(line => {
+      refRaw.split("\n").forEach((line: string) => {
         const m = line.match(/^LINK\d+:\s*(.+?)\|(.+?)\|(.+)/);
         if (m) links.push({ name: m[1].trim(), desc: m[2].trim(), url: m[3].trim() });
       });
       if (links.length > 0) {
         refHtml = `<div id="ref-section" style="margin:48px 0 32px">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-    <div style="width:4px;height:24px;background:linear-gradient(180deg,#2563eb,#1d4ed8);border-radius:2px"></div>
+    <div style="width:4px;height:24px;background:linear-gradient(180deg,#2563eb,#1d4ed8);border-radius:2px;flex-shrink:0"></div>
     <h2 style="font-size:18px;font-weight:800;color:#1a1a1a;margin:0">참고자료 &amp; 링크</h2>
   </div>
   <div style="display:grid;gap:10px">
-  ${links.map(({name, desc, url}) => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#ffffff;border-radius:14px;border:1px solid #e8e8eb;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+  ${links.map(({name, desc, url}: {name:string;desc:string;url:string}) =>
+    `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#ffffff;border-radius:14px;border:1px solid #e8e8eb;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
     <div style="flex:1;min-width:0">
       <div style="font-weight:700;color:#2563eb;font-size:15px;margin-bottom:4px">🔗 ${name}</div>
       <div style="color:#86868b;font-size:13px;line-height:1.5">${desc}</div>
@@ -1035,12 +1031,11 @@ export default function DeploymentPage() {
       }
     }
 
-    // 관련글
-    const postRaw = extractSection(fullText, "[관련글시작]", "[관련글끝]");
+    // ── 관련글 HTML ──
     let postHtml = "";
     if (postRaw) {
       const posts: {title: string; desc: string}[] = [];
-      postRaw.split("\n").forEach(line => {
+      postRaw.split("\n").forEach((line: string) => {
         const m = line.match(/^POST\d+:\s*(.+?)\|(.+)/);
         if (m) posts.push({ title: m[1].trim(), desc: m[2].trim() });
       });
@@ -1048,7 +1043,8 @@ export default function DeploymentPage() {
         postHtml = `<div style="margin:40px 0">
   <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">관련 글</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-    ${posts.map(({title, desc}) => `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+    ${posts.map(({title, desc}: {title:string;desc:string}) =>
+    `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
       <div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:8px;line-height:1.5">${title}</div>
       <div style="color:#64748b;font-size:12px;line-height:1.6">${desc}</div>
     </div>`).join("")}
@@ -1057,21 +1053,15 @@ export default function DeploymentPage() {
       }
     }
 
-    // 섹션 마커 제거
-    const cleanHtml = fullText
-      .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
-      .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
-      .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, "");
-
-    // ── 목차(TOC) 자동 생성 ──
+    // ── 목차(TOC) 자동 생성 ── (bodyHtml 변환 후 h2Titles에 쌓임)
     let tocHtml = "";
     if (h2Titles.length >= 2) {
-      const tocItems = h2Titles.map((t, i) =>
+      const tocItems = h2Titles.map((t: string, i: number) =>
         `<li style="margin:6px 0"><a href="#section-${i}" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">${t}</a></li>`
       );
       if (faqRaw) tocItems.push(`<li style="margin:6px 0"><a href="#faq-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">자주 묻는 질문</a></li>`);
       if (refRaw) tocItems.push(`<li style="margin:6px 0"><a href="#ref-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">참고자료 &amp; 링크</a></li>`);
-      tocHtml = `<div style="background:#f0f4ff;border:1px solid #c7d7fe;border-radius:14px;padding:20px 24px;margin:24px 0 32px">
+      tocHtml = `<div style="background:#f0f4ff;border:1px solid #c7d7fe;border-radius:14px;padding:20px 24px;margin:0 0 32px">
   <div style="font-weight:800;font-size:15px;color:#2563eb;margin-bottom:12px">📋 목차</div>
   <ol style="margin:0;padding-left:20px;line-height:1.5">
     ${tocItems.join("\n    ")}
@@ -1079,7 +1069,7 @@ export default function DeploymentPage() {
 </div>`;
     }
 
-    return tocHtml + cleanHtml + faqHtml + refHtml + postHtml;
+    return tocHtml + bodyHtml + faqHtml + refHtml + postHtml;
   }
 
   function buildFinalContent(): string {
