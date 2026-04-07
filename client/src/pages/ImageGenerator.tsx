@@ -949,12 +949,14 @@ export default function ImageGenerator() {
 
     setIsGenerating(true);
     setProgress(0);
+    // ✅ 새 생성 시작 시 translatedPrompt 캐시 초기화 (이전 글 프롬프트 재사용 방지)
+    setTranslatedPrompt("");
 
     try {
       const numImages = parseInt(count) || 1;
-      // 첫 번째 variation만 캐시, 나머지는 매번 다르게
-      const firstTranslated = translatedPrompt || await autoTranslatePrompt(prompt.trim(), 0);
-      if (!translatedPrompt) setTranslatedPrompt(firstTranslated);
+      // ✅ 항상 새로 번역 (캐시 재사용 금지 → 이전 글 프롬프트 오염 방지)
+      const firstTranslated = await autoTranslatePrompt(prompt.trim(), 0);
+      setTranslatedPrompt(firstTranslated);
       const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
       const fullPrompt = `${firstTranslated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
       const [w, h] = (size || "1024x1024").split("x").map(Number);
