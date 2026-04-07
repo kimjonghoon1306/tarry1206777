@@ -1233,7 +1233,21 @@ export default function DeploymentPage() {
       tocHtml = `<div style="background:#f0f4ff;border:1px solid #c7d7fe;border-radius:14px;padding:20px 24px;margin:0 0 32px"><div style="font-weight:800;font-size:15px;color:#2563eb;margin-bottom:12px">📋 목차</div><ol style="margin:0;padding:0;list-style:none">${tocItems.join("\n")}</ol></div>`;
     }
 
-    return tocHtml + bodyHtml + faqHtml + refHtml + postHtml;
+    const tailHtml = faqHtml + refHtml + postHtml;
+
+    // 목차를 썸네일(본문 첫 이미지) 아래로 이동
+    // 첫 블록이 이미지면: 첫 이미지 -> 목차 -> 나머지 본문 순서
+    if (tocHtml) {
+      const firstBlock = blocks[0];
+      const firstIsImage = firstBlock && (firstBlock.type === "image" || firstBlock.type === "image-pair");
+      if (firstIsImage && parts.length > 0) {
+        const [firstPart, ...restParts] = parts;
+        return firstPart + tocHtml + restParts.join("
+") + tailHtml;
+      }
+    }
+
+    return tocHtml + bodyHtml + tailHtml;
   }
 
   function buildFinalContent(): string {
