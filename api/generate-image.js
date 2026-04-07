@@ -46,84 +46,60 @@ function cleanText(value: string): string {
   return (value || "").replace(/\s+/g, " ").replace(/[“”"'`]/g, "").trim();
 }
 
-
-function extractTitleKeywords(topic: string): string[] {
-  const raw = cleanText(topic)
-    .split(/[\s,\/|:;·()\[\]{}!?]+/)
-    .map(v => v.trim())
-    .filter(Boolean);
-
-  const stopwords = new Set([
-    "추천","가이드","정리","방법","후기","리뷰","비교","뜻","의미","총정리","완벽정리","완전정복","꿀팁","팁","정보","소개","설명","알아보기","체크","주의사항","준비물","활용법","사용법","best","top","how","guide","review","tips","info","article"
-  ]);
-
-  const out: string[] = [];
-  for (const token of raw) {
-    const t = token.toLowerCase();
-    if (stopwords.has(t)) continue;
-    if (token.length < 2) continue;
-    if (!out.includes(token)) out.push(token);
-    if (out.length >= 5) break;
-  }
-  return out;
-}
-
 function classifyTopic(topic: string): TopicScene {
   const t = cleanText(topic).toLowerCase();
-  const keywords = extractTitleKeywords(topic);
-  const keywordHint = keywords.length ? `visible subject cues: ${keywords.join(", ")}` : "";
 
   if (/레시피|요리|음식|맛집|식단|도시락|반찬|디저트|브런치|커피|카페|치킨|피자|라면|파스타|샐러드|스테이크|빵|케이크/.test(t)) {
     return {
       category: "food",
-      anchor: "finished dish from the article title must be clearly visible and fill the frame",
-      scene: "single plated meal on a table or kitchen counter, only relevant ingredients or cookware if directly tied to the title",
-      extra: [keywordHint, "food only", "single scene only", "dish is the hero subject", "no people", "no face"].filter(Boolean),
+      anchor: "finished dish from the article title must be clearly visible",
+      scene: "single plated food dish on a table or kitchen counter, edible realistic meal result, only relevant ingredients or cookware if directly related",
+      extra: ["food only", "single scene only", "dish is the hero subject"],
     };
   }
 
-  if (/숙소|호텔|펜션|리조트|여행|관광|제주|서울|부산|강원|경주|전주|여수|속초|해외여행|국내여행|공항|비행기|랜드마크/.test(t)) {
+  if (/숙소|호텔|펜션|리조트|여행|관광|제주|서울|부산|강원|경주|전주|여수|속초|해외여행|국내여행/.test(t)) {
     return {
       category: "travel",
-      anchor: "the place, room, or destination from the article title must be clearly visible",
-      scene: "real accommodation interior, landmark, landscape, transport, or travel environment directly matching the title",
-      extra: [keywordHint, "literal place depiction", "single scene only"].filter(Boolean),
+      anchor: "the place or accommodation from the article title must be clearly visible",
+      scene: "real hotel room, travel destination, landmark, landscape, or accommodation interior matching the title",
+      extra: ["literal place depiction", "single scene only"],
     };
   }
 
   if (/부동산|전세|월세|청약|분양|아파트|원룸|오피스텔|빌라|임대|주택|집|방|인테리어|리모델링|이사/.test(t)) {
     return {
       category: "real_estate",
-      anchor: "the property, room, contract, or housing object from the article title must be clearly visible",
-      scene: "room interior, apartment exterior, keys with contract paper, renovation materials, or moving boxes directly matching the title",
-      extra: [keywordHint, "real property context only", "single scene only", "no people"].filter(Boolean),
+      anchor: "room, house, property exterior, or contract-related object from the article title must be clearly visible",
+      scene: "real estate contract paper with keys, room interior, apartment exterior, or moving boxes directly related to the title",
+      extra: ["single scene only", "real property context only"],
     };
   }
 
-  if (/대출|금융|재테크|주식|코인|경제|세금|보험|연금|신용점수|카드|지원금|정부지원|연말정산|돈|절약|저축|예산/.test(t)) {
+  if (/대출|금융|재테크|주식|코인|경제|세금|보험|연금|신용점수|카드|지원금|정부지원|연말정산|돈|절약/.test(t)) {
     return {
       category: "finance",
-      anchor: "the financial object or document from the article title must be clearly visible",
-      scene: "calculator, bill, contract paper, coins, card, budget notebook, savings jar, or market monitor setup directly tied to the title",
-      extra: [keywordHint, "object-focused finance scene", "single scene only", "no portrait"].filter(Boolean),
+      anchor: "financial object from the article title must be clearly visible",
+      scene: "calculator, financial document, savings jar, coins, card, bank note, or market monitor object-focused setup",
+      extra: ["single scene only", "object-focused finance scene"],
     };
   }
 
-  if (/건강|운동|다이어트|헬스|요가|필라테스|영양제|스킨케어|피부|탈모|건강식|병원|약|수면|뷰티|메이크업|화장품/.test(t)) {
+  if (/다이어트|건강|운동|헬스|요가|필라테스|영양제|스킨케어|피부|탈모|건강식|병원|약|수면/.test(t)) {
     return {
-      category: "health_beauty",
-      anchor: "the health, skincare, or wellness subject from the article title must be clearly visible",
-      scene: "healthy meal, supplement bottle, dumbbell, yoga mat, skincare bottle, medicine pack, or wellness setup matching the title",
-      extra: [keywordHint, "object-focused wellness scene", "single scene only", "no portrait"].filter(Boolean),
+      category: "health",
+      anchor: "health-related object or result from the article title must be clearly visible",
+      scene: "healthy meal, supplement bottles, dumbbells, yoga mat, skincare items, or wellness setup matching the title",
+      extra: ["single scene only", "object-focused wellness scene"],
     };
   }
 
-  if (/ai|챗gpt|인공지능|앱|스마트폰|노트북|컴퓨터|유튜브|블로그|코딩|프로그래밍|개발|it|소셜미디어|게임|웹사이트|자동화|툴|소프트웨어/.test(t)) {
+  if (/ai|챗gpt|인공지능|앱|스마트폰|노트북|컴퓨터|유튜브|블로그|코딩|프로그래밍|개발|it|소셜미디어|게임/.test(t)) {
     return {
       category: "tech",
-      anchor: "the device, workspace, or software-related subject from the article title must be clearly visible",
-      scene: "laptop, phone, monitor, keyboard, creator desk, code screen, AI workspace, or digital tool setup directly matching the title",
-      extra: [keywordHint, "device-focused setup", "single scene only", "no people"].filter(Boolean),
+      anchor: "device or screen-related subject from the article title must be clearly visible",
+      scene: "laptop, smartphone, keyboard, creator desk, code screen, or AI workspace with no person visible",
+      extra: ["single scene only", "device-focused setup"],
     };
   }
 
@@ -131,97 +107,61 @@ function classifyTopic(topic: string): TopicScene {
     return {
       category: "pet",
       anchor: "the pet from the article title must be clearly visible",
-      scene: "single pet subject in a realistic home, care, play, or feeding environment that matches the title",
-      extra: [keywordHint, "single scene only"].filter(Boolean),
+      scene: "single pet subject in a realistic home or care environment",
+      extra: ["single scene only"],
     };
   }
 
-  if (/패션|쇼핑|명품|코디|옷|가방|신발|액세서리|의류/.test(t)) {
+  if (/패션|쇼핑|명품|코디|옷|가방|신발|뷰티|메이크업|화장품/.test(t)) {
     return {
-      category: "fashion",
-      anchor: "the product or outfit from the article title must be clearly visible",
-      scene: "clothing rack, folded clothes, shoes, handbag, accessory, or beauty product display matching the title",
-      extra: [keywordHint, "product-focused scene", "single scene only", "no model portrait"].filter(Boolean),
+      category: "fashion_beauty",
+      anchor: "the item from the article title must be clearly visible",
+      scene: "clothing rack, beauty product setup, outfit display, handbag, shoes, or shopping item scene matching the title",
+      extra: ["product-focused scene", "single scene only"],
     };
   }
 
-  if (/육아|아기|아이|임신|출산|유아|초등|교육|장난감/.test(t)) {
-    return {
-      category: "parenting",
-      anchor: "the parenting or child-related subject from the article title must be clearly visible",
-      scene: "baby items, stroller, crib, bottle, toys, school supplies, or parenting objects directly matching the title",
-      extra: [keywordHint, "object-focused family scene", "single scene only", "no close-up face"].filter(Boolean),
-    };
-  }
-
-  if (/공부|영어|자격증|취업|면접|자소서|대학생|취준생|독서|시험|학습/.test(t)) {
+  if (/공부|영어|자격증|취업|면접|자소서|대학생|취준생|독서/.test(t)) {
     return {
       category: "study_job",
-      anchor: "the study or work-related subject from the article title must be clearly visible",
-      scene: "books, notebook, exam sheets, resume paper, stationery, desk setup, or office objects matching the title",
-      extra: [keywordHint, "object-focused scene", "single scene only", "no portrait"].filter(Boolean),
+      anchor: "study or job-related object from the article title must be clearly visible",
+      scene: "books, notebook, exam material, resume paper, stationery, or study desk object setup",
+      extra: ["single scene only"],
     };
   }
 
   if (/자동차|중고차|전기차|오토바이|차량/.test(t)) {
     return {
-      category: "vehicle",
+      category: "car",
       anchor: "the vehicle from the article title must be clearly visible",
-      scene: "single car or motorcycle exterior, charging setup, dealership row, or road scene matching the title",
-      extra: [keywordHint, "vehicle subject only", "single scene only", "no driver portrait"].filter(Boolean),
+      scene: "single vehicle exterior, charging station scene, dealership row, or road scene matching the title",
+      extra: ["single scene only"],
     };
   }
 
-  if (/캠핑|아웃도어|글램핑|텐트|등산|트레킹|백패킹|캠핑용품|낚시/.test(t)) {
+  if (/캠핑|아웃도어|글램핑|텐트|등산|트레킹|백패킹|캠핑용품/.test(t)) {
     return {
       category: "outdoor",
-      anchor: "the outdoor gear or environment from the article title must be clearly visible",
-      scene: "tent, camp table, lantern, mountain trail, backpack, hiking gear, or outdoor equipment scene matching the title",
-      extra: [keywordHint, "outdoor gear centered", "single scene only", "no people"].filter(Boolean),
+      anchor: "outdoor gear or location from the article title must be clearly visible",
+      scene: "tent, camping gear, mountain trail, camp table, or outdoor equipment in a realistic environment",
+      extra: ["single scene only"],
     };
   }
 
-  if (/창업|사업|마케팅|비즈니스|sns마케팅|스타트업|브랜딩|매출|홍보/.test(t)) {
+  if (/창업|사업|마케팅|비즈니스|sns마케팅|스타트업/.test(t)) {
     return {
       category: "business",
-      anchor: "the business subject from the article title must be clearly visible",
-      scene: "documents, packaging, laptop, sales board, memo board, shipping boxes, or office objects relevant to the title",
-      extra: [keywordHint, "object-focused business scene", "single scene only", "no team portrait"].filter(Boolean),
-    };
-  }
-
-  if (/정부|서류|신청|민원|법률|소송|계약|증명서|세무|행정/.test(t)) {
-    return {
-      category: "document",
-      anchor: "the document or official object from the article title must be clearly visible",
-      scene: "official paper, form, certificate, stamp, folder, pen, or desk setup directly matching the title",
-      extra: [keywordHint, "document-focused scene", "single scene only", "no portrait"].filter(Boolean),
-    };
-  }
-
-  if (/청소|정리|수납|살림|주방|욕실|세탁/.test(t)) {
-    return {
-      category: "home_life",
-      anchor: "the household object or space from the article title must be clearly visible",
-      scene: "clean room corner, storage box, kitchen tools, bathroom shelf, or cleaning supplies matching the title",
-      extra: [keywordHint, "home object focused", "single scene only", "no people"].filter(Boolean),
-    };
-  }
-
-  if (/음악|영화|드라마|책|독서|취미|악기|게임/.test(t)) {
-    return {
-      category: "culture",
-      anchor: "the hobby or entertainment subject from the article title must be clearly visible",
-      scene: "book stack, instrument, headphones, controller, remote, ticket, or hobby object setup matching the title",
-      extra: [keywordHint, "object-focused culture scene", "single scene only", "no portrait"].filter(Boolean),
+      anchor: "business object from the article title must be clearly visible",
+      scene: "documents, laptop, packaging, sales board, strategy notes, or workspace setup relevant to the title",
+      extra: ["single scene only"],
     };
   }
 
   return {
     category: "generic",
-    anchor: "the core subject from the article title must be clearly visible and obvious at first glance",
-    scene: `single realistic object-centered or place-centered scene directly illustrating the article title with only relevant props${keywords.length ? ` related to ${keywords.join(", ")}` : ""}`,
-    extra: [keywordHint, "single scene only", "no generic stock mood photo"].filter(Boolean),
+    anchor: "the core subject from the article title must be clearly visible and obvious",
+    scene: "single realistic scene directly illustrating the article title with only relevant props",
+    extra: ["single scene only"],
   };
 }
 
@@ -232,16 +172,13 @@ function buildSceneLockedPrompt(topicOrPrompt: string): string {
   return [
     `article topic: ${topic}`,
     `literal visual depiction of ${topic}`,
-    `article hero image about ${topic}`,
     scene.anchor,
     scene.scene,
     ...scene.extra,
     "clear topic-centered article scene",
     "topic matched subject",
-    "subject from title must be obvious at first glance",
     "natural real-world scene",
     "professional photography",
-    "adsense-safe article image",
     "editorial blog hero image",
     "8K ultra realistic",
     BASE_NEGATIVE,
@@ -273,7 +210,6 @@ function normalizePrompt(prompt: string): string {
       "finished dish only",
       "no people, no face, no hands",
       "food should fill the frame",
-      "single plated dish only",
     ].join(", ");
   }
 
@@ -320,7 +256,7 @@ async function callReplicateStart(apiKey: string, prompt: string, size: string):
       Authorization: `Token ${apiKey}`,
     },
     body: JSON.stringify({
-      version: "black-forest-labs/flux-schnell",
+      model: "black-forest-labs/flux-schnell",
       input: {
         prompt,
         go_fast: true,
@@ -391,12 +327,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!apiKey && provider !== "pollinations") return res.status(400).json({ error: "apiKey is required" });
     if (!prompt && action !== "poll") return res.status(400).json({ error: "prompt is required" });
 
-    if (provider === "pollinations") {
-      return res.status(400).json({
-        error: "Pollinations blocked for AdSense mode. Use Replicate, OpenAI, or Gemini for stronger topic matching.",
-      });
-    }
-
     const normalizedPrompt = prompt ? normalizePrompt(prompt) : "";
 
     if (provider === "openai") {
@@ -442,4 +372,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
-
