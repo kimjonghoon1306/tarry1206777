@@ -46,7 +46,7 @@ export default async function handler(req, res) {
   };
   const langLabel = langMap[language] || "한국어";
   const targetChars = parseInt(minChars) || 1500;
-  const maxTokens = Math.min(8000, Math.max(4000, Math.ceil(targetChars * 2)));
+  const maxTokens = 8000; // 항상 최대 토큰 (잘림 방지)
 
   const titleInstruction = title
     ? `글 제목은 반드시 "${title}" 으로 시작해줘.`
@@ -96,14 +96,17 @@ ${categoryGuide}
 ⑤ SEO: 키워드 7회 이상 자연스럽게 포함
 
 [형식 규칙]
-- 반드시 ${targetChars}자 이상
+- 본문(소제목+단락)만 ${targetChars}자 이상 작성
+- FAQ와 참고자료는 글자수에 포함하지 않음 (별도 추가)
 - 소제목은 ## 소제목 형식만 사용 (### 이상 금지)
 - ** 별표 강조 금지
 - - 대시 목록 금지
 - 순수 텍스트 + ## 소제목만 사용
 - 한자/일본어/중국어 절대 금지${styleGuide}
 
-[필수 섹션 - 본문 끝에 반드시 추가]
+[작성 순서]
+1단계: 본문을 ${targetChars}자 이상 완전히 작성하고 마무리 문장까지 끝낼 것
+2단계: 본문이 완전히 끝난 후 아래 두 섹션을 추가할 것 (글자수 무관)
 
 [참고자료시작]
 LINK1: (공식기관 또는 신뢰할 수 있는 사이트 이름)|(한 줄 설명)|(https://실제URL)
@@ -118,8 +121,6 @@ Q2: (질문)
 A2: (답변)
 Q3: (질문)
 A3: (답변)
-Q4: (질문)
-A4: (답변)
 [FAQ끝]`;
 
   try {
