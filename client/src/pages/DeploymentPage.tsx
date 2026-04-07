@@ -104,36 +104,6 @@ function renderPreview(text: string): JSX.Element[] {
       return <hr key={i} className="my-4" style={{ borderColor: "var(--border)" }} />;
     if (line === "")
       return <br key={i} />;
-    // ✅ [팁] 색상 박스 — 초록
-    if (line.startsWith("[팁]")) {
-      return (
-        <div key={i} className="flex items-start gap-2 rounded-xl px-4 py-3 my-2 text-sm"
-          style={{ background: "#ecfdf5", border: "1px solid #6ee7b7", color: "#065f46" }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
-          <span>{line.slice(4).trim()}</span>
-        </div>
-      );
-    }
-    // ✅ [주의] 색상 박스 — 주황
-    if (line.startsWith("[주의]")) {
-      return (
-        <div key={i} className="flex items-start gap-2 rounded-xl px-4 py-3 my-2 text-sm"
-          style={{ background: "#fff7ed", border: "1px solid #fdba74", color: "#9a3412" }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
-          <span>{line.slice(5).trim()}</span>
-        </div>
-      );
-    }
-    // ✅ [중요] 색상 박스 — 파랑
-    if (line.startsWith("[중요]")) {
-      return (
-        <div key={i} className="flex items-start gap-2 rounded-xl px-4 py-3 my-2 text-sm"
-          style={{ background: "#eff6ff", border: "1px solid #93c5fd", color: "#1e40af" }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>📌</span>
-          <span>{line.slice(5).trim()}</span>
-        </div>
-      );
-    }
     return (
       <p key={i} className="mb-2 text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
         {line}
@@ -2230,17 +2200,11 @@ ${rows.map((row, ri) => {
                 </div>
               )}
 
-              {title && (
-                <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 leading-tight">
-                  {title}
-                </h1>
-              )}
-
-              {/* 썸네일+제목 아래 목차 표시 (h2 1개 이상이면 표시) */}
+              {/* 썸네일 유무 상관없이 항상 목차 표시 */}
               {(() => {
                 const allText = blocks.filter(b => b.type === "text").map(b => (b as TextBlock).content).join("\n");
                 const h2s = [...allText.matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
-                if (h2s.length < 1) return null;
+                if (h2s.length < 2) return null;
                 return (
                   <div className="rounded-xl p-5 mb-5" style={{ background: "#f0f4ff", border: "1px solid #c7d7fe" }}>
                     <div className="font-bold text-sm mb-3" style={{ color: "#2563eb" }}>📋 목차</div>
@@ -2260,6 +2224,12 @@ ${rows.map((row, ri) => {
                   </div>
                 );
               })()}
+
+              {title && (
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 leading-tight">
+                  {title}
+                </h1>
+              )}
 
               {greeting && (
                 <div
