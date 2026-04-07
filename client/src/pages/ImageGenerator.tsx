@@ -909,19 +909,72 @@ export default function ImageGenerator() {
       return `${p}, ${NP}, editorial blog photo, natural lighting, professional photography, 8K ultra realistic`;
     }
 
-    // ── Step 1: AI 번역 API ───────────
+    // ── Step 1: Gemini 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ───────────
     const aiProvider = getContentProvider();
     const aiKey = getAPIKey(aiProvider);
     if (aiKey) {
       try {
-        const resp = await fetch("/api/translate-prompt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: p, variation }),
-        });
-        const data = await resp.json();
-        if (data.ok && data.prompt && data.prompt.length > 10) {
-          return `${data.prompt}, ${NP}, natural real-world scene, editorial blog photo, 8K ultra realistic`;
+        const aiPrompt = `You are a Stable Diffusion image prompt expert.
+Convert this Korean blog topic into ONE English image prompt.
+RULES:
+- English ONLY
+- NO people, NO faces, NO persons, NO hands
+- Describe physical objects, scenery, or settings
+- Be specific to the exact topic meaning
+- Max 12 words
+- Output the prompt only, nothing else
+Topic: "${p}"`;
+
+        let generatedPrompt = "";
+
+        if (aiProvider === "gemini") {
+          const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash"];
+          for (const model of models) {
+            try {
+              const resp = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${aiKey}`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    contents: [{ parts: [{ text: aiPrompt }] }],
+                    generationConfig: { maxOutputTokens: 50, temperature: 0.7 },
+                  }),
+                }
+              );
+              if (!resp.ok) continue;
+              const data = await resp.json();
+              const text = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+              if (text && text.length > 5 && /[a-zA-Z]/.test(text)) { generatedPrompt = text; break; }
+            } catch { continue; }
+          }
+        } else if (aiProvider === "claude") {
+          const resp = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-key": aiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+            body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 50, messages: [{ role: "user", content: aiPrompt }] }),
+          });
+          if (resp.ok) { const data = await resp.json(); generatedPrompt = (data.content?.[0]?.text || "").trim(); }
+        } else if (aiProvider === "openai") {
+          const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${aiKey}` },
+            body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: aiPrompt }], max_tokens: 50 }),
+          });
+          if (resp.ok) { const data = await resp.json(); generatedPrompt = (data.choices?.[0]?.message?.content || "").trim(); }
+        } else if (aiProvider === "groq") {
+          const resp = await fetch("/api/translate-prompt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: p, variation }),
+          });
+          const data = await resp.json();
+          if (data.ok && data.prompt) generatedPrompt = data.prompt;
+        }
+
+        if (generatedPrompt && generatedPrompt.length > 5 && /[a-zA-Z]/.test(generatedPrompt)) {
+          const clean = generatedPrompt.replace(/^["'`→\-:]+\s*/g, "").replace(/["'`]+$/g, "").trim();
+          return `${clean}, ${NP}, natural real-world scene, editorial blog photo, 8K ultra realistic`;
         }
       } catch {}
     }
