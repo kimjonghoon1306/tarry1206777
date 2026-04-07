@@ -237,215 +237,19 @@ function extractKeyword(prompt: string): string {
   if (/강아지|고양이|반려/.test(p)) return "cute pet dog cat companion home";
   if (/패션|옷|코디|스타일/.test(p)) return "fashion style clothing trendy outfit";
   if (/아이|육아|아기|임신/.test(p)) return "family parenting baby children happy";
-  if (/(^|[^a-z])it([^a-z]|$)|앱|ai|컴퓨터|스마트폰/.test(p)) return "technology digital innovation smartphone";
+  if (/it|앱|ai|컴퓨터|스마트폰/.test(p)) return "technology digital innovation smartphone";
   if (/결혼|웨딩|신혼/.test(p)) return "wedding ceremony couple love celebration";
   if (/꽃|자연|봄|여름|가을|겨울/.test(p)) return "beautiful nature flowers seasons landscape";
   // 4. 영어 단어 추출
   const englishWords = prompt
     .replace(/[,，。、]/g, " ")
-    .split(/\s+/)
-    .filter(w => /^[a-zA-Z0-9-]+$/.test(w) && w.length > 2)
-    .slice(0, 6)
+    .split(" ")
+    .filter(w => /^[a-zA-Z0-9]+$/.test(w) && w.length > 2)
+    .slice(0, 4)
     .join(" ");
-  if (englishWords) return englishWords;
+  if (englishWords) return englishWords + " lifestyle blog photography";
   // 5. 기본값
-  return "clear topic-centered article scene";
-}
-
-
-function extractCoreTopicTokens(rawPrompt: string): string[] {
-  return rawPrompt
-    .replace(/[\[\]\(\)\{\}"'“”‘’!?.,:;|/\\]+/g, " ")
-    .split(/\s+/)
-    .map(s => s.trim())
-    .filter(Boolean)
-    .filter(s => s.length >= 2)
-    .filter(s => !/^(모든것|모든|정리|가이드|후기|추천|비교|방법|리뷰|소개|총정리|스트레스|날리는|도시|탈출)$/i.test(s))
-    .slice(0, 6);
-}
-
-function isGenericTranslatedPrompt(value: string): boolean {
-  const v = value.toLowerCase().trim();
-  if (!v) return true;
-  const genericSignals = [
-    "clear topic-centered article scene",
-    "information concept",
-    "minimal clean desk document",
-    "lifestyle concept",
-    "editorial blog photo",
-    "object focused",
-    "natural real-world scene",
-  ];
-  const hitCount = genericSignals.filter(sig => v.includes(sig)).length;
-  return hitCount >= 2 || v.split(",").length <= 3;
-}
-
-function buildLiteralTopicScene(rawPrompt: string): string {
-  const tokens = extractCoreTopicTokens(rawPrompt);
-  const tokenPhrase = tokens.length > 0 ? tokens.join(" ") : rawPrompt.trim();
-  return [
-    tokenPhrase,
-    `literal visual depiction of ${tokenPhrase}`,
-    `article hero image about ${tokenPhrase}`,
-    "subject from the title must be visible and obvious",
-    "single scene only",
-    "no abstract concept",
-    "no unrelated desk prop image",
-    "no generic stock mood photo",
-  ].join(", ");
-}
-
-function buildSceneDirective(rawPrompt: string): string {
-  const p = rawPrompt.trim().toLowerCase();
-
-  if (/맛집|음식|요리|레시피|카페|디저트|치킨|피자|라면|파스타|브런치|삼겹살|초밥|회|커피/.test(p)) {
-    return [
-      "show the real food or drink as the main subject",
-      "restaurant table or cafe context",
-      "close-up appetizing composition",
-      "no random desk objects",
-      "no unrelated room scene",
-    ].join(", ");
-  }
-
-  if (/숙소|호텔|펜션|리조트|오피스텔|원룸|아파트|전세|월세|부동산|주택|빌라|방/.test(p)) {
-    return [
-      "show the actual accommodation or property as the main subject",
-      "hotel room interior, bedroom interior, apartment exterior, or keys with contract depending on the title",
-      "clean empty space, no people present",
-      "travel lodging or real estate context must be obvious",
-      "no generic lifestyle desk photo",
-    ].join(", ");
-  }
-
-  if (/여행|관광|제주|서울|부산|강원|경주|전주|여수|속초|해외여행|국내여행|공항|비행기/.test(p)) {
-    return [
-      "show the actual destination or travel environment",
-      "landmark, city view, beach, mountain, hotel exterior, or airport scene depending on the title",
-      "wide editorial travel composition",
-      "no generic home interior",
-    ].join(", ");
-  }
-
-  if (/다이어트|건강|운동|헬스|요가|필라테스|영양제|스킨케어|메이크업|뷰티|피부|헤어/.test(p)) {
-    return [
-      "show the real health, fitness, or beauty subject from the article",
-      "healthy meal, gym equipment, skincare products, or beauty routine tools depending on the title",
-      "clear product or activity context",
-      "no abstract concept image",
-    ].join(", ");
-  }
-
-  if (/재테크|주식|코인|대출|돈|금융|보험|세금|연금|신용점수|카드|지원금|정부지원|연말정산/.test(p)) {
-    return [
-      "show real financial objects related to the article",
-      "documents, calculator, coins, bank card, contract papers, ledger, or money on desk depending on the title",
-      "clear finance context",
-      "no abstract glowing technology art",
-    ].join(", ");
-  }
-
-  if (/(^|[^a-z])ai([^a-z]|$)|챗gpt|인공지능|앱|스마트폰|노트북|컴퓨터|유튜브|블로그|소셜미디어|게임|코딩|개발/.test(p)) {
-    return [
-      "show the actual tech subject used in the article",
-      "laptop workspace, smartphone screen, coding monitor, or creator desk depending on the title",
-      "clean digital work environment",
-      "no abstract neon concept art",
-    ].join(", ");
-  }
-
-  if (/육아|아이|아기|임신|출산|공부|영어|취업|자격증|대학생|취준생/.test(p)) {
-    return [
-      "show the actual life situation from the article",
-      "nursery items, study desk, resume papers, books, or educational materials depending on the title",
-      "realistic home or study environment",
-      "no generic mood-only image",
-    ].join(", ");
-  }
-
-  if (/자동차|중고차|전기차|오토바이/.test(p)) {
-    return [
-      "show the actual vehicle as the main subject",
-      "road, showroom, charging station, or dealership context depending on the title",
-      "clear exterior detail",
-      "no unrelated indoor scene",
-    ].join(", ");
-  }
-
-  if (/강아지|고양이|반려동물|햄스터/.test(p)) {
-    return [
-      "show the actual pet as the main subject",
-      "home environment with pet items",
-      "cute but realistic editorial pet photo",
-      "no unrelated prop image",
-    ].join(", ");
-  }
-
-  if (/패션|쇼핑|명품|코디/.test(p)) {
-    return [
-      "show the actual fashion or shopping subject from the article",
-      "clothing rack, outfit layout, bag display, or store context depending on the title",
-      "clean commercial editorial style",
-    ].join(", ");
-  }
-
-  if (/창업|마케팅|사업|비즈니스|sns마케팅/.test(p)) {
-    return [
-      "show the actual business subject from the article",
-      "office desk, campaign notes, laptop, presentation board, or product planning materials depending on the title",
-      "clear business context",
-      "no generic decorative desk still life",
-    ].join(", ");
-  }
-
-  if (/꽃|바다|숲|봄|여름|가을|겨울|산|계곡|해변/.test(p)) {
-    return [
-      "show the actual natural subject from the article",
-      "literal landscape or seasonal scene",
-      "no indoor desk image",
-    ].join(", ");
-  }
-
-  return [
-    "show the literal subject of the title in a single realistic scene",
-    "main object or place from the article must be clearly visible",
-    "no generic stock mood image",
-    "no unrelated desk or document prop image",
-  ].join(", ");
-}
-
-function buildTopicLockedPrompt(rawPrompt: string, translatedPrompt: string): string {
-  const raw = rawPrompt.trim();
-  const translated = translatedPrompt.trim();
-  const mapped = extractKeyword(raw);
-  const literalTopic = buildLiteralTopicScene(raw);
-  const visibleTopic = raw
-    .replace(/[\n\r]+/g, " ")
-    .replace(/[,:;|/]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 80);
-
-  const topicGuard = visibleTopic
-    ? `the image must clearly depict the article topic "${visibleTopic}" at a glance`
-    : "the image must clearly depict the article topic at a glance";
-
-  const safeTranslated = isGenericTranslatedPrompt(translated) ? "" : translated;
-
-  return [
-    literalTopic,
-    mapped,
-    safeTranslated,
-    topicGuard,
-    "topic matched subject",
-    "literal title matching scene",
-    "single coherent scene",
-    "main subject obvious and easy to recognize",
-    "avoid generic stock mood image",
-    "avoid unrelated decorative scene",
-    "avoid abstract information concept image",
-    "editorial article hero image",
-  ].filter(Boolean).join(", ");
+  return "korean lifestyle blog beautiful photography";
 }
 
 
@@ -519,17 +323,22 @@ const STYLES = [
 
 const ADSENSE_STYLE_VALUE = "realistic";
 const ADSENSE_STYLE_LABEL = "📸 애드센스 최적 실사";
-const ADSENSE_QUALITY_BOOST = [
-  "premium editorial blog photography",
-  "ultra realistic DSLR photo",
-  "natural lighting",
-  "clean composition",
-  "trustworthy blog article image",
-  "high quality magazine style",
-  "sharp focus",
-  "rich natural colors"
-].join(", ");
-const ADSENSE_NEGATIVE_PROMPT = [
+
+const ADSENSE_TOPIC_NEGATIVE_PROMPT = [
+  "no people",
+  "no person",
+  "no human",
+  "no portrait",
+  "no face",
+  "no hands",
+  "no crowd",
+  "no group photo",
+  "no selfie",
+  "no abstract concept",
+  "no symbolic metaphor",
+  "no generic lifestyle photo",
+  "no unrelated desk prop image",
+  "no stock mood photo",
   "no infographic",
   "no diagram",
   "no chart",
@@ -552,9 +361,281 @@ const ADSENSE_NEGATIVE_PROMPT = [
   "no illustration"
 ].join(", ");
 
-function buildAdsenseSafePrompt(basePrompt: string): string {
-  return `${basePrompt}, ${STYLE_PROMPTS.realistic}, ${ADSENSE_QUALITY_BOOST}, ${ADSENSE_NEGATIVE_PROMPT}`;
+type TopicScene = {
+  category: string;
+  anchor: string;
+  scene: string;
+  camera: string;
+  extra?: string[];
+};
+
+
+function sanitizeTopicText(value: string): string {
+  return (value || "").replace(/\s+/g, " ").replace(/[“”"'`]/g, "").trim();
 }
+
+function extractTitleKeywords(topic: string): string[] {
+  const text = sanitizeTopicText(topic);
+  const raw = text
+    .split(/[\s,\/|:;·()\[\]{}!?]+/)
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  const stopwords = new Set([
+    "추천","가이드","정리","방법","후기","리뷰","비교","뜻","의미","총정리","완벽정리","완전정복","꿀팁","팁","정보","소개","설명","알아보기","체크","주의사항","준비물","활용법","사용법","best","top","how","guide","review","tips","info","article"
+  ]);
+
+  const out: string[] = [];
+  for (const token of raw) {
+    const t = token.toLowerCase();
+    if (stopwords.has(t)) continue;
+    if (token.length < 2) continue;
+    if (!out.includes(token)) out.push(token);
+    if (out.length >= 5) break;
+  }
+  return out;
+}
+
+function chooseVariationCamera(variation: number): string {
+  const views = [
+    "centered hero composition",
+    "45-degree angle shot",
+    "close-up detail shot",
+    "clean wide composition",
+    "top-down composition"
+  ];
+  return views[variation % views.length];
+}
+
+type TopicScene = {
+  category: string;
+  anchor: string;
+  scene: string;
+  camera: string;
+  extra?: string[];
+};
+
+function classifyTopicScene(topic: string, variation = 0): TopicScene {
+  const t = sanitizeTopicText(topic).toLowerCase();
+  const keywords = extractTitleKeywords(topic);
+  const keywordHint = keywords.length ? `visible subject cues: ${keywords.join(", ")}` : "";
+
+  const base = {
+    camera: chooseVariationCamera(variation),
+    extra: [keywordHint, "single scene only"].filter(Boolean),
+  };
+
+  if (/레시피|요리|음식|맛집|식단|도시락|반찬|디저트|브런치|커피|카페|치킨|피자|라면|파스타|샐러드|스테이크|빵|케이크/.test(t)) {
+    return {
+      category: "food",
+      anchor: "the finished food or dish from the article title must be clearly visible and fill the frame",
+      scene: "single plated meal, table or kitchen counter context, only relevant ingredients or cookware if directly tied to the title",
+      ...base,
+      extra: [...base.extra, "food only", "no people", "no face", "dish is the hero subject"],
+    };
+  }
+
+  if (/숙소|호텔|펜션|리조트|여행|관광|제주|서울|부산|강원|경주|전주|여수|속초|해외여행|국내여행|공항|비행기|랜드마크/.test(t)) {
+    return {
+      category: "travel",
+      anchor: "the place, room, or destination from the article title must be clearly visible",
+      scene: "real accommodation interior, landmark, landscape, transport, or travel environment directly matching the title",
+      ...base,
+      extra: [...base.extra, "literal place depiction", "no unrelated stock travel mood"],
+    };
+  }
+
+  if (/부동산|전세|월세|청약|분양|아파트|원룸|오피스텔|빌라|임대|주택|집|방|인테리어|리모델링|이사/.test(t)) {
+    return {
+      category: "real_estate",
+      anchor: "the property, room, contract, or housing object from the article title must be clearly visible",
+      scene: "room interior, apartment exterior, keys with contract paper, renovation materials, or moving boxes directly matching the title",
+      ...base,
+      extra: [...base.extra, "real property context only", "no people"],
+    };
+  }
+
+  if (/대출|금융|재테크|주식|코인|경제|세금|보험|연금|신용점수|카드|지원금|정부지원|연말정산|돈|절약|저축|예산/.test(t)) {
+    return {
+      category: "finance",
+      anchor: "the financial object or document from the article title must be clearly visible",
+      scene: "calculator, bill, contract paper, coins, card, budget notebook, savings jar, or market monitor setup directly tied to the title",
+      ...base,
+      extra: [...base.extra, "object-focused finance scene", "no portrait"],
+    };
+  }
+
+  if (/건강|운동|다이어트|헬스|요가|필라테스|영양제|스킨케어|피부|탈모|건강식|병원|약|수면|뷰티|메이크업|화장품/.test(t)) {
+    return {
+      category: "health_beauty",
+      anchor: "the health, skincare, or wellness subject from the article title must be clearly visible",
+      scene: "healthy meal, supplement bottle, dumbbell, yoga mat, skincare bottle, medicine pack, or wellness setup matching the title",
+      ...base,
+      extra: [...base.extra, "object-focused wellness scene", "no portrait"],
+    };
+  }
+
+  if (/ai|챗gpt|인공지능|앱|스마트폰|노트북|컴퓨터|유튜브|블로그|코딩|프로그래밍|개발|it|소셜미디어|게임|웹사이트|자동화|툴|소프트웨어/.test(t)) {
+    return {
+      category: "tech",
+      anchor: "the device, workspace, or software-related subject from the article title must be clearly visible",
+      scene: "laptop, phone, monitor, keyboard, creator desk, code screen, AI workspace, or digital tool setup directly matching the title",
+      ...base,
+      extra: [...base.extra, "device-focused setup", "no people"],
+    };
+  }
+
+  if (/강아지|고양이|반려동물|펫|햄스터/.test(t)) {
+    return {
+      category: "pet",
+      anchor: "the pet from the article title must be clearly visible",
+      scene: "single pet subject in a realistic home, care, play, or feeding environment that matches the title",
+      ...base,
+      extra: [...base.extra, "single pet subject"],
+    };
+  }
+
+  if (/패션|쇼핑|명품|코디|옷|가방|신발|액세서리|의류/.test(t)) {
+    return {
+      category: "fashion",
+      anchor: "the product or outfit from the article title must be clearly visible",
+      scene: "clothing rack, folded clothes, shoes, handbag, accessory, or beauty product display matching the title",
+      ...base,
+      extra: [...base.extra, "product-focused scene", "no model portrait"],
+    };
+  }
+
+  if (/육아|아기|아이|임신|출산|유아|초등|교육|장난감/.test(t)) {
+    return {
+      category: "parenting",
+      anchor: "the parenting or child-related subject from the article title must be clearly visible",
+      scene: "baby items, stroller, crib, bottle, toys, school supplies, or parenting objects directly matching the title",
+      ...base,
+      extra: [...base.extra, "object-focused family scene", "no close-up face"],
+    };
+  }
+
+  if (/공부|영어|자격증|취업|면접|자소서|대학생|취준생|독서|시험|학습/.test(t)) {
+    return {
+      category: "study_job",
+      anchor: "the study or work-related subject from the article title must be clearly visible",
+      scene: "books, notebook, exam sheets, resume paper, stationery, desk setup, or office objects matching the title",
+      ...base,
+      extra: [...base.extra, "object-focused scene", "no portrait"],
+    };
+  }
+
+  if (/자동차|중고차|전기차|오토바이|차량/.test(t)) {
+    return {
+      category: "vehicle",
+      anchor: "the vehicle from the article title must be clearly visible",
+      scene: "single car or motorcycle exterior, charging setup, dealership row, or road scene matching the title",
+      ...base,
+      extra: [...base.extra, "vehicle subject only", "no driver portrait"],
+    };
+  }
+
+  if (/캠핑|아웃도어|글램핑|텐트|등산|트레킹|백패킹|캠핑용품|낚시/.test(t)) {
+    return {
+      category: "outdoor",
+      anchor: "the outdoor gear or environment from the article title must be clearly visible",
+      scene: "tent, camp table, lantern, mountain trail, backpack, hiking gear, or outdoor equipment scene matching the title",
+      ...base,
+      extra: [...base.extra, "outdoor gear centered", "no people"],
+    };
+  }
+
+  if (/창업|사업|마케팅|비즈니스|sns마케팅|스타트업|브랜딩|매출|홍보/.test(t)) {
+    return {
+      category: "business",
+      anchor: "the business subject from the article title must be clearly visible",
+      scene: "documents, packaging, laptop, sales board, memo board, shipping boxes, or office objects relevant to the title",
+      ...base,
+      extra: [...base.extra, "object-focused business scene", "no team portrait"],
+    };
+  }
+
+  if (/정부|서류|신청|민원|법률|소송|계약|증명서|세무|행정/.test(t)) {
+    return {
+      category: "document",
+      anchor: "the document or official object from the article title must be clearly visible",
+      scene: "official paper, form, certificate, stamp, folder, pen, or desk setup directly matching the title",
+      ...base,
+      extra: [...base.extra, "document-focused scene", "no portrait"],
+    };
+  }
+
+  if (/청소|정리|수납|살림|주방|욕실|세탁/.test(t)) {
+    return {
+      category: "home_life",
+      anchor: "the household object or space from the article title must be clearly visible",
+      scene: "clean room corner, storage box, kitchen tools, bathroom shelf, or cleaning supplies matching the title",
+      ...base,
+      extra: [...base.extra, "home object focused", "no people"],
+    };
+  }
+
+  if (/음악|영화|드라마|책|독서|취미|악기|게임/.test(t)) {
+    return {
+      category: "culture",
+      anchor: "the hobby or entertainment subject from the article title must be clearly visible",
+      scene: "book stack, instrument, headphones, controller, remote, ticket, or hobby object setup matching the title",
+      ...base,
+      extra: [...base.extra, "object-focused culture scene", "no portrait"],
+    };
+  }
+
+  return {
+    category: "generic_object",
+    anchor: "the main subject from the article title must be clearly visible and obvious",
+    scene: `single realistic object-centered or place-centered scene directly illustrating the article topic, with only relevant props${keywords.length ? ` related to ${keywords.join(", ")}` : ""}`,
+    camera: chooseVariationCamera(variation),
+    extra: [...base.extra, "literal title matching scene", "no generic stock mood photo"],
+  };
+}
+
+function buildTopicLockedPrompt(originalTopic: string, translatedBase: string, variation = 0): string {
+  const cleanTopic = sanitizeTopicText(originalTopic);
+  const scene = classifyTopicScene(cleanTopic, variation);
+  const safeBase = sanitizeTopicText(translatedBase);
+
+  return [
+    `article topic: ${cleanTopic}`,
+    `literal visual depiction of ${cleanTopic}`,
+    `article hero image about ${cleanTopic}`,
+    scene.anchor,
+    scene.scene,
+    scene.camera,
+    ...(scene.extra || []),
+    safeBase,
+    "clear topic-centered article scene",
+    "topic matched subject",
+    "subject from title must be obvious at first glance",
+    "literal title matching scene",
+    "natural real-world scene",
+    "professional photography",
+    "adsense-safe article image",
+    "editorial blog photo",
+    "8K ultra realistic",
+    ADSENSE_TOPIC_NEGATIVE_PROMPT,
+  ].filter(Boolean).join(", ");
+}
+
+function isWeakGenericPrompt(value: string): boolean {
+  const v = (value || "").toLowerCase();
+  if (!v.trim()) return true;
+  return [
+    "lifestyle concept",
+    "minimal clean background",
+    "korean lifestyle blog beautiful photography",
+    "lifestyle blog photography",
+    "information concept",
+    "generic",
+    "editorial blog photo",
+    "blog photography"
+  ].some(token => v.includes(token));
+}
+
 
 const STATS_KEY = "img_stats";
 function loadStats() {
@@ -1117,10 +1198,7 @@ export default function ImageGenerator() {
         });
         const data = await resp.json();
         if (data.ok && data.prompt && data.prompt.length > 10) {
-          const mapped = extractKeyword(p);
-          const literalTopic = buildLiteralTopicScene(p);
-          const safePrompt = isGenericTranslatedPrompt(data.prompt) ? "" : data.prompt;
-          return `${literalTopic}, ${mapped}${safePrompt ? `, ${safePrompt}` : ""}, ${NP}, topic matched subject, literal title matching scene, natural real-world scene, editorial blog photo, 8K ultra realistic`;
+          return `${data.prompt}, ${NP}, object-focused, single scene only, literal title matching scene, natural real-world scene, 8K ultra realistic`;
         }
       } catch {}
     }
@@ -1190,14 +1268,21 @@ export default function ImageGenerator() {
       return `gym fitness equipment weights dumbbells training, ${NP}, editorial blog photo, natural lighting, professional photography, 8K`;
 
     // ── 최후 수단 ──
-    return `${buildLiteralTopicScene(p)}, ${extractKeyword(p)}, ${NP}, topic matched subject, literal title matching scene, clear recognizable main object, editorial blog photo, natural lighting, professional photography, 8K`;
+    return `literal title matching object scene for ${p}, ${NP}, single realistic scene, only relevant props, natural lighting, professional photography, 8K`;
   };
+
 
 
   const handleGenerate = async () => {
     const provider = getImageProvider();
     const apiKey = getAPIKey(provider);
-    if (provider !== "pollinations" && !apiKey) {
+
+    if (provider === "pollinations") {
+      toast.error("Pollinations는 주제 일치도가 불안정해서 차단했습니다. Replicate, OpenAI, Gemini 중 하나를 사용해주세요.");
+      return;
+    }
+
+    if (!apiKey) {
       toast.error(`설정에서 ${currentAI?.label} API 키를 입력해주세요`);
       return;
     }
@@ -1211,42 +1296,34 @@ export default function ImageGenerator() {
 
     try {
       const numImages = parseInt(count) || 1;
-      const rawTopic = prompt.trim();
-      const currentTranslated = translatedPrompt.trim();
-      const firstTranslated = currentTranslated && !isGenericTranslatedPrompt(currentTranslated)
-        ? currentTranslated
-        : await autoTranslatePrompt(rawTopic, 0);
+      const shouldReuseTranslated = translatedPrompt && !isWeakGenericPrompt(translatedPrompt);
+      const firstTranslated = shouldReuseTranslated
+        ? translatedPrompt
+        : await autoTranslatePrompt(prompt.trim(), 0);
+
       setTranslatedPrompt(firstTranslated);
-      const basePrompt = buildTopicLockedPrompt(rawTopic, firstTranslated);
-      const fullPrompt = buildAdsenseSafePrompt(`${basePrompt}, exact topic relevance is more important than artistic mood, the viewer should guess the article topic just by looking at the image`);
+
       const [w, h] = (size || "1024x1024").split("x").map(Number);
       const styleLabel = ADSENSE_STYLE_LABEL;
-      const variationShots = [
-        "front three-quarter composition while keeping the same article subject",
-        "close-up detail shot of the same topic",
-        "wide establishing shot of the same topic",
-        "natural contextual scene of the same topic",
-        "clean editorial composition of the same topic",
-      ];
 
       toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
 
       if (numImages === 1) {
+        const fullPrompt = buildTopicLockedPrompt(prompt.trim(), firstTranslated, 0);
         await generateImages(1, fullPrompt, w || 1024, h || 1024, styleLabel, size);
       } else {
-        // 여러 장 생성 시 각각 다른 variation 프롬프트 사용
-        const prompts: string[] = [fullPrompt];
+        const prompts: string[] = [];
+        prompts.push(buildTopicLockedPrompt(prompt.trim(), firstTranslated, 0));
+
         for (let vi = 1; vi < numImages; vi++) {
           try {
-            const varTranslated = await autoTranslatePrompt(rawTopic, vi);
-            const variedBase = buildTopicLockedPrompt(rawTopic, varTranslated);
-            const shot = variationShots[vi % variationShots.length];
-            prompts.push(buildAdsenseSafePrompt(`${variedBase}, ${shot}`));
+            const translated = await autoTranslatePrompt(prompt.trim(), vi);
+            prompts.push(buildTopicLockedPrompt(prompt.trim(), translated, vi));
           } catch {
-            const shot = variationShots[vi % variationShots.length];
-            prompts.push(buildAdsenseSafePrompt(`${basePrompt}, ${shot}`));
+            prompts.push(buildTopicLockedPrompt(prompt.trim(), firstTranslated, vi));
           }
         }
+
         for (const p of prompts) {
           await generateImages(1, p, w || 1024, h || 1024, styleLabel, size);
         }
