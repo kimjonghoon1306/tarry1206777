@@ -867,6 +867,9 @@ export default function DeploymentPage() {
 
   // ── 콘텐츠 빌드 ──
   function buildHtmlContent(): string {
+    // H2 목록 수집 (TOC 자동 생성용)
+    const h2Titles: string[] = [];
+
     function inlineFormat(text: string): string {
       return text
         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -874,8 +877,13 @@ export default function DeploymentPage() {
         .replace(/`(.+?)`/g, `<code style="background:#f4f4f4;padding:2px 6px;border-radius:4px;font-size:13px">$1</code>`);
     }
     function mdLineToHtml(line: string): string {
-      if (/^### /.test(line)) return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2ecc71;padding-left:10px">${inlineFormat(line.slice(4))}</h3>`;
-      if (/^## /.test(line)) return `<h2 style="font-size:22px;font-weight:800;margin:32px 0 12px;color:#111;border-bottom:2px solid #eee;padding-bottom:8px">${inlineFormat(line.slice(3))}</h2>`;
+      if (/^## /.test(line)) {
+        const t = line.slice(3).trim();
+        const idx = h2Titles.length;
+        h2Titles.push(t);
+        return `<h2 id="section-${idx}" style="font-size:22px;font-weight:800;margin:36px 0 14px;color:#111;border-bottom:2px solid #e8e8ed;padding-bottom:10px;letter-spacing:-.02em">${inlineFormat(t)}</h2>`;
+      }
+      if (/^### /.test(line)) return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:10px">${inlineFormat(line.slice(4))}</h3>`;
       if (/^# /.test(line)) return `<h1 style="font-size:26px;font-weight:900;margin:0 0 24px;color:#111">${inlineFormat(line.slice(2))}</h1>`;
       if (/^---+$/.test(line.trim())) return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
       if (/^[-*] /.test(line)) return `<li style="margin:6px 0;line-height:1.8">${inlineFormat(line.slice(2))}</li>`;
@@ -961,7 +969,7 @@ export default function DeploymentPage() {
         }
       }
       if (qaPairs.length > 0) {
-        faqHtml = `<div style="margin:40px 0;padding:28px;background:#f8f9ff;border-radius:16px;border:1px solid #e0e4ff">
+        faqHtml = `<div id="faq-section" style="margin:48px 0 32px;padding:28px;background:#f8f9ff;border-radius:16px;border:1px solid #e0e4ff">
   <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 20px;display:flex;align-items:center;gap:8px">
     <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#6366f1;border-radius:8px;color:white;font-size:16px">Q</span>
     자주 묻는 질문
@@ -984,18 +992,18 @@ export default function DeploymentPage() {
         if (m) links.push({ name: m[1].trim(), desc: m[2].trim(), url: m[3].trim() });
       });
       if (links.length > 0) {
-        refHtml = `<div style="margin:48px 0 32px">
+        refHtml = `<div id="ref-section" style="margin:48px 0 32px">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-    <div style="width:4px;height:24px;background:linear-gradient(180deg,#2ecc71,#27ae60);border-radius:2px"></div>
-    <h2 style="font-size:18px;font-weight:800;color:#1a1a1a;margin:0">관련 사이트 바로가기</h2>
+    <div style="width:4px;height:24px;background:linear-gradient(180deg,#2563eb,#1d4ed8);border-radius:2px"></div>
+    <h2 style="font-size:18px;font-weight:800;color:#1a1a1a;margin:0">참고자료 &amp; 링크</h2>
   </div>
   <div style="display:grid;gap:10px">
-  ${links.map(({name, desc, url}) => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#ffffff;border-radius:14px;border:1px solid #e8e8eb;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06);transition:all 0.2s">
+  ${links.map(({name, desc, url}) => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#ffffff;border-radius:14px;border:1px solid #e8e8eb;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
     <div style="flex:1;min-width:0">
-      <div style="font-weight:700;color:#1a1a1a;font-size:15px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+      <div style="font-weight:700;color:#2563eb;font-size:15px;margin-bottom:4px">🔗 ${name}</div>
       <div style="color:#86868b;font-size:13px;line-height:1.5">${desc}</div>
     </div>
-    <div style="flex-shrink:0;margin-left:12px;width:32px;height:32px;border-radius:50%;background:#f5f5f7;display:flex;align-items:center;justify-content:center;font-size:14px">→</div>
+    <div style="flex-shrink:0;margin-left:12px;width:32px;height:32px;border-radius:50%;background:#eff3ff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#2563eb">→</div>
   </a>`).join("")}
   </div>
 </div>`;
@@ -1024,13 +1032,29 @@ export default function DeploymentPage() {
       }
     }
 
-    // 섹션 마커 제거 후 특별 섹션 추가
+    // 섹션 마커 제거
     const cleanHtml = fullText
       .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
       .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
       .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, "");
 
-    return cleanHtml + faqHtml + refHtml + postHtml;
+    // ── 목차(TOC) 자동 생성 ──
+    let tocHtml = "";
+    if (h2Titles.length >= 2) {
+      const tocItems = h2Titles.map((t, i) =>
+        `<li style="margin:6px 0"><a href="#section-${i}" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">${t}</a></li>`
+      );
+      if (faqRaw) tocItems.push(`<li style="margin:6px 0"><a href="#faq-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">자주 묻는 질문</a></li>`);
+      if (refRaw) tocItems.push(`<li style="margin:6px 0"><a href="#ref-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">참고자료 &amp; 링크</a></li>`);
+      tocHtml = `<div style="background:#f0f4ff;border:1px solid #c7d7fe;border-radius:14px;padding:20px 24px;margin:24px 0 32px">
+  <div style="font-weight:800;font-size:15px;color:#2563eb;margin-bottom:12px">📋 목차</div>
+  <ol style="margin:0;padding-left:20px;line-height:1.5">
+    ${tocItems.join("\n    ")}
+  </ol>
+</div>`;
+    }
+
+    return tocHtml + cleanHtml + faqHtml + refHtml + postHtml;
   }
 
   function buildFinalContent(): string {
