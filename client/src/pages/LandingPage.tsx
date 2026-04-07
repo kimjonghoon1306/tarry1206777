@@ -102,7 +102,16 @@ export default function LandingPage() {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* 운영자 전용 톱니바퀴 - 항상 첫 번째로 배치해 모바일에서도 보임 */}
+          <button
+            title="운영자"
+            onClick={() => navigate("/superadmin")}
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+            style={{ color: "var(--muted-foreground)", background: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            <Settings className="w-4 h-4" />
+          </button>
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-9 h-9">
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
@@ -117,19 +126,10 @@ export default function LandingPage() {
           <Button
             size="sm"
             onClick={() => navigate("/signup")}
-            style={{ background: "var(--color-emerald)", color: "white" }}
+            style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap" }}
           >
             시작하기 <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
-          {/* 운영자 전용 톱니바퀴 - 다크/라이트 모두 보이도록 */}
-          <button
-            title="운영자"
-            onClick={() => navigate("/superadmin")}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
-            style={{ color: "var(--muted-foreground)", background: "var(--card)", border: "1px solid var(--border)" }}
-          >
-            <Settings className="w-4 h-4" />
-          </button>
         </div>
       </nav>
 
