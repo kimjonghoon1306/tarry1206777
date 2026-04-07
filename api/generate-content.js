@@ -2,9 +2,21 @@
 // 플레인 텍스트 출력 (## 소제목 허용) + FAQ/참고자료 마커 유지
 
 function removeNonKorean(text) {
-  const markers = ["[참고자료시작]","[참고자료끝]","[FAQ시작]","[FAQ끝]","[팁]","[주의]","[중요]"];
+  // ✅ 보호할 마커들 - 먼저 플레이스홀더로 치환
+  const markers = [
+    "[참고자료시작]","[참고자료끝]","[FAQ시작]","[FAQ끝]",
+    "[팁]","[주의]","[중요]","[관련글시작]","[관련글끝]"
+  ];
   const placeholders = markers.map((m, i) => [`XSECMARK${i}X`, m]);
   placeholders.forEach(([key, val]) => { text = text.split(val).join(key); });
+
+  // ✅ ## 소제목 줄 보호 (먼저 추출 후 복원)
+  const h2Lines = [];
+  text = text.replace(/^## .+$/gm, (match) => {
+    const idx = h2Lines.length;
+    h2Lines.push(match);
+    return `XH2LINE${idx}X`;
+  });
 
   text = text
     .replace(/[一-鿿㐀-䶿]/g, "")
@@ -19,6 +31,8 @@ function removeNonKorean(text) {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
+  // ✅ ## 소제목 복원
+  h2Lines.forEach((line, idx) => { text = text.split(`XH2LINE${idx}X`).join(line); });
   placeholders.forEach(([key, val]) => { text = text.split(key).join(val); });
   return text;
 }
