@@ -14,12 +14,20 @@ function removeNonKorean(text: string): string {
     text = text.split(val).join(key);
   });
 
+  // ## 소제목 보호
+  const h2Lines: string[] = [];
+  text = text.replace(/^## .+$/gm, (match) => {
+    const idx = h2Lines.length;
+    h2Lines.push(match);
+    return 'XH2LINE' + idx + 'X';
+  });
+
   text = text
     .replace(/[一-鿿㐀-䶿]/g, "")
     .replace(/[\u3040-\u30FF]/g, "")
     .replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s.,!?;:()\-\'\"\.\[\]%@#&+=/\\~`|<>{}^_$\n]/g, "")
     .replace(/\*{2,}/g, "")
-    .replace(/#{1,6}\s+/g, "")
+    .replace(/^#{3,}\s+/gm, "")  // ## 소제목은 보존, ### 이상만 제거
     .replace(/^[-*]\s+/gm, "")
     .replace(/^\d+\.\s+/gm, "")
     .replace(/_{2,}/g, "")
@@ -27,6 +35,8 @@ function removeNonKorean(text: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
+  // ## 소제목 복원
+  h2Lines.forEach((line, idx) => { text = text.split('XH2LINE' + idx + 'X').join(line); });
   // 마커 복원
   placeholders.forEach(([key, val]) => {
     text = text.split(key).join(val);
@@ -157,7 +167,7 @@ ${categoryGuide}
 - 문장 끝 다양하게: "~해요", "~거든요", "~더라고요", "~잖아요"
 - 반드시 ${minChars}자 이상, ${Math.floor(minChars * 1.4)}자 이하로 작성 (초과 금지)
 - ⚠️ 별표(*) 절대 사용 금지 — **강조**, *이탤릭* 전부 금지
-- ⚠️ 샵(#) 절대 사용 금지 — ## 제목, ### 소제목 전부 금지
+- 소제목은 반드시 ## 소제목 형식으로 작성 (4~6개), ### 이상 금지
 - ⚠️ 대시(-) 목록 절대 금지 — - 항목 전부 금지
 - ⚠️ 언더바(_) 절대 사용 금지
 - 순수 텍스트, 자연스러운 단락 구분
