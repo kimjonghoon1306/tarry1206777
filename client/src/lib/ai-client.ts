@@ -204,10 +204,10 @@ POST3: (연관 주제 블로그 제목 3)|(이유)
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
     const GEMINI_MODELS = [
-      "gemini-2.5-flash",
-      "gemini-2.5-flash-lite",
       "gemini-2.0-flash",
       "gemini-2.0-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
     ];
     const maxTok = Math.min(8192, Math.max(4000, Math.ceil(minChars * 1.8)));
     let lastErr = "";
@@ -373,10 +373,10 @@ export async function generateTitles(
   // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
   if (provider === "gemini") {
     const GEMINI_MODELS = [
-      "gemini-2.5-flash",
-      "gemini-2.5-flash-lite",
       "gemini-2.0-flash",
       "gemini-2.0-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
     ];
     let lastErr = "";
     for (const model of GEMINI_MODELS) {
