@@ -844,15 +844,13 @@ export default function DeploymentPage() {
       const c = (b as TextBlock).content;
       return c.includes("[FAQ시작]") || c.includes("[참고자료시작]") || c.includes("[관련글시작]");
     }
+
     const markerIdx = textOnly.findIndex(hasSectionMarker);
     const safeBlocks = markerIdx === -1 ? textOnly : textOnly.slice(0, markerIdx);
     const sectionBlocks = markerIdx === -1 ? [] : textOnly.slice(markerIdx);
-    const safeTextCount = safeBlocks.filter(b => b.type === "text").length;
+    const safeTextCount = safeBlocks.filter((b) => b.type === "text").length;
 
-    // 첫 이미지 맨 앞 + 3단락마다 1장, 최대 7장 캡
-    const calcMax = Math.max(1, Math.floor(safeTextCount / 3) + 1);
-    const maxImages = Math.min(calcMax, 7); // 최대 7장
-    const imgs = images.slice(0, maxImages);
+    const imgs = images.filter((img) => img?.src && img.src.trim() !== "");
 
     if (imgs.length === 0) {
       toast.error("이미지가 없습니다");
@@ -860,37 +858,69 @@ export default function DeploymentPage() {
     }
 
     const result: ContentBlock[] = [];
-    let imgIdx = 0;
+    let insertedCount = 0;
     let textCount = 0;
 
     // ✅ 첫 이미지를 맨 앞에 삽입
     result.push({
       type: "image",
       id: uid(),
-      src: imgs[imgIdx].src,
-      alt: imgs[imgIdx].alt || "이미지 1",
+      src: imgs[0].src,
+      alt: imgs[0].alt || "이미지 1",
       position: "center",
       source: "auto",
     } as ContentBlock);
-    imgIdx++;
+    insertedCount++;
 
-    // 나머지 텍스트 블록 사이에 3단락마다 이미지 삽입
+    // ✅ 남은 이미지를 본문 길이에 맞춰 최대한 고르게 분산 배치
+    const remainingImages = imgs.slice(1);
+    const insertMap = new Map<number, typeof remainingImages>();
+
+    if (safeTextCount > 0 && remainingImages.length > 0) {
+      remainingImages.forEach((img, index) => {
+        const targetTextIndex = Math.min(
+          safeTextCount,
+          Math.max(1, Math.ceil(((index + 1) * safeTextCount) / remainingImages.length))
+        );
+        const bucket = insertMap.get(targetTextIndex) || [];
+        bucket.push(img);
+        insertMap.set(targetTextIndex, bucket);
+      });
+    }
+
     for (let i = 0; i < safeBlocks.length; i++) {
       result.push(safeBlocks[i]);
+
       if (safeBlocks[i].type === "text") {
         textCount++;
-        if (textCount % 3 === 0 && imgIdx < imgs.length) {
+        const toInsert = insertMap.get(textCount) || [];
+        toInsert.forEach((img, idx) => {
           result.push({
             type: "image",
             id: uid(),
-            src: imgs[imgIdx].src,
-            alt: imgs[imgIdx].alt || `이미지 ${imgIdx + 1}`,
+            src: img.src,
+            alt: img.alt || `이미지 ${insertedCount + idx + 1}`,
             position: "center",
             source: "auto",
           } as ContentBlock);
-          imgIdx++;
-        }
+        });
+        insertedCount += toInsert.length;
       }
+    }
+
+    // ✅ 텍스트보다 이미지가 훨씬 많아서 못 들어간 경우 맨 끝(FAQ 전)에 추가
+    if (insertedCount < imgs.length) {
+      imgs.slice(insertedCount).forEach((img, idx) => {
+        result.push({
+          type: "image",
+          id: uid(),
+          src: img.src,
+          alt: img.alt || `이미지 ${insertedCount + idx + 1}`,
+          position: "center",
+          source: "auto",
+        } as ContentBlock);
+      });
+      insertedCount = imgs.length;
     }
 
     // ✅ FAQ/참고자료 섹션은 이미지 없이 맨 끝에 추가
@@ -900,7 +930,7 @@ export default function DeploymentPage() {
 
     setBlocks(result);
     setAutoInserted(true);
-    toast.success(`이미지 ${imgIdx}장 배치 완료! (첫 이미지 상단 + 3단락마다 1장)`);
+    toast.success(`이미지 ${insertedCount}장 모두 배치 완료!`);
   }
 
   function handleAutoInsert() {
