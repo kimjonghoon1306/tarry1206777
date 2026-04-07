@@ -949,6 +949,34 @@ export default function DeploymentPage() {
     toast.success("자동 삽입 이미지 제거됨");
   }
 
+  // ── 초기화 함수 ──
+  function handleResetAll() {
+    if (!window.confirm("전체 초기화하면 제목, 본문, 이미지, 썸네일이 모두 삭제됩니다. 계속하시겠어요?")) return;
+    setTitle("");
+    setGreeting("");
+    setThumbnail("");
+    setHashtags([]);
+    setBlocks([{ type: "text", id: uid(), content: "" }]);
+    setAutoInserted(false);
+    localStorage.removeItem("blogauto_deploy_blocks");
+    toast.success("전체 초기화 완료!");
+  }
+
+  function handleResetContent() {
+    if (!window.confirm("본문만 초기화할까요?")) return;
+    setBlocks([{ type: "text", id: uid(), content: "" }]);
+    setAutoInserted(false);
+    localStorage.removeItem("blogauto_deploy_blocks");
+    toast.success("본문 초기화 완료!");
+  }
+
+  function handleResetImages() {
+    setBlocks((prev) => prev.filter((b) => b.type === "text"));
+    setThumbnail("");
+    setAutoInserted(false);
+    toast.success("이미지 전체 초기화 완료!");
+  }
+
   // ── 콘텐츠 빌드 ──
   function buildHtmlContent(): string {
     const tocEntries: { id: string; title: string }[] = [];
@@ -2217,6 +2245,30 @@ export default function DeploymentPage() {
 
             {/* 오른쪽: 발행 설정 (데스크탑) */}
             <div className="hidden lg:block space-y-4">
+              {/* 초기화 버튼 - PC */}
+              <div className="rounded-xl p-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Trash2 className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
+                  <span className="text-sm font-semibold text-foreground">초기화</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button onClick={handleResetAll}
+                    className="text-xs py-2 rounded-lg font-semibold transition-all active:scale-95"
+                    style={{ background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5" }}>
+                    전체
+                  </button>
+                  <button onClick={handleResetContent}
+                    className="text-xs py-2 rounded-lg font-semibold transition-all active:scale-95"
+                    style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }}>
+                    본문
+                  </button>
+                  <button onClick={handleResetImages}
+                    className="text-xs py-2 rounded-lg font-semibold transition-all active:scale-95"
+                    style={{ background: "#ede9fe", color: "#5b21b6", border: "1px solid #c4b5fd" }}>
+                    이미지
+                  </button>
+                </div>
+              </div>
               <PublishPanel
                 platforms={platforms}
                 selectedPlatforms={selectedPlatforms}
@@ -2251,6 +2303,23 @@ export default function DeploymentPage() {
           >
             <Copy className="w-4 h-4" />
             네이버 블로그 복사하기 📋
+          </button>
+        </div>
+        <div className="flex gap-2 px-3 pt-1 pb-0">
+          <button onClick={handleResetAll}
+            className="flex-1 text-xs py-1.5 rounded-lg font-semibold"
+            style={{ background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5" }}>
+            전체초기화
+          </button>
+          <button onClick={handleResetContent}
+            className="flex-1 text-xs py-1.5 rounded-lg font-semibold"
+            style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }}>
+            본문초기화
+          </button>
+          <button onClick={handleResetImages}
+            className="flex-1 text-xs py-1.5 rounded-lg font-semibold"
+            style={{ background: "#ede9fe", color: "#5b21b6", border: "1px solid #c4b5fd" }}>
+            이미지초기화
           </button>
         </div>
         <div className="flex gap-2 px-3 py-2">
