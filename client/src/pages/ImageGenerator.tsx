@@ -854,7 +854,7 @@ export default function ImageGenerator() {
   };
 
   // ── 한국어 → 영어 이미지 프롬프트 자동 변환 ──────────────
-  const autoTranslatePrompt = async (koreanPrompt: string): Promise<string> => {
+  const autoTranslatePrompt = async (koreanPrompt: string, variation: number = 0): Promise<string> => {
     const p = koreanPrompt.trim();
     const NP = "no people, no portrait, no face, object focused";
 
@@ -870,7 +870,7 @@ export default function ImageGenerator() {
         const resp = await fetch("/api/translate-prompt", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: p }),
+          body: JSON.stringify({ provider: aiProvider, apiKey: aiKey, topic: p, variation }),
         });
         const data = await resp.json();
         if (data.ok && data.prompt && data.prompt.length > 10) {
@@ -952,15 +952,36 @@ export default function ImageGenerator() {
 
     try {
       const numImages = parseInt(count) || 1;
-      const translated = translatedPrompt || await autoTranslatePrompt(prompt.trim());
-      setTranslatedPrompt(translated);
+      // 첫 번째 variation만 캐시, 나머지는 매번 다르게
+      const firstTranslated = translatedPrompt || await autoTranslatePrompt(prompt.trim(), 0);
+      if (!translatedPrompt) setTranslatedPrompt(firstTranslated);
       const qualityBoost = "professional photography, stunning visual, highly detailed, perfect lighting";
-      const fullPrompt = `${translated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
+      const fullPrompt = `${firstTranslated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`;
       const [w, h] = (size || "1024x1024").split("x").map(Number);
       const styleLabel = STYLES.find(s => s.value === style)?.label || style;
 
       toast.loading(`이미지 ${numImages}개 생성 중...`, { id: "imggen" });
-      await generateImages(numImages, fullPrompt, w || 1024, h || 1024, styleLabel, size);
+
+      if (numImages === 1) {
+        await generateImages(1, fullPrompt, w || 1024, h || 1024, styleLabel, size);
+      } else {
+        // 여러 장 생성 시 각각 다른 variation 프롬프트 사용
+        const aiProvider = getContentProvider();
+        const aiKey = getAPIKey(aiProvider);
+        const prompts: string[] = [fullPrompt]; // 첫 번째는 이미 생성됨
+        for (let vi = 1; vi < numImages; vi++) {
+          try {
+            const varTranslated = await autoTranslatePrompt(prompt.trim(), vi);
+            prompts.push(`${varTranslated}, ${STYLE_PROMPTS[style] || STYLE_PROMPTS.realistic}, ${qualityBoost}`);
+          } catch {
+            prompts.push(fullPrompt);
+          }
+        }
+        // 각 프롬프트로 1장씩 순서대로 생성
+        for (const p of prompts) {
+          await generateImages(1, p, w || 1024, h || 1024, styleLabel, size);
+        }
+      }
     } catch (e: any) {
       toast.error(`생성 실패: ${e?.message || "알 수 없는 오류"}`, { id: "imggen" });
     } finally {
