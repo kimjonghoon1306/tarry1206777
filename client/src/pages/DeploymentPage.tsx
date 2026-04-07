@@ -635,6 +635,13 @@ export default function DeploymentPage() {
     () => safeParseJSON("blogauto_deploy_images", [])
   );
 
+  // ✅ 썸네일 자동 지정: 이미지가 있고 썸네일이 없으면 첫번째 이미지로 자동 설정
+  useEffect(() => {
+    if (!thumbnail && deployImages.length > 0 && deployImages[0].src) {
+      setThumbnail(deployImages[0].src);
+    }
+  }, [deployImages]);
+
   const [blocks, setBlocks] = useState<ContentBlock[]>(() => {
     // 저장된 블록 상태 우선 복원
     const savedBlocks = safeParseJSON<ContentBlock[] | null>("blogauto_deploy_blocks", null);
@@ -1131,13 +1138,13 @@ ${rows.map((row, ri) => {
     let tocHtml = "";
     if (h2Titles.length >= 2) {
       const tocItems = h2Titles.map((t: string, i: number) =>
-        `<li style="margin:6px 0"><a href="#section-${i}" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">${t}</a></li>`
+        `<li style="margin:8px 0;display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2563eb;color:white;font-size:11px;font-weight:800;flex-shrink:0">${i+1}</span><a href="#section-${i}" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">${t}</a></li>`
       );
       if (faqRaw) tocItems.push(`<li style="margin:6px 0"><a href="#faq-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">자주 묻는 질문</a></li>`);
       if (refRaw) tocItems.push(`<li style="margin:6px 0"><a href="#ref-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">참고자료 &amp; 링크</a></li>`);
       tocHtml = `<div style="background:#f0f4ff;border:1px solid #c7d7fe;border-radius:14px;padding:20px 24px;margin:0 0 32px">
   <div style="font-weight:800;font-size:15px;color:#2563eb;margin-bottom:12px">📋 목차</div>
-  <ol style="margin:0;padding-left:20px;line-height:1.5">
+  <ol style="margin:0;padding:0;list-style:none">
     ${tocItems.join("\n    ")}
   </ol>
 </div>`;
