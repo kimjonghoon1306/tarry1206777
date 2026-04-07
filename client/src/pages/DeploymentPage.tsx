@@ -955,7 +955,40 @@ export default function DeploymentPage() {
     }
 
     function groupLines(lines: string[]): string {
-      return lines.map(mdLineToHtml).filter(Boolean).join("\n");
+      // ✅ 표(table) 감지: | 로 시작하는 연속 줄을 테이블로 변환
+      const result: string[] = [];
+      let tableBuffer: string[] = [];
+
+      function flushTable() {
+        if (tableBuffer.length < 2) {
+          tableBuffer.forEach(l => result.push(mdLineToHtml(l)));
+          tableBuffer = [];
+          return;
+        }
+        const rows = tableBuffer.filter(l => !/^\|[-\s|]+\|$/.test(l.trim()));
+        const tableHtml = `<div style="overflow-x:auto;margin:20px 0">
+<table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+${rows.map((row, ri) => {
+  const cells = row.split("|").map(c => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
+  const tag = ri === 0 ? "th" : "td";
+  const rowBg = ri === 0 ? "background:#2563eb;color:white;" : ri % 2 === 0 ? "background:#f8fafc;" : "background:white;";
+  return `<tr>${cells.map(c => `<${tag} style="padding:12px 16px;border:1px solid #e2e8f0;text-align:left;${rowBg}font-weight:${ri===0?"700":"400"}">${c}</${tag}>`).join("")}</tr>`;
+}).join("\n")}
+</table></div>`;
+        result.push(tableHtml);
+        tableBuffer = [];
+      }
+
+      for (const line of lines) {
+        if (/^\|.+\|/.test(line.trim())) {
+          tableBuffer.push(line);
+        } else {
+          if (tableBuffer.length > 0) flushTable();
+          result.push(mdLineToHtml(line));
+        }
+      }
+      if (tableBuffer.length > 0) flushTable();
+      return result.filter(Boolean).join("\n");
     }
 
     function extractSection(text: string, startTag: string, endTag: string): string {
@@ -2159,6 +2192,23 @@ export default function DeploymentPage() {
                   <img src={thumbnail} alt="썸네일" className="w-full h-full object-cover" />
                 </div>
               )}
+
+              {/* 썸네일 바로 밑 목차 */}
+              {(() => {
+                const allText = blocks.filter(b => b.type === "text").map(b => (b as TextBlock).content).join("\n");
+                const h2s = [...allText.matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
+                if (h2s.length < 2) return null;
+                return (
+                  <div className="rounded-xl p-5 mb-5" style={{ background: "#f0f4ff", border: "1px solid #c7d7fe" }}>
+                    <div className="font-bold text-sm mb-3" style={{ color: "#2563eb" }}>📋 목차</div>
+                    <ol className="space-y-1.5 pl-5" style={{ margin: 0 }}>
+                      {h2s.map((t, i) => (
+                        <li key={i} style={{ color: "#2563eb", fontSize: 14, fontWeight: 500 }}>{t}</li>
+                      ))}
+                    </ol>
+                  </div>
+                );
+              })()}
 
               {title && (
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 leading-tight">
