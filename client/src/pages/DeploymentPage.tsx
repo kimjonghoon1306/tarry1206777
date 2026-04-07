@@ -912,6 +912,20 @@ export default function DeploymentPage() {
       if (/^---+$/.test(line.trim())) return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
       if (!line.trim()) return "";
 
+      // ✅ [팁] / [주의] / [중요] 마커 우선 감지 (AI가 붙인 마커)
+      if (/^\[팁\]/.test(line.trim())) {
+        const body = inlineFormat(line.trim().replace(/^\[팁\]\s*/, ""));
+        return `<div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#1e3a8a;line-height:1.7">💡 ${body}</div>`;
+      }
+      if (/^\[주의\]/.test(line.trim())) {
+        const body = inlineFormat(line.trim().replace(/^\[주의\]\s*/, ""));
+        return `<div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#78350f;line-height:1.7">⚠️ ${body}</div>`;
+      }
+      if (/^\[중요\]/.test(line.trim())) {
+        const body = inlineFormat(line.trim().replace(/^\[중요\]\s*/, ""));
+        return `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#14532d;line-height:1.7">✅ ${body}</div>`;
+      }
+
       const text = inlineFormat(line);
 
       // 🔵 팁/핵심/포인트 → 파란 박스
