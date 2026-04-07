@@ -921,88 +921,167 @@ export default function DeploymentPage() {
 
   // ── 콘텐츠 빌드 ──
   function buildHtmlContent(): string {
-    const h2Titles: string[] = [];
+    const tocEntries: { id: string; title: string }[] = [];
+    let autoSectionIndex = 0;
+
+    function escapeHtml(text: string): string {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
 
     function inlineFormat(text: string): string {
-      return text
+      return escapeHtml(text)
         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.+?)\*/g, "<em>$1</em>");
     }
 
-    function mdLineToHtml(line: string): string {
-      if (/^## /.test(line)) {
-        const t = inlineFormat(line.slice(3).trim());
-        const idx = h2Titles.length;
-        h2Titles.push(line.slice(3).trim());
-        return `<h2 id="section-${idx}" style="font-size:22px;font-weight:800;margin:36px 0 14px;color:#111111;border-bottom:2px solid #e8e8ed;padding-bottom:10px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#2563eb;color:white;font-size:13px;font-weight:800;flex-shrink:0">${idx + 1}</span>${t}</h2>`;
-      }
-      if (/^### /.test(line)) return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:10px">${inlineFormat(line.slice(4))}</h3>`;
-      if (/^---+$/.test(line.trim())) return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
-      if (!line.trim()) return "";
+    function stripInlineMarkdown(text: string): string {
+      return text
+        .replace(/^#{1,3}\s+/, "")
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/\*(.+?)\*/g, "$1")
+        .replace(/`(.+?)`/g, "$1")
+        .trim();
+    }
 
-      // ✅ [팁] / [주의] / [중요] 마커 우선 감지 (AI가 붙인 마커)
-      if (/^\[팁\]/.test(line.trim())) {
-        const body = inlineFormat(line.trim().replace(/^\[팁\]\s*/, ""));
-        return `<div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#1e3a8a;line-height:1.7">💡 ${body}</div>`;
-      }
-      if (/^\[주의\]/.test(line.trim())) {
-        const body = inlineFormat(line.trim().replace(/^\[주의\]\s*/, ""));
-        return `<div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#78350f;line-height:1.7">⚠️ ${body}</div>`;
-      }
-      if (/^\[중요\]/.test(line.trim())) {
-        const body = inlineFormat(line.trim().replace(/^\[중요\]\s*/, ""));
-        return `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#14532d;line-height:1.7">✅ ${body}</div>`;
+    function shortenTitle(text: string, max = 26): string {
+      const cleaned = stripInlineMarkdown(text).replace(/\s+/g, " ").trim();
+      if (!cleaned) return `핵심 내용 ${tocEntries.length + 1}`;
+      return cleaned.length > max ? `${cleaned.slice(0, max).trim()}…` : cleaned;
+    }
+
+    function makeSectionHeading(title: string, id?: string): string {
+      const sectionId = id || `section-${tocEntries.length}`;
+      const cleanTitle = shortenTitle(title, 60);
+      tocEntries.push({ id: sectionId, title: cleanTitle });
+      return `<h2 id="${sectionId}" style="font-size:22px;font-weight:800;margin:36px 0 14px;color:#111111;border-bottom:2px solid #e8e8ed;padding-bottom:10px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#2563eb;color:white;font-size:13px;font-weight:800;flex-shrink:0">${tocEntries.length}</span>${inlineFormat(cleanTitle)}</h2>`;
+    }
+
+    function buildCallout(type: "tip" | "warning" | "important", body: string): string {
+      const styles = {
+        tip: {
+          bg: "#eff6ff",
+          border: "#2563eb",
+          color: "#1e3a8a",
+          icon: "💡",
+        },
+        warning: {
+          bg: "#fffbeb",
+          border: "#f59e0b",
+          color: "#78350f",
+          icon: "⚠️",
+        },
+        important: {
+          bg: "#f0fdf4",
+          border: "#16a34a",
+          color: "#14532d",
+          icon: "✅",
+        },
+      } as const;
+      const s = styles[type];
+      return `<div style="background:${s.bg};border-left:4px solid ${s.border};border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:${s.color};line-height:1.8">${s.icon} ${body}</div>`;
+    }
+
+    function classifyCallout(line: string): "tip" | "warning" | "important" | null {
+      const trimmed = line.trim();
+      if (!trimmed) return null;
+
+      if (/^\[팁\]/.test(trimmed)) return "tip";
+      if (/^\[(주의|경고)\]/.test(trimmed)) return "warning";
+      if (/^\[(중요|필수)\]/.test(trimmed)) return "important";
+
+      if (/^(tip|팁|포인트|핵심|check|체크|꿀팁|추천)[:\s!]/i.test(trimmed)) return "tip";
+      if (/^(주의|경고|warning|caution|조심|실수)[:\s!]/i.test(trimmed)) return "warning";
+      if (/^(중요|필수|반드시|꼭|key|핵심 정리|요약|정리)[:\s!]/i.test(trimmed)) return "important";
+
+      if (/반드시|꼭 확인|주의해야|절대|가장 중요|핵심은|정리하면|요약하면|놓치면 안/.test(trimmed)) return "important";
+      if (/주의|조심|실수|틀리기|헷갈리|오해|잘못|피해야|주의사항/.test(trimmed)) return "warning";
+      if (/팁|꿀팁|비법|비결|노하우|포인트|추천|도움이 됩니다|유용합니다/.test(trimmed)) return "tip";
+
+      return null;
+    }
+
+    function mdLineToHtml(line: string, paragraphIndexRef: { value: number }, explicitHeadingFoundRef: { value: boolean }): string {
+      const trimmed = line.trim();
+      if (!trimmed) return "";
+
+      if (/^##\s+/.test(trimmed)) {
+        explicitHeadingFoundRef.value = true;
+        return makeSectionHeading(trimmed.replace(/^##\s+/, ""));
       }
 
-      const text = inlineFormat(line);
-
-      // 🔵 팁/핵심/포인트 → 파란 박스
-      if (/^(tip|팁|포인트|핵심|check|체크|꿀팁)[:\s!]/i.test(line.trim())) {
-        return `<div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#1e3a8a;line-height:1.7">💡 ${text}</div>`;
-      }
-      // 🟡 주의/경고 → 노란 박스
-      if (/^(주의|경고|warning|caution|조심)[:\s!]/i.test(line.trim())) {
-        return `<div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#78350f;line-height:1.7">⚠️ ${text}</div>`;
-      }
-      // 🟢 중요/필수/반드시 → 초록 박스
-      if (/^(중요|필수|반드시|꼭|key|핵심 정리)[:\s!]/i.test(line.trim())) {
-        return `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#14532d;line-height:1.7">✅ ${text}</div>`;
-      }
-      // 문장 내 중요 키워드 감지 → 자동 색상 박스
-      if (/반드시|꼭 확인|주의해야|절대|가장 중요|핵심은|정리하면|요약하면/.test(line) && line.length < 150) {
-        return `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 10px 10px 0;padding:12px 16px;margin:16px 0;font-size:15px;color:#14532d;line-height:1.7">✅ ${text}</div>`;
-      }
-      if (/주의|조심|실수|틀리기|헷갈리|오해|잘못/.test(line) && line.length < 150) {
-        return `<div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:12px 16px;margin:16px 0;font-size:15px;color:#78350f;line-height:1.7">⚠️ ${text}</div>`;
-      }
-      if (/팁|꿀팁|비법|비결|노하우|포인트|추천/.test(line) && line.length < 150) {
-        return `<div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 10px 10px 0;padding:12px 16px;margin:16px 0;font-size:15px;color:#1e3a8a;line-height:1.7">💡 ${text}</div>`;
+      if (/^###\s+/.test(trimmed)) {
+        return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:10px">${inlineFormat(trimmed.replace(/^###\s+/, ""))}</h3>`;
       }
 
-      return `<p style="line-height:1.9;margin:0 0 16px;color:#333333;font-size:16px">${text}</p>`;
+      if (/^---+$/.test(trimmed)) {
+        return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
+      }
+
+      const calloutType = classifyCallout(trimmed);
+      if (calloutType) {
+        const body = inlineFormat(
+          trimmed
+            .replace(/^\[(팁|주의|경고|중요|필수)\]\s*/i, "")
+            .replace(/^(tip|팁|포인트|핵심|check|체크|꿀팁|추천|주의|경고|warning|caution|조심|실수|중요|필수|반드시|꼭|key|핵심 정리|요약|정리)[:\s!]+/i, "")
+        );
+        return buildCallout(calloutType, body || inlineFormat(trimmed));
+      }
+
+      const isBulletListLine = /^[-*•]\s+/.test(trimmed);
+      const isNumberedListLine = /^\d+[.)]\s+/.test(trimmed);
+      const isListLine = isBulletListLine || isNumberedListLine;
+      const cleanedText = stripInlineMarkdown(trimmed);
+      const isTitleLike = !/[.!?。！？]$/.test(cleanedText) && cleanedText.length >= 8 && cleanedText.length <= 42;
+
+      if (isNumberedListLine) {
+        const numberedBody = inlineFormat(trimmed.replace(/^(\d+[.)])\s+/, `<strong>$1</strong> `));
+        return buildCallout("important", numberedBody);
+      }
+
+      let autoHeadingHtml = "";
+      if (!explicitHeadingFoundRef.value && paragraphIndexRef.value > 0 && paragraphIndexRef.value % 3 === 0 && !isListLine) {
+        autoSectionIndex += 1;
+        autoHeadingHtml = makeSectionHeading(shortenTitle(cleanedText || `핵심 내용 ${autoSectionIndex}`, 24), `section-auto-${autoSectionIndex}`);
+      } else if (!explicitHeadingFoundRef.value && paragraphIndexRef.value === 0 && isTitleLike) {
+        autoSectionIndex += 1;
+        autoHeadingHtml = makeSectionHeading(shortenTitle(cleanedText, 24), `section-auto-${autoSectionIndex}`);
+      }
+
+      paragraphIndexRef.value += 1;
+      const text = inlineFormat(trimmed);
+      const paragraphHtml = isBulletListLine
+        ? `<p style="line-height:1.9;margin:0 0 12px;color:#333333;font-size:16px;padding-left:4px">${text}</p>`
+        : `<p style="line-height:1.9;margin:0 0 16px;color:#333333;font-size:16px">${text}</p>`;
+
+      return autoHeadingHtml + paragraphHtml;
     }
 
     function groupLines(lines: string[]): string {
-      // ✅ 표(table) 감지: | 로 시작하는 연속 줄을 테이블로 변환
       const result: string[] = [];
       let tableBuffer: string[] = [];
+      const paragraphIndexRef = { value: 0 };
+      const explicitHeadingFoundRef = { value: false };
 
       function flushTable() {
         if (tableBuffer.length < 2) {
-          tableBuffer.forEach(l => result.push(mdLineToHtml(l)));
+          tableBuffer.forEach((l) => result.push(mdLineToHtml(l, paragraphIndexRef, explicitHeadingFoundRef)));
           tableBuffer = [];
           return;
         }
-        const rows = tableBuffer.filter(l => !/^\|[-\s|]+\|$/.test(l.trim()));
-        const tableHtml = `<div style="overflow-x:auto;margin:20px 0">
-<table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
-${rows.map((row, ri) => {
-  const cells = row.split("|").map(c => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
-  const tag = ri === 0 ? "th" : "td";
-  const rowBg = ri === 0 ? "background:#2563eb;color:white;" : ri % 2 === 0 ? "background:#f8fafc;" : "background:white;";
-  return `<tr>${cells.map(c => `<${tag} style="padding:12px 16px;border:1px solid #e2e8f0;text-align:left;${rowBg}font-weight:${ri===0?"700":"400"}">${c}</${tag}>`).join("")}</tr>`;
-}).join("\n")}
-</table></div>`;
+        const rows = tableBuffer.filter((l) => !/^\|[-\s|]+\|$/.test(l.trim()));
+        const tableHtml = `<div style="overflow-x:auto;margin:20px 0"><table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">${rows
+          .map((row, ri) => {
+            const cells = row.split("|").map((c) => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
+            const tag = ri === 0 ? "th" : "td";
+            const rowBg = ri === 0 ? "background:#2563eb;color:white;" : ri % 2 === 0 ? "background:#f8fafc;" : "background:white;";
+            return `<tr>${cells.map((c) => `<${tag} style="padding:12px 16px;border:1px solid #e2e8f0;text-align:left;${rowBg}font-weight:${ri === 0 ? "700" : "400"}">${inlineFormat(c)}</${tag}>`).join("")}</tr>`;
+          })
+          .join("\n")}</table></div>`;
         result.push(tableHtml);
         tableBuffer = [];
       }
@@ -1012,7 +1091,8 @@ ${rows.map((row, ri) => {
           tableBuffer.push(line);
         } else {
           if (tableBuffer.length > 0) flushTable();
-          result.push(mdLineToHtml(line));
+          const html = mdLineToHtml(line, paragraphIndexRef, explicitHeadingFoundRef);
+          if (html) result.push(html);
         }
       }
       if (tableBuffer.length > 0) flushTable();
@@ -1026,7 +1106,6 @@ ${rows.map((row, ri) => {
       return text.slice(s + startTag.length, e).trim();
     }
 
-    // ✅ 핵심: HTML 변환 전 원본 텍스트에서 마커 먼저 추출
     const allRawText = blocks
       .filter((b: any) => b.type === "text")
       .map((b: any) => (b as TextBlock).content)
@@ -1040,7 +1119,6 @@ ${rows.map((row, ri) => {
 
     blocks.forEach((b: any) => {
       if (b.type === "text") {
-        // 마커 섹션 제거 후 HTML 변환
         const cleaned = b.content
           .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
           .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
@@ -1052,12 +1130,17 @@ ${rows.map((row, ri) => {
       } else if (b.type === "image-pair") {
         const validImgs = b.images.filter((img: any) => img.src && img.src.trim() !== "");
         if (validImgs.length > 0) {
-          const imgHtml = validImgs.map((img: any) =>
-            `<figure style="display:inline-block;width:${validImgs.length > 1 ? "48%" : "100%"};margin:4px 1%;vertical-align:top">` +
-            `<img src="${img.src}" alt="${img.alt || ""}" style="width:100%;border-radius:12px;display:block">` +
-            (img.alt ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:4px">${img.alt}</figcaption>` : "") +
-            `</figure>`
-          ).join("");
+          const imgHtml = validImgs
+            .map(
+              (img: any) =>
+                `<figure style="display:inline-block;width:${validImgs.length > 1 ? "48%" : "100%"};margin:4px 1%;vertical-align:top">` +
+                `<img src="${img.src}" alt="${escapeHtml(img.alt || "")}" style="width:100%;border-radius:12px;display:block">` +
+                (img.alt
+                  ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:4px">${inlineFormat(img.alt)}</figcaption>`
+                  : "") +
+                `</figure>`
+            )
+            .join("");
           parts.push(`<div style="margin:16px 0;line-height:0">${imgHtml}</div>`);
         }
       } else if (b.type === "image") {
@@ -1065,110 +1148,89 @@ ${rows.map((row, ri) => {
         if (imgSrc) {
           parts.push(
             `<figure style="margin:20px 0;text-align:center">` +
-            `<img src="${imgSrc}" alt="${b.alt || ""}" style="width:100%;border-radius:12px;display:block">` +
-            (b.alt ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:6px">${b.alt}</figcaption>` : "") +
-            `</figure>`
+              `<img src="${imgSrc}" alt="${escapeHtml(b.alt || "")}" style="width:100%;border-radius:12px;display:block">` +
+              (b.alt
+                ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:6px">${inlineFormat(b.alt)}</figcaption>`
+                : "") +
+              `</figure>`
           );
         }
       }
     });
 
     if (hashtags.length > 0) {
-      parts.push(`<p style="margin-top:24px;color:#888;font-size:14px">${hashtags.join(" ")}</p>`);
+      parts.push(`<p style="margin-top:24px;color:#888;font-size:14px">${hashtags.map((tag) => inlineFormat(tag)).join(" ")}</p>`);
     }
 
     const bodyHtml = parts.join("\n");
 
-    // ── FAQ HTML ──
     let faqHtml = "";
     if (faqRaw) {
-      const qaPairs: {q: string; a: string}[] = [];
+      const qaPairs: { q: string; a: string }[] = [];
       const lines = faqRaw.split("\n").map((l: string) => l.trim()).filter(Boolean);
       for (let i = 0; i < lines.length; i++) {
         const qMatch = lines[i].match(/^Q\d+:\s*(.+)/);
-        if (qMatch && lines[i+1]) {
-          const aNext = lines[i+1].match(/^A\d+:\s*(.+)/);
-          if (aNext) { qaPairs.push({ q: qMatch[1], a: aNext[1] }); i++; }
+        if (qMatch && lines[i + 1]) {
+          const aNext = lines[i + 1].match(/^A\d+:\s*(.+)/);
+          if (aNext) {
+            qaPairs.push({ q: qMatch[1], a: aNext[1] });
+            i++;
+          }
         }
       }
       if (qaPairs.length > 0) {
-        faqHtml = `<div id="faq-section" style="margin:48px 0 32px;padding:28px;background:#f8f9ff;border-radius:16px;border:1px solid #e0e4ff">
-  <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 20px;display:flex;align-items:center;gap:8px">
-    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#6366f1;border-radius:8px;color:white;font-size:16px;flex-shrink:0">Q</span>
-    자주 묻는 질문
-  </h2>
-  ${qaPairs.map(({q, a}: {q:string;a:string}) => `<div style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid #e0e4ff">
-    <div style="background:#6366f1;color:white;padding:14px 18px;font-weight:700;font-size:15px">Q. ${q}</div>
-    <div style="background:white;padding:14px 18px;color:#444;font-size:14px;line-height:1.8">A. ${a}</div>
-  </div>`).join("")}
-</div>`;
+        faqHtml = `<div id="faq-section" style="margin:48px 0 32px;padding:28px;background:#f8f9ff;border-radius:16px;border:1px solid #e0e4ff"><h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 20px;display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#6366f1;border-radius:8px;color:white;font-size:16px;flex-shrink:0">Q</span>자주 묻는 질문</h2>${qaPairs
+          .map(
+            ({ q, a }: { q: string; a: string }) =>
+              `<div style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid #e0e4ff"><div style="background:#6366f1;color:white;padding:14px 18px;font-weight:700;font-size:15px">Q. ${inlineFormat(q)}</div><div style="background:white;padding:14px 18px;color:#444;font-size:14px;line-height:1.8">A. ${inlineFormat(a)}</div></div>`
+          )
+          .join("")}</div>`;
       }
     }
 
-    // ── 참고자료 HTML ──
     let refHtml = "";
     if (refRaw) {
-      const links: {name: string; desc: string; url: string}[] = [];
+      const links: { name: string; desc: string; url: string }[] = [];
       refRaw.split("\n").forEach((line: string) => {
         const m = line.match(/^LINK\d+:\s*(.+?)\|(.+?)\|(.+)/);
         if (m) links.push({ name: m[1].trim(), desc: m[2].trim(), url: m[3].trim() });
       });
       if (links.length > 0) {
-        refHtml = `<div id="ref-section" style="margin:48px 0 32px">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-    <div style="width:4px;height:24px;background:linear-gradient(180deg,#2563eb,#1d4ed8);border-radius:2px;flex-shrink:0"></div>
-    <h2 style="font-size:18px;font-weight:800;color:#1a1a1a;margin:0">참고자료 &amp; 링크</h2>
-  </div>
-  <div style="display:grid;gap:10px">
-  ${links.map(({name, desc, url}: {name:string;desc:string;url:string}) =>
-    `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#ffffff;border-radius:14px;border:1px solid #e8e8eb;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-    <div style="flex:1;min-width:0">
-      <div style="font-weight:700;color:#2563eb;font-size:15px;margin-bottom:4px">🔗 ${name}</div>
-      <div style="color:#86868b;font-size:13px;line-height:1.5">${desc}</div>
-    </div>
-    <div style="flex-shrink:0;margin-left:12px;width:32px;height:32px;border-radius:50%;background:#eff3ff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#2563eb">→</div>
-  </a>`).join("")}
-  </div>
-</div>`;
+        refHtml = `<div id="ref-section" style="margin:48px 0 32px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:20px"><div style="width:4px;height:24px;background:linear-gradient(180deg,#2563eb,#1d4ed8);border-radius:2px;flex-shrink:0"></div><h2 style="font-size:18px;font-weight:800;color:#1a1a1a;margin:0">참고자료 &amp; 링크</h2></div><div style="display:grid;gap:10px">${links
+          .map(
+            ({ name, desc, url }: { name: string; desc: string; url: string }) =>
+              `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#ffffff;border-radius:14px;border:1px solid #e8e8eb;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="flex:1;min-width:0"><div style="font-weight:700;color:#2563eb;font-size:15px;margin-bottom:4px">🔗 ${inlineFormat(name)}</div><div style="color:#86868b;font-size:13px;line-height:1.5">${inlineFormat(desc)}</div></div><div style="flex-shrink:0;margin-left:12px;width:32px;height:32px;border-radius:50%;background:#eff3ff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#2563eb">→</div></a>`
+          )
+          .join("")}</div></div>`;
       }
     }
 
-    // ── 관련글 HTML ──
     let postHtml = "";
     if (postRaw) {
-      const posts: {title: string; desc: string}[] = [];
+      const posts: { title: string; desc: string }[] = [];
       postRaw.split("\n").forEach((line: string) => {
         const m = line.match(/^POST\d+:\s*(.+?)\|(.+)/);
         if (m) posts.push({ title: m[1].trim(), desc: m[2].trim() });
       });
       if (posts.length > 0) {
-        postHtml = `<div style="margin:40px 0">
-  <h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">관련 글</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-    ${posts.map(({title, desc}: {title:string;desc:string}) =>
-    `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-      <div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:8px;line-height:1.5">${title}</div>
-      <div style="color:#64748b;font-size:12px;line-height:1.6">${desc}</div>
-    </div>`).join("")}
-  </div>
-</div>`;
+        postHtml = `<div style="margin:40px 0"><h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">관련 글</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">${posts
+          .map(
+            ({ title, desc }: { title: string; desc: string }) =>
+              `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:8px;line-height:1.5">${inlineFormat(title)}</div><div style="color:#64748b;font-size:12px;line-height:1.6">${inlineFormat(desc)}</div></div>`
+          )
+          .join("")}</div></div>`;
       }
     }
 
-    // ── 목차(TOC) 자동 생성 ── (bodyHtml 변환 후 h2Titles에 쌓임)
     let tocHtml = "";
-    if (h2Titles.length >= 2) {
-      const tocItems = h2Titles.map((t: string, i: number) =>
-        `<li style="margin:8px 0;display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2563eb;color:white;font-size:11px;font-weight:800;flex-shrink:0">${i+1}</span><a href="#section-${i}" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">${t}</a></li>`
+    if (tocEntries.length >= 1) {
+      const tocItems = tocEntries.map(
+        (entry, i) =>
+          `<li style="margin:8px 0;display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2563eb;color:white;font-size:11px;font-weight:800;flex-shrink:0">${i + 1}</span><a href="#${entry.id}" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">${inlineFormat(entry.title)}</a></li>`
       );
       if (faqRaw) tocItems.push(`<li style="margin:6px 0"><a href="#faq-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">자주 묻는 질문</a></li>`);
       if (refRaw) tocItems.push(`<li style="margin:6px 0"><a href="#ref-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">참고자료 &amp; 링크</a></li>`);
-      tocHtml = `<div style="background:#f0f4ff;border:1px solid #c7d7fe;border-radius:14px;padding:20px 24px;margin:0 0 32px">
-  <div style="font-weight:800;font-size:15px;color:#2563eb;margin-bottom:12px">📋 목차</div>
-  <ol style="margin:0;padding:0;list-style:none">
-    ${tocItems.join("\n    ")}
-  </ol>
-</div>`;
+      tocHtml = `<div style="background:#f0f4ff;border:1px solid #c7d7fe;border-radius:14px;padding:20px 24px;margin:0 0 32px"><div style="font-weight:800;font-size:15px;color:#2563eb;margin-bottom:12px">📋 목차</div><ol style="margin:0;padding:0;list-style:none">${tocItems.join("\n")}</ol></div>`;
     }
 
     return tocHtml + bodyHtml + faqHtml + refHtml + postHtml;
