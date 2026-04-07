@@ -883,11 +883,20 @@ export default function ImageGenerator() {
       } catch {}
     }
 
-    // ── Step 2: KO_EN_MAP 매핑 (길이 긴 것 우선) ──────────
+    // ── Step 2: KO_EN_MAP 매핑 (길이 긴 것 우선, 단어 분리도 시도) ──────────
     const sortedEntries = Object.entries(KO_EN_MAP).sort((a, b) => b[0].length - a[0].length);
     for (const [ko, en] of sortedEntries) {
       if (p.includes(ko)) {
         return `${en}, professional photography, natural lighting, 8K ultra realistic`;
+      }
+    }
+    // 공백/특수문자로 분리된 단어도 매핑 시도
+    const words = p.split(/[\s,]+/);
+    for (const word of words) {
+      for (const [ko, en] of sortedEntries) {
+        if (word.includes(ko) || ko.includes(word)) {
+          return `${en}, professional photography, natural lighting, 8K ultra realistic`;
+        }
       }
     }
 
