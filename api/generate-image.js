@@ -1,374 +1,283 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+// BlogAuto Pro - generate-image v5.1
+// ✅ Vercel 타임아웃 60초로 확장
+export const config = { maxDuration: 60 };
 
-type TopicScene = {
-  category: string;
-  anchor: string;
-  scene: string;
-  extra: string[];
-};
+// ✅ Gemini Imagen 3 지원
+// ✅ OpenAI DALL-E 3 지원
+// ✅ Replicate Flux Schnell 지원
+// ✅ POST 방식으로 통일
+// ✅ imgbb 자동 업로드 (영구 URL)
 
-const BASE_NEGATIVE = [
-  "no people",
-  "no person",
-  "no human",
-  "no portrait",
-  "no face",
-  "no hands",
-  "no crowd",
-  "no selfie",
-  "no group photo",
-  "no abstract concept",
-  "no symbolic image",
-  "no metaphor",
-  "no generic lifestyle photo",
-  "no stock mood photo",
-  "no unrelated desk props",
-  "no infographic",
-  "no diagram",
-  "no chart",
-  "no graph",
-  "no screenshot",
-  "no UI",
-  "no app screen",
-  "no dashboard",
-  "no text",
-  "no letters",
-  "no watermark",
-  "no logo",
-  "no poster",
-  "no banner",
-  "no cartoon",
-  "no illustration",
-  "no 3d render",
-].join(", ");
-
-function cleanText(value: string): string {
-  return (value || "").replace(/\s+/g, " ").replace(/[“”"'`]/g, "").trim();
+// imgbb에 이미지 업로드 → 영구 URL 반환
+async function uploadToImgbb(imgbbKey, imageData) {
+  if (!imgbbKey) return imageData; // 키 없으면 원본 반환
+  try {
+    // base64 또는 URL 모두 처리
+    const isBase64 = imageData.startsWith("data:");
+    const base64Data = isBase64 ? imageData.split(",")[1] : null;
+    const formData = new URLSearchParams();
+    formData.append("key", imgbbKey);
+    if (base64Data) {
+      formData.append("image", base64Data);
+    } else {
+      formData.append("image", imageData); // URL
+    }
+    const resp = await fetch("https://api.imgbb.com/1/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await resp.json();
+    if (data.success && data.data?.url) {
+      return data.data.url; // 영구 URL
+    }
+    return imageData; // 실패 시 원본 반환
+  } catch {
+    return imageData; // 오류 시 원본 반환
+  }
 }
 
-function classifyTopic(topic: string): TopicScene {
-  const t = cleanText(topic).toLowerCase();
-
-  if (/레시피|요리|음식|맛집|식단|도시락|반찬|디저트|브런치|커피|카페|치킨|피자|라면|파스타|샐러드|스테이크|빵|케이크/.test(t)) {
-    return {
-      category: "food",
-      anchor: "finished dish from the article title must be clearly visible",
-      scene: "single plated food dish on a table or kitchen counter, edible realistic meal result, only relevant ingredients or cookware if directly related",
-      extra: ["food only", "single scene only", "dish is the hero subject"],
-    };
-  }
-
-  if (/숙소|호텔|펜션|리조트|여행|관광|제주|서울|부산|강원|경주|전주|여수|속초|해외여행|국내여행/.test(t)) {
-    return {
-      category: "travel",
-      anchor: "the place or accommodation from the article title must be clearly visible",
-      scene: "real hotel room, travel destination, landmark, landscape, or accommodation interior matching the title",
-      extra: ["literal place depiction", "single scene only"],
-    };
-  }
-
-  if (/부동산|전세|월세|청약|분양|아파트|원룸|오피스텔|빌라|임대|주택|집|방|인테리어|리모델링|이사/.test(t)) {
-    return {
-      category: "real_estate",
-      anchor: "room, house, property exterior, or contract-related object from the article title must be clearly visible",
-      scene: "real estate contract paper with keys, room interior, apartment exterior, or moving boxes directly related to the title",
-      extra: ["single scene only", "real property context only"],
-    };
-  }
-
-  if (/대출|금융|재테크|주식|코인|경제|세금|보험|연금|신용점수|카드|지원금|정부지원|연말정산|돈|절약/.test(t)) {
-    return {
-      category: "finance",
-      anchor: "financial object from the article title must be clearly visible",
-      scene: "calculator, financial document, savings jar, coins, card, bank note, or market monitor object-focused setup",
-      extra: ["single scene only", "object-focused finance scene"],
-    };
-  }
-
-  if (/다이어트|건강|운동|헬스|요가|필라테스|영양제|스킨케어|피부|탈모|건강식|병원|약|수면/.test(t)) {
-    return {
-      category: "health",
-      anchor: "health-related object or result from the article title must be clearly visible",
-      scene: "healthy meal, supplement bottles, dumbbells, yoga mat, skincare items, or wellness setup matching the title",
-      extra: ["single scene only", "object-focused wellness scene"],
-    };
-  }
-
-  if (/ai|챗gpt|인공지능|앱|스마트폰|노트북|컴퓨터|유튜브|블로그|코딩|프로그래밍|개발|it|소셜미디어|게임/.test(t)) {
-    return {
-      category: "tech",
-      anchor: "device or screen-related subject from the article title must be clearly visible",
-      scene: "laptop, smartphone, keyboard, creator desk, code screen, or AI workspace with no person visible",
-      extra: ["single scene only", "device-focused setup"],
-    };
-  }
-
-  if (/강아지|고양이|반려동물|펫|햄스터/.test(t)) {
-    return {
-      category: "pet",
-      anchor: "the pet from the article title must be clearly visible",
-      scene: "single pet subject in a realistic home or care environment",
-      extra: ["single scene only"],
-    };
-  }
-
-  if (/패션|쇼핑|명품|코디|옷|가방|신발|뷰티|메이크업|화장품/.test(t)) {
-    return {
-      category: "fashion_beauty",
-      anchor: "the item from the article title must be clearly visible",
-      scene: "clothing rack, beauty product setup, outfit display, handbag, shoes, or shopping item scene matching the title",
-      extra: ["product-focused scene", "single scene only"],
-    };
-  }
-
-  if (/공부|영어|자격증|취업|면접|자소서|대학생|취준생|독서/.test(t)) {
-    return {
-      category: "study_job",
-      anchor: "study or job-related object from the article title must be clearly visible",
-      scene: "books, notebook, exam material, resume paper, stationery, or study desk object setup",
-      extra: ["single scene only"],
-    };
-  }
-
-  if (/자동차|중고차|전기차|오토바이|차량/.test(t)) {
-    return {
-      category: "car",
-      anchor: "the vehicle from the article title must be clearly visible",
-      scene: "single vehicle exterior, charging station scene, dealership row, or road scene matching the title",
-      extra: ["single scene only"],
-    };
-  }
-
-  if (/캠핑|아웃도어|글램핑|텐트|등산|트레킹|백패킹|캠핑용품/.test(t)) {
-    return {
-      category: "outdoor",
-      anchor: "outdoor gear or location from the article title must be clearly visible",
-      scene: "tent, camping gear, mountain trail, camp table, or outdoor equipment in a realistic environment",
-      extra: ["single scene only"],
-    };
-  }
-
-  if (/창업|사업|마케팅|비즈니스|sns마케팅|스타트업/.test(t)) {
-    return {
-      category: "business",
-      anchor: "business object from the article title must be clearly visible",
-      scene: "documents, laptop, packaging, sales board, strategy notes, or workspace setup relevant to the title",
-      extra: ["single scene only"],
-    };
-  }
-
-  return {
-    category: "generic",
-    anchor: "the core subject from the article title must be clearly visible and obvious",
-    scene: "single realistic scene directly illustrating the article title with only relevant props",
-    extra: ["single scene only"],
-  };
+function normalizeReplicateOutput(output) {
+  if (!output) return [];
+  const items = Array.isArray(output) ? output : [output];
+  return items
+    .map((item) => {
+      if (!item) return null;
+      if (typeof item === "string") return item;
+      if (typeof item === "object") {
+        return item.url || item.uri || item.href || item.output || null;
+      }
+      return null;
+    })
+    .filter(Boolean);
 }
 
-function buildSceneLockedPrompt(topicOrPrompt: string): string {
-  const topic = cleanText(topicOrPrompt);
-  const scene = classifyTopic(topic);
-
-  return [
-    `article topic: ${topic}`,
-    `literal visual depiction of ${topic}`,
-    scene.anchor,
-    scene.scene,
-    ...scene.extra,
-    "clear topic-centered article scene",
-    "topic matched subject",
-    "natural real-world scene",
-    "professional photography",
-    "editorial blog hero image",
-    "8K ultra realistic",
-    BASE_NEGATIVE,
-  ].join(", ");
-}
-
-function inferTopicFromPrompt(prompt: string): string {
-  const cleaned = cleanText(prompt);
-  const markers = [
-    /article topic:\s*([^,]+)/i,
-    /article hero image about\s*([^,]+)/i,
-    /literal visual depiction of\s*([^,]+)/i,
-  ];
-  for (const regex of markers) {
-    const m = cleaned.match(regex);
-    if (m?.[1]) return cleanText(m[1]);
-  }
-  return cleaned.split(",")[0] || cleaned;
-}
-
-function normalizePrompt(prompt: string): string {
-  const topic = inferTopicFromPrompt(prompt);
-  const normalized = buildSceneLockedPrompt(topic);
-
-  if (/레시피|요리|음식|맛집|식단|도시락|반찬|디저트|브런치|커피|카페|치킨|피자|라면|파스타|샐러드|스테이크|빵|케이크/i.test(topic)) {
-    return [
-      normalized,
-      "overhead or 45-degree food photography",
-      "finished dish only",
-      "no people, no face, no hands",
-      "food should fill the frame",
-    ].join(", ");
-  }
-
-  return normalized;
-}
-
-function sizeToRatio(size: string): string {
-  const [w, h] = (size || "1024x1024").split("x").map(Number);
+// size → Gemini aspectRatio 변환
+function toAspectRatio(size) {
+  if (!size) return "1:1";
+  const [w, h] = size.split("x").map(Number);
   if (!w || !h) return "1:1";
   const ratio = w / h;
-  if (ratio > 1.5) return "16:9";
-  if (ratio > 1.2) return "4:3";
-  if (ratio < 0.8) return "3:4";
-  return "1:1";
+  if (ratio >= 1.7) return "16:9";  // 가로형
+  if (ratio <= 0.6) return "9:16";  // 세로형
+  if (ratio >= 1.2) return "4:3";   // 약간 가로
+  if (ratio <= 0.85) return "3:4";  // 약간 세로
+  return "1:1";                      // 정사각형
 }
 
-async function callOpenAI(apiKey: string, prompt: string, size: string, count: number): Promise<string[]> {
-  const resp = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-image-1",
-      prompt,
-      size: size === "1920x1080" ? "1536x1024" : size === "1280x720" ? "1536x1024" : "1024x1024",
-      n: Math.max(1, Math.min(count, 4)),
-    }),
-  });
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "POST만 지원합니다" });
 
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data?.error?.message || "OpenAI image generation failed");
-  return Array.isArray(data?.data) ? data.data.map((x: any) => x?.b64_json ? `data:image/png;base64,${x.b64_json}` : x?.url).filter(Boolean) : [];
-}
+  const { provider, apiKey, prompt, size = "1024x1024", count = 1, imgbbKey = "", action = "start", predictionId } = req.body || {};
 
-async function callReplicateStart(apiKey: string, prompt: string, size: string): Promise<any> {
-  const ratio = sizeToRatio(size);
-
-  const resp = await fetch("https://api.replicate.com/v1/predictions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Token ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "black-forest-labs/flux-schnell",
-      input: {
-        prompt,
-        go_fast: true,
-        megapixels: "1",
-        num_outputs: 1,
-        aspect_ratio: ratio,
-        output_format: "jpg",
-        output_quality: 90,
-      },
-    }),
-  });
-
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data?.detail || data?.error || "Replicate start failed");
-  return data;
-}
-
-async function callReplicatePoll(apiKey: string, predictionId: string): Promise<any> {
-  const resp = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
-    headers: {
-      Authorization: `Token ${apiKey}`,
-    },
-  });
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data?.detail || data?.error || "Replicate poll failed");
-  return data;
-}
-
-async function callGemini(apiKey: string, prompt: string): Promise<string[]> {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
-  const resp = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"],
-      },
-    }),
-  });
-
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data?.error?.message || "Gemini image generation failed");
-
-  const images: string[] = [];
-  for (const candidate of data?.candidates || []) {
-    for (const part of candidate?.content?.parts || []) {
-      const inline = part?.inlineData;
-      if (inline?.mimeType?.startsWith("image/") && inline?.data) {
-        images.push(`data:${inline.mimeType};base64,${inline.data}`);
-      }
-    }
-  }
-  return images;
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (!provider || !apiKey) {
+    return res.status(400).json({ error: "provider, apiKey 필수입니다" });
   }
 
-  try {
-    const { provider, apiKey, prompt, size = "1024x1024", count = 1, action, predictionId } = req.body || {};
-
-    if (!provider) return res.status(400).json({ error: "provider is required" });
-    if (!apiKey && provider !== "pollinations") return res.status(400).json({ error: "apiKey is required" });
-    if (!prompt && action !== "poll") return res.status(400).json({ error: "prompt is required" });
-
-    const normalizedPrompt = prompt ? normalizePrompt(prompt) : "";
-
-    if (provider === "openai") {
-      const images = await callOpenAI(apiKey, normalizedPrompt, size, count);
-      return res.status(200).json({ images, promptUsed: normalizedPrompt });
-    }
-
-    if (provider === "gemini") {
-      const images = await callGemini(apiKey, normalizedPrompt);
-      return res.status(200).json({ images: images.slice(0, Math.max(1, count)), promptUsed: normalizedPrompt });
-    }
-
-    if (provider === "replicate") {
-      if (action === "poll") {
-        if (!predictionId) return res.status(400).json({ error: "predictionId is required for poll" });
-        const data = await callReplicatePoll(apiKey, predictionId);
-        const output = Array.isArray(data?.output) ? data.output : data?.output ? [data.output] : [];
-        return res.status(200).json({
-          status: data?.status,
-          images: output.filter(Boolean),
-          error: data?.error || null,
-        });
-      }
-
-      const started = await callReplicateStart(apiKey, normalizedPrompt, size);
-      const output = Array.isArray(started?.output) ? started.output : started?.output ? [started.output] : [];
-      if (started?.status === "succeeded" && output.length > 0) {
-        return res.status(200).json({ done: true, images: output, promptUsed: normalizedPrompt });
-      }
-
-      return res.status(200).json({
-        done: false,
-        predictionId: started?.id,
-        status: started?.status,
-        promptUsed: normalizedPrompt,
+  // poll 요청은 prompt 없이 predictionId만으로 처리 (맨 위에서 바로 처리)
+  if (provider === "replicate" && action === "poll") {
+    if (!predictionId) return res.status(400).json({ error: "predictionId 필요" });
+    try {
+      const r = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
+        headers: { Authorization: `Token ${apiKey}` },
       });
+      const d = await r.json();
+      const images = d.status === "succeeded"
+        ? normalizeReplicateOutput(d.output)
+        : [];
+      const uploaded = (d.status === "succeeded" && imgbbKey)
+        ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img)))
+        : images;
+      return res.json({
+        ok: true,
+        status: d.status,
+        images: uploaded,
+        error: d.status === "failed" ? (d.error || "생성 실패") : null,
+      });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
     }
-
-    return res.status(400).json({ error: `Unsupported provider: ${provider}` });
-  } catch (error: any) {
-    return res.status(500).json({
-      error: error?.message || "Unknown error",
-    });
   }
+
+  if (!prompt) {
+    return res.status(400).json({ error: "prompt 필수입니다" });
+  }
+
+  const numImages = Math.min(parseInt(count) || 1, 10);
+
+  // ── Gemini (gemini-2.0-flash-exp 이미지 생성 시도) ──
+  if (provider === "gemini") {
+    const MODELS = [
+      "gemini-2.0-flash-exp",
+      "gemini-2.0-flash-preview-image-generation",
+    ];
+    const images = [];
+
+    try {
+      for (let i = 0; i < numImages; i++) {
+        let generated = false;
+        for (const model of MODELS) {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+              }),
+            }
+          );
+
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            const msg = (err?.error?.message || "").toLowerCase();
+            if (resp.status === 403 || msg.includes("api key")) {
+              throw new Error("Gemini API 키가 잘못되었습니다.");
+            }
+            if (resp.status === 429) throw new Error("Gemini 한도 초과. 잠시 후 다시 시도해주세요.");
+            continue;
+          }
+
+          const data = await resp.json();
+          const parts = data?.candidates?.[0]?.content?.parts || [];
+          for (const part of parts) {
+            if (part.inlineData?.data) {
+              images.push(`data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`);
+              generated = true;
+              break;
+            }
+          }
+          if (generated) break;
+        }
+      }
+
+      if (images.length === 0) {
+        throw new Error("Gemini 이미지 생성 실패. AI Studio 키는 이미지 생성이 제한될 수 있습니다. Replicate를 사용해보세요.");
+      }
+      const geminiUploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
+      return res.json({ ok: true, images: geminiUploaded, provider: "gemini" });
+
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+    // ── OpenAI DALL-E 3 ─────────────────────────────────
+  // DALL-E 3는 1회 1장만 생성 가능 → 병렬로 여러 번 호출
+  if (provider === "openai") {
+    // DALL-E 3 지원 사이즈 매핑
+    function toDallESize(s) {
+      const [w, h] = (s || "1024x1024").split("x").map(Number);
+      if (!w || !h) return "1024x1024";
+      const ratio = w / h;
+      if (ratio > 1.4) return "1792x1024";  // 가로
+      if (ratio < 0.7) return "1024x1792";  // 세로
+      return "1024x1024";                    // 정사각형
+    }
+    const dallESize = toDallESize(size);
+
+    try {
+      const requests = Array.from({ length: numImages }, () =>
+        fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "dall-e-3",
+            prompt,
+            n: 1,
+            size: dallESize,
+            quality: "standard",
+            response_format: "url",
+          }),
+        })
+      );
+
+      const responses = await Promise.all(requests);
+      const images = [];
+
+      for (const resp of responses) {
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = err?.error?.message || "";
+          if (resp.status === 401) throw new Error("OpenAI API 키가 잘못되었습니다.");
+          if (msg.includes("billing") || msg.includes("quota")) throw new Error("OpenAI 크레딧이 부족합니다. platform.openai.com에서 충전해주세요.");
+          throw new Error(`OpenAI 오류 (${resp.status}): ${msg}`);
+        }
+        const data = await resp.json();
+        const url = data.data?.[0]?.url;
+        if (url) images.push(url);
+      }
+
+      if (images.length === 0) throw new Error("이미지가 생성되지 않았습니다.");
+      const openaiUploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
+      return res.json({ ok: true, images: openaiUploaded, provider: "openai" });
+
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ── Replicate (Flux Schnell) ──────────────────────────
+  // ✅ 브라우저 직접 폴링 방식 — Vercel 타임아웃 완전 해결
+  if (provider === "replicate") {
+    const [w, h] = (size || "1024x1024").split("x").map(Number);
+    const width = w || 1024;
+    const height = h || 1024;
+    // ── 시작: 예측 요청 후 ID 반환 ──
+    try {
+      const resp = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${apiKey}`,
+        },
+        body: JSON.stringify({
+          input: {
+            prompt,
+            width,
+            height,
+            num_outputs: Math.min(numImages, 4),
+            num_inference_steps: 4,
+            output_format: "webp",
+            output_quality: 90,
+          },
+        }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        const msg = err?.detail || err?.error || "";
+        if (resp.status === 401) throw new Error("Replicate API 토큰이 잘못되었습니다.");
+        if (resp.status === 402) throw new Error("Replicate 크레딧이 부족합니다. replicate.com에서 충전해주세요.");
+        throw new Error(`Replicate 오류 (${resp.status}): ${msg}`);
+      }
+
+      const data = await resp.json();
+
+      // 즉시 완료된 경우
+      if (data.status === "succeeded") {
+        const images = normalizeReplicateOutput(data.output);
+        const uploaded = imgbbKey ? await Promise.all(images.map(img => uploadToImgbb(imgbbKey, img))) : images;
+        return res.json({ ok: true, images: uploaded, provider: "replicate", done: true });
+      }
+
+      // 처리 중 → ID 반환, 브라우저가 폴링
+      if (data.id) {
+        return res.json({ ok: true, predictionId: data.id, status: data.status || "starting", done: false, provider: "replicate" });
+      }
+
+      throw new Error("Replicate 예측 시작 실패");
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+    return res.status(400).json({ error: "지원하지 않는 provider입니다 (gemini / openai / replicate)" });
 }
