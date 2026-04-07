@@ -2,21 +2,9 @@
 // 플레인 텍스트 출력 (## 소제목 허용) + FAQ/참고자료 마커 유지
 
 function removeNonKorean(text) {
-  // ✅ 보호할 마커들 - 먼저 플레이스홀더로 치환
-  const markers = [
-    "[참고자료시작]","[참고자료끝]","[FAQ시작]","[FAQ끝]",
-    "[팁]","[주의]","[중요]","[관련글시작]","[관련글끝]"
-  ];
+  const markers = ["[참고자료시작]","[참고자료끝]","[FAQ시작]","[FAQ끝]","[팁]","[주의]","[중요]"];
   const placeholders = markers.map((m, i) => [`XSECMARK${i}X`, m]);
   placeholders.forEach(([key, val]) => { text = text.split(val).join(key); });
-
-  // ✅ ## 소제목 줄 보호 (먼저 추출 후 복원)
-  const h2Lines = [];
-  text = text.replace(/^## .+$/gm, (match) => {
-    const idx = h2Lines.length;
-    h2Lines.push(match);
-    return `XH2LINE${idx}X`;
-  });
 
   text = text
     .replace(/[一-鿿㐀-䶿]/g, "")
@@ -31,8 +19,6 @@ function removeNonKorean(text) {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  // ✅ ## 소제목 복원
-  h2Lines.forEach((line, idx) => { text = text.split(`XH2LINE${idx}X`).join(line); });
   placeholders.forEach(([key, val]) => { text = text.split(key).join(val); });
   return text;
 }
@@ -106,6 +92,9 @@ ${categoryGuide}
 ① AI 티 절대 금지: "저도 처음엔", "솔직히 말하면", "이거 진짜 써보니까" 같은 자연스러운 표현 사용
 ② 구체적 정보: 실제 가격, 수치, 날짜, 기간 반드시 포함
 ③ 소제목 구조: 본문을 4~6개 소제목으로 나눠서 작성. 각 소제목은 반드시 ## 소제목 형식으로 작성
+   예시) ## 첫 번째 장소: 양양 오션뷰 감성 펜션
+   예시) ## 가격과 예약 방법 총정리
+   절대로 "첫 번째로", "두 번째는" 같은 텍스트로 소제목을 대체하지 말 것
 ④ 각 소제목 아래 단락은 3~5문장으로 균등하게
 ⑤ SEO: 키워드 7회 이상 자연스럽게 포함
 ⑥ 중요 문장 마커: 글 전체에서 3~5회 아래 마커를 문장 맨 앞에 단독 줄로 사용
