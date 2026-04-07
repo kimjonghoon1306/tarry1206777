@@ -117,9 +117,10 @@ export default function LandingPage() {
           <Button
             size="sm"
             onClick={() => navigate("/signup")}
-            style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap" }}
+            className="px-2 sm:px-3"
+            style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap", fontSize: "12px" }}
           >
-            시작하기 <ArrowRight className="w-4 h-4 ml-1" />
+            시작하기 <ArrowRight className="w-3 h-3 ml-1" />
           </Button>
           {/* 운영자 전용 톱니바퀴 - PC/모바일 모두 표시, 맨 오른쪽 */}
           <button
