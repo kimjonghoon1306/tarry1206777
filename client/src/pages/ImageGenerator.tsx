@@ -106,6 +106,10 @@ const KO_EN_MAP: Record<string, string> = {
   여수: "yeosu ocean night view korea bridge, no people",
   속초: "sokcho beach mountains east sea korea, no people",
   캠핑: "camping outdoor tent campfire nature stars, no people",
+  캠핑용품: "camping gear equipment tent sleeping bag backpack outdoor, no people",
+  캠핑용품도매: "camping gear wholesale equipment tent outdoor supplies, no people",
+  도매: "wholesale products boxes warehouse storage supplies, no people",
+  아웃도어: "outdoor camping hiking gear equipment backpack, no people",
   글램핑: "glamping luxury tent outdoor nature, no people",
   펜션: "pension guesthouse cozy countryside exterior, no people",
   리조트: "resort pool luxury tropical exterior, no people",
@@ -889,6 +893,10 @@ export default function ImageGenerator() {
 
     // ── Step 3: 키워드 기반 정밀 카테고리 폴백 ──────────────
     const t = p.toLowerCase();
+    if (/캠핑|아웃도어|등산|트레킹|백패킹|텐트|캠핑용품|글램핑/.test(t))
+      return `camping gear equipment tent outdoor backpack sleeping bag nature, ${NP}, professional photography, 8K`;
+    if (/도매|wholesale|공급|유통|벌크|대량구매/.test(t))
+      return `wholesale warehouse products boxes storage supply chain, ${NP}, professional photography, 8K`;
     if (/유튜브|유튜버|채널|구독|조회수|쇼츠|알고리즘/.test(t))
       return `youtube creator studio setup camera ring light tripod microphone desk equipment, ${NP}, professional photography, 8K`;
     if (/넷플릭스|왓챠|티빙|구독서비스|ott/.test(t))
