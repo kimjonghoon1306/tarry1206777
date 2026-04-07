@@ -356,64 +356,6 @@ const ADSENSE_NEGATIVE_PROMPT = [
   "no illustration"
 ].join(", ");
 
-function buildSceneDirectiveFromTopic(topic: string): string {
-  const t = (topic || "").trim();
-  if (/레시피|요리|음식|맛집|식단|도시락|반찬|디저트|브런치|커피|카페|치킨|피자|라면|파스타|샐러드|스테이크|빵|케이크/i.test(t)) {
-    return "finished food dish from the article title must be clearly visible, plated meal, real food close-up, table or kitchen counter, overhead or 45-degree food photography, food only";
-  }
-  if (/숙소|호텔|펜션|리조트|여행|관광|제주|서울|부산|강원|경주|전주|여수|속초|해외여행|국내여행/i.test(t)) {
-    return "place or accommodation from the article title must be clearly visible, real hotel room interior, travel destination, landmark or landscape matching the title";
-  }
-  if (/부동산|전세|월세|청약|분양|아파트|원룸|오피스텔|빌라|임대|주택|집|방|인테리어|리모델링|이사/i.test(t)) {
-    return "room, house, apartment exterior, property interior, keys, contract paper, or moving boxes matching the title must be clearly visible";
-  }
-  if (/대출|금융|재테크|주식|코인|경제|세금|보험|연금|신용점수|카드|지원금|정부지원|연말정산|돈|절약/i.test(t)) {
-    return "financial subject from the article title must be clearly visible, calculator, finance document, coins, card, savings jar, or market monitor setup";
-  }
-  if (/다이어트|건강|운동|헬스|요가|필라테스|영양제|스킨케어|피부|탈모|건강식|병원|약|수면/i.test(t)) {
-    return "health-related subject from the article title must be clearly visible, healthy meal, supplement bottles, dumbbells, yoga mat, skincare items, or wellness setup";
-  }
-  if (/AI|챗GPT|인공지능|앱|스마트폰|노트북|컴퓨터|유튜브|블로그|코딩|프로그래밍|개발|IT|소셜미디어|게임/i.test(t)) {
-    return "device or screen-related subject from the article title must be clearly visible, laptop, smartphone, keyboard, creator desk, code screen, or AI workspace";
-  }
-  if (/강아지|고양이|반려동물|펫|햄스터/i.test(t)) {
-    return "the pet from the article title must be clearly visible in a realistic home or care environment";
-  }
-  if (/패션|쇼핑|명품|코디|옷|가방|신발|뷰티|메이크업|화장품/i.test(t)) {
-    return "the item from the article title must be clearly visible, clothing rack, beauty product setup, outfit display, handbag, shoes, or shopping item scene";
-  }
-  if (/공부|영어|자격증|취업|면접|자소서|대학생|취준생|독서/i.test(t)) {
-    return "study or job-related subject from the article title must be clearly visible, books, notebook, exam material, resume paper, stationery, or study desk setup";
-  }
-  if (/자동차|중고차|전기차|오토바이|차량/i.test(t)) {
-    return "the vehicle from the article title must be clearly visible, single vehicle exterior, charging station, dealership row, or road scene";
-  }
-  if (/캠핑|아웃도어|글램핑|텐트|등산|트레킹|백패킹|캠핑용품/i.test(t)) {
-    return "outdoor gear or location from the article title must be clearly visible, tent, camping gear, mountain trail, camp table, or outdoor equipment";
-  }
-  if (/창업|사업|마케팅|비즈니스|sns마케팅|스타트업/i.test(t)) {
-    return "business subject from the article title must be clearly visible, documents, laptop, packaging, sales board, strategy notes, or workspace setup";
-  }
-  return "the core subject from the article title must be clearly visible and obvious, single realistic scene directly illustrating the title with only relevant props";
-}
-
-function buildTopicLockedPrompt(originalTopic: string, basePrompt: string): string {
-  const topic = (originalTopic || "").trim();
-  const sceneDirective = buildSceneDirectiveFromTopic(topic);
-  return [
-    `article topic: ${topic}`,
-    `literal visual depiction of ${topic}`,
-    sceneDirective,
-    "single scene only",
-    "clear topic-centered article scene",
-    "subject from the article title must be visible and obvious",
-    basePrompt,
-    STYLE_PROMPTS.realistic,
-    ADSENSE_QUALITY_BOOST,
-    ADSENSE_NEGATIVE_PROMPT,
-  ].join(", ");
-}
-
 function buildAdsenseSafePrompt(basePrompt: string): string {
   return `${basePrompt}, ${STYLE_PROMPTS.realistic}, ${ADSENSE_QUALITY_BOOST}, ${ADSENSE_NEGATIVE_PROMPT}`;
 }
@@ -1073,7 +1015,7 @@ export default function ImageGenerator() {
       // 첫 번째 variation만 캐시, 나머지는 매번 다르게
       const firstTranslated = translatedPrompt || await autoTranslatePrompt(prompt.trim(), 0);
       if (!translatedPrompt) setTranslatedPrompt(firstTranslated);
-      const fullPrompt = buildTopicLockedPrompt(prompt.trim(), firstTranslated);
+      const fullPrompt = buildAdsenseSafePrompt(firstTranslated);
       const [w, h] = (size || "1024x1024").split("x").map(Number);
       const styleLabel = ADSENSE_STYLE_LABEL;
 
@@ -1087,7 +1029,7 @@ export default function ImageGenerator() {
         for (let vi = 1; vi < numImages; vi++) {
           try {
             const varTranslated = await autoTranslatePrompt(prompt.trim(), vi);
-            prompts.push(buildTopicLockedPrompt(prompt.trim(), varTranslated));
+            prompts.push(buildAdsenseSafePrompt(varTranslated));
           } catch {
             prompts.push(fullPrompt);
           }
