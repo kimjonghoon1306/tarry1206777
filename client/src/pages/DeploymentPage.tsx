@@ -619,7 +619,13 @@ export default function DeploymentPage() {
   const [hashtags, setHashtags] = useState<string[]>(saved?.hashtags || []);
   const [newTag, setNewTag] = useState("");
   const [thumbnail, setThumbnail] = useState<string>(() => {
-    return saved?.thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
+    // 새 콘텐츠가 있으면 이전 thumbnail localStorage 무조건 초기화
+    if (saved?.content) {
+      // 새 글 기준: saved.thumbnail이 있으면 사용, 없으면 무조건 빈값 (이전 글 썸네일 차단)
+      localStorage.removeItem("blogauto_thumbnail");
+      return saved?.thumbnail || "";
+    }
+    return localStorage.getItem("blogauto_thumbnail") || "";
   });
   // thumbnail 변경 시 localStorage 동기화
   useEffect(() => {
@@ -911,6 +917,20 @@ export default function DeploymentPage() {
       if (/^### /.test(line)) return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:10px">${inlineFormat(line.slice(4))}</h3>`;
       if (/^---+$/.test(line.trim())) return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
       if (!line.trim()) return "";
+
+      // ✅ AI 마커 우선 감지 ([팁] / [주의] / [중요])
+      if (/^\[팁\]\s*/.test(line.trim())) {
+        const body = inlineFormat(line.trim().replace(/^\[팁\]\s*/, ""));
+        return `<div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#1e3a8a;line-height:1.7">💡 ${body}</div>`;
+      }
+      if (/^\[주의\]\s*/.test(line.trim())) {
+        const body = inlineFormat(line.trim().replace(/^\[주의\]\s*/, ""));
+        return `<div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#78350f;line-height:1.7">⚠️ ${body}</div>`;
+      }
+      if (/^\[중요\]\s*/.test(line.trim())) {
+        const body = inlineFormat(line.trim().replace(/^\[중요\]\s*/, ""));
+        return `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:#14532d;line-height:1.7">✅ ${body}</div>`;
+      }
 
       const text = inlineFormat(line);
 
