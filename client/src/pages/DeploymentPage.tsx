@@ -1483,7 +1483,7 @@ export default function DeploymentPage() {
   }
 
   // ── Webhook 발행 ──
-  async function publishToWebhook() {
+  async function publishToWebhook(platformId: string) {
     // 1. platform_custom_list 우선 (신규 방식)
     let url = "";
     let key = "";
@@ -1492,9 +1492,12 @@ export default function DeploymentPage() {
     try {
       const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
       if (customList.length > 0) {
-        url = customList[0]["webhook_url"] || "";
-        key = customList[0]["webhook_auth_key"] || "";
-        authHeader = customList[0]["webhook_auth_header"] || "Authorization";
+        const customPlatforms = platforms.filter(p => p.type === "custom");
+        const customIndex = customPlatforms.findIndex(p => p.id === platformId);
+        const entry = customList[customIndex >= 0 ? customIndex : 0] || customList[0];
+        url = entry["webhook_url"] || "";
+        key = entry["webhook_auth_key"] || "";
+        authHeader = entry["webhook_auth_header"] || "Authorization";
       }
     } catch {}
 
@@ -1604,7 +1607,7 @@ export default function DeploymentPage() {
             publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null
           );
         } else {
-          await publishToWebhook();
+          await publishToWebhook(platformId);
         }
       }
       // 서버에 발행 글 저장 (대시보드 실시간 연동)
