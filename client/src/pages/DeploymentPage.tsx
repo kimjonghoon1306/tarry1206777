@@ -348,6 +348,7 @@ interface PublishPanelProps {
   onPublish: () => void;
   selectedCategory: string;
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
+  onRemovePlatform: (id: string) => void;
 }
 
 function PublishPanel({
@@ -364,6 +365,7 @@ function PublishPanel({
   onPublish,
   selectedCategory,
   setSelectedCategory,
+  onRemovePlatform,
 }: PublishPanelProps) {
   function togglePlatform(id: string) {
     setSelectedPlatforms((prev) =>
@@ -475,9 +477,19 @@ function PublishPanel({
                       )}
                     </div>
                   </div>
-                  {isSelected && (
-                    <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {isSelected && (
+                      <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onRemovePlatform(platform.id); }}
+                      className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
+                      style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}
+                      title="플랫폼 삭제"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </button>
               );
             })
@@ -684,7 +696,22 @@ export default function DeploymentPage() {
   const [platforms, setPlatforms] = useState<Platform[]>(() => {
     const stored = localStorage.getItem(DEPLOY_PLATFORMS_KEY);
     if (stored) {
-      try { return JSON.parse(stored); } catch {}
+      try {
+        const parsed: Platform[] = JSON.parse(stored);
+        // custom 항목은 platform_custom_list 실제 데이터 기준으로 정리 (누적 방지)
+        const customList: Record<string, string>[] = (() => {
+          try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
+        })();
+        const nonCustom = parsed.filter((p) => p.type !== "custom");
+        const customPlatforms: Platform[] = customList.map((c) => ({
+          id: uid(),
+          type: "custom" as const,
+          name: c._name || "커스텀 사이트",
+        }));
+        const synced = [...nonCustom, ...customPlatforms];
+        localStorage.setItem(DEPLOY_PLATFORMS_KEY, JSON.stringify(synced));
+        return synced;
+      } catch {}
     }
     const defaults: Platform[] = [];
     if (userGet("naver_blog_id"))
@@ -1510,6 +1537,24 @@ export default function DeploymentPage() {
   }
 
   // ── 발행 핸들러 ──
+  // ── 플랫폼 삭제 (배포관리 UI에서) ──
+  function handleRemovePlatform(id: string) {
+    setPlatforms((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      localStorage.setItem(DEPLOY_PLATFORMS_KEY, JSON.stringify(updated));
+      const removed = prev.find((p) => p.id === id);
+      if (removed && removed.type === "custom") {
+        try {
+          const customList: Record<string, string>[] = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+          const updatedCustom = customList.filter((c) => c._name !== removed.name);
+          localStorage.setItem("platform_custom_list", JSON.stringify(updatedCustom));
+        } catch {}
+      }
+      return updated;
+    });
+    setSelectedPlatforms((prev) => prev.filter((sid) => sid !== id));
+  }
+
   async function handlePublish() {
     if (selectedPlatforms.length === 0) { toast.error("발행할 플랫폼을 선택해주세요"); return; }
     if (!title.trim()) { toast.error("제목을 입력해주세요"); return; }
@@ -1723,6 +1768,7 @@ export default function DeploymentPage() {
                   onPublish={handlePublish}
                   selectedCategory={selectedCategory}
                   setSelectedCategory={setSelectedCategory}
+                  onRemovePlatform={handleRemovePlatform}
                 />
               </div>
             )}
@@ -2231,6 +2277,7 @@ export default function DeploymentPage() {
                 onPublish={handlePublish}
                 selectedCategory={selectedCategory}
                 setSelectedCategory={setSelectedCategory}
+                onRemovePlatform={handleRemovePlatform}
               />
             </div>
           </div>
