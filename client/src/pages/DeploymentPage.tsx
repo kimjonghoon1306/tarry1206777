@@ -1550,6 +1550,7 @@ export default function DeploymentPage() {
       localStorage.removeItem(CONTENT_KEY);
     } else if (type === "image") {
       setThumbnail("");
+      setDeployImages([]);  // 자동 썸네일 재설정 방지
       setBlocks((prev) => prev.filter((b) => b.type === "text"));
       localStorage.removeItem("blogauto_thumbnail");
       localStorage.removeItem("blogauto_deploy_images");
