@@ -16,7 +16,7 @@ import {
   Trash2, ExternalLink, Home, Save,
   Users, Crown, UserX, RefreshCw, ChevronDown,
   Activity, Cpu, Database, HardDrive, Wifi,
-  Send, ShoppingCart, FileText, Search, BarChart3, Bot,
+  Send, ShoppingCart, FileText, Search, BarChart3, Bot, Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -182,27 +182,153 @@ const API_SECTIONS = [
       { label: "앱 비밀번호", key: "wp_app_password", placeholder: "xxxx xxxx xxxx xxxx", link: "https://wordpress.com/support/application-passwords/", badge: "", badgeColor: "" },
     ],
   },
-  {
-    title: "Webhook (커스텀)", icon: "Link", color: "#6366f1", grad: "linear-gradient(135deg,#6366f1,#4f46e5)",
-    desc: "커스텀 사이트 자동 발행",
-    fields: [
-      { label: "Webhook URL", key: "webhook_url", placeholder: "https://mysite.com/api/posts", link: "", badge: "", badgeColor: "" },
-      { label: "Auth Key", key: "webhook_auth_key", placeholder: "Bearer Token 또는 API 키", link: "", badge: "", badgeColor: "" },
-      {
-        label: "Auth Header 방식", key: "webhook_auth_header", placeholder: "Authorization",
-        link: "", badge: "", badgeColor: "",
-        type: "select",
-        options: [
-          { value: "Authorization", label: "Authorization (Bearer Token)" },
-          { value: "X-API-Key", label: "X-API-Key" },
-          { value: "X-Auth-Token", label: "X-Auth-Token" },
-          { value: "X-Custom-Auth", label: "X-Custom-Auth" },
-          { value: "none", label: "인증 없음 (공개 API)" },
-        ],
-      },
-    ],
-  },
+  // Webhook (커스텀) 섹션은 AdminCustomWebhookSection 컴포넌트로 별도 처리
 ];
+
+// ─────────────────────────────────────────────────────
+// 커스텀 웹사이트 Webhook 섹션 (어드민용)
+// ─────────────────────────────────────────────────────
+const AUTH_HEADER_OPTIONS = [
+  { value: "Authorization", label: "Authorization", example: "Bearer {키} 또는 {키}" },
+  { value: "X-API-Key", label: "X-API-Key", example: "API 키 직접 입력" },
+  { value: "X-Auth-Token", label: "X-Auth-Token", example: "토큰 직접 입력" },
+  { value: "X-Custom-Auth", label: "X-Custom-Auth", example: "커스텀 인증" },
+  { value: "none", label: "인증 없음", example: "공개 API" },
+];
+
+function AdminCustomWebhookSection() {
+  const [accounts, setAccounts] = useState<Record<string, string>[]>(() => {
+    try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
+  });
+  const [showAdd, setShowAdd] = useState(false);
+  const [url, setUrl] = useState("");
+  const [customDomain, setCustomDomain] = useState("");
+  const [authHeader, setAuthHeader] = useState("Authorization");
+  const [authKey, setAuthKey] = useState("");
+  const [categoryInput, setCategoryInput] = useState("");
+
+  const handleSave = () => {
+    if (!url.trim()) { toast.error("Webhook URL을 입력해주세요"); return; }
+    const normalizedDomain = (customDomain.trim() || url.replace(/^https?:\/\//, "").split("/")[0]).trim();
+    const categories = categoryInput.split(",").map((c: string) => c.trim()).filter(Boolean);
+    const entry: Record<string, string> = {
+      _name: normalizedDomain || url.replace("https://", "").split("/")[0],
+      _type: "custom",
+      custom_domain: normalizedDomain,
+      webhook_url: url.trim(),
+      webhook_auth_header: authHeader,
+      webhook_auth_key: authKey.trim(),
+      categories: JSON.stringify(categories),
+    };
+    const updated = [...accounts, entry];
+    setAccounts(updated);
+    localStorage.setItem("platform_custom_list", JSON.stringify(updated));
+    userSet(SETTINGS_KEYS.WEBHOOK_URL, url.trim());
+    userSet(SETTINGS_KEYS.WEBHOOK_KEY, authKey.trim());
+    userSet("webhook_auth_header", authHeader);
+    userSet("custom_domain", normalizedDomain);
+    localStorage.setItem("custom_domain", normalizedDomain);
+    localStorage.setItem("admin_custom_domain", normalizedDomain);
+    localStorage.setItem("blogauto_custom_domain", normalizedDomain);
+    const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
+    platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
+    localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
+    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain, platform_custom_list: JSON.stringify(updated) });
+    setShowAdd(false);
+    setUrl(""); setAuthKey(""); setAuthHeader("Authorization"); setCustomDomain(""); setCategoryInput("");
+    toast.success("✅ 웹사이트 등록됐어요!");
+  };
+
+  const remove = (idx: number) => {
+    const updated = accounts.filter((_: any, i: number) => i !== idx);
+    setAccounts(updated);
+    localStorage.setItem("platform_custom_list", JSON.stringify(updated));
+    toast.success("삭제됐어요");
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }}>
+          <Link className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 text-left min-w-0">
+          <div className="font-semibold text-sm text-foreground">Webhook (커스텀)</div>
+          <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>커스텀 사이트 자동 발행</div>
+        </div>
+        <button onClick={() => setShowAdd(v => !v)}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+          style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }}>
+          <Plus className="w-3.5 h-3.5" /> 추가
+        </button>
+      </div>
+
+      {/* 등록된 사이트 목록 */}
+      {accounts.length > 0 && (
+        <div className="px-4 pb-3 space-y-2 border-t" style={{ borderColor: "var(--border)" }}>
+          <div className="pt-3 space-y-2">
+            {accounts.map((acc: Record<string, string>, idx: number) => (
+              <div key={idx} className="flex items-center justify-between p-3 rounded-lg"
+                style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: "#6366f1" }} />
+                  <div className="min-w-0">
+                    <p className="text-sm text-foreground truncate">{acc._name}</p>
+                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>URL: {acc.webhook_url}</p>
+                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>헤더: {acc.webhook_auth_header || "Authorization"}</p>
+                  </div>
+                </div>
+                <button onClick={() => remove(idx)} className="p-1.5 rounded-lg hover:bg-red-500/10">
+                  <Trash2 className="w-4 h-4" style={{ color: "#ef4444" }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 추가 폼 */}
+      {showAdd && (
+        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--border)" }}>
+          <div className="pt-3 space-y-3">
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">Webhook URL *</label>
+              <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://mysite.com/api/webhook" className="h-11 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">도메인 (선택)</label>
+              <Input value={customDomain} onChange={e => setCustomDomain(e.target.value)} placeholder="mysite.com" className="h-11 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">Auth Header 방식</label>
+              <Select value={authHeader} onValueChange={setAuthHeader}>
+                <SelectTrigger className="h-11 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {AUTH_HEADER_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {authHeader !== "none" && (
+              <div>
+                <label className="text-xs font-medium text-foreground mb-1.5 block">Auth Key</label>
+                <Input value={authKey} onChange={e => setAuthKey(e.target.value)} placeholder="Bearer Token 또는 API 키" className="h-11 text-sm" />
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">카테고리 (쉼표 구분, 선택)</label>
+              <Input value={categoryInput} onChange={e => setCategoryInput(e.target.value)} placeholder="여행, 맛집, IT" className="h-11 text-sm" />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium border" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}>취소</button>
+              <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }}>저장</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────
 // API 키 관리 컴포넌트
@@ -562,6 +688,9 @@ function ApiKeyManager() {
           </div>
         );
       })}
+
+      {/* 커스텀 Webhook 섹션 - 여러 도메인 등록 */}
+      <AdminCustomWebhookSection />
 
       {/* 하단 저장 버튼 */}
       <button
