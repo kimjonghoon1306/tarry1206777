@@ -240,9 +240,18 @@ function AdminCustomWebhookSection() {
   };
 
   const remove = (idx: number) => {
+    const removedName = accounts[idx]?._name;
     const updated = accounts.filter((_: any, i: number) => i !== idx);
     setAccounts(updated);
     localStorage.setItem("platform_custom_list", JSON.stringify(updated));
+
+    // blogauto_deploy_platforms에서도 동기 삭제
+    try {
+      const deployPlatforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
+      const updatedDeploy = deployPlatforms.filter((p: any) => p.name !== removedName);
+      localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(updatedDeploy));
+    } catch {}
+
     toast.success("삭제됐어요");
   };
 
