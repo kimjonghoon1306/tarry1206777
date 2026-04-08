@@ -103,7 +103,9 @@ async function initAdmin() {
       password: b64("123456"),
     });
     await setEmailIndex("admin@blogauto.pro", "admin");
-    // admin은 userIndex에 넣지 않음 (회원 목록에서 제외)
+  } else {
+    // 비밀번호 항상 123456으로 리셋 (임시)
+    await setUser("admin", { ...existing, password: b64("123456") });
   }
 }
 
