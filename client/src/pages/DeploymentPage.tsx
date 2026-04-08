@@ -1212,12 +1212,33 @@ export default function DeploymentPage() {
       const lines = faqRaw.split("\n").map((l: string) => l.trim()).filter(Boolean);
       for (let i = 0; i < lines.length; i++) {
         const qMatch = lines[i].match(/^Q\d+:\s*(.+)/);
-        if (qMatch && lines[i + 1]) {
-          const aNext = lines[i + 1].match(/^A\d+:\s*(.+)/);
-          if (aNext) {
-            qaPairs.push({ q: qMatch[1], a: aNext[1] });
-            i++;
+        if (!qMatch) continue;
+        // A 줄 찾기 — Q 바로 다음이 아니어도, 여러 줄 답변도 흡수
+        let aText = "";
+        let j = i + 1;
+        // 빈 줄 건너뛰고 A 패턴 찾기
+        while (j < lines.length && !lines[j].match(/^A\d+:\s*(.+)/)) {
+          // 다음 Q가 나오면 A 없는 Q이므로 중단
+          if (lines[j].match(/^Q\d+:/)) break;
+          j++;
+        }
+        if (j < lines.length) {
+          const aMatch = lines[j].match(/^A\d+:\s*(.+)/);
+          if (aMatch) {
+            // A 첫 줄 수집
+            const aLines = [aMatch[1]];
+            let k = j + 1;
+            // A 이후 줄이 Q나 A 패턴 아니면 이어지는 답변으로 흡수
+            while (k < lines.length && !lines[k].match(/^[QA]\d+:/)) {
+              aLines.push(lines[k]);
+              k++;
+            }
+            aText = aLines.join(" ");
+            i = k - 1; // 다음 루프에서 k부터 시작
           }
+        }
+        if (aText) {
+          qaPairs.push({ q: qMatch[1], a: aText });
         }
       }
       if (qaPairs.length > 0) {
