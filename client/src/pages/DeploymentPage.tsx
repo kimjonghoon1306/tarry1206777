@@ -1174,8 +1174,22 @@ export default function DeploymentPage() {
 
     const parts: string[] = [];
 
+    // FAQ/참고자료/관련글 섹션 마커를 가진 텍스트 블록 이후엔 이미지 삽입 금지
+    let sectionMarkerFound = false;
+    function hasSectionMarkerHtml(content: string): boolean {
+      return (
+        content.includes("[FAQ시작]") ||
+        content.includes("[참고자료시작]") ||
+        content.includes("[관련글시작]")
+      );
+    }
+
     blocks.forEach((b: any) => {
       if (b.type === "text") {
+        // 마커 감지: 이 블록부터 이후 이미지 금지
+        if (!sectionMarkerFound && hasSectionMarkerHtml(b.content)) {
+          sectionMarkerFound = true;
+        }
         const cleaned = b.content
           .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
           .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
@@ -1185,6 +1199,8 @@ export default function DeploymentPage() {
           parts.push(groupLines(cleaned.split("\n")));
         }
       } else if (b.type === "image-pair") {
+        // 섹션 마커 이후 이미지 절대 삽입 금지
+        if (sectionMarkerFound) return;
         const validImgs = b.images.filter((img: any) => img.src && img.src.trim() !== "");
         if (validImgs.length > 0) {
           const imgHtml = validImgs
@@ -1201,6 +1217,8 @@ export default function DeploymentPage() {
           parts.push(`<div style="margin:16px 0;line-height:0">${imgHtml}</div>`);
         }
       } else if (b.type === "image") {
+        // 섹션 마커 이후 이미지 절대 삽입 금지
+        if (sectionMarkerFound) return;
         const imgSrc = b.src || b.url || "";
         if (imgSrc) {
           parts.push(
@@ -1273,17 +1291,26 @@ export default function DeploymentPage() {
 
     let postHtml = "";
     if (postRaw) {
-      const posts: { title: string; desc: string }[] = [];
+      const posts: { title: string; desc: string; url: string }[] = [];
       postRaw.split("\n").forEach((line: string) => {
-        const m = line.match(/^POST\d+:\s*(.+?)\|(.+)/);
-        if (m) posts.push({ title: m[1].trim(), desc: m[2].trim() });
+        const l = line.trim();
+        if (!l) return;
+        // POST1: 제목|설명|URL
+        const m3 = l.match(/^POST\d+:\s*(.+?)\|(.+?)\|(https?:\/\/.+)/);
+        if (m3) { posts.push({ title: m3[1].trim(), desc: m3[2].trim(), url: m3[3].trim() }); return; }
+        // POST1: 제목|설명 (URL 없음 — 하위 호환)
+        const m2 = l.match(/^POST\d+:\s*(.+?)\|(.+)/);
+        if (m2) posts.push({ title: m2[1].trim(), desc: m2[2].trim(), url: "" });
       });
       if (posts.length > 0) {
         postHtml = `<div style="margin:40px 0"><h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">관련 글</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">${posts
-          .map(
-            ({ title, desc }: { title: string; desc: string }) =>
-              `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:8px;line-height:1.5">${inlineFormat(title)}</div><div style="color:#64748b;font-size:12px;line-height:1.6">${inlineFormat(desc)}</div></div>`
-          )
+          .map(({ title, desc, url }: { title: string; desc: string; url: string }) => {
+            const inner = `<div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:8px;line-height:1.5">${inlineFormat(title)}</div><div style="color:#64748b;font-size:12px;line-height:1.6">${inlineFormat(desc)}</div>`;
+            if (url) {
+              return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06);text-decoration:none" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.06)'">${inner}</a>`;
+            }
+            return `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">${inner}</div>`;
+          })
           .join("")}</div></div>`;
       }
     }
@@ -1548,16 +1575,45 @@ export default function DeploymentPage() {
   // ── 발행 핸들러 ──
   // ── 전체/본문/이미지 초기화 ──
   function handleReset(type: "all" | "content" | "image") {
-    if (type === "all" || type === "content") {
+    if (type === "all") {
+      // 전체: 제목+해시태그+블록 전부 + 썸네일 + 이미지 블록
       setTitle("");
       setHashtags([]);
       setBlocks([{ type: "text", id: uid(), content: "" }]);
+      setThumbnail("");
       localStorage.removeItem("blogauto_deploy_blocks");
       localStorage.removeItem(CONTENT_KEY);
-    }
-    if (type === "all" || type === "image") {
-      setThumbnail("");
       localStorage.removeItem("blogauto_thumbnail");
+      // CONTENT_KEY 내 thumbnail 필드도 제거
+      try {
+        const c = JSON.parse(localStorage.getItem(CONTENT_KEY) || "{}");
+        delete c.thumbnail;
+        localStorage.setItem(CONTENT_KEY, JSON.stringify(c));
+      } catch {}
+    } else if (type === "content") {
+      // 🟡 글 초기화: title + hashtags + 텍스트 블록만. 이미지 블록은 유지
+      setTitle("");
+      setHashtags([]);
+      setBlocks((prev) => {
+        const imageBlocks = prev.filter(
+          (b) => b.type === "image" || b.type === "image-pair"
+        );
+        return imageBlocks.length > 0
+          ? [...imageBlocks, { type: "text", id: uid(), content: "" }]
+          : [{ type: "text", id: uid(), content: "" }];
+      });
+      localStorage.removeItem(CONTENT_KEY);
+    } else if (type === "image") {
+      // 🔴 이미지 초기화: thumbnail + 이미지 블록(auto/manual) 전부 제거
+      setThumbnail("");
+      setBlocks((prev) => prev.filter((b) => b.type === "text"));
+      localStorage.removeItem("blogauto_thumbnail");
+      // CONTENT_KEY 내 thumbnail 필드 제거
+      try {
+        const c = JSON.parse(localStorage.getItem(CONTENT_KEY) || "{}");
+        delete c.thumbnail;
+        localStorage.setItem(CONTENT_KEY, JSON.stringify(c));
+      } catch {}
     }
   }
 
