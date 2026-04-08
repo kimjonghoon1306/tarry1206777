@@ -348,7 +348,6 @@ interface PublishPanelProps {
   onPublish: () => void;
   selectedCategory: string;
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
-  onRemovePlatform: (id: string) => void;
 }
 
 function PublishPanel({
@@ -365,7 +364,6 @@ function PublishPanel({
   onPublish,
   selectedCategory,
   setSelectedCategory,
-  onRemovePlatform,
 }: PublishPanelProps) {
   function togglePlatform(id: string) {
     setSelectedPlatforms((prev) =>
@@ -477,19 +475,9 @@ function PublishPanel({
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    {isSelected && (
-                      <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onRemovePlatform(platform.id); }}
-                      className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
-                      style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}
-                      title="플랫폼 삭제"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {isSelected && (
+                    <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+                  )}
                 </button>
               );
             })
@@ -696,22 +684,7 @@ export default function DeploymentPage() {
   const [platforms, setPlatforms] = useState<Platform[]>(() => {
     const stored = localStorage.getItem(DEPLOY_PLATFORMS_KEY);
     if (stored) {
-      try {
-        const parsed: Platform[] = JSON.parse(stored);
-        // custom 항목은 platform_custom_list 실제 데이터 기준으로 정리 (누적 방지)
-        const customList: Record<string, string>[] = (() => {
-          try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
-        })();
-        const nonCustom = parsed.filter((p) => p.type !== "custom");
-        const customPlatforms: Platform[] = customList.map((c) => ({
-          id: uid(),
-          type: "custom" as const,
-          name: c._name || "커스텀 사이트",
-        }));
-        const synced = [...nonCustom, ...customPlatforms];
-        localStorage.setItem(DEPLOY_PLATFORMS_KEY, JSON.stringify(synced));
-        return synced;
-      } catch {}
+      try { return JSON.parse(stored); } catch {}
     }
     const defaults: Platform[] = [];
     if (userGet("naver_blog_id"))
@@ -974,38 +947,6 @@ export default function DeploymentPage() {
     );
     setAutoInserted(false);
     toast.success("자동 삽입 이미지 제거됨");
-  }
-
-  // ── 초기화 함수 ──
-  function handleResetAll() {
-    if (!window.confirm("전체 초기화하면 제목, 본문, 이미지, 썸네일이 모두 삭제됩니다. 계속하시겠어요?")) return;
-    setTitle("");
-    setGreeting("");
-    setThumbnail("");
-    setHashtags([]);
-    setBlocks([{ type: "text", id: uid(), content: "" }]);
-    setDeployImages([]);
-    setAutoInserted(false);
-    localStorage.removeItem("blogauto_deploy_blocks");
-    localStorage.removeItem("blogauto_deploy_images");
-    toast.success("전체 초기화 완료!");
-  }
-
-  function handleResetContent() {
-    if (!window.confirm("본문만 초기화할까요?")) return;
-    setBlocks([{ type: "text", id: uid(), content: "" }]);
-    setAutoInserted(false);
-    localStorage.removeItem("blogauto_deploy_blocks");
-    toast.success("본문 초기화 완료!");
-  }
-
-  function handleResetImages() {
-    setBlocks((prev) => prev.filter((b) => b.type === "text"));
-    setThumbnail("");
-    setDeployImages([]);
-    localStorage.removeItem("blogauto_deploy_images");
-    setAutoInserted(false);
-    toast.success("이미지 전체 초기화 완료!");
   }
 
   // ── 콘텐츠 빌드 ──
@@ -1569,25 +1510,6 @@ export default function DeploymentPage() {
   }
 
   // ── 발행 핸들러 ──
-  // ── 플랫폼 삭제 (배포관리 UI에서) ──
-  function handleRemovePlatform(id: string) {
-    setPlatforms((prev) => {
-      const updated = prev.filter((p) => p.id !== id);
-      localStorage.setItem(DEPLOY_PLATFORMS_KEY, JSON.stringify(updated));
-      // custom 항목이면 platform_custom_list에서도 제거
-      const removed = prev.find((p) => p.id === id);
-      if (removed && removed.type === "custom") {
-        try {
-          const customList: Record<string, string>[] = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
-          const updatedCustom = customList.filter((c) => c._name !== removed.name);
-          localStorage.setItem("platform_custom_list", JSON.stringify(updatedCustom));
-        } catch {}
-      }
-      return updated;
-    });
-    setSelectedPlatforms((prev) => prev.filter((sid) => sid !== id));
-  }
-
   async function handlePublish() {
     if (selectedPlatforms.length === 0) { toast.error("발행할 플랫폼을 선택해주세요"); return; }
     if (!title.trim()) { toast.error("제목을 입력해주세요"); return; }
@@ -1801,7 +1723,6 @@ export default function DeploymentPage() {
                   onPublish={handlePublish}
                   selectedCategory={selectedCategory}
                   setSelectedCategory={setSelectedCategory}
-                  onRemovePlatform={handleRemovePlatform}
                 />
               </div>
             )}
@@ -2296,30 +2217,6 @@ export default function DeploymentPage() {
 
             {/* 오른쪽: 발행 설정 (데스크탑) */}
             <div className="hidden lg:block space-y-4">
-              {/* 초기화 버튼 - PC */}
-              <div className="rounded-xl p-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Trash2 className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
-                  <span className="text-sm font-semibold text-foreground">초기화</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button onClick={handleResetAll}
-                    className="text-xs py-2 rounded-lg font-semibold transition-all active:scale-95"
-                    style={{ background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5" }}>
-                    전체
-                  </button>
-                  <button onClick={handleResetContent}
-                    className="text-xs py-2 rounded-lg font-semibold transition-all active:scale-95"
-                    style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }}>
-                    본문
-                  </button>
-                  <button onClick={handleResetImages}
-                    className="text-xs py-2 rounded-lg font-semibold transition-all active:scale-95"
-                    style={{ background: "#ede9fe", color: "#5b21b6", border: "1px solid #c4b5fd" }}>
-                    이미지
-                  </button>
-                </div>
-              </div>
               <PublishPanel
                 platforms={platforms}
                 selectedPlatforms={selectedPlatforms}
@@ -2334,7 +2231,6 @@ export default function DeploymentPage() {
                 onPublish={handlePublish}
                 selectedCategory={selectedCategory}
                 setSelectedCategory={setSelectedCategory}
-                onRemovePlatform={handleRemovePlatform}
               />
             </div>
           </div>
@@ -2355,23 +2251,6 @@ export default function DeploymentPage() {
           >
             <Copy className="w-4 h-4" />
             네이버 블로그 복사하기 📋
-          </button>
-        </div>
-        <div className="flex gap-2 px-3 pt-1 pb-0">
-          <button onClick={handleResetAll}
-            className="flex-1 text-xs py-1.5 rounded-lg font-semibold"
-            style={{ background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5" }}>
-            전체초기화
-          </button>
-          <button onClick={handleResetContent}
-            className="flex-1 text-xs py-1.5 rounded-lg font-semibold"
-            style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }}>
-            본문초기화
-          </button>
-          <button onClick={handleResetImages}
-            className="flex-1 text-xs py-1.5 rounded-lg font-semibold"
-            style={{ background: "#ede9fe", color: "#5b21b6", border: "1px solid #c4b5fd" }}>
-            이미지초기화
           </button>
         </div>
         <div className="flex gap-2 px-3 py-2">
