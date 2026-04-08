@@ -348,7 +348,6 @@ interface PublishPanelProps {
   onPublish: () => void;
   selectedCategory: string;
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
-  onRemovePlatform: (id: string) => void;
 }
 
 function PublishPanel({
@@ -365,7 +364,6 @@ function PublishPanel({
   onPublish,
   selectedCategory,
   setSelectedCategory,
-  onRemovePlatform,
 }: PublishPanelProps) {
   function togglePlatform(id: string) {
     setSelectedPlatforms((prev) =>
@@ -477,19 +475,9 @@ function PublishPanel({
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    {isSelected && (
-                      <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onRemovePlatform(platform.id); }}
-                      className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
-                      style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}
-                      title="플랫폼 삭제"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {isSelected && (
+                    <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+                  )}
                 </button>
               );
             })
@@ -696,22 +684,7 @@ export default function DeploymentPage() {
   const [platforms, setPlatforms] = useState<Platform[]>(() => {
     const stored = localStorage.getItem(DEPLOY_PLATFORMS_KEY);
     if (stored) {
-      try {
-        const parsed: Platform[] = JSON.parse(stored);
-        // custom 항목은 platform_custom_list 실제 데이터 기준으로 정리 (누적 방지)
-        const customList: Record<string, string>[] = (() => {
-          try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
-        })();
-        const nonCustom = parsed.filter((p) => p.type !== "custom");
-        const customPlatforms: Platform[] = customList.map((c) => ({
-          id: uid(),
-          type: "custom" as const,
-          name: c._name || "커스텀 사이트",
-        }));
-        const synced = [...nonCustom, ...customPlatforms];
-        localStorage.setItem(DEPLOY_PLATFORMS_KEY, JSON.stringify(synced));
-        return synced;
-      } catch {}
+      try { return JSON.parse(stored); } catch {}
     }
     const defaults: Platform[] = [];
     if (userGet("naver_blog_id"))
@@ -1174,22 +1147,18 @@ export default function DeploymentPage() {
 
     const parts: string[] = [];
 
-    // FAQ/참고자료/관련글 섹션 마커를 가진 텍스트 블록 이후엔 이미지 삽입 금지
-    let sectionMarkerFound = false;
-    function hasSectionMarkerHtml(content: string): boolean {
-      return (
-        content.includes("[FAQ시작]") ||
-        content.includes("[참고자료시작]") ||
-        content.includes("[관련글시작]")
-      );
-    }
+    // FAQ/참고자료/관련글 마커 블록 인덱스 사전 스캔 — 이미지가 마커보다 앞에 있어도 차단
+    const sectionMarkerIdx = (blocks as any[]).findIndex(
+      (b: any) =>
+        b.type === "text" &&
+        (b.content.includes("[FAQ시작]") ||
+          b.content.includes("[참고자료시작]") ||
+          b.content.includes("[관련글시작]"))
+    );
 
-    blocks.forEach((b: any) => {
+    blocks.forEach((b: any, blockIdx: number) => {
+      const afterSection = sectionMarkerIdx !== -1 && blockIdx >= sectionMarkerIdx;
       if (b.type === "text") {
-        // 마커 감지: 이 블록부터 이후 이미지 금지
-        if (!sectionMarkerFound && hasSectionMarkerHtml(b.content)) {
-          sectionMarkerFound = true;
-        }
         const cleaned = b.content
           .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
           .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
@@ -1199,8 +1168,7 @@ export default function DeploymentPage() {
           parts.push(groupLines(cleaned.split("\n")));
         }
       } else if (b.type === "image-pair") {
-        // 섹션 마커 이후 이미지 절대 삽입 금지
-        if (sectionMarkerFound) return;
+        if (afterSection) return; // 섹션 이후 이미지 절대 금지
         const validImgs = b.images.filter((img: any) => img.src && img.src.trim() !== "");
         if (validImgs.length > 0) {
           const imgHtml = validImgs
@@ -1217,8 +1185,7 @@ export default function DeploymentPage() {
           parts.push(`<div style="margin:16px 0;line-height:0">${imgHtml}</div>`);
         }
       } else if (b.type === "image") {
-        // 섹션 마커 이후 이미지 절대 삽입 금지
-        if (sectionMarkerFound) return;
+        if (afterSection) return; // 섹션 이후 이미지 절대 금지
         const imgSrc = b.src || b.url || "";
         if (imgSrc) {
           parts.push(
@@ -1267,17 +1234,8 @@ export default function DeploymentPage() {
     if (refRaw) {
       const links: { name: string; desc: string; url: string }[] = [];
       refRaw.split("\n").forEach((line: string) => {
-        const l = line.trim();
-        if (!l) return;
-        // LINK1: 제목|설명|URL
-        const m1 = l.match(/^LINK\d+:\s*(.+?)\|(.+?)\|(https?:\/\/.+)/);
-        if (m1) { links.push({ name: m1[1].trim(), desc: m1[2].trim(), url: m1[3].trim() }); return; }
-        // 제목|설명|URL (prefix 없음)
-        const m2 = l.match(/^(.+?)\|(.+?)\|(https?:\/\/.+)/);
-        if (m2) { links.push({ name: m2[1].trim(), desc: m2[2].trim(), url: m2[3].trim() }); return; }
-        // 제목|(설명)|(URL) 형식
-        const m3 = l.match(/^(.+?)\|\((.+?)\)\|\((https?:\/\/.+?)\)/);
-        if (m3) { links.push({ name: m3[1].trim(), desc: m3[2].trim(), url: m3[3].trim() }); return; }
+        const m = line.match(/^LINK\d+:\s*(.+?)\|(.+?)\|(.+)/);
+        if (m) links.push({ name: m[1].trim(), desc: m[2].trim(), url: m[3].trim() });
       });
       if (links.length > 0) {
         refHtml = `<div id="ref-section" style="margin:48px 0 32px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:20px"><div style="width:4px;height:24px;background:linear-gradient(180deg,#2563eb,#1d4ed8);border-radius:2px;flex-shrink:0"></div><h2 style="font-size:18px;font-weight:800;color:#1a1a1a;margin:0">참고자료 &amp; 링크</h2></div><div style="display:grid;gap:10px">${links
@@ -1298,7 +1256,7 @@ export default function DeploymentPage() {
         // POST1: 제목|설명|URL
         const m3 = l.match(/^POST\d+:\s*(.+?)\|(.+?)\|(https?:\/\/.+)/);
         if (m3) { posts.push({ title: m3[1].trim(), desc: m3[2].trim(), url: m3[3].trim() }); return; }
-        // POST1: 제목|설명 (URL 없음 — 하위 호환)
+        // POST1: 제목|설명 (하위 호환)
         const m2 = l.match(/^POST\d+:\s*(.+?)\|(.+)/);
         if (m2) posts.push({ title: m2[1].trim(), desc: m2[2].trim(), url: "" });
       });
@@ -1306,9 +1264,7 @@ export default function DeploymentPage() {
         postHtml = `<div style="margin:40px 0"><h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">관련 글</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">${posts
           .map(({ title, desc, url }: { title: string; desc: string; url: string }) => {
             const inner = `<div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:8px;line-height:1.5">${inlineFormat(title)}</div><div style="color:#64748b;font-size:12px;line-height:1.6">${inlineFormat(desc)}</div>`;
-            if (url) {
-              return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06);text-decoration:none" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.06)'">${inner}</a>`;
-            }
+            if (url) return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06);text-decoration:none">${inner}</a>`;
             return `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">${inner}</div>`;
           })
           .join("")}</div></div>`;
@@ -1572,11 +1528,9 @@ export default function DeploymentPage() {
     if (!resp.ok) throw new Error(`Webhook 전송 실패 (${resp.status}): ${url} 서버가 POST 요청을 허용하는지 확인해주세요`);
   }
 
-  // ── 발행 핸들러 ──
-  // ── 전체/본문/이미지 초기화 ──
+  // ── 초기화 ──
   function handleReset(type: "all" | "content" | "image") {
     if (type === "all") {
-      // 전체: 제목+해시태그+블록 전부 + 썸네일 + 이미지 블록
       setTitle("");
       setHashtags([]);
       setBlocks([{ type: "text", id: uid(), content: "" }]);
@@ -1584,57 +1538,26 @@ export default function DeploymentPage() {
       localStorage.removeItem("blogauto_deploy_blocks");
       localStorage.removeItem(CONTENT_KEY);
       localStorage.removeItem("blogauto_thumbnail");
-      // CONTENT_KEY 내 thumbnail 필드도 제거
-      try {
-        const c = JSON.parse(localStorage.getItem(CONTENT_KEY) || "{}");
-        delete c.thumbnail;
-        localStorage.setItem(CONTENT_KEY, JSON.stringify(c));
-      } catch {}
+      localStorage.removeItem("blogauto_deploy_images");
+      try { const raw = localStorage.getItem(CONTENT_KEY); if (raw) { const c = JSON.parse(raw); delete c.thumbnail; localStorage.setItem(CONTENT_KEY, JSON.stringify(c)); } } catch {}
     } else if (type === "content") {
-      // 🟡 글 초기화: title + hashtags + 텍스트 블록만. 이미지 블록은 유지
       setTitle("");
       setHashtags([]);
       setBlocks((prev) => {
-        const imageBlocks = prev.filter(
-          (b) => b.type === "image" || b.type === "image-pair"
-        );
-        return imageBlocks.length > 0
-          ? [...imageBlocks, { type: "text", id: uid(), content: "" }]
-          : [{ type: "text", id: uid(), content: "" }];
+        const imgBlocks = prev.filter((b) => b.type === "image" || b.type === "image-pair");
+        return imgBlocks.length > 0 ? [...imgBlocks, { type: "text", id: uid(), content: "" }] : [{ type: "text", id: uid(), content: "" }];
       });
       localStorage.removeItem(CONTENT_KEY);
     } else if (type === "image") {
-      // 🔴 이미지 초기화: thumbnail + 이미지 블록(auto/manual) 전부 제거
       setThumbnail("");
       setBlocks((prev) => prev.filter((b) => b.type === "text"));
       localStorage.removeItem("blogauto_thumbnail");
-      // CONTENT_KEY 내 thumbnail 필드 제거
-      try {
-        const c = JSON.parse(localStorage.getItem(CONTENT_KEY) || "{}");
-        delete c.thumbnail;
-        localStorage.setItem(CONTENT_KEY, JSON.stringify(c));
-      } catch {}
+      localStorage.removeItem("blogauto_deploy_images");
+      try { const raw = localStorage.getItem(CONTENT_KEY); if (raw) { const c = JSON.parse(raw); delete c.thumbnail; localStorage.setItem(CONTENT_KEY, JSON.stringify(c)); } } catch {}
     }
   }
 
-  // ── 플랫폼 삭제 (배포관리 UI에서) ──
-  function handleRemovePlatform(id: string) {
-    setPlatforms((prev) => {
-      const updated = prev.filter((p) => p.id !== id);
-      localStorage.setItem(DEPLOY_PLATFORMS_KEY, JSON.stringify(updated));
-      const removed = prev.find((p) => p.id === id);
-      if (removed && removed.type === "custom") {
-        try {
-          const customList: Record<string, string>[] = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
-          const updatedCustom = customList.filter((c) => c._name !== removed.name);
-          localStorage.setItem("platform_custom_list", JSON.stringify(updatedCustom));
-        } catch {}
-      }
-      return updated;
-    });
-    setSelectedPlatforms((prev) => prev.filter((sid) => sid !== id));
-  }
-
+  // ── 발행 핸들러 ──
   async function handlePublish() {
     if (selectedPlatforms.length === 0) { toast.error("발행할 플랫폼을 선택해주세요"); return; }
     if (!title.trim()) { toast.error("제목을 입력해주세요"); return; }
@@ -1776,24 +1699,20 @@ export default function DeploymentPage() {
               )}
               {/* 초기화 버튼 그룹 */}
               <div className="flex items-center gap-1">
-                <Button size="sm" className="gap-1 h-9 text-xs font-semibold"
+                <button
+                  className="flex items-center gap-1 px-2.5 h-9 rounded-lg text-xs font-semibold transition-colors"
                   style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
-                  onClick={() => { if(confirm("전체를 초기화할까요?")) handleReset("all"); }}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">전체</span>
-                </Button>
-                <Button size="sm" className="gap-1 h-9 text-xs font-semibold"
-                  style={{ background: "rgba(245,158,11,0.12)", color: "#d97706", border: "1px solid rgba(245,158,11,0.3)" }}
-                  onClick={() => { if(confirm("본문을 초기화할까요?")) handleReset("content"); }}>
-                  <FileText className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">본문</span>
-                </Button>
-                <Button size="sm" className="gap-1 h-9 text-xs font-semibold"
-                  style={{ background: "rgba(139,92,246,0.12)", color: "#7c3aed", border: "1px solid rgba(139,92,246,0.3)" }}
-                  onClick={() => { if(confirm("이미지를 초기화할까요?")) handleReset("image"); }}>
+                  onClick={() => { if (confirm("이미지를 초기화할까요?")) handleReset("image"); }}>
                   <Image className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">이미지</span>
-                </Button>
+                  <span className="hidden sm:inline">이미지초기화</span>
+                </button>
+                <button
+                  className="flex items-center gap-1 px-2.5 h-9 rounded-lg text-xs font-semibold transition-colors"
+                  style={{ background: "rgba(245,158,11,0.12)", color: "#d97706", border: "1px solid rgba(245,158,11,0.3)" }}
+                  onClick={() => { if (confirm("글을 초기화할까요?")) handleReset("content"); }}>
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">글초기화</span>
+                </button>
               </div>
               {/* 네이버 블로그 복사 버튼 */}
               <Button size="sm" className="gap-1.5 h-9"
@@ -1869,7 +1788,6 @@ export default function DeploymentPage() {
                   onPublish={handlePublish}
                   selectedCategory={selectedCategory}
                   setSelectedCategory={setSelectedCategory}
-                  onRemovePlatform={handleRemovePlatform}
                 />
               </div>
             )}
@@ -2378,7 +2296,6 @@ export default function DeploymentPage() {
                 onPublish={handlePublish}
                 selectedCategory={selectedCategory}
                 setSelectedCategory={setSelectedCategory}
-                onRemovePlatform={handleRemovePlatform}
               />
             </div>
           </div>
