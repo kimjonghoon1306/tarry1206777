@@ -297,10 +297,6 @@ function AdminCustomWebhookSection() {
               <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://mysite.com/api/webhook" className="h-11 text-sm" />
             </div>
             <div>
-              <label className="text-xs font-medium text-foreground mb-1.5 block">도메인 (선택)</label>
-              <Input value={customDomain} onChange={e => setCustomDomain(e.target.value)} placeholder="mysite.com" className="h-11 text-sm" />
-            </div>
-            <div>
               <label className="text-xs font-medium text-foreground mb-1.5 block">Auth Header 방식</label>
               <Select value={authHeader} onValueChange={setAuthHeader}>
                 <SelectTrigger className="h-11 text-sm"><SelectValue /></SelectTrigger>
