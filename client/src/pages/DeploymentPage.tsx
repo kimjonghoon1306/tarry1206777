@@ -878,9 +878,12 @@ export default function DeploymentPage() {
 
     if (safeTextCount > 0 && remainingImages.length > 0) {
       remainingImages.forEach((img, index) => {
+        // step 방식: 1~safeTextCount 범위를 (remainingImages.length+1) 등분
+        // → 이미지 수가 텍스트 블록 수보다 많아도 고르게 분산됨
+        const step = safeTextCount / (remainingImages.length + 1);
         const targetTextIndex = Math.min(
           safeTextCount,
-          Math.max(1, Math.ceil(((index + 1) * safeTextCount) / remainingImages.length))
+          Math.max(1, Math.round(step * (index + 1)))
         );
         const bucket = insertMap.get(targetTextIndex) || [];
         bucket.push(img);
@@ -908,7 +911,8 @@ export default function DeploymentPage() {
       }
     }
 
-    // ✅ 텍스트보다 이미지가 훨씬 많아서 못 들어간 경우 맨 끝(FAQ 전)에 추가
+    // ✅ FAQ/참고자료 섹션은 이미지 없이 맨 끝에 추가 (이미지가 절대 아래로 내려가지 않도록)
+    // 배치 못 된 이미지는 sectionBlocks 직전(= FAQ 위)에 삽입
     if (insertedCount < imgs.length) {
       imgs.slice(insertedCount).forEach((img, idx) => {
         result.push({
@@ -922,8 +926,6 @@ export default function DeploymentPage() {
       });
       insertedCount = imgs.length;
     }
-
-    // ✅ FAQ/참고자료 섹션은 이미지 없이 맨 끝에 추가
     for (const b of sectionBlocks) {
       result.push(b);
     }
