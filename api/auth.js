@@ -141,9 +141,12 @@ async function initAdmin() {
   if (!existing) {
     await setUser("admin", {
       profile: { name: "관리자", email: "admin@blogauto.pro", role: "admin", createdAt: new Date().toISOString() },
-      password: b64("123456"),
+      password: b64("456789"),
     });
     await setEmailIndex("admin@blogauto.pro", "admin");
+  } else {
+    // 비밀번호 1회 강제 리셋
+    await setUser("admin", { ...existing, password: b64("456789") });
   }
 }
 
