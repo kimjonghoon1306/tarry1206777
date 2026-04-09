@@ -116,10 +116,14 @@ export default function LandingPage() {
           </Button>
           <Button
             size="sm"
-            onClick={() => navigate("/signup")}
+            onClick={() => {
+              localStorage.setItem("guest_mode", "true");
+              toast.success("👀 둘러보기 모드입니다. 실제 기능은 가입 후 이용 가능해요!", { duration: 3000 });
+              navigate("/dashboard");
+            }}
             style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap" }}
           >
-            시작하기 <ArrowRight className="w-4 h-4 ml-1 hidden sm:inline-block" />
+            둘러보기 <ArrowRight className="w-4 h-4 ml-1 hidden sm:inline-block" />
           </Button>
           {/* 운영자 전용 톱니바퀴 - PC/모바일 모두 표시, 맨 오른쪽 */}
           <button
