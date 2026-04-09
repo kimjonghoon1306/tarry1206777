@@ -1,5 +1,3 @@
-import crypto from "crypto";
-
 // BlogAuto Pro - auth v5.0
 // ✅ 관리자 비번 KV 서버 저장 (배포해도 초기화 안됨)
 // ✅ 회원가입 시 userIndex 등록 (회원 목록 관리)
@@ -53,8 +51,6 @@ async function setUser(userId, data) {
   await kvSet(`user:${userId}`, data);
 }
 async function getSession(token) {
-  const parsed = parseSignedToken(token);
-  if (parsed?.uid) return parsed.uid;
   const uid = await kvGet(`session:${token}`);
   return uid || _mem[`session:${token}`] || null;
 }
@@ -95,45 +91,8 @@ async function removeFromUserIndex(userId) {
   await kvSet("userIndex", updated);
 }
 
-const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || process.env.JWT_SECRET || "blogauto-pro-auth-secret-v1";
-
+const mkToken = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const b64 = (s) => Buffer.from(s).toString("base64");
-const b64url = (input) => Buffer.from(typeof input === "string" ? input : JSON.stringify(input))
-  .toString("base64")
-  .replace(/=/g, "")
-  .replace(/\+/g, "-")
-  .replace(/\//g, "_");
-const unb64url = (input) => {
-  const normalized = String(input || "").replace(/-/g, "+").replace(/_/g, "/");
-  const pad = normalized.length % 4 ? "=".repeat(4 - (normalized.length % 4)) : "";
-  return Buffer.from(normalized + pad, "base64").toString();
-};
-const signTokenPayload = (payload) => {
-  const body = b64url(payload);
-  const sig = crypto.createHmac("sha256", TOKEN_SECRET).update(body).digest("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-  return `${body}.${sig}`;
-};
-const parseSignedToken = (token) => {
-  if (!token || typeof token !== "string" || !token.includes(".")) return null;
-  const [body, sig] = token.split(".");
-  const expected = crypto.createHmac("sha256", TOKEN_SECRET).update(body).digest("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-  if (sig !== expected) return null;
-  try {
-    const payload = JSON.parse(unb64url(body));
-    if (!payload?.uid) return null;
-    if (payload.exp && Date.now() > payload.exp) return null;
-    return payload;
-  } catch {
-    return null;
-  }
-};
-const mkToken = (userId) => signTokenPayload({ uid: userId, iat: Date.now(), exp: Date.now() + 1000 * 60 * 60 * 24 * 30 });
 
 // ── 관리자 초기화 (비번은 KV에 이미 있으면 절대 덮어쓰지 않음) ──
 async function initAdmin() {
@@ -144,9 +103,7 @@ async function initAdmin() {
       password: b64("123456"),
     });
     await setEmailIndex("admin@blogauto.pro", "admin");
-  } else {
-    // 비밀번호 항상 123456으로 리셋 (임시)
-    await setUser("admin", { ...existing, password: b64("123456") });
+    // admin은 userIndex에 넣지 않음 (회원 목록에서 제외)
   }
 }
 
@@ -192,7 +149,7 @@ export default async function handler(req, res) {
     await setUser(userId, userData);
     await setEmailIndex(email, userId);
     await addToUserIndex(userId); // ✅ 회원 목록에 등록
-    const tk = mkToken(userId);
+    const tk = mkToken();
     await setSession(tk, userId);
     return res.json({ ok: true, token: tk, user: { id: userId, ...userData.profile } });
   }
@@ -208,7 +165,7 @@ export default async function handler(req, res) {
     const u = await getUser(userId);
     if (!u) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
     if (u.password !== b64(password)) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
-    const tk = mkToken(userId);
+    const tk = mkToken();
     await setSession(tk, userId);
     return res.json({ ok: true, token: tk, user: { id: userId, ...u.profile } });
   }
