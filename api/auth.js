@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 // BlogAuto Pro - auth v5.0
 // ✅ 관리자 비번 KV 서버 저장 (배포해도 초기화 안됨)
 // ✅ 회원가입 시 userIndex 등록 (회원 목록 관리)
@@ -51,12 +53,16 @@ async function setUser(userId, data) {
   await kvSet(`user:${userId}`, data);
 }
 async function getSession(token) {
+  const statelessUid = verifyStatelessToken(token);
+  if (statelessUid) return statelessUid;
   const uid = await kvGet(`session:${token}`);
   return uid || _mem[`session:${token}`] || null;
 }
 async function setSession(token, userId) {
+  if (token && token.includes(".")) return true;
   _mem[`session:${token}`] = userId;
   await kvSet(`session:${token}`, userId);
+  return true;
 }
 async function delSession(token) {
   delete _mem[`session:${token}`];
@@ -93,6 +99,48 @@ async function removeFromUserIndex(userId) {
 
 const mkToken = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const b64 = (s) => Buffer.from(s).toString("base64");
+const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || process.env.KV_REST_API_TOKEN || "blogauto-local-secret";
+const TOKEN_TTL_SEC = 60 * 60 * 24 * 30;
+
+function base64UrlEncode(input) {
+  return Buffer.from(input).toString("base64url");
+}
+
+function base64UrlDecode(input) {
+  return Buffer.from(input, "base64url").toString("utf8");
+}
+
+function signTokenPayload(payload) {
+  return createHmac("sha256", TOKEN_SECRET).update(payload).digest("base64url");
+}
+
+function createStatelessToken(userId) {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = base64UrlEncode(JSON.stringify({ uid: userId, iat: now, exp: now + TOKEN_TTL_SEC }));
+  const sig = signTokenPayload(payload);
+  return `${payload}.${sig}`;
+}
+
+function verifyStatelessToken(token) {
+  if (!token || typeof token !== "string" || !token.includes(".")) return null;
+  const [payload, sig] = token.split(".");
+  if (!payload || !sig) return null;
+  const expected = signTokenPayload(payload);
+  try {
+    const ok = timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+    if (!ok) return null;
+  } catch {
+    return null;
+  }
+  try {
+    const decoded = JSON.parse(base64UrlDecode(payload));
+    const now = Math.floor(Date.now() / 1000);
+    if (!decoded?.uid || !decoded?.exp || decoded.exp < now) return null;
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
 
 // ── 관리자 초기화 (비번은 KV에 이미 있으면 절대 덮어쓰지 않음) ──
 async function initAdmin() {
@@ -151,7 +199,7 @@ export default async function handler(req, res) {
     await setUser(userId, userData);
     await setEmailIndex(email, userId);
     await addToUserIndex(userId); // ✅ 회원 목록에 등록
-    const tk = mkToken();
+    const tk = createStatelessToken(userId);
     await setSession(tk, userId);
     return res.json({ ok: true, token: tk, user: { id: userId, ...userData.profile } });
   }
@@ -167,7 +215,7 @@ export default async function handler(req, res) {
     const u = await getUser(userId);
     if (!u) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
     if (u.password !== b64(password)) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
-    const tk = mkToken();
+    const tk = createStatelessToken(userId);
     await setSession(tk, userId);
     return res.json({ ok: true, token: tk, user: { id: userId, ...u.profile } });
   }
