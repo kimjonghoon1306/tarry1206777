@@ -125,6 +125,7 @@ export default function Dashboard() {
   const [serverStats, setServerStats] = useState<Record<string, any>>({});
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "done" | "offline">("idle");
   const isLoggedIn = !!localStorage.getItem("ba_token");
+  const isGuestMode = !isLoggedIn && localStorage.getItem("guest_mode") === "true";
 
   // 현재 언어
   const currentLang = localStorage.getItem("content_language") || "ko";
@@ -280,6 +281,28 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="p-4 sm:p-6 space-y-5 pb-10">
+
+        {/* ── 게스트 둘러보기 배너 ── */}
+        {isGuestMode && (
+          <div
+            className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl px-4 py-3"
+            style={{ background: "oklch(0.769 0.188 70.08/15%)", border: "1px solid oklch(0.769 0.188 70.08/40%)" }}
+          >
+            <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--color-amber-brand)" }}>
+              👀 둘러보기 모드 — 모든 기능은 가입 후 이용 가능해요
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => { localStorage.removeItem("guest_mode"); navigate("/login"); }}
+                style={{ whiteSpace: "nowrap", fontSize: 12 }}>
+                로그인
+              </Button>
+              <Button size="sm" onClick={() => { localStorage.removeItem("guest_mode"); navigate("/signup"); }}
+                style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap", fontSize: 12 }}>
+                무료 가입하기
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* ── 헤더 ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
