@@ -24,8 +24,9 @@ function PrivateRoute({ component: Component }: { component: React.ComponentType
   const [, navigate] = useLocation();
   const isLoggedIn = !!localStorage.getItem("ba_token");
   const isSuperAdmin = !!sessionStorage.getItem("bap_admin_auth");
+  const isGuest = !!localStorage.getItem("guest_mode");
 
-  if (!isLoggedIn && !isSuperAdmin) {
+  if (!isLoggedIn && !isSuperAdmin && !isGuest) {
     const currentPath = window.location.pathname;
     setTimeout(() => navigate(`/login?redirect=${encodeURIComponent(currentPath)}`), 0);
     return null;
