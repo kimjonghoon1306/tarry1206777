@@ -127,6 +127,29 @@ export default function Dashboard() {
   const isLoggedIn = !!localStorage.getItem("ba_token");
   const isGuestMode = !isLoggedIn && localStorage.getItem("guest_mode") === "true";
 
+  // ── 관리자 공지 팝업 ──────────────────────────────
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupData, setPopupData] = useState<{ id: string; title: string; content: string; enabled: boolean } | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("ba_token") || "";
+    fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "loadPopup" }),
+    }).then(r => r.json()).then(d => {
+      if (d.ok && d.popup?.enabled) {
+        const dismissed = localStorage.getItem(`popup_dismissed_${d.popup.id}`);
+        if (!dismissed) { setPopupData(d.popup); setPopupVisible(true); }
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleClosePopup = () => {
+    if (popupData) localStorage.setItem(`popup_dismissed_${popupData.id}`, "1");
+    setPopupVisible(false);
+  };
+
   // 현재 언어
   const currentLang = localStorage.getItem("content_language") || "ko";
   const langLabels: Record<string, string> = {
@@ -280,6 +303,28 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      {/* ── 관리자 공지 팝업 ── */}
+      {popupVisible && popupData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+          <div className="w-full max-w-md rounded-2xl p-6 relative" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <button onClick={handleClosePopup} className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center hover:bg-accent/20" style={{ color: "var(--muted-foreground)" }}>
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "oklch(0.696 0.17 162.48 / 15%)" }}>
+                <Zap className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
+              </div>
+              <h2 className="font-bold text-foreground text-lg">{popupData.title}</h2>
+            </div>
+            <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "var(--muted-foreground)" }}>
+              {popupData.content}
+            </div>
+            <button onClick={handleClosePopup} className="w-full mt-6 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95" style={{ background: "var(--color-emerald)" }}>
+              확인했어요 ✓
+            </button>
+          </div>
+        </div>
+      )}
       <div className="p-4 sm:p-6 space-y-5 pb-10">
 
         {/* ── 게스트 둘러보기 배너 ── */}
@@ -415,12 +460,12 @@ export default function Dashboard() {
         )}
 
         {/* ── 핵심 지표 카드 ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {[
             { label: "오늘 방문자", value: todayViews > 0 ? todayViews.toLocaleString() : "—", change: "GSC 연동 필요", up: true, icon: Eye, color: "var(--color-emerald)" },
             { label: "광고 클릭", value: todayClicks > 0 ? todayClicks.toLocaleString() : "—", change: "애드센스 연동 필요", up: true, icon: MousePointerClick, color: "var(--color-amber-brand)" },
             { label: "오늘 수익", value: todayRevenue > 0 ? "₩" + todayRevenue.toLocaleString() : "—", change: "애드센스 연동 필요", up: true, icon: DollarSign, color: "oklch(0.6 0.15 220)" },
-            { label: "발행된 글", value: String(publishCount || 0), change: "", up: true, icon: FileText, color: "oklch(0.75 0.12 300)" },
+
           ].map(metric => (
             <div key={metric.label} className="rounded-xl p-4 feature-card"
               style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -645,12 +690,8 @@ export default function Dashboard() {
                 </Button>
               </div>
             ) : (
-              /* 비로그인 - 예시 데이터 */
-              [
-                { title: "2026년 최고의 맛집 TOP 10 - 서울 강남 숨은 맛집 완벽 가이드", status: "published", views: 1240, clicks: 89, date: "2시간 전", platform: "네이버" },
-                { title: "봄 여행 완벽 코스 - 제주도 3박 4일 여행 계획 총정리", status: "scheduled", views: 0, clicks: 0, date: "오늘 18:00", platform: "티스토리" },
-                { title: "건강한 다이어트 식단 - 일주일 식단표 무료 공개", status: "published", views: 892, clicks: 67, date: "어제", platform: "네이버" },
-              ].map(post => {
+              /* 비로그인 - 빈 상태 */
+              [].map(post => {
                 const cfg = post.status === "published"
                   ? { label: "발행됨", color: "var(--color-emerald)", bg: "oklch(0.696 0.17 162.48 / 15%)" }
                   : { label: "예약됨", color: "var(--color-amber-brand)", bg: "oklch(0.769 0.188 70.08 / 15%)" };
