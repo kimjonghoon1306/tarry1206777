@@ -46,7 +46,7 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/superadmin" component={SuperAdminPage} />
       <Route path="/monetization" component={MonetizationPage} />
-      <Route path="/admin-revenue" component={AdminRevenueDashboard} />
+      <Route path="/admin-revenue-dashboard" component={AdminRevenueDashboard} />
       <Route path="/dashboard" component={() => <PrivateRoute component={Dashboard} />} />
       <Route path="/keywords" component={() => <PrivateRoute component={KeywordResearch} />} />
       <Route path="/content" component={() => <PrivateRoute component={ContentGenerator} />} />
