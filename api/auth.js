@@ -305,7 +305,9 @@ export default async function handler(req, res) {
 
   // ── 팝업 불러오기 (전체 회원) ────────────────────
   if (action === "loadPopup") {
-    const popup = await kvGet("admin:popup") || _mem["admin:popup"] || null;
+    let popup = await kvGet("admin:popup") || _mem["admin:popup"] || null;
+    // KV에서 문자열로 저장된 경우 파싱
+    if (typeof popup === "string") { try { popup = JSON.parse(popup); } catch {} }
     return res.json({ ok: true, popup });
   }
 
