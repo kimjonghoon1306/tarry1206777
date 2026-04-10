@@ -21,6 +21,9 @@ import {
   Calendar,
   TrendingUp,
   Zap,
+  Share2,
+  Copy,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -64,6 +67,43 @@ export default function MyPage() {
   const platforms = getPlatformStatus();
   const connectedCount = platforms.filter(p => p.configured).length;
 
+  // 로그인한 회원 정보
+  const baUser = (() => { try { return JSON.parse(localStorage.getItem("ba_user") || "{}"); } catch { return {}; } })();
+  const userName = baUser?.name || baUser?.id || "사용자";
+  const userEmail = baUser?.email || "";
+  const userId = baUser?.id || "";
+  const userInitial = userName.charAt(0).toUpperCase();
+  const joinDate = baUser?.createdAt ? new Date(baUser.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "long" }) : "알 수 없음";
+
+  // 추천 링크
+  const refLink = userId ? `https://www.blogautopro.com/signup?ref=${userId}` : "https://www.blogautopro.com/signup";
+
+  const copyRefLink = () => {
+    navigator.clipboard.writeText(refLink);
+    toast.success("추천 링크가 복사됐어요!");
+  };
+
+  const shareKakao = () => {
+    const kakaoUrl = `https://sharer.kakao.com/talk/friends/picker/link?app_key=KAKAO_APP_KEY&validation_action=default&validation_params=%7B%7D`;
+    const msg = encodeURIComponent(`BlogAuto Pro - AI 블로그 자동화 시스템
+
+블로그 글을 자동으로 생성하고 수익을 극대화하세요!
+
+👉 ${refLink}`);
+    const shareUrl = `https://story.kakao.com/share?url=${encodeURIComponent(refLink)}&text=${msg}`;
+    // 카카오톡 공유 (웹 공유 API 활용)
+    if (navigator.share) {
+      navigator.share({
+        title: "BlogAuto Pro",
+        text: "AI 블로그 자동화 시스템 - 블로그 글을 자동으로 생성하고 수익을 극대화하세요!",
+        url: refLink,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(refLink);
+      toast.success("링크가 복사됐어요! 카카오톡에 붙여넣기 해주세요 😊");
+    }
+  };
+
   return (
     <Layout>
       <div className="p-6"><div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
@@ -88,12 +128,12 @@ export default function MyPage() {
               className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black text-white flex-shrink-0"
               style={{ background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))" }}
             >
-              A
+              {userInitial}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Admin
+                  {userName}
                 </h2>
                 <span
                   className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold"
@@ -104,11 +144,11 @@ export default function MyPage() {
                 </span>
               </div>
               <p className="text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-                BlogAuto Pro 사용자
+                {userEmail}
               </p>
               <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
                 <Calendar className="w-3 h-3" />
-                가입일: 2026년 1월
+                가입일: {joinDate}
               </div>
             </div>
           </div>
@@ -233,6 +273,51 @@ export default function MyPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* 추천 링크 공유 */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Share2 className="w-5 h-5" style={{ color: "#ec4899" }} />
+            <h3 className="font-semibold text-foreground">친구 초대</h3>
+          </div>
+          <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>
+            내 추천 링크로 친구가 가입하면 함께 시작할 수 있어요 😊
+          </p>
+          <div className="flex items-center gap-2 p-3 rounded-xl mb-3" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+            <span className="flex-1 text-xs truncate" style={{ color: "var(--muted-foreground)" }}>{refLink}</span>
+            <button onClick={copyRefLink} className="shrink-0 p-1.5 rounded-lg transition-colors hover:bg-accent/20">
+              <Copy className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={copyRefLink}
+              className="flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-semibold text-white transition-all active:scale-95"
+              style={{ background: "var(--color-emerald)" }}>
+              <Copy className="w-4 h-4" /> 링크 복사
+            </button>
+            <button onClick={shareKakao}
+              className="flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-semibold text-white transition-all active:scale-95"
+              style={{ background: "#FEE500", color: "#000" }}>
+              <Share2 className="w-4 h-4" /> 카카오 공유
+            </button>
+          </div>
+        </div>
+
+        {/* 수익화 가이드 PDF */}
+        <div className="rounded-xl p-5" style={{ background: "linear-gradient(135deg, oklch(0.696 0.17 162.48/10%), oklch(0.769 0.188 70.08/10%))", border: "1px solid oklch(0.696 0.17 162.48/30%)" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Download className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
+            <h3 className="font-semibold text-foreground">수익화 가이드 (무료)</h3>
+          </div>
+          <p className="text-xs mb-3" style={{ color: "var(--muted-foreground)" }}>
+            애드센스 vs 애드포스트 완전 비교 분석 + 자동화 수익 시스템 구축 가이드
+          </p>
+          <a href="/adsense_guide.pdf" target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-semibold text-white transition-all active:scale-95 w-full"
+            style={{ background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))" }}>
+            <Download className="w-4 h-4" /> PDF 다운로드
+          </a>
         </div>
 
         {/* Logout */}
