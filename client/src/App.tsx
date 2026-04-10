@@ -1,4 +1,4 @@
-import "./index.css"; // 🔥 이 줄이 핵심 (반드시 있어야 함)
+import "./index.css";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -44,17 +44,14 @@ function PrivateRoute({ component: Component }) {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={HeroPage} />
-      <Route path="/home" component={LandingPage} />
-      <Route path="/login" component={LoginPage} />
-      <Route path="/signup" component={SignupPage} />
 
+      {/* 🔥 먼저 상세 경로들 */}
       <Route path="/superadmin" component={SuperAdminPage} />
-      <Route path="/admin" component={AdminPage} />
-      <Route path="/monetization" component={MonetizationPage} />
-
       <Route path="/admin-revenue" component={AdminRevenueDashboard} />
+      <Route path="/monetization" component={MonetizationPage} />
+      <Route path="/admin" component={AdminPage} />
 
+      {/* 일반 */}
       <Route path="/dashboard" component={() => <PrivateRoute component={Dashboard} />} />
       <Route path="/keywords" component={() => <PrivateRoute component={KeywordResearch} />} />
       <Route path="/content" component={() => <PrivateRoute component={ContentGenerator} />} />
@@ -63,7 +60,13 @@ function Router() {
       <Route path="/settings" component={() => <PrivateRoute component={SettingsPage} />} />
       <Route path="/mypage" component={() => <PrivateRoute component={MyPage} />} />
 
-      <Route path="/404" component={NotFound} />
+      {/* 로그인 */}
+      <Route path="/login" component={LoginPage} />
+      <Route path="/signup" component={SignupPage} />
+
+      {/* 홈은 맨 아래 */}
+      <Route path="/" component={HeroPage} />
+
       <Route component={NotFound} />
     </Switch>
   );
