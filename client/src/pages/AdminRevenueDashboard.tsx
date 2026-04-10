@@ -479,14 +479,14 @@ export default function AdminRevenueDashboard() {
           </div>
           <ThemeBtn dark={isDark} toggle={toggleTheme} />
           <button
-            onClick={() => alert("🏠 홈 페이지 경로를 설정해주세요 (/super-admin)")}
-            title="홈으로 이동 (경로 미설정)"
+            onClick={() => window.location.href = "/superadmin"}
+            title="슈퍼어드민으로 이동"
             style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(239,68,68,0.4)", flexShrink: 0 }}>
             🏠
           </button>
           <button
-            onClick={() => alert("💰 수익화 페이지 경로를 설정해주세요 (/monetization)")}
-            title="수익화로 이동 (경로 미설정)"
+            onClick={() => window.location.href = "/monetization"}
+            title="수익화 페이지로 이동"
             style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(239,68,68,0.4)", flexShrink: 0 }}>
             💰
           </button>
@@ -656,12 +656,12 @@ export default function AdminRevenueDashboard() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button
-              onClick={() => alert("🏠 홈 페이지 경로를 설정해주세요 (/super-admin)")}
+              onClick={() => window.location.href = "/superadmin"}
               style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(239,68,68,0.4)" }}>
               🏠
             </button>
             <button
-              onClick={() => alert("💰 수익화 페이지 경로를 설정해주세요 (/monetization)")}
+              onClick={() => window.location.href = "/monetization"}
               style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(239,68,68,0.4)" }}>
               💰
             </button>
