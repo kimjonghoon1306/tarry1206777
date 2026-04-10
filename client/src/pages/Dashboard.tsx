@@ -132,32 +132,21 @@ export default function Dashboard() {
   const [popupData, setPopupData] = useState<{ id: string; title: string; content: string; enabled: boolean } | null>(null);
 
   useEffect(() => {
+    const token = localStorage.getItem("ba_token") || "";
     fetch("/api/auth", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ action: "loadPopup" }),
     }).then(r => r.json()).then(d => {
       if (d.ok && d.popup?.enabled) {
-        const key = `popup_dismissed_${d.popup.id}`;
-        const dismissedUntil = localStorage.getItem(key);
-        // 닫기: 영구 / 일주일: 만료일 확인
-        if (dismissedUntil === "forever") return;
-        if (dismissedUntil && Date.now() < parseInt(dismissedUntil)) return;
-        setPopupData(d.popup);
-        setPopupVisible(true);
+        const dismissed = localStorage.getItem(`popup_dismissed_${d.popup.id}`);
+        if (!dismissed) { setPopupData(d.popup); setPopupVisible(true); }
       }
     }).catch(() => {});
   }, []);
 
-  const handleClosePopup = (type: "close" | "week") => {
-    if (popupData) {
-      const key = `popup_dismissed_${popupData.id}`;
-      if (type === "week") {
-        localStorage.setItem(key, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
-      } else {
-        localStorage.setItem(key, "forever");
-      }
-    }
+  const handleClosePopup = () => {
+    if (popupData) localStorage.setItem(`popup_dismissed_${popupData.id}`, "1");
     setPopupVisible(false);
   };
 
@@ -318,7 +307,7 @@ export default function Dashboard() {
       {popupVisible && popupData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
           <div className="w-full max-w-md rounded-2xl p-6 relative" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-            <button onClick={() => handleClosePopup("close")} className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center hover:bg-accent/20" style={{ color: "var(--muted-foreground)" }}>
+            <button onClick={handleClosePopup} className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center hover:bg-accent/20" style={{ color: "var(--muted-foreground)" }}>
               <X className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-3 mb-4">
@@ -330,14 +319,9 @@ export default function Dashboard() {
             <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "var(--muted-foreground)" }}>
               {popupData.content}
             </div>
-            <div className="flex gap-2 mt-6">
-              <button onClick={() => handleClosePopup("week")} className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-95" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
-                일주일 안보기
-              </button>
-              <button onClick={() => handleClosePopup("close")} className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95" style={{ background: "var(--color-emerald)" }}>
-                확인했어요 ✓
-              </button>
-            </div>
+            <button onClick={handleClosePopup} className="w-full mt-6 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95" style={{ background: "var(--color-emerald)" }}>
+              확인했어요 ✓
+            </button>
           </div>
         </div>
       )}
@@ -393,7 +377,7 @@ export default function Dashboard() {
 
               {/* 알림 드롭다운 */}
               {showNotifications && (
-                <div className="absolute right-0 top-11 w-80 rounded-2xl shadow-2xl z-50"
+                <div className="absolute right-0 top-11 rounded-2xl shadow-2xl z-50" style={{ width: "min(320px, calc(100vw - 32px))", right: 0 }}
                   style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                   <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
                     <span className="font-semibold text-sm text-foreground">알림 {unreadCount > 0 && `(${unreadCount})`}</span>
