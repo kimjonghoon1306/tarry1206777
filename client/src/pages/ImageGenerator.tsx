@@ -314,10 +314,10 @@ const STYLE_PROMPTS: Record<string, string> = {
 };
 
 const STYLES = [
-  { value: "realistic", label: "📸 애드센스 최적 실사", desc: "주제와 상관없이 가장 안전한 프리미엄 블로그 사진" },
-  { value: "commercial", label: "✨ 광고/상업", desc: "보조 옵션" },
-  { value: "lifestyle", label: "🏠 라이프스타일", desc: "보조 옵션" },
-  { value: "illustration", label: "🎨 일러스트", desc: "권장 안 함" },
+  { value: "realistic", label: "📸 실사 (권장)", desc: "주제 연관 실사 이미지 · 애드센스 안전" },
+  { value: "commercial", label: "✨ 광고/상업", desc: "상업적 느낌의 깔끔한 이미지" },
+  { value: "lifestyle", label: "🏠 라이프스타일", desc: "일상·생활 감성 이미지" },
+  { value: "illustration", label: "🎨 일러스트", desc: "아트 스타일 이미지" },
 ];
 
 
@@ -562,11 +562,6 @@ export default function ImageGenerator() {
   useEffect(() => {
     if (autoPrompt) setPrompt(autoPrompt);
   }, [autoPrompt]);
-
-  // 애드센스용 기본 스타일은 항상 실사 고정
-  useEffect(() => {
-    if (style !== ADSENSE_STYLE_VALUE) setStyle(ADSENSE_STYLE_VALUE);
-  }, [style]);
 
   // 설정 변경시 localStorage 저장
   useEffect(() => {
@@ -1266,14 +1261,11 @@ Topic: "${p}"`;
                 {STYLES.map((s) => (
                   <button key={s.value} className="rounded-lg p-2.5 text-left transition-all"
                     style={{
-                      background: s.value === ADSENSE_STYLE_VALUE ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)",
-                      border: `1px solid ${s.value === ADSENSE_STYLE_VALUE ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
-                      opacity: s.value === ADSENSE_STYLE_VALUE ? 1 : 0.5,
+                      background: style === s.value ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)",
+                      border: `1px solid ${style === s.value ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
+                      opacity: 1,
                     }}
-                    onClick={() => {
-                      setStyle(ADSENSE_STYLE_VALUE);
-                      toast.info("애드센스 기준으로 실사 모드가 기본 적용됩니다");
-                    }}>
+                    onClick={() => setStyle(s.value)}>
                     <div className="text-xs font-semibold text-foreground">{s.label}</div>
                     <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{s.desc}</div>
                   </button>
