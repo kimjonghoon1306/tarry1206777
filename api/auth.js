@@ -305,7 +305,6 @@ export default async function handler(req, res) {
   if (action === "savePopup") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const uid = await getSession(tk);
-    // admin 유저 또는 admin role 둘 다 허용
     if (!uid) return res.json({ ok: false, error: "로그인이 필요합니다" });
     const popup = { ...body.popup, id: "popup_main" };
     _mem["admin:popup"] = popup;
@@ -313,12 +312,28 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // ── 팝업 불러오기 (전체 회원) ────────────────────
   if (action === "loadPopup") {
     let popup = await kvGet("admin:popup") || _mem["admin:popup"] || null;
-    // KV에서 문자열로 저장된 경우 파싱
     if (typeof popup === "string") { try { popup = JSON.parse(popup); } catch {} }
     return res.json({ ok: true, popup });
+  }
+
+  // ── 팝업 목록 저장 (관리자, 다중) ────────────────────
+  if (action === "savePopups") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요합니다" });
+    const popups = Array.isArray(body.popups) ? body.popups : [];
+    _mem["admin:popups"] = popups;
+    await kvSet("admin:popups", popups);
+    return res.json({ ok: true });
+  }
+
+  // ── 팝업 목록 불러오기 (전체 회원, 다중) ─────────────
+  if (action === "loadPopups") {
+    let popups = await kvGet("admin:popups") || _mem["admin:popups"] || [];
+    if (!Array.isArray(popups)) popups = [];
+    return res.json({ ok: true, popups });
   }
 
   // ── admin 복구 (profile 없을 때) ─────────────────
