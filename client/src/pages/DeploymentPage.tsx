@@ -1020,6 +1020,9 @@ export default function DeploymentPage() {
       const trimmed = line.trim();
       if (!trimmed) return null;
 
+      // Q1:/A1: 패턴은 FAQ 마커 잔여물 — callout 변환 금지
+      if (/^[QA]\d+:/.test(trimmed)) return null;
+
       if (/^\[팁\]/.test(trimmed)) return "tip";
       if (/^\[(주의|경고)\]/.test(trimmed)) return "warning";
       if (/^\[(중요|필수)\]/.test(trimmed)) return "important";
