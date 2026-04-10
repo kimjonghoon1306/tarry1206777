@@ -157,16 +157,16 @@ function TistorySection() {
           <h3 className="font-semibold text-foreground">티스토리</h3>
           <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
             style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-            ⚡ 자동 발행
+            ⚡ 반자동
           </span>
         </div>
-        <a href="https://www.tistory.com/guide/api/manage/register" target="_blank" rel="noopener noreferrer"
+        <a href="https://www.tistory.com" target="_blank" rel="noopener noreferrer"
           className="text-xs flex items-center gap-1 hover:underline" style={{ color: "#FF6300" }}>
-          앱 등록 <ExternalLink className="w-3 h-3" />
+          티스토리 개설하기 <ExternalLink className="w-3 h-3" />
         </a>
       </div>
       <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-        티스토리 → 관리 → 앱 등록 → Client ID, Secret 발급 후 입력
+        ⚠️ 티스토리 API 신규 앱 등록이 중단되었습니다. 기존 발급자만 사용 가능하며, Access Token을 직접 입력해주세요.
       </p>
       <div className="space-y-3">
         <div>
