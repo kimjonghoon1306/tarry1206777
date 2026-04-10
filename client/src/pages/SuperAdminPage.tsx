@@ -198,7 +198,7 @@ const AUTH_HEADER_OPTIONS = [
 
 function AdminCustomWebhookSection() {
   const [accounts, setAccounts] = useState<Record<string, string>[]>(() => {
-    try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("admin_custom_list") || "[]"); } catch { return []; }
   });
   const [showAdd, setShowAdd] = useState(false);
   const [url, setUrl] = useState("");
@@ -222,7 +222,7 @@ function AdminCustomWebhookSection() {
     };
     const updated = [...accounts, entry];
     setAccounts(updated);
-    localStorage.setItem("platform_custom_list", JSON.stringify(updated));
+    localStorage.setItem("admin_custom_list", JSON.stringify(updated));
     userSet(SETTINGS_KEYS.WEBHOOK_URL, url.trim());
     userSet(SETTINGS_KEYS.WEBHOOK_KEY, authKey.trim());
     userSet("webhook_auth_header", authHeader);
@@ -233,7 +233,7 @@ function AdminCustomWebhookSection() {
     const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
     platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
     localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
-    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain, platform_custom_list: JSON.stringify(updated) });
+    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain, admin_custom_list: JSON.stringify(updated) });
     setShowAdd(false);
     setUrl(""); setAuthKey(""); setAuthHeader("Authorization"); setCustomDomain(""); setCategoryInput("");
     toast.success("✅ 웹사이트 등록됐어요!");
@@ -243,7 +243,7 @@ function AdminCustomWebhookSection() {
     const removedName = accounts[idx]?._name;
     const updated = accounts.filter((_: any, i: number) => i !== idx);
     setAccounts(updated);
-    localStorage.setItem("platform_custom_list", JSON.stringify(updated));
+    localStorage.setItem("admin_custom_list", JSON.stringify(updated));
 
     // blogauto_deploy_platforms에서도 동기 삭제
     try {
