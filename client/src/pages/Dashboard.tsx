@@ -71,9 +71,9 @@ function loadRealData() {
       const seed = d.getDate() + i;
       return {
         date: label,
-        views: Math.floor(baseViews + Math.sin(seed) * 400 + i * 120),
-        clicks: Math.floor(300 + Math.cos(seed) * 80 + i * 35),
-        revenue: Math.floor(12000 + Math.sin(seed + 1) * 3000 + i * 1800),
+        views: 0,
+        clicks: 0,
+        revenue: 0,
       };
     });
 
@@ -83,8 +83,8 @@ function loadRealData() {
       recentPosts.push({
         title: content.title || content.keyword || "최근 작성된 글",
         status: "published",
-        views: Math.floor(Math.random() * 1200 + 200),
-        clicks: Math.floor(Math.random() * 100 + 20),
+        views: 0,
+        clicks: 0,
         date: "방금",
         platform: platforms[0]?.type === "naver" ? "네이버" : platforms[0]?.type === "tistory" ? "티스토리" : "블로그",
       });
@@ -184,9 +184,9 @@ export default function Dashboard() {
       const base = 800 + (serverPosts.length * 12);
       return {
         date: label,
-        views: Math.floor(base + Math.sin(seed) * 400 + i * 120),
-        clicks: Math.floor(300 + Math.cos(seed) * 80 + i * 35),
-        revenue: Math.floor(12000 + Math.sin(seed + 1) * 3000 + i * 1800),
+        views: 0,
+        clicks: 0,
+        revenue: 0,
       };
     });
   };
@@ -417,10 +417,10 @@ export default function Dashboard() {
         {/* ── 핵심 지표 카드 ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { label: "오늘 방문자", value: todayViews.toLocaleString(), change: "+18.2%", up: true, icon: Eye, color: "var(--color-emerald)" },
-            { label: "광고 클릭", value: todayClicks.toLocaleString(), change: "+24.1%", up: true, icon: MousePointerClick, color: "var(--color-amber-brand)" },
-            { label: "오늘 수익 (추정)", value: "₩" + todayRevenue.toLocaleString(), change: (parseFloat(revenueChange) >= 0 ? "+" : "") + revenueChange + "%", up: parseFloat(revenueChange) >= 0, icon: DollarSign, color: "oklch(0.6 0.15 220)" },
-            { label: "발행된 글", value: String(publishCount || 247), change: "+3", up: true, icon: FileText, color: "oklch(0.75 0.12 300)" },
+            { label: "오늘 방문자", value: todayViews > 0 ? todayViews.toLocaleString() : "—", change: "GSC 연동 필요", up: true, icon: Eye, color: "var(--color-emerald)" },
+            { label: "광고 클릭", value: todayClicks > 0 ? todayClicks.toLocaleString() : "—", change: "애드센스 연동 필요", up: true, icon: MousePointerClick, color: "var(--color-amber-brand)" },
+            { label: "오늘 수익", value: todayRevenue > 0 ? "₩" + todayRevenue.toLocaleString() : "—", change: "애드센스 연동 필요", up: true, icon: DollarSign, color: "oklch(0.6 0.15 220)" },
+            { label: "발행된 글", value: String(publishCount || 0), change: "", up: true, icon: FileText, color: "oklch(0.75 0.12 300)" },
           ].map(metric => (
             <div key={metric.label} className="rounded-xl p-4 feature-card"
               style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
