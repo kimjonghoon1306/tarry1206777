@@ -16,19 +16,24 @@ async function kvGet(key) {
     });
     const d = await r.json();
     if (d.result === null || d.result === undefined) return null;
-    return typeof d.result === "string" ? JSON.parse(d.result) : d.result;
+    try {
+      return typeof d.result === "string" ? JSON.parse(d.result) : d.result;
+    } catch {
+      return d.result;
+    }
   } catch { return null; }
 }
 
 async function kvSet(key, value) {
   if (!KV_URL || !KV_TOKEN) return false;
   try {
-    await fetch(`${KV_URL}/set/${encodeURIComponent(key)}`, {
+    const serialized = JSON.stringify(value);
+    const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(serialized)}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${KV_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ value: JSON.stringify(value) }),
+      headers: { Authorization: `Bearer ${KV_TOKEN}` },
     });
-    return true;
+    const d = await r.json();
+    return d.result === "OK";
   } catch { return false; }
 }
 
@@ -144,10 +149,8 @@ async function initAdmin() {
       password: b64("123456"),
     });
     await setEmailIndex("admin@blogauto.pro", "admin");
-  } else {
-    // 비밀번호 항상 123456으로 리셋 (임시)
-    await setUser("admin", { ...existing, password: b64("123456") });
   }
+  // 기존 admin이 있으면 아무것도 하지 않음 (비번 유지)
 }
 
 async function getUserRole(token) {
