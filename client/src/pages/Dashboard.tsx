@@ -127,29 +127,55 @@ export default function Dashboard() {
   const isLoggedIn = !!localStorage.getItem("ba_token");
   const isGuestMode = !isLoggedIn && localStorage.getItem("guest_mode") === "true";
 
-  // ── 관리자 공지 팝업 ──────────────────────────────
-  const [popupVisible, setPopupVisible] = useState(false);
-  const [popupData, setPopupData] = useState<{ id: string; title: string; content: string; enabled: boolean } | null>(null);
+  // ── 관리자 공지 팝업 (다중) ──────────────────────────────
+  const [popupQueue, setPopupQueue] = useState<any[]>([]);
+  const [currentPopupIdx, setCurrentPopupIdx] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("ba_token") || "";
     fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action: "loadPopup" }),
+      body: JSON.stringify({ action: "loadPopups" }),
     }).then(r => r.json()).then(d => {
-      if (d.ok && d.popup?.enabled) {
-        const dismissed = localStorage.getItem(`popup_dismissed_${d.popup.id}`);
-        if (!dismissed) { setPopupData(d.popup); setPopupVisible(true); }
+      if (d.ok && Array.isArray(d.popups)) {
+        const now = new Date();
+        const active = d.popups.filter((p: any) => {
+          if (!p.enabled) return false;
+          if (p.startAt && new Date(p.startAt) > now) return false;
+          if (p.endAt && new Date(p.endAt) < now) return false;
+          // 일주일 보지 않기 체크
+          const snooze = localStorage.getItem(`popup_snooze_${p.id}`);
+          if (snooze && Date.now() < parseInt(snooze)) return false;
+          return true;
+        });
+        setPopupQueue(active);
       }
     }).catch(() => {});
   }, []);
 
+  const currentPopup = popupQueue[currentPopupIdx] || null;
+
   const handleClosePopup = () => {
-    if (popupData) localStorage.setItem(`popup_dismissed_${popupData.id}`, "1");
-    setPopupVisible(false);
+    // 닫기 - 다음에 또 뜸
+    if (currentPopupIdx < popupQueue.length - 1) {
+      setCurrentPopupIdx(i => i + 1);
+    } else {
+      setPopupQueue([]);
+    }
   };
 
+  const handleSnoozePopup = () => {
+    // 일주일 보지 않기
+    if (currentPopup) {
+      localStorage.setItem(`popup_snooze_${currentPopup.id}`, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    }
+    if (currentPopupIdx < popupQueue.length - 1) {
+      setCurrentPopupIdx(i => i + 1);
+    } else {
+      setPopupQueue([]);
+    }
+  };
   // 현재 언어
   const currentLang = localStorage.getItem("content_language") || "ko";
   const langLabels: Record<string, string> = {
@@ -303,25 +329,36 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      {/* ── 관리자 공지 팝업 ── */}
-      {popupVisible && popupData && (
+      {/* ── 관리자 공지 팝업 (다중) ── */}
+      {currentPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
           <div className="w-full max-w-md rounded-2xl p-6 relative" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-            <button onClick={handleClosePopup} className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center hover:bg-accent/20" style={{ color: "var(--muted-foreground)" }}>
-              <X className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-3 mb-4">
+            {popupQueue.length > 1 && (
+              <div className="absolute top-4 left-4 text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                {currentPopupIdx + 1} / {popupQueue.length}
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-4 mt-2">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "oklch(0.696 0.17 162.48 / 15%)" }}>
                 <Zap className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
               </div>
-              <h2 className="font-bold text-foreground text-lg">{popupData.title}</h2>
+              <h2 className="font-bold text-foreground text-lg">{currentPopup.title}</h2>
             </div>
             <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "var(--muted-foreground)" }}>
-              {popupData.content}
+              {currentPopup.content}
             </div>
-            <button onClick={handleClosePopup} className="w-full mt-6 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95" style={{ background: "var(--color-emerald)" }}>
-              확인했어요 ✓
-            </button>
+            <div className="flex gap-2 mt-6">
+              <button onClick={handleSnoozePopup}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
+                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                일주일 보지 않기
+              </button>
+              <button onClick={handleClosePopup}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
+                style={{ background: "var(--color-emerald)" }}>
+                확인했어요 ✓
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -377,7 +414,8 @@ export default function Dashboard() {
 
               {/* 알림 드롭다운 */}
               {showNotifications && (
-                <div className="absolute right-0 top-11 rounded-2xl shadow-2xl z-50" style={{ width: "min(320px, calc(100vw - 32px))", right: 0, background: "var(--card)", border: "1px solid var(--border)" }}>
+                <div className="absolute right-0 top-11 rounded-2xl shadow-2xl z-50" style={{ width: "min(320px, calc(100vw - 32px))", right: 0 }}
+                  style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                   <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
                     <span className="font-semibold text-sm text-foreground">알림 {unreadCount > 0 && `(${unreadCount})`}</span>
                     <div className="flex gap-2">
