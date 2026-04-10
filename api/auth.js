@@ -291,6 +291,22 @@ export default async function handler(req, res) {
   }
 
   // ── 관리자: 글로벌 설정 저장 ─────────────────────────
+  // ── 팝업 저장 (관리자만) ─────────────────────────
+  if (action === "savePopup") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+    const popup = { ...body.popup, id: body.popup?.id || "popup_" + Date.now() };
+    await kvSet("admin:popup", popup);
+    return res.json({ ok: true });
+  }
+
+  // ── 팝업 불러오기 (전체 회원) ────────────────────
+  if (action === "loadPopup") {
+    const popup = await kvGet("admin:popup") || null;
+    return res.json({ ok: true, popup });
+  }
+
   if (action === "saveAdminGlobalSettings") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const info = await getUserRole(tk);
