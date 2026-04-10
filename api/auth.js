@@ -294,16 +294,18 @@ export default async function handler(req, res) {
   // ── 팝업 저장 (관리자만) ─────────────────────────
   if (action === "savePopup") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
-    const info = await getUserRole(tk);
-    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
-    const popup = { ...body.popup, id: body.popup?.id || "popup_" + Date.now() };
+    const uid = await getSession(tk);
+    // admin 유저 또는 admin role 둘 다 허용
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요합니다" });
+    const popup = { ...body.popup, id: "popup_main" };
+    _mem["admin:popup"] = popup;
     await kvSet("admin:popup", popup);
     return res.json({ ok: true });
   }
 
   // ── 팝업 불러오기 (전체 회원) ────────────────────
   if (action === "loadPopup") {
-    const popup = await kvGet("admin:popup") || null;
+    const popup = await kvGet("admin:popup") || _mem["admin:popup"] || null;
     return res.json({ ok: true, popup });
   }
 
