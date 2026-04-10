@@ -159,9 +159,7 @@ export default function Dashboard() {
   // 팝업 슬라이드 (내용을 --- 구분자로 나눔)
   const [slideIdx, setSlideIdx] = useState(0);
   const slides = currentPopup
-    ? currentPopup.content.split(/
----
-/).map((s: string) => s.trim()).filter(Boolean)
+    ? currentPopup.content.split("\n---\n").map((s: string) => s.trim()).filter(Boolean)
     : [];
   const totalSlides = slides.length || 1;
   const isLastSlide = slideIdx >= totalSlides - 1;
