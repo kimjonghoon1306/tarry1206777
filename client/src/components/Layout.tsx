@@ -190,7 +190,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
               <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>발행 글</div>
             </div>
             <div className="rounded-lg p-2 text-center" style={{ background: "oklch(1 0 0 / 4%)" }}>
-              <div className="text-sm font-bold" style={{ color: "var(--color-amber-brand)" }}>₩89K</div>
+              <div className="text-sm font-bold" style={{ color: "var(--color-amber-brand)" }}>—</div>
               <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>이번달 수익</div>
             </div>
           </div>
