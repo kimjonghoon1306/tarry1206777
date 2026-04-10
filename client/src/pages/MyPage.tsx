@@ -35,13 +35,7 @@ function getPlatformStatus() {
       configured: !!(userGet(SETTINGS_KEYS.NAVER_BLOG_ID) && userGet(SETTINGS_KEYS.NAVER_BLOG_TOKEN)),
       settingsPath: "/settings",
     },
-    {
-      name: "일반 웹사이트",
-      color: "oklch(0.6 0.15 220)",
-      logo: "W",
-      configured: (() => { try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]").length > 0; } catch { return false; } })(),
-      settingsPath: "/settings",
-    },
+
     {
       name: "WordPress",
       color: "#21759B",
