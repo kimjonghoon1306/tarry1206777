@@ -35,7 +35,13 @@ function getPlatformStatus() {
       configured: !!(userGet(SETTINGS_KEYS.NAVER_BLOG_ID) && userGet(SETTINGS_KEYS.NAVER_BLOG_TOKEN)),
       settingsPath: "/settings",
     },
-
+    {
+      name: "일반 웹사이트",
+      color: "oklch(0.6 0.15 220)",
+      logo: "W",
+      configured: !!userGet(SETTINGS_KEYS.WEBHOOK_URL),
+      settingsPath: "/settings",
+    },
     {
       name: "WordPress",
       color: "#21759B",
