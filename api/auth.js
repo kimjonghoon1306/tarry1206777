@@ -16,10 +16,17 @@ async function kvGet(key) {
     });
     const d = await r.json();
     if (d.result === null || d.result === undefined) return null;
+    const raw = d.result;
+    if (typeof raw !== "string") return raw;
     try {
-      return typeof d.result === "string" ? JSON.parse(d.result) : d.result;
+      const parsed = JSON.parse(raw);
+      // 파싱 결과가 또 문자열이면 한 번 더 파싱
+      if (typeof parsed === "string") {
+        try { return JSON.parse(parsed); } catch { return parsed; }
+      }
+      return parsed;
     } catch {
-      return d.result;
+      return raw;
     }
   } catch { return null; }
 }
