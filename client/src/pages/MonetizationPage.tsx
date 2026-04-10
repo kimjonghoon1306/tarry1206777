@@ -303,6 +303,14 @@ export default function MonetizationPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => window.location.href = "/super-admin"}
+              style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(239,68,68,0.4)" }}>
+              🏠
+            </button>
+            <button onClick={() => window.location.href = "/admin-revenue-dashboard"}
+              style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(245,158,11,0.4)" }}>
+              📊
+            </button>
             {/* 미니 진행률 */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 20, background: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)", border: `1px solid ${lc.border}` }}>
               <div style={{ width: 72, height: 4, borderRadius: 4, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)", overflow: "hidden" }}>
