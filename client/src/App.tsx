@@ -19,6 +19,7 @@ import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import AdminPage from "./pages/AdminPage";
+import MonetizationPage from "./pages/MonetizationPage";
 
 function PrivateRoute({ component: Component }: { component: React.ComponentType }) {
   const [, navigate] = useLocation();
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={SignupPage} />
       <Route path="/superadmin" component={SuperAdminPage} />
+      <Route path="/monetization" component={MonetizationPage} />
       <Route path="/dashboard" component={() => <PrivateRoute component={Dashboard} />} />
       <Route path="/keywords" component={() => <PrivateRoute component={KeywordResearch} />} />
       <Route path="/content" component={() => <PrivateRoute component={ContentGenerator} />} />
