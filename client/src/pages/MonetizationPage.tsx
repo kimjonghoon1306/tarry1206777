@@ -1,5 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
-import Layout from "@/components/Layout";
+import { useState, useCallback } from "react";
 
 // ─── 타입 ─────────────────────────────────────────────────
 interface AdSenseSettings {
@@ -263,7 +262,7 @@ export default function MonetizationPage() {
   const cardStyle = { background: lc.card, border: `1px solid ${lc.border}` };
 
   return (
-    <Layout>
+    <>
       <style>{css}</style>
       <div style={{ minHeight: "100vh", background: lc.bg, color: lc.text, fontFamily: "'Syne',-apple-system,sans-serif", position: "relative", overflow: "hidden" }}>
 
@@ -599,6 +598,6 @@ export default function MonetizationPage() {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }
