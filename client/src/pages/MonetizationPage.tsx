@@ -297,8 +297,8 @@ export default function MonetizationPage() {
             <div style={{ width: 1, height: 16, background: lc.border }} />
             <div style={{ width: 30, height: 30, borderRadius: 9, background: "linear-gradient(135deg,#00e5a0,#06b6d4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>💰</div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 900, color: lc.text, lineHeight: 1.1, letterSpacing: -0.3 }}>수익화 센터</div>
-              <div style={{ fontSize: 9, color: "#00e5a0", fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Mono',monospace" }}>BLOGAUTO PRO</div>
+              <div style={{ fontSize: 13, fontWeight: 900, color: lc.text, lineHeight: 1.1, letterSpacing: -0.3, whiteSpace: "nowrap" }}>수익화 센터</div>
+              <div style={{ fontSize: 9, color: "#00e5a0", fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Mono',monospace", whiteSpace: "nowrap" }}>BLOGAUTO PRO</div>
             </div>
           </div>
 
