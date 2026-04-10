@@ -1275,10 +1275,17 @@ function AdminDashboard() {
                 <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{activeTab.label} 관리</p>
               </div>
             </div>
-            <button className="text-xs px-3 py-2 rounded-xl font-medium transition-all active:scale-95"
-              style={{ background: "var(--muted)", color: "var(--muted-foreground)" }} onClick={handleLogout}>
-              잠금
-            </button>
+            <div className="flex items-center gap-2">
+              <button className="text-xs px-3 py-2 rounded-xl font-bold transition-all active:scale-95"
+                style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", boxShadow: "0 0 12px rgba(239,68,68,0.4)" }}
+                onClick={() => window.location.href = "/monetization"}>
+                💰 수익화
+              </button>
+              <button className="text-xs px-3 py-2 rounded-xl font-medium transition-all active:scale-95"
+                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }} onClick={handleLogout}>
+                잠금
+              </button>
+            </div>
           </div>
         </div>
 
