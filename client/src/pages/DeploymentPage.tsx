@@ -1421,21 +1421,7 @@ export default function DeploymentPage() {
     const blogName = userGet("tistory_blog_name");
     if (!accessToken || !blogName) throw new Error("설정에서 티스토리 Access Token과 블로그를 먼저 등록해주세요");
 
-    const htmlContent = blocks.map(b => {
-      if (b.type === "text") {
-        return b.content
-          .replace(/^### (.+)/gm, "<h3>$1</h3>")
-          .replace(/^## (.+)/gm, "<h2>$1</h2>")
-          .replace(/^# (.+)/gm, "<h1>$1</h1>")
-          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-          .replace(/\n/g, "<br>");
-      } else if (b.type === "image-pair") {
-        return `<div style="display:flex;gap:8px">${b.images.map(img => `<img src="${img.src}" style="width:50%;border-radius:8px">`).join("")}</div>`;
-      } else if (b.type === "image" && b.src) {
-        return `<p style="text-align:center"><img src="${b.src}" style="max-width:100%;border-radius:8px"></p>`;
-      }
-      return "";
-    }).join("<br><br>");
+    const htmlContent = buildHtmlContent();
 
     const resp = await fetch("/api/tistory", {
       method: "POST",
