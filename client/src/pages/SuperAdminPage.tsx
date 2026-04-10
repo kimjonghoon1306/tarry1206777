@@ -1242,85 +1242,162 @@ function OGManager() {
 // 공지 팝업 관리
 // ─────────────────────────────────────────────────────
 function PopupManager() {
-  const [enabled, setEnabled] = useState(false);
-  const [title, setTitle] = useState("BlogAuto Pro 시작 가이드");
-  const [content, setContent] = useState(
-    "👋 BlogAuto Pro에 오신 것을 환영합니다!\n\n" +
-    "📌 시작 순서\n" +
-    "1. 설정 → API 키 입력\n" +
-    "2. 키워드 수집 → 키워드 발굴\n" +
-    "3. 콘텐츠 생성 → AI 글쓰기\n" +
-    "4. 이미지 생성 → 썸네일 제작\n" +
-    "5. 배포 관리 → 발행하기\n\n" +
-    "궁금한 점은 고객센터로 문의해주세요! 🚀"
-  );
+  const [popups, setPopups] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [newStartAt, setNewStartAt] = useState("");
+  const [newEndAt, setNewEndAt] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("ba_token") || "";
     fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action: "loadPopup" }),
+      body: JSON.stringify({ action: "loadPopups" }),
     }).then(r => r.json()).then(d => {
-      if (d.ok && d.popup) {
-        setEnabled(d.popup.enabled || false);
-        setTitle(d.popup.title || title);
-        setContent(d.popup.content || content);
-      }
+      if (d.ok && Array.isArray(d.popups)) setPopups(d.popups);
     }).catch(() => {});
   }, []);
 
-  const handleSave = async () => {
+  const save = async (list: any[]) => {
     setSaving(true);
     const token = localStorage.getItem("ba_token") || "";
     await fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action: "savePopup", popup: { enabled, title, content, id: "popup_main" } }),
+      body: JSON.stringify({ action: "savePopups", popups: list }),
     });
     setSaving(false);
-    toast.success("✅ 공지 팝업 저장됨");
+    toast.success("✅ 팝업 저장됨");
+  };
+
+  const addPopup = async () => {
+    if (!newTitle.trim()) { toast.error("제목을 입력해주세요"); return; }
+    if (!newContent.trim()) { toast.error("내용을 입력해주세요"); return; }
+    const popup = {
+      id: Date.now().toString(),
+      title: newTitle.trim(),
+      content: newContent.trim(),
+      enabled: true,
+      startAt: newStartAt || "",
+      endAt: newEndAt || "",
+    };
+    const updated = [...popups, popup];
+    setPopups(updated);
+    await save(updated);
+    setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt("");
+    setShowAdd(false);
+  };
+
+  const toggleEnabled = async (id: string) => {
+    const updated = popups.map(p => p.id === id ? { ...p, enabled: !p.enabled } : p);
+    setPopups(updated);
+    await save(updated);
+  };
+
+  const deletePopup = async (id: string) => {
+    const updated = popups.filter(p => p.id !== id);
+    setPopups(updated);
+    await save(updated);
+    toast.success("삭제됐어요");
   };
 
   return (
     <div className="space-y-4 py-4">
-      <div className="rounded-2xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-foreground">회원 공지 팝업</h3>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{enabled ? "활성" : "비활성"}</span>
-            <div className="relative">
-              <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="sr-only" />
-              <div className="w-11 h-6 rounded-full transition-colors" style={{ background: enabled ? "#10b981" : "var(--muted)" }}
-                onClick={() => setEnabled(v => !v)}>
-                <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow"
-                  style={{ left: enabled ? "22px" : "2px" }} />
-              </div>
-            </div>
-          </label>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>팝업 제목</label>
-            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="공지 제목" className="text-sm" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>팝업 내용</label>
-            <Textarea value={content} onChange={e => setContent(e.target.value)} placeholder="팝업에 표시될 내용" className="text-sm min-h-[200px] font-mono" />
-          </div>
-          <div className="rounded-xl p-3 text-xs" style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
-            💡 회원이 한 번 닫으면 같은 팝업은 다시 뜨지 않아요. 내용 수정 후 저장하면 모든 회원에게 다시 표시됩니다.
-          </div>
-          <Button className="w-full" style={{ background: "#ec4899", color: "white" }} onClick={handleSave} disabled={saving}>
-            {saving ? "저장 중..." : "💾 팝업 설정 저장"}
-          </Button>
+      {/* 안내 */}
+      <div className="rounded-2xl p-4 flex items-start gap-3" style={{ background: "oklch(0.65 0.22 350/10%)", border: "1px solid oklch(0.65 0.22 350/30%)" }}>
+        <Bell className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#ec4899" }} />
+        <div>
+          <p className="text-sm font-semibold text-foreground">회원 공지 팝업 관리</p>
+          <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+            활성화된 팝업이 대시보드에 표시돼요. 회원이 닫기 또는 일주일 보지 않기를 선택할 수 있어요.
+          </p>
         </div>
       </div>
+
+      {/* 팝업 목록 */}
+      {popups.map((popup, idx) => (
+        <div key={popup.id} className="rounded-2xl p-4 space-y-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: popup.enabled ? "oklch(0.696 0.17 162.48/20%)" : "var(--muted)", color: popup.enabled ? "#10b981" : "var(--muted-foreground)" }}>
+                {popup.enabled ? "활성" : "비활성"}
+              </span>
+              <span className="font-semibold text-sm text-foreground">{popup.title}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* 활성 토글 */}
+              <div className="relative w-11 h-6 rounded-full cursor-pointer transition-colors"
+                style={{ background: popup.enabled ? "#10b981" : "var(--muted)" }}
+                onClick={() => toggleEnabled(popup.id)}>
+                <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow"
+                  style={{ left: popup.enabled ? "22px" : "2px" }} />
+              </div>
+              <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/10"
+                onClick={() => deletePopup(popup.id)}>
+                <Trash2 className="w-4 h-4" style={{ color: "#ef4444" }} />
+              </button>
+            </div>
+          </div>
+          <p className="text-xs whitespace-pre-line" style={{ color: "var(--muted-foreground)" }}>{popup.content}</p>
+          {(popup.startAt || popup.endAt) && (
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+              {popup.startAt && `시작: ${popup.startAt}`}{popup.startAt && popup.endAt && " ~ "}{popup.endAt && `종료: ${popup.endAt}`}
+            </p>
+          )}
+        </div>
+      ))}
+
+      {popups.length === 0 && !showAdd && (
+        <div className="py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>등록된 팝업이 없어요</div>
+      )}
+
+      {/* 추가 폼 */}
+      {showAdd && (
+        <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--card)", border: "1px solid #ec489940" }}>
+          <p className="font-semibold text-sm text-foreground">새 팝업 추가</p>
+          <div>
+            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>제목</label>
+            <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="팝업 제목" className="text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>내용</label>
+            <Textarea value={newContent} onChange={e => setNewContent(e.target.value)} placeholder="팝업 내용" className="text-sm min-h-[120px] font-mono" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>노출 시작일 (선택)</label>
+              <Input type="date" value={newStartAt} onChange={e => setNewStartAt(e.target.value)} className="text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>노출 종료일 (선택)</label>
+              <Input type="date" value={newEndAt} onChange={e => setNewEndAt(e.target.value)} className="text-sm" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button className="flex-1" style={{ background: "#ec4899", color: "white" }} onClick={addPopup} disabled={saving}>
+              {saving ? "저장 중..." : "✅ 추가"}
+            </Button>
+            <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt(""); }}>
+              취소
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 추가 버튼 */}
+      {!showAdd && (
+        <button className="w-full h-11 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+          style={{ background: "linear-gradient(135deg,#ec4899,#db2777)" }}
+          onClick={() => setShowAdd(true)}>
+          <Plus className="w-4 h-4" /> 팝업 추가
+        </button>
+      )}
     </div>
   );
 }
-
 // ─────────────────────────────────────────────────────
 // 관리자 대시보드
 // ─────────────────────────────────────────────────────
@@ -1359,21 +1436,15 @@ function AdminDashboard() {
                 <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{activeTab.label} 관리</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <button className="transition-all active:scale-95"
-                style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(239,68,68,0.4)" }}
+            <div className="flex items-center gap-2">
+              <button className="text-xs px-3 py-2 rounded-xl font-bold transition-all active:scale-95"
+                style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", boxShadow: "0 0 12px rgba(239,68,68,0.4)" }}
                 onClick={() => window.location.href = "/monetization"}>
-                💰
+                💰 수익화
               </button>
-              <button className="transition-all active:scale-95"
-                style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(245,158,11,0.4)" }}
-                onClick={() => window.location.href = "/admin-revenue-dashboard"}>
-                📊
-              </button>
-              <button className="transition-all active:scale-95"
-                style={{ padding: "8px 11px", borderRadius: 10, background: "var(--muted)", color: "var(--muted-foreground)", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1 }}
-                onClick={handleLogout}>
-                🔒
+              <button className="text-xs px-3 py-2 rounded-xl font-medium transition-all active:scale-95"
+                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }} onClick={handleLogout}>
+                잠금
               </button>
             </div>
           </div>
