@@ -156,7 +156,7 @@ const API_SECTIONS = [
   },
   {
     title: "티스토리", icon: "Send", color: "#FF6300", grad: "linear-gradient(135deg,#FF6300,#cc4f00)",
-    desc: "애드센스 자동 발행",
+    desc: "반자동 발행 (기존 API 발급자 전용)",
     fields: [
       { label: "Client ID", key: "tistory_client_id", placeholder: "Client ID", link: "https://www.tistory.com", badge: "반자동", badgeColor: "#FF6300" },
       { label: "Client Secret", key: "tistory_client_secret", placeholder: "Client Secret", link: "", badge: "", badgeColor: "" },
