@@ -598,6 +598,11 @@ export default function KeywordResearch() {
           competition:item.compIdx==="높음"?"높음":item.compIdx==="낮음"?"낮음":"중",
           category:kw||"수집", starred:false,
         };
+      }).sort((a, b) => {
+        // 수익 플랫폼 스위치에 따라 정렬
+        if (adsenseOn && !adpostOn) return b.cpc - a.cpc;           // 애드센스: CPC 높은 순
+        if (adpostOn && !adsenseOn) return b.volume - a.volume;     // 애드포스트: 검색량 높은 순
+        return (b.cpc * 0.5 + b.volume * 0.5) - (a.cpc * 0.5 + a.volume * 0.5); // 둘 다: 균형
       });
 
       setKeywords(prev => {
