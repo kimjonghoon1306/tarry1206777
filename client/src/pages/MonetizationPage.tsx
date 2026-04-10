@@ -332,10 +332,9 @@ export default function MonetizationPage() {
             {STEPS.map(s => (
               <button key={s.id} className="m-step"
                 onClick={() => setActiveStep(s.id)}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${activeStep === s.id ? s.color + "60" : lc.border}`, background: activeStep === s.id ? `${s.color}12` : "transparent", color: activeStep === s.id ? s.color : lc.muted, fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 10px", borderRadius: 10, border: `1px solid ${activeStep === s.id ? s.color + "60" : lc.border}`, background: activeStep === s.id ? `${s.color}12` : "transparent", color: activeStep === s.id ? s.color : lc.muted, fontSize: 18, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, position: "relative" }}>
                 <span>{s.icon}</span>
-                <span>{s.label}</span>
-                {s.done && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00e5a0", boxShadow: "0 0 6px #00e5a0" }} />}
+                {s.done && <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#00e5a0", boxShadow: "0 0 6px #00e5a0" }} />}
               </button>
             ))}
             <div style={{ flex: 1 }} />
