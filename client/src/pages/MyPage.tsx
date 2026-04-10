@@ -39,7 +39,7 @@ function getPlatformStatus() {
       name: "일반 웹사이트",
       color: "oklch(0.6 0.15 220)",
       logo: "W",
-      configured: !!userGet(SETTINGS_KEYS.WEBHOOK_URL),
+      configured: (() => { try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]").length > 0; } catch { return false; } })(),
       settingsPath: "/settings",
     },
     {
