@@ -39,6 +39,10 @@ export default async function handler(req, res) {
       });
     }
 
+    // ── 핑 전송 (색인 속도 향상) ──────────────────────
+    const postUrl = data.url || data.link || `https://tarryguide.com`;
+    sendPings(title, postUrl); // 비동기 — 발행 응답 블로킹 안 함
+
     return res.json({ success: true });
 
   } catch (e) {
@@ -47,6 +51,46 @@ export default async function handler(req, res) {
       message: e.message
     });
   }
+}
+
+// ── 핑 서버 목록 ─────────────────────────────────────────
+const PING_SERVERS = [
+  // RPC XML 핑 서버
+  { name: "Pingomatic",     url: "http://rpc.pingomatic.com/",           type: "rpc" },
+  { name: "WordPress",      url: "http://rpc.wordpress.com/",            type: "rpc" },
+  { name: "Blogrolling",    url: "http://rpc.blogrolling.com/pinger/",   type: "rpc" },
+  // GET 핑 서버
+  { name: "Google",         url: "https://www.google.com/ping?sitemap=", type: "get" },
+  { name: "Bing",           url: "https://www.bing.com/indexnow?url=",   type: "get" },
+];
+
+async function sendPings(title, postUrl) {
+  const encoded = encodeURIComponent(postUrl);
+
+  const jobs = PING_SERVERS.map(async (server) => {
+    try {
+      if (server.type === "rpc") {
+        // XML-RPC weblogUpdates.ping
+        const xml = `<?xml version="1.0"?><methodCall><methodName>weblogUpdates.ping</methodName><params><param><value>${title}</value></param><param><value>${postUrl}</value></param></params></methodCall>`;
+        await fetch(server.url, {
+          method: "POST",
+          headers: { "Content-Type": "text/xml" },
+          body: xml,
+          signal: AbortSignal.timeout(5000),
+        });
+      } else {
+        // GET 방식
+        await fetch(`${server.url}${encoded}`, {
+          signal: AbortSignal.timeout(5000),
+        });
+      }
+      console.log(`[PING] ✓ ${server.name}`);
+    } catch (e) {
+      console.log(`[PING] ✗ ${server.name}: ${e.message}`);
+    }
+  });
+
+  await Promise.allSettled(jobs);
 }
 
 function extractFirstImage(html) {
