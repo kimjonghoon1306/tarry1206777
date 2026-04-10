@@ -156,8 +156,27 @@ export default function Dashboard() {
 
   const currentPopup = popupQueue[currentPopupIdx] || null;
 
+  // 팝업 슬라이드 (내용을 --- 구분자로 나눔)
+  const [slideIdx, setSlideIdx] = useState(0);
+  const slides = currentPopup
+    ? currentPopup.content.split(/
+---
+/).map((s: string) => s.trim()).filter(Boolean)
+    : [];
+  const totalSlides = slides.length || 1;
+  const isLastSlide = slideIdx >= totalSlides - 1;
+
+  // 팝업 바뀔 때 슬라이드 초기화
+  const prevPopupId = popupQueue[currentPopupIdx]?.id;
+
+  const handleNextSlide = () => {
+    if (!isLastSlide) { setSlideIdx(i => i + 1); return; }
+    handleClosePopup();
+  };
+  const handlePrevSlide = () => { if (slideIdx > 0) setSlideIdx(i => i - 1); };
+
   const handleClosePopup = () => {
-    // 닫기 - 다음에 또 뜸
+    setSlideIdx(0);
     if (currentPopupIdx < popupQueue.length - 1) {
       setCurrentPopupIdx(i => i + 1);
     } else {
@@ -166,10 +185,10 @@ export default function Dashboard() {
   };
 
   const handleSnoozePopup = () => {
-    // 일주일 보지 않기
     if (currentPopup) {
       localStorage.setItem(`popup_snooze_${currentPopup.id}`, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
     }
+    setSlideIdx(0);
     if (currentPopupIdx < popupQueue.length - 1) {
       setCurrentPopupIdx(i => i + 1);
     } else {
@@ -329,35 +348,61 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      {/* ── 관리자 공지 팝업 (다중) ── */}
+      {/* ── 관리자 공지 팝업 (슬라이드 카드) ── */}
       {currentPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-md rounded-2xl p-6 relative" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-            {popupQueue.length > 1 && (
-              <div className="absolute top-4 left-4 text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
-                {currentPopupIdx + 1} / {popupQueue.length}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}>
+          <div className="w-full max-w-sm rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+
+            {/* 헤더 */}
+            <div className="flex items-center gap-3 px-5 pt-5 pb-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "oklch(0.696 0.17 162.48 / 15%)" }}>
+                <Zap className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+              </div>
+              <h2 className="font-bold text-foreground text-base flex-1">{currentPopup.title}</h2>
+              <button onClick={handleSnoozePopup} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--muted-foreground)", background: "var(--muted)" }}>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* 슬라이드 인디케이터 */}
+            {totalSlides > 1 && (
+              <div className="flex items-center gap-1.5 px-5 pt-3">
+                {Array.from({ length: totalSlides }).map((_, i) => (
+                  <div key={i} className="h-1 rounded-full transition-all" style={{ flex: i === slideIdx ? 2 : 1, background: i === slideIdx ? "var(--color-emerald)" : "var(--border)" }} />
+                ))}
               </div>
             )}
-            <div className="flex items-center gap-3 mb-4 mt-2">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "oklch(0.696 0.17 162.48 / 15%)" }}>
-                <Zap className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
+
+            {/* 슬라이드 내용 */}
+            <div className="px-5 py-4 min-h-[140px]">
+              <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "var(--muted-foreground)" }}>
+                {totalSlides > 1 ? slides[slideIdx] : currentPopup.content}
               </div>
-              <h2 className="font-bold text-foreground text-lg">{currentPopup.title}</h2>
             </div>
-            <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "var(--muted-foreground)" }}>
-              {currentPopup.content}
-            </div>
-            <div className="flex gap-2 mt-6">
-              <button onClick={handleSnoozePopup}
-                className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
-                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
-                일주일 보지 않기
-              </button>
-              <button onClick={handleClosePopup}
-                className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
-                style={{ background: "var(--color-emerald)" }}>
-                확인했어요 ✓
-              </button>
+
+            {/* 하단 버튼 */}
+            <div className="px-5 pb-5 space-y-2">
+              <div className="flex gap-2">
+                {slideIdx > 0 && (
+                  <button onClick={handlePrevSlide}
+                    className="py-2.5 px-4 rounded-xl font-semibold text-sm transition-all active:scale-95"
+                    style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                    ← 이전
+                  </button>
+                )}
+                <button onClick={handleNextSlide}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
+                  style={{ background: "var(--color-emerald)" }}>
+                  {isLastSlide ? "확인했어요 ✓" : "다음 →"}
+                </button>
+              </div>
+              {isLastSlide && (
+                <button onClick={handleSnoozePopup}
+                  className="w-full py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
+                  style={{ color: "var(--muted-foreground)" }}>
+                  일주일 동안 보지 않기
+                </button>
+              )}
             </div>
           </div>
         </div>
