@@ -11,7 +11,7 @@ import { useState, useRef, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
-  Shield, Key, Eye, EyeOff, Copy, Lock, Zap,
+  Shield, Key, Eye, EyeOff, Copy, Lock, Zap, Bell,
   CheckCircle2, Image, Upload, X, Globe, Link,
   Trash2, ExternalLink, Home, Save,
   Users, Crown, UserX, RefreshCw, ChevronDown,
@@ -1239,6 +1239,89 @@ function OGManager() {
 }
 
 // ─────────────────────────────────────────────────────
+// 공지 팝업 관리
+// ─────────────────────────────────────────────────────
+function PopupManager() {
+  const [enabled, setEnabled] = useState(false);
+  const [title, setTitle] = useState("BlogAuto Pro 시작 가이드");
+  const [content, setContent] = useState(
+    "👋 BlogAuto Pro에 오신 것을 환영합니다!\n\n" +
+    "📌 시작 순서\n" +
+    "1. 설정 → API 키 입력\n" +
+    "2. 키워드 수집 → 키워드 발굴\n" +
+    "3. 콘텐츠 생성 → AI 글쓰기\n" +
+    "4. 이미지 생성 → 썸네일 제작\n" +
+    "5. 배포 관리 → 발행하기\n\n" +
+    "궁금한 점은 고객센터로 문의해주세요! 🚀"
+  );
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("ba_token") || "";
+    fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "loadPopup" }),
+    }).then(r => r.json()).then(d => {
+      if (d.ok && d.popup) {
+        setEnabled(d.popup.enabled || false);
+        setTitle(d.popup.title || title);
+        setContent(d.popup.content || content);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const token = localStorage.getItem("ba_token") || "";
+    await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "savePopup", popup: { enabled, title, content, id: "popup_main" } }),
+    });
+    setSaving(false);
+    toast.success("✅ 공지 팝업 저장됨");
+  };
+
+  return (
+    <div className="space-y-4 py-4">
+      <div className="rounded-2xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-foreground">회원 공지 팝업</h3>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{enabled ? "활성" : "비활성"}</span>
+            <div className="relative">
+              <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="sr-only" />
+              <div className="w-11 h-6 rounded-full transition-colors" style={{ background: enabled ? "#10b981" : "var(--muted)" }}
+                onClick={() => setEnabled(v => !v)}>
+                <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow"
+                  style={{ left: enabled ? "22px" : "2px" }} />
+              </div>
+            </div>
+          </label>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>팝업 제목</label>
+            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="공지 제목" className="text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>팝업 내용</label>
+            <Textarea value={content} onChange={e => setContent(e.target.value)} placeholder="팝업에 표시될 내용" className="text-sm min-h-[200px] font-mono" />
+          </div>
+          <div className="rounded-xl p-3 text-xs" style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+            💡 회원이 한 번 닫으면 같은 팝업은 다시 뜨지 않아요. 내용 수정 후 저장하면 모든 회원에게 다시 표시됩니다.
+          </div>
+          <Button className="w-full" style={{ background: "#ec4899", color: "white" }} onClick={handleSave} disabled={saving}>
+            {saving ? "저장 중..." : "💾 팝업 설정 저장"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
 // 관리자 대시보드
 // ─────────────────────────────────────────────────────
 const TABS = [
@@ -1247,6 +1330,7 @@ const TABS = [
   { id: "security",label: "보안",   icon: Shield, color: "#f59e0b", grad: "linear-gradient(135deg,#f59e0b,#d97706)" },
   { id: "category",label: "카테고리", icon: FileText, color: "#06b6d4", grad: "linear-gradient(135deg,#06b6d4,#0284c7)" },
   { id: "og",      label: "OG",    icon: Image, color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)" },
+  { id: "popup",   label: "공지",  icon: Bell, color: "#ec4899", grad: "linear-gradient(135deg,#ec4899,#db2777)" },
 ] as const;
 type TabId = typeof TABS[number]["id"];
 
@@ -1296,6 +1380,7 @@ function AdminDashboard() {
           {tab === "security" && <SecurityPanel />}
           {tab === "category" && <CategoryManager />}
           {tab === "og"       && <OGManager />}
+          {tab === "popup"    && <PopupManager />}
         </div>
       </div>
 
