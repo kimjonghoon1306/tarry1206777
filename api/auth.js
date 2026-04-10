@@ -311,6 +311,22 @@ export default async function handler(req, res) {
     return res.json({ ok: true, popup });
   }
 
+  // ── admin 복구 (profile 없을 때) ─────────────────
+  if (action === "repairAdmin") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const parsed = parseSignedToken(tk);
+    if (!parsed || parsed.uid !== "admin") return res.json({ ok: false, error: "admin 토큰 필요" });
+    const existing = await getUser("admin") || {};
+    const repaired = {
+      ...existing,
+      id: "admin",
+      profile: { name: "관리자", email: "admin@blogauto.pro", role: "admin", createdAt: new Date().toISOString() },
+      password: existing.password,
+    };
+    await setUser("admin", repaired);
+    return res.json({ ok: true, user: repaired });
+  }
+
   if (action === "saveAdminGlobalSettings") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const info = await getUserRole(tk);
