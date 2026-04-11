@@ -1490,9 +1490,9 @@ export default function DeploymentPage() {
       const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
       if (customList.length > 0) {
         const platform = platforms.find(p => p.id === platformId);
-        const platformName = platform?.name || "";
+        const platformName = (platform?.name || "").replace(/^www\./, "");
         const entry =
-          customList.find((e: any) => e._name === platformName || e.custom_domain === platformName) ||
+          customList.find((e: any) => (e._name || "").replace(/^www\./, "") === platformName || (e.custom_domain || "").replace(/^www\./, "") === platformName) ||
           customList.find((e: any) => e.webhook_url && platformName && e.webhook_url.includes(platformName)) ||
           null;
         if (entry) {
