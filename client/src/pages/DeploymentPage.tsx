@@ -908,27 +908,26 @@ export default function DeploymentPage() {
       }
     }
 
-    // ✅ 못 들어간 이미지는 본문 텍스트 블록 사이에 고르게 재삽입 (FAQ/참고자료 앞으로 절대 안 감)
+    // ✅ 못 들어간 이미지는 마지막 텍스트 블록 뒤에 순서대로 삽입 (FAQ/참고자료 앞으로 절대 안 감)
     if (insertedCount < imgs.length) {
       const remaining = imgs.slice(insertedCount);
-      const textPositions: number[] = [];
-      result.forEach((b, i) => { if (b.type === "text") textPositions.push(i); });
-      if (textPositions.length > 0) {
-        const insertions: { pos: number; img: typeof remaining[0] }[] = remaining.map((img, i) => {
-          const posIdx = Math.floor((i * textPositions.length) / remaining.length);
-          return { pos: textPositions[Math.min(posIdx, textPositions.length - 1)] + 1, img };
-        });
-        insertions.reverse().forEach(({ pos, img }) => {
-          result.splice(pos, 0, {
-            type: "image",
-            id: uid(),
-            src: img.src,
-            alt: img.alt || `이미지`,
-            position: "center",
-            source: "auto",
-          } as ContentBlock);
-        });
+      // 마지막 텍스트 블록 인덱스 찾기
+      let lastTextIdx = -1;
+      for (let i = result.length - 1; i >= 0; i--) {
+        if (result[i].type === "text") { lastTextIdx = i; break; }
       }
+      const insertAt = lastTextIdx >= 0 ? lastTextIdx + 1 : result.length;
+      // 뒤에서부터 splice해야 인덱스 안 밀림
+      remaining.reverse().forEach((img) => {
+        result.splice(insertAt, 0, {
+          type: "image",
+          id: uid(),
+          src: img.src,
+          alt: img.alt || `이미지`,
+          position: "center",
+          source: "auto",
+        } as ContentBlock);
+      });
       insertedCount = imgs.length;
     }
 
