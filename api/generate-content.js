@@ -22,11 +22,17 @@ function ensureMarkers(text) {
     );
   }
 
-  // POST1: 패턴 → [관련글시작]~[관련글끝]
+  // POST1: 패턴 → [관련글시작]~[관련글끝] (URL 제거)
   if (!text.includes("[관련글시작]") && /POST1\s*:/i.test(text)) {
     text = text.replace(
       /(POST1\s*:[\s\S]*?)(?=\n\[|$)/i,
-      "[관련글시작]\n$1\n[관련글끝]"
+      (match) => {
+        // POST 각 줄에서 URL 부분 제거 (제목|설명 형식만 유지)
+        const cleaned = match.split("\n").map(line => {
+          return line.replace(/\|?\s*https?:\/\/\S+/gi, "").trim();
+        }).join("\n");
+        return "[관련글시작]\n" + cleaned + "\n[관련글끝]";
+      }
     );
   }
 
@@ -165,9 +171,13 @@ A3: (답변)
 [FAQ끝]
 
 [참고자료시작]
-LINK1: (공식기관 또는 신뢰할 수 있는 사이트 이름)|(한 줄 설명)|(https://실제URL)
-LINK2: (사이트 이름)|(설명)|(https://실제URL)
-LINK3: (사이트 이름)|(설명)|(https://실제URL)
+⚠️ URL 규칙: 반드시 실제 존재하는 공식 사이트 메인 URL만 사용할 것. 확실하지 않으면 아래 공식 URL만 사용.
+- 정부/공공: https://www.gov.kr, https://www.nts.go.kr, https://www.fsc.go.kr, https://www.moel.go.kr
+- 금융: https://www.krx.co.kr, https://www.bok.or.kr, https://www.fss.or.kr
+- 건강: https://www.nhis.or.kr, https://www.kdca.go.kr
+LINK1: (공식기관 또는 신뢰할 수 있는 사이트 이름)|(한 줄 설명)|(https://실제공식URL)
+LINK2: (사이트 이름)|(설명)|(https://실제공식URL)
+LINK3: (사이트 이름)|(설명)|(https://실제공식URL)
 [참고자료끝]`;
 
   try {
