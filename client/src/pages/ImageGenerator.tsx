@@ -353,7 +353,12 @@ const ADSENSE_NEGATIVE_PROMPT = [
   "no isolated product cutout",
   "no 3d render",
   "no cartoon",
-  "no illustration"
+  "no illustration",
+  "no people",
+  "no person",
+  "no face",
+  "no portrait",
+  "no human"
 ].join(", ");
 
 function buildAdsenseSafePrompt(basePrompt: string): string {
@@ -909,14 +914,15 @@ export default function ImageGenerator() {
     const aiKey = getAPIKey(aiProvider);
     if (aiKey) {
       try {
-        const aiPrompt = `You are a Stable Diffusion image prompt expert.
-Convert this Korean blog topic into ONE English image prompt.
+        const aiPrompt = `You are a cinematic image prompt expert.
+Create a hyper-realistic blog thumbnail image prompt for this topic.
 RULES:
 - English ONLY
-- NO people, NO faces, NO persons, NO hands
-- Describe physical objects, scenery, or settings
-- Be specific to the exact topic meaning
-- Max 12 words
+- Start with: "A hyper-realistic cinematic close-up of"
+- Describe the most visually representative object or scene for the topic
+- NO people, NO faces, NO persons, NO hands, NO text, NO letters
+- Include: natural lighting, clean background, vibrant colors
+- Max 20 words total
 - Output the prompt only, nothing else
 Topic: "${p}"`;
 
