@@ -14,11 +14,17 @@ function ensureMarkers(text) {
     );
   }
 
-  // LINK1: 패턴 → [참고자료시작]~[참고자료끝]
+  // LINK1: 패턴 → [참고자료시작]~[참고자료끝] (URL 메인 도메인만 남기기)
   if (!text.includes("[참고자료시작]") && /LINK1\s*:/i.test(text)) {
     text = text.replace(
       /(LINK1\s*:[\s\S]*?)(?=\nPOST1\s*:|\n\[|$)/i,
-      "[참고자료시작]\n$1\n[참고자료끝]"
+      (match) => {
+        const cleaned = match.split("\n").map(line => {
+          // URL 경로 제거하고 메인 도메인만 남기기
+          return line.replace(/(https?:\/\/[^/|\s]+)\/[^|\s]*/gi, "$1");
+        }).join("\n");
+        return "[참고자료시작]\n" + cleaned + "\n[참고자료끝]";
+      }
     );
   }
 
