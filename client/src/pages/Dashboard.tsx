@@ -353,8 +353,8 @@ export default function Dashboard() {
 
             {/* 헤더 */}
             <div className="flex items-center gap-3 px-5 pt-5 pb-4" style={{ borderBottom: "1px solid var(--border)" }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "oklch(0.696 0.17 162.48 / 15%)" }}>
-                <Zap className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg" style={{ background: currentPopup.color ? `${currentPopup.color}20` : "oklch(0.696 0.17 162.48 / 15%)" }}>
+                {currentPopup.emoji || <Zap className="w-4 h-4" style={{ color: currentPopup.color || "var(--color-emerald)" }} />}
               </div>
               <h2 className="font-bold text-foreground text-base flex-1">{currentPopup.title}</h2>
               <button onClick={handleSnoozePopup} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--muted-foreground)", background: "var(--muted)" }}>
@@ -390,10 +390,17 @@ export default function Dashboard() {
                 )}
                 <button onClick={handleNextSlide}
                   className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
-                  style={{ background: "var(--color-emerald)" }}>
+                  style={{ background: currentPopup.color || "var(--color-emerald)" }}>
                   {isLastSlide ? "확인했어요 ✓" : "다음 →"}
                 </button>
               </div>
+              {isLastSlide && currentPopup.fileUrl && (
+                <a href={currentPopup.fileUrl} target="_blank" rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+                  style={{ background: currentPopup.color || "var(--color-emerald)" }}>
+                  📥 파일 다운로드
+                </a>
+              )}
               {isLastSlide && (
                 <button onClick={handleSnoozePopup}
                   className="w-full py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
