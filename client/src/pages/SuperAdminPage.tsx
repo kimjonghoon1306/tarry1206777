@@ -1253,6 +1253,7 @@ function PopupManager() {
   const [newColor, setNewColor] = useState("#10b981");
   const [newFileUrl, setNewFileUrl] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState<"title"|"content"|null>(null);
+  const [editingId, setEditingId] = useState<string|null>(null);
 
   const EMOJI_LIST = ["😀","😊","🎉","🔥","💡","⭐","✅","❌","📢","📣","🎁","💰","🚀","💎","🏆","❤️","👍","🙌","😍","🤩","📌","🔔","💬","📝","📱","💻","🌟","✨","🎯","🎊","🎈","🎀","🛒","💳","📦","🔗","📧","📞","🌈","🌙","☀️","⚡","🌺","🍀","🦋","🐝","💐","🍎","☕","🎵"];
 
@@ -1320,6 +1321,39 @@ function PopupManager() {
     toast.success("삭제됐어요");
   };
 
+  const startEdit = (popup: any) => {
+    setEditingId(popup.id);
+    setNewTitle(popup.title || "");
+    setNewContent(popup.content || "");
+    setNewStartAt(popup.startAt || "");
+    setNewEndAt(popup.endAt || "");
+    setNewEmoji(popup.emoji || "📢");
+    setNewColor(popup.color || "#10b981");
+    setNewFileUrl(popup.fileUrl || "");
+    setShowAdd(true);
+  };
+
+  const saveEdit = async () => {
+    if (!newTitle.trim()) { toast.error("제목을 입력해주세요"); return; }
+    if (!newContent.trim()) { toast.error("내용을 입력해주세요"); return; }
+    const updated = popups.map(p => p.id === editingId ? {
+      ...p,
+      title: newTitle.trim(),
+      content: newContent.trim(),
+      startAt: newStartAt || "",
+      endAt: newEndAt || "",
+      emoji: newEmoji || "📢",
+      color: newColor || "#10b981",
+      fileUrl: newFileUrl.trim() || "",
+    } : p);
+    setPopups(updated);
+    await save(updated);
+    setEditingId(null);
+    setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt("");
+    setNewEmoji("📢"); setNewColor("#10b981"); setNewFileUrl("");
+    setShowAdd(false);
+  };
+
   return (
     <div className="space-y-4 py-4">
       {/* 안내 */}
@@ -1351,6 +1385,10 @@ function PopupManager() {
                 <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow"
                   style={{ left: popup.enabled ? "22px" : "2px" }} />
               </div>
+              <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-500/10"
+                onClick={() => startEdit(popup)}>
+                <span style={{ fontSize: 14 }}>✏️</span>
+              </button>
               <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/10"
                 onClick={() => deletePopup(popup.id)}>
                 <Trash2 className="w-4 h-4" style={{ color: "#ef4444" }} />
@@ -1373,7 +1411,7 @@ function PopupManager() {
       {/* 추가 폼 */}
       {showAdd && (
         <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--card)", border: "1px solid #ec489940" }}>
-          <p className="font-semibold text-sm text-foreground">새 팝업 추가</p>
+          <p className="font-semibold text-sm text-foreground">{editingId ? "팝업 수정" : "새 팝업 추가"}</p>
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>제목</label>
@@ -1438,10 +1476,10 @@ function PopupManager() {
             <Input value={newFileUrl} onChange={e => setNewFileUrl(e.target.value)} placeholder="https://... 또는 /파일경로.pdf" className="text-sm" />
           </div>
           <div className="flex gap-2">
-            <Button className="flex-1" style={{ background: "#ec4899", color: "white" }} onClick={addPopup} disabled={saving}>
-              {saving ? "저장 중..." : "✅ 추가"}
+            <Button className="flex-1" style={{ background: "#ec4899", color: "white" }} onClick={editingId ? saveEdit : addPopup} disabled={saving}>
+              {saving ? "저장 중..." : editingId ? "✅ 수정 저장" : "✅ 추가"}
             </Button>
-            <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt(""); setNewEmoji("📢"); setNewColor("#10b981"); setNewFileUrl(""); }}>
+            <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); setEditingId(null); setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt(""); setNewEmoji("📢"); setNewColor("#10b981"); setNewFileUrl(""); }}>
               취소
             </Button>
           </div>
