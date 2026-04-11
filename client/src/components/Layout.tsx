@@ -28,7 +28,9 @@ import {
   TrendingUp,
   Bot,
   User,
+  LogOut,
 } from "lucide-react";
+import { clearUserLocalCache } from "@/lib/user-storage";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -316,16 +318,28 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             </Button>
 
             {/* User avatar */}
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer"
-              style={{
-                background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))",
-                color: "white",
-              }}
-              onClick={() => navigate("/mypage")}
-            >
-              A
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full cursor-pointer hover:bg-accent/20 transition-colors" style={{ border: "1px solid var(--border)" }}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    style={{ background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))", color: "white" }}>
+                    {(() => { try { const u = JSON.parse(localStorage.getItem("ba_user") || "{}"); return (u.name || u.id || "A").charAt(0).toUpperCase(); } catch { return "A"; } })()}
+                  </div>
+                  <span className="text-xs font-medium hidden sm:inline" style={{ color: "var(--foreground)", maxWidth: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {(() => { try { const u = JSON.parse(localStorage.getItem("ba_user") || "{}"); return u.name || u.id || "내 계정"; } catch { return "내 계정"; } })()}
+                  </span>
+                  <ChevronDown className="w-3 h-3 opacity-60" style={{ color: "var(--muted-foreground)" }} />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => navigate("/mypage")}>
+                  <User className="w-4 h-4 mr-2" /> 마이페이지
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { clearUserLocalCache(); toast.success("로그아웃되었습니다"); setTimeout(() => window.location.href = "/", 1000); }} style={{ color: "#ef4444" }}>
+                  <LogOut className="w-4 h-4 mr-2" /> 로그아웃
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* 관리자 톱니바퀴 */}
             <button
