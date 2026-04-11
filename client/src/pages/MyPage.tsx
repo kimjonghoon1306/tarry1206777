@@ -70,6 +70,7 @@ export default function MyPage() {
   const [curPw, setCurPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
+  const [showPw, setShowPw] = useState<Record<string,boolean>>({});
   const [pwLoading, setPwLoading] = useState(false);
 
   const handleChangePw = async () => {
@@ -356,24 +357,32 @@ export default function MyPage() {
             <h3 className="font-semibold text-foreground">비밀번호 변경</h3>
           </div>
           <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>현재 비밀번호</label>
-              <input type="password" value={curPw} onChange={e => setCurPw(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", outline: "none" }} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>새 비밀번호</label>
-              <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", outline: "none" }} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>새 비밀번호 확인</label>
-              <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", outline: "none" }} />
-            </div>
+            {[
+              { key: "cur", label: "현재 비밀번호", value: curPw, onChange: setCurPw },
+              { key: "new", label: "새 비밀번호", value: newPw, onChange: setNewPw },
+              { key: "confirm", label: "새 비밀번호 확인", value: confirmPw, onChange: setConfirmPw },
+            ].map(f => (
+              <div key={f.key}>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>{f.label}</label>
+                <div className="relative">
+                  <input
+                    type={showPw[f.key] ? "text" : "password"}
+                    value={f.value}
+                    onChange={e => f.onChange(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm pr-10"
+                    style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", outline: "none" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(prev => ({ ...prev, [f.key]: !prev[f.key] }))}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-base"
+                    style={{ color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}
+                  >
+                    {showPw[f.key] ? "🙈" : "👁"}
+                  </button>
+                </div>
+              </div>
+            ))}
             <button onClick={handleChangePw} disabled={pwLoading}
               className="w-full h-10 rounded-xl text-sm font-semibold text-white transition-all active:scale-95"
               style={{ background: "var(--color-emerald)" }}>
