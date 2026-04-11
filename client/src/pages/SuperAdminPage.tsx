@@ -1249,6 +1249,9 @@ function PopupManager() {
   const [newContent, setNewContent] = useState("");
   const [newStartAt, setNewStartAt] = useState("");
   const [newEndAt, setNewEndAt] = useState("");
+  const [newEmoji, setNewEmoji] = useState("📢");
+  const [newColor, setNewColor] = useState("#10b981");
+  const [newFileUrl, setNewFileUrl] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("ba_token") || "";
@@ -1283,11 +1286,15 @@ function PopupManager() {
       enabled: true,
       startAt: newStartAt || "",
       endAt: newEndAt || "",
+      emoji: newEmoji || "📢",
+      color: newColor || "#10b981",
+      fileUrl: newFileUrl.trim() || "",
     };
     const updated = [...popups, popup];
     setPopups(updated);
     await save(updated);
     setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt("");
+    setNewEmoji("📢"); setNewColor("#10b981"); setNewFileUrl("");
     setShowAdd(false);
   };
 
@@ -1376,11 +1383,28 @@ function PopupManager() {
               <Input type="date" value={newEndAt} onChange={e => setNewEndAt(e.target.value)} className="text-sm" />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>이모지 아이콘</label>
+              <Input value={newEmoji} onChange={e => setNewEmoji(e.target.value)} placeholder="📢" className="text-sm" maxLength={4} />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>헤더 색상</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} className="w-10 h-9 rounded cursor-pointer border-0" style={{ background: "transparent" }} />
+                <Input value={newColor} onChange={e => setNewColor(e.target.value)} placeholder="#10b981" className="text-sm flex-1" maxLength={7} />
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>파일 다운로드 URL (선택)</label>
+            <Input value={newFileUrl} onChange={e => setNewFileUrl(e.target.value)} placeholder="https://... 또는 /파일경로.pdf" className="text-sm" />
+          </div>
           <div className="flex gap-2">
             <Button className="flex-1" style={{ background: "#ec4899", color: "white" }} onClick={addPopup} disabled={saving}>
               {saving ? "저장 중..." : "✅ 추가"}
             </Button>
-            <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt(""); }}>
+            <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt(""); setNewEmoji("📢"); setNewColor("#10b981"); setNewFileUrl(""); }}>
               취소
             </Button>
           </div>
