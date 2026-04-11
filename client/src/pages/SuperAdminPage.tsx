@@ -1252,6 +1252,15 @@ function PopupManager() {
   const [newEmoji, setNewEmoji] = useState("📢");
   const [newColor, setNewColor] = useState("#10b981");
   const [newFileUrl, setNewFileUrl] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState<"title"|"content"|null>(null);
+
+  const EMOJI_LIST = ["😀","😊","🎉","🔥","💡","⭐","✅","❌","📢","📣","🎁","💰","🚀","💎","🏆","❤️","👍","🙌","😍","🤩","📌","🔔","💬","📝","📱","💻","🌟","✨","🎯","🎊","🎈","🎀","🛒","💳","📦","🔗","📧","📞","🌈","🌙","☀️","⚡","🌺","🍀","🦋","🐝","💐","🍎","☕","🎵"];
+
+  const insertEmoji = (emoji: string, target: "title" | "content") => {
+    if (target === "title") setNewTitle(prev => prev + emoji);
+    if (target === "content") setNewContent(prev => prev + emoji);
+    setShowEmojiPicker(null);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("ba_token") || "";
@@ -1366,11 +1375,39 @@ function PopupManager() {
         <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--card)", border: "1px solid #ec489940" }}>
           <p className="font-semibold text-sm text-foreground">새 팝업 추가</p>
           <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>제목</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>제목</label>
+              <button type="button" onClick={() => setShowEmojiPicker(v => v === "title" ? null : "title")}
+                className="text-xs px-2 py-0.5 rounded-lg" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                😊 이모티콘
+              </button>
+            </div>
+            {showEmojiPicker === "title" && (
+              <div className="flex flex-wrap gap-1 p-2 mb-2 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+                {EMOJI_LIST.map(e => (
+                  <button key={e} type="button" onClick={() => insertEmoji(e, "title")}
+                    className="text-lg hover:scale-125 transition-transform p-0.5">{e}</button>
+                ))}
+              </div>
+            )}
             <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="팝업 제목" className="text-sm" />
           </div>
           <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>내용</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>내용</label>
+              <button type="button" onClick={() => setShowEmojiPicker(v => v === "content" ? null : "content")}
+                className="text-xs px-2 py-0.5 rounded-lg" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                😊 이모티콘
+              </button>
+            </div>
+            {showEmojiPicker === "content" && (
+              <div className="flex flex-wrap gap-1 p-2 mb-2 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+                {EMOJI_LIST.map(e => (
+                  <button key={e} type="button" onClick={() => insertEmoji(e, "content")}
+                    className="text-lg hover:scale-125 transition-transform p-0.5">{e}</button>
+                ))}
+              </div>
+            )}
             <Textarea value={newContent} onChange={e => setNewContent(e.target.value)} placeholder="팝업 내용" className="text-sm min-h-[120px] font-mono" />
           </div>
           <div className="grid grid-cols-2 gap-3">
