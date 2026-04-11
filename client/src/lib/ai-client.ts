@@ -237,9 +237,16 @@ POST3: (연관 주제 블로그 제목 3)|(이유)
         const data = await resp.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         if (!text) { lastErr = `${model} 빈 응답`; continue; }
+        const finishReason = data.candidates?.[0]?.finishReason || "";
+        if (finishReason && finishReason !== "STOP") {
+          console.warn(`[Gemini] ${model} 불완전한 응답 (${finishReason})`);
+          // 글은 그대로 반환하되 경고 throw로 호출부에서 toast 표시
+          throw Object.assign(new Error(`Gemini 응답이 완전하지 않습니다. 서버 불안정으로 글이 중간에 잘렸을 수 있어요. 재시도해보세요. (${finishReason})`), { isWarning: true, content: ensureMinChars(text, minChars, keyword, title) });
+        }
         return ensureMinChars(text, minChars, keyword, title);
       } catch (e: any) {
         if (e.message?.includes("API 키")) throw e;
+        if ((e as any).isWarning) throw e;
         lastErr = e.message;
         continue;
       }
