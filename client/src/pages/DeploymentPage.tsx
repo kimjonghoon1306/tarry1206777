@@ -1159,8 +1159,12 @@ export default function DeploymentPage() {
           b.content.includes("[관련글시작]"))
     );
 
+    // 전체 텍스트에서도 마커 존재 여부 확인 (블록 분리된 경우 대비)
+    const hasAnySectionMarker = allRawText.includes("[FAQ시작]") || allRawText.includes("[참고자료시작]") || allRawText.includes("[관련글시작]");
+
     blocks.forEach((b: any, blockIdx: number) => {
-      const afterSection = sectionMarkerIdx !== -1 && blockIdx >= sectionMarkerIdx;
+      const afterSection = (sectionMarkerIdx !== -1 && blockIdx >= sectionMarkerIdx) ||
+        (hasAnySectionMarker && sectionMarkerIdx === -1 && (b.type === "image" || b.type === "image-pair"));
       if (b.type === "text") {
         const cleaned = b.content
           .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
@@ -1481,12 +1485,18 @@ export default function DeploymentPage() {
     try {
       const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
       if (customList.length > 0) {
-        const customPlatforms = platforms.filter(p => p.type === "custom");
-        const customIndex = customPlatforms.findIndex(p => p.id === platformId);
-        const entry = customList[customIndex >= 0 ? customIndex : 0] || customList[0];
-        url = entry["webhook_url"] || "";
-        key = entry["webhook_auth_key"] || "";
-        authHeader = entry["webhook_auth_header"] || "Authorization";
+        // platform name(domain)으로 customList에서 직접 매칭
+        const platform = platforms.find(p => p.id === platformId);
+        const platformName = platform?.name || "";
+        const entry =
+          customList.find((e: any) => e._name === platformName || e.custom_domain === platformName) ||
+          customList.find((e: any) => e.webhook_url && platformName && e.webhook_url.includes(platformName)) ||
+          null;
+        if (entry) {
+          url = entry["webhook_url"] || "";
+          key = entry["webhook_auth_key"] || "";
+          authHeader = entry["webhook_auth_header"] || "Authorization";
+        }
       }
     } catch {}
 
