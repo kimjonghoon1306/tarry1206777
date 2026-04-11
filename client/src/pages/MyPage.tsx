@@ -3,6 +3,7 @@
  * 사용자 프로필, 현황, 연결된 플랫폼 확인
  */
 
+import { useState } from "react";
 import Layout from "@/components/Layout";
 import { clearUserLocalCache, userGet, SETTINGS_KEYS } from "@/lib/user-storage";
 import { useLocation } from "wouter";
@@ -24,6 +25,7 @@ import {
   Share2,
   Copy,
   Download,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -65,6 +67,33 @@ const USAGE_STATS = [
 export default function MyPage() {
   const [, navigate] = useLocation();
   const platforms = getPlatformStatus();
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const handleChangePw = async () => {
+    if (!curPw || !newPw || !confirmPw) { toast.error("모든 항목을 입력해주세요"); return; }
+    if (newPw !== confirmPw) { toast.error("새 비밀번호가 일치하지 않아요"); return; }
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(newPw)) { toast.error("비밀번호는 영문 대소문자+숫자 포함 6자 이상이어야 해요"); return; }
+    setPwLoading(true);
+    try {
+      const token = localStorage.getItem("ba_token") || "";
+      const resp = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "changePassword", currentPassword: curPw, newPassword: newPw }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "변경 실패");
+      toast.success("비밀번호가 변경됐어요!");
+      setCurPw(""); setNewPw(""); setConfirmPw("");
+    } catch (e: any) {
+      toast.error(e.message || "비밀번호 변경 실패");
+    } finally {
+      setPwLoading(false);
+    }
+  };
   const connectedCount = platforms.filter(p => p.configured).length;
 
   // 로그인한 회원 정보
@@ -318,6 +347,39 @@ export default function MyPage() {
             style={{ background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))" }}>
             <Download className="w-4 h-4" /> PDF 다운로드
           </a>
+        </div>
+
+        {/* 비밀번호 변경 */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <Key className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
+            <h3 className="font-semibold text-foreground">비밀번호 변경</h3>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>현재 비밀번호</label>
+              <input type="password" value={curPw} onChange={e => setCurPw(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm"
+                style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", outline: "none" }} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>새 비밀번호</label>
+              <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm"
+                style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", outline: "none" }} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>새 비밀번호 확인</label>
+              <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm"
+                style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)", outline: "none" }} />
+            </div>
+            <button onClick={handleChangePw} disabled={pwLoading}
+              className="w-full h-10 rounded-xl text-sm font-semibold text-white transition-all active:scale-95"
+              style={{ background: "var(--color-emerald)" }}>
+              {pwLoading ? "변경 중..." : "비밀번호 변경"}
+            </button>
+          </div>
         </div>
 
         {/* Logout */}
