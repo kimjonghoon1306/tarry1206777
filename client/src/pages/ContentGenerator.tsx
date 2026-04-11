@@ -389,12 +389,10 @@ export default function ContentGenerator() {
                   onClick={() => {
                     // 키워드와 제목만 전달 - 한글 노이즈 제거
                     const autoPrompt = title ? `${keyword} ${title}` : keyword;
-                    const contentSummary = generatedContent ? generatedContent.replace(/\[.*?\]/g, "").slice(0, 200) : "";
-                    const fullAutoPrompt = contentSummary ? `${autoPrompt} - ${contentSummary}` : autoPrompt;
                     // 단락 수 계산 (줄바꿈 기준)
                     const paragraphCount = generatedContent ? generatedContent.split(/\n\n+/).filter((p: string) => p.trim().length > 10).length : 0;
                     const maxImgs = Math.max(1, Math.floor(paragraphCount / 3));
-                    navigate(`/images?prompt=${encodeURIComponent(fullAutoPrompt)}&keyword=${encodeURIComponent(keyword)}&maxImages=${maxImgs}`);
+                    navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}&maxImages=${maxImgs}`);
                   }}>
                   <Image className="w-4 h-4" /> 이미지 생성
                 </Button>
@@ -736,11 +734,9 @@ export default function ContentGenerator() {
                     style={{ background: "oklch(0.75 0.12 300)", color: "white" }}
                     onClick={() => {
                       const autoPrompt = title ? `${keyword} ${title}` : keyword;
-                      const contentSummary2 = generatedContent ? generatedContent.replace(/\[.*?\]/g, "").slice(0, 200) : "";
-                      const fullAutoPrompt2 = contentSummary2 ? `${autoPrompt} - ${contentSummary2}` : autoPrompt;
                       const paragraphCount2 = generatedContent ? generatedContent.split(/\n\n+/).filter((p: string) => p.trim().length > 10).length : 0;
                     const maxImgs2 = Math.max(1, Math.floor(paragraphCount2 / 3));
-                    navigate(`/images?prompt=${encodeURIComponent(fullAutoPrompt2)}&keyword=${encodeURIComponent(keyword)}&maxImages=${maxImgs2}`);
+                    navigate(`/images?prompt=${encodeURIComponent(autoPrompt)}&keyword=${encodeURIComponent(keyword)}&maxImages=${maxImgs2}`);
                     }}>
                     <Sparkles className="w-3.5 h-3.5" /> AI생성
                   </Button>
