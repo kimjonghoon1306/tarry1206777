@@ -178,6 +178,61 @@ function ToggleRow({ label, sub, checked, onChange }: { label: string; sub?: str
   );
 }
 
+// ─── 테마 버튼 (호버 애니메이션) ────────────────────────
+function ThemeNavBtn({ isLight, onToggle, border, textColor }: {
+  isLight: boolean; onToggle: () => void; border: string; textColor: string;
+}) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: 5,
+        padding: "8px 13px", borderRadius: 12, flexShrink: 0,
+        border: `1.5px solid ${hov ? (isLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)") : border}`,
+        background: hov
+          ? (isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.12)")
+          : (isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)"),
+        color: textColor, fontSize: 16, fontWeight: 800,
+        cursor: "pointer", fontFamily: "inherit",
+        transform: hov ? "translateY(-3px) scale(1.08)" : "translateY(0) scale(1)",
+        boxShadow: hov ? (isLight ? "0 6px 20px rgba(0,0,0,0.12)" : "0 6px 20px rgba(255,255,255,0.08)") : "none",
+        transition: "all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      }}>
+      <span>{isLight ? "🌙" : "☀️"}</span>
+      <span className="theme-label" style={{ fontSize: 12 }}>{isLight ? "밤" : "낮"}</span>
+    </button>
+  );
+}
+
+// ─── 네비게이션 아이콘 버튼 (호버 애니메이션) ───────────
+function NavBtn({ emoji, title: ttl, href, bg, bgHov, border, borderHov, color, glow }: {
+  emoji: string; title: string; href: string;
+  bg: string; bgHov: string; border: string; borderHov: string; color: string; glow: string;
+}) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={() => window.location.href = href}
+      title={ttl}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        padding: "8px 13px", borderRadius: 10, flexShrink: 0,
+        background: hov ? bgHov : bg,
+        border: `1.5px solid ${hov ? borderHov : border}`,
+        color, cursor: "pointer", fontSize: 17, lineHeight: 1,
+        transform: hov ? "translateY(-3px) scale(1.08)" : "translateY(0) scale(1)",
+        boxShadow: hov ? `0 6px 20px ${glow}, 0 0 0 1px ${border}` : "none",
+        transition: "all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      }}>
+      {emoji}
+    </button>
+  );
+}
+
 // ─── 메인 컴포넌트 ────────────────────────────────────────
 export default function MonetizationPage() {
   const [state, setState] = useState<MonetizationState>(loadState);
@@ -229,6 +284,10 @@ export default function MonetizationPage() {
     @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
     @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
     @keyframes scanline{0%{top:-2px}100%{top:100vh}}
+    @keyframes btnPop{0%{transform:scale(1) translateY(0)}50%{transform:scale(1.13) translateY(-3px)}100%{transform:scale(1.08) translateY(-2px)}}
+    .nav-icon-btn{transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1)!important;}
+    .nav-icon-btn:hover{transform:translateY(-3px) scale(1.08)!important;}
+    .nav-icon-btn:active{transform:translateY(0) scale(0.95)!important;}
     input::placeholder{color:rgba(107,122,153,0.5);}
     select option{background:#0f1525;color:#f0f4ff;}
     .m-step:hover{transform:translateY(-1px);transition:all 0.2s;}
@@ -243,6 +302,9 @@ export default function MonetizationPage() {
       .m-main{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start;}
       .m-side{display:flex;flex-direction:column;gap:12px;}
     }
+    .theme-label{display:none;}
+    .progress-bar{display:none!important;}
+    @media(min-width:600px){.theme-label{display:inline;}.progress-bar{display:flex!important;}}
     @media(min-width:1280px){
       .m-main{grid-template-columns:300px 1fr 300px;}
       .m-side{display:flex;}
@@ -293,8 +355,6 @@ export default function MonetizationPage() {
         {/* ── 헤더 ── */}
         <div style={{ position: "sticky", top: 0, zIndex: 100, background: lc.headerBg, backdropFilter: "blur(24px)", borderBottom: `1px solid ${lc.border}`, padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <a href="/superadmin" style={{ color: lc.muted, fontSize: 11, textDecoration: "none", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>← BACK</a>
-            <div style={{ width: 1, height: 16, background: lc.border }} />
             <div style={{ width: 30, height: 30, borderRadius: 9, background: "linear-gradient(135deg,#00e5a0,#06b6d4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>💰</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 900, color: lc.text, lineHeight: 1.1, letterSpacing: -0.3, whiteSpace: "nowrap" }}>수익화 센터</div>
@@ -303,25 +363,39 @@ export default function MonetizationPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => window.location.href = "/super-admin"}
-              style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(239,68,68,0.4)" }}>
-              🏠
-            </button>
-            <button onClick={() => window.location.href = "/admin-revenue-dashboard"}
-              style={{ padding: "8px 11px", borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", border: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, boxShadow: "0 0 10px rgba(245,158,11,0.4)" }}>
-              📊
-            </button>
-            {/* 미니 진행률 */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 20, background: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)", border: `1px solid ${lc.border}` }}>
+            {/* 미니 진행률 - 모바일 숨김 */}
+            <div className="progress-bar" style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 20, background: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)", border: `1px solid ${lc.border}` }}>
               <div style={{ width: 72, height: 4, borderRadius: 4, background: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)", overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${progressPct}%`, background: "linear-gradient(90deg,#00e5a0,#06b6d4)", borderRadius: 4, transition: "width 1s ease" }} />
               </div>
               <span style={{ fontSize: 11, fontWeight: 900, color: "#00e5a0", fontFamily: "'DM Mono',monospace" }}>{progressPct}%</span>
             </div>
-            {/* 테마 */}
-            <button onClick={toggleTheme} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 20, border: `1px solid ${lc.border}`, background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)", color: lc.text, fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-              {isLight ? "🌙 밤" : "☀️ 낮"}
-            </button>
+            {/* 테마 - PC: 아이콘+텍스트, 모바일: 아이콘만 */}
+            <ThemeNavBtn isLight={isLight} onToggle={toggleTheme} border={lc.border} textColor={lc.text} />
+            {/* 슈퍼어드민 버튼 - 연한 빨강 + 호버 애니메이션 */}
+            <NavBtn
+              emoji="🏠"
+              title="슈퍼어드민"
+              href="/super-admin"
+              bg="#ff000018"
+              bgHov="#ff000030"
+              border="#ff000045"
+              borderHov="#ff000080"
+              color="#ff6b6b"
+              glow="#ff000040"
+            />
+            {/* 대시보드 버튼 - 연한 핑크 + 호버 애니메이션 */}
+            <NavBtn
+              emoji="📊"
+              title="수익 대시보드"
+              href="/admin-revenue-dashboard"
+              bg="#ec489918"
+              bgHov="#ec489930"
+              border="#ec489945"
+              borderHov="#ec489980"
+              color="#ec4899"
+              glow="#ec489940"
+            />
           </div>
         </div>
 
