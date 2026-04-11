@@ -1,6 +1,38 @@
 // BlogAuto Pro - generate-content v5.1
 // 플레인 텍스트 출력 (## 소제목 허용) + FAQ/참고자료 마커 유지
 
+// Groq가 마커 없이 날것 텍스트로 쓸 때 자동으로 마커 씌우기
+function ensureMarkers(text) {
+  // 이미 마커가 있으면 그대로 반환
+  if (text.includes("[FAQ시작]") && text.includes("[참고자료시작]")) return text;
+
+  // Q1:/A1: 패턴 → [FAQ시작]~[FAQ끝]
+  if (!text.includes("[FAQ시작]") && /Q1\s*:/i.test(text)) {
+    text = text.replace(
+      /(Q1\s*:[\s\S]*?)(?=\nLINK1\s*:|\nPOST1\s*:|$)/i,
+      "[FAQ시작]\n$1\n[FAQ끝]"
+    );
+  }
+
+  // LINK1: 패턴 → [참고자료시작]~[참고자료끝]
+  if (!text.includes("[참고자료시작]") && /LINK1\s*:/i.test(text)) {
+    text = text.replace(
+      /(LINK1\s*:[\s\S]*?)(?=\nPOST1\s*:|\n\[|$)/i,
+      "[참고자료시작]\n$1\n[참고자료끝]"
+    );
+  }
+
+  // POST1: 패턴 → [관련글시작]~[관련글끝]
+  if (!text.includes("[관련글시작]") && /POST1\s*:/i.test(text)) {
+    text = text.replace(
+      /(POST1\s*:[\s\S]*?)(?=\n\[|$)/i,
+      "[관련글시작]\n$1\n[관련글끝]"
+    );
+  }
+
+  return text;
+}
+
 function removeNonKorean(text) {
   const markers = ["[참고자료시작]","[참고자료끝]","[FAQ시작]","[FAQ끝]","[팁]","[주의]","[중요]"];
   const placeholders = markers.map((m, i) => [`XSECMARK${i}X`, m]);
@@ -277,7 +309,8 @@ POST3: (연관 주제 블로그 제목 3)|(이유)
         throw new Error(`Groq 오류: ${resp.status}`);
       }
       const data = await resp.json();
-      return res.json({ content: removeNonKorean(data.choices?.[0]?.message?.content || "") });
+      const groqText = data.choices?.[0]?.message?.content || "";
+      return res.json({ content: removeNonKorean(ensureMarkers(groqText)) });
     }
 
     return res.status(400).json({ error: "지원하지 않는 AI입니다" });
