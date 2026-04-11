@@ -544,8 +544,8 @@ export default function AdminRevenueDashboard() {
             <span style={{ fontSize: 10, fontWeight: 900, color: ACCENTS.green, fontFamily: "'DM Mono', monospace" }}>LIVE</span>
           </div>
           <ThemeBtn dark={isDark} toggle={toggleTheme} />
-          <NavIconBtn emoji="🏠" title="슈퍼어드민" href="/superadmin" color={ACCENTS.cyan} />
-          <NavIconBtn emoji="💰" title="수익화" href="/monetization" color={ACCENTS.amber} />
+          <NavIconBtn emoji="🏠" title="슈퍼어드민" href="/superadmin" color="#ff6b6b" />
+          <NavIconBtn emoji="💰" title="수익화" href="/monetization" color={ACCENTS.pink} />
         </div>
       </div>
 
