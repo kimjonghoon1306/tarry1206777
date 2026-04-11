@@ -376,7 +376,7 @@ export default function MonetizationPage() {
             <NavBtn
               emoji="🏠"
               title="슈퍼어드민"
-              href="/super-admin"
+              href="/superadmin"
               bg="#ff000018"
               bgHov="#ff000030"
               border="#ff000045"
