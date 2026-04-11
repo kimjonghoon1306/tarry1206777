@@ -908,18 +908,27 @@ export default function DeploymentPage() {
       }
     }
 
-    // ✅ 텍스트보다 이미지가 훨씬 많아서 못 들어간 경우 맨 끝(FAQ 전)에 추가
+    // ✅ 못 들어간 이미지는 본문 텍스트 블록 사이에 고르게 재삽입 (FAQ/참고자료 앞으로 절대 안 감)
     if (insertedCount < imgs.length) {
-      imgs.slice(insertedCount).forEach((img, idx) => {
-        result.push({
-          type: "image",
-          id: uid(),
-          src: img.src,
-          alt: img.alt || `이미지 ${insertedCount + idx + 1}`,
-          position: "center",
-          source: "auto",
-        } as ContentBlock);
-      });
+      const remaining = imgs.slice(insertedCount);
+      const textPositions: number[] = [];
+      result.forEach((b, i) => { if (b.type === "text") textPositions.push(i); });
+      if (textPositions.length > 0) {
+        const insertions: { pos: number; img: typeof remaining[0] }[] = remaining.map((img, i) => {
+          const posIdx = Math.floor((i * textPositions.length) / remaining.length);
+          return { pos: textPositions[Math.min(posIdx, textPositions.length - 1)] + 1, img };
+        });
+        insertions.reverse().forEach(({ pos, img }) => {
+          result.splice(pos, 0, {
+            type: "image",
+            id: uid(),
+            src: img.src,
+            alt: img.alt || `이미지`,
+            position: "center",
+            source: "auto",
+          } as ContentBlock);
+        });
+      }
       insertedCount = imgs.length;
     }
 
@@ -1159,12 +1168,8 @@ export default function DeploymentPage() {
           b.content.includes("[관련글시작]"))
     );
 
-    // 전체 텍스트에서도 마커 존재 여부 확인 (블록 분리된 경우 대비)
-    const hasAnySectionMarker = allRawText.includes("[FAQ시작]") || allRawText.includes("[참고자료시작]") || allRawText.includes("[관련글시작]");
-
     blocks.forEach((b: any, blockIdx: number) => {
-      const afterSection = (sectionMarkerIdx !== -1 && blockIdx >= sectionMarkerIdx) ||
-        (hasAnySectionMarker && sectionMarkerIdx === -1 && (b.type === "image" || b.type === "image-pair"));
+      const afterSection = sectionMarkerIdx !== -1 && blockIdx >= sectionMarkerIdx;
       if (b.type === "text") {
         const cleaned = b.content
           .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
@@ -1485,7 +1490,6 @@ export default function DeploymentPage() {
     try {
       const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
       if (customList.length > 0) {
-        // platform name(domain)으로 customList에서 직접 매칭
         const platform = platforms.find(p => p.id === platformId);
         const platformName = platform?.name || "";
         const entry =
