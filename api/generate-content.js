@@ -181,7 +181,11 @@ LINK3: (사이트 이름)|(설명)|(https://실제URL)
           }
           const data = await resp.json();
           const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          const finishReason = data.candidates?.[0]?.finishReason || "";
           if (!text) { lastError = `${model} 빈 응답`; continue; }
+          if (finishReason === "MAX_TOKENS") {
+            return res.json({ content: removeNonKorean(text), warning: "글이 일부 잘렸습니다. 더 짧은 글자수를 설정해보세요." });
+          }
           return res.json({ content: removeNonKorean(text) });
         } catch (e) {
           if (e.message?.startsWith("FATAL:")) throw new Error(e.message.replace("FATAL:", ""));
@@ -241,27 +245,53 @@ LINK3: (사이트 이름)|(설명)|(https://실제URL)
     }
 
     if (provider === "groq") {
-      const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: Math.min(maxTokens, 8000),
-          temperature: 0.7,
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        const msg = err.error?.message || "";
-        if (msg.includes("rate_limit")) throw new Error("Groq 분당 요청 한도 초과.");
-        throw new Error(`Groq 오류: ${resp.status}`);
+      const GROQ_MODELS = [
+        { model: "llama-3.3-70b-versatile", maxTokens: 32768 },
+        { model: "llama3-70b-8192", maxTokens: 8192 },
+        { model: "mixtral-8x7b-32768", maxTokens: 32768 },
+      ];
+      let lastError = null;
+      for (const { model, maxTokens: modelMax } of GROQ_MODELS) {
+        try {
+          const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: "system", content: "당신은 한국어 블로그 전문 작가입니다. 반드시 요청한 분량을 전부 완성해서 출력해야 합니다. 절대 중간에 끊으면 안 됩니다." },
+                { role: "user", content: prompt }
+              ],
+              max_tokens: Math.min(maxTokens, modelMax),
+              temperature: 0.7,
+            }),
+          });
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            const msg = err.error?.message || "";
+            if (msg.includes("rate_limit") || resp.status === 429) { lastError = `${model} 한도 초과`; continue; }
+            if (msg.includes("model_not_found") || resp.status === 404) { lastError = `${model} 없음`; continue; }
+            lastError = `Groq 오류 (${resp.status})`;
+            continue;
+          }
+          const data = await resp.json();
+          const text = data.choices?.[0]?.message?.content || "";
+          const finishReason = data.choices?.[0]?.finish_reason || "";
+          if (!text) { lastError = `${model} 빈 응답`; continue; }
+          // 잘린 경우 경고 포함해서 반환 (완전 실패보다 나음)
+          if (finishReason === "length") {
+            return res.json({ content: removeNonKorean(text), warning: "글이 일부 잘렸을 수 있습니다. 더 짧은 글자수를 설정해보세요." });
+          }
+          return res.json({ content: removeNonKorean(text) });
+        } catch (e) {
+          lastError = e.message;
+          continue;
+        }
       }
-      const data = await resp.json();
-      return res.json({ content: removeNonKorean(data.choices?.[0]?.message?.content || "") });
+      throw new Error(`Groq 오류 (${lastError})`);
     }
 
     return res.status(400).json({ error: "지원하지 않는 AI입니다" });
