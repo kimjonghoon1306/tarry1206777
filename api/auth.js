@@ -10,38 +10,48 @@ const KV_TOKEN = process.env.KV_REST_API_TOKEN;
 
 async function kvGet(key) {
   if (!KV_URL || !KV_TOKEN) return null;
-  try {
-    const r = await fetch(`${KV_URL}/get/${encodeURIComponent(key)}`, {
-      headers: { Authorization: `Bearer ${KV_TOKEN}` },
-    });
-    const d = await r.json();
-    if (d.result === null || d.result === undefined) return null;
-    const raw = d.result;
-    if (typeof raw !== "string") return raw;
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const parsed = JSON.parse(raw);
-      // 파싱 결과가 또 문자열이면 한 번 더 파싱
-      if (typeof parsed === "string") {
-        try { return JSON.parse(parsed); } catch { return parsed; }
+      const r = await fetch(`${KV_URL}/get/${encodeURIComponent(key)}`, {
+        headers: { Authorization: `Bearer ${KV_TOKEN}` },
+      });
+      const d = await r.json();
+      if (d.result === null || d.result === undefined) return null;
+      const raw = d.result;
+      if (typeof raw !== "string") return raw;
+      try {
+        const parsed = JSON.parse(raw);
+        // 파싱 결과가 또 문자열이면 한 번 더 파싱
+        if (typeof parsed === "string") {
+          try { return JSON.parse(parsed); } catch { return parsed; }
+        }
+        return parsed;
+      } catch {
+        return raw;
       }
-      return parsed;
     } catch {
-      return raw;
+      if (attempt < 2) await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
     }
-  } catch { return null; }
+  }
+  return null;
 }
 
 async function kvSet(key, value) {
   if (!KV_URL || !KV_TOKEN) return false;
-  try {
-    const serialized = JSON.stringify(value);
-    const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(serialized)}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${KV_TOKEN}` },
-    });
-    const d = await r.json();
-    return d.result === "OK";
-  } catch { return false; }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const serialized = JSON.stringify(value);
+      const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(serialized)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${KV_TOKEN}` },
+      });
+      const d = await r.json();
+      if (d.result === "OK") return true;
+    } catch {
+      if (attempt < 2) await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+    }
+  }
+  return false;
 }
 
 async function kvDel(key) {
