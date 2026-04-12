@@ -1817,8 +1817,27 @@ Topic: "${p}"`;
       )}
 
       {/* ── 모바일 하단 고정 바 ── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-3 flex gap-2"
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-3 space-y-2"
         style={{ background: "var(--background)", borderTop: "1px solid var(--border)", backdropFilter: "blur(12px)" }}>
+        {/* 모바일 갯수 선택 */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold shrink-0" style={{ color: "var(--muted-foreground)" }}>생성 수량</span>
+          <select value={count} onChange={e => setCount(e.target.value)}
+            className="flex-1 h-9 rounded-lg px-2 text-sm font-semibold"
+            style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--foreground)" }}>
+            <option value="1">1개</option>
+            <option value="4">4개</option>
+            <option value="8">8개</option>
+            <option value="10">10개</option>
+            <option value="15">15개</option>
+            <option value="20">20개</option>
+            <option value="30">30개</option>
+          </select>
+          {maxImagesFromContent > 0 && (
+            <span className="text-xs shrink-0" style={{ color: "oklch(0.75 0.12 300)" }}>추천 {maxImagesFromContent}개</span>
+          )}
+        </div>
+        <div className="flex gap-2">
         <button
           className="flex-1 h-12 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 relative overflow-hidden"
           style={{
@@ -1844,6 +1863,7 @@ Topic: "${p}"`;
             <span>🚀 {selectedImages.length > 0 ? `${selectedImages.length}개` : `${loadedCount}개`} 발행</span>
           </button>
         )}
+        </div>
       </div>
 
       {/* 모바일 하단바 여백 */}
