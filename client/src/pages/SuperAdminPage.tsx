@@ -962,102 +962,133 @@ function SecurityPanel() {
 // ─────────────────────────────────────────────────────
 // 카테고리 관리
 // ─────────────────────────────────────────────────────
-function CategoryManager() {
-  const [categories, setCategories] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("blogauto_categories") || "[]"); } catch { return []; }
-  });
-  const [newCat, setNewCat] = useState("");
+const CUSTOM_COLORS = ["#10b981","#f59e0b","#8b5cf6","#ef4444","#06b6d4","#ec4899","#f97316","#14b8a6","#6366f1","#84cc16"];
 
-  const save = (list: string[]) => {
-    setCategories(list);
-    localStorage.setItem("blogauto_categories", JSON.stringify(list));
-    saveSettingsToServer({ blogauto_categories: JSON.stringify(list) });
-  };
+const FIXED_PLATFORMS = [
+  { key: "wordpress", label: "워드프레스", color: "#21759B" },
+  { key: "blogger",   label: "블로거",     color: "#FF5722" },
+  { key: "medium",    label: "미디엄",     color: "#333333" },
+];
+
+function loadPlatformCategories(): Record<string, string[]> {
+  try { return JSON.parse(localStorage.getItem("platform_categories") || "{}"); } catch { return {}; }
+}
+
+function savePlatformCategories(data: Record<string, string[]>) {
+  localStorage.setItem("platform_categories", JSON.stringify(data));
+  saveSettingsToServer({ platform_categories: JSON.stringify(data) });
+}
+
+function PlatformCategoryCard({ platformKey, label, color, allData, onUpdate }: {
+  platformKey: string; label: string; color: string;
+  allData: Record<string, string[]>; onUpdate: (data: Record<string, string[]>) => void;
+}) {
+  const cats = allData[platformKey] || [];
+  const [newCat, setNewCat] = useState("");
 
   const add = () => {
     const trimmed = newCat.trim();
     if (!trimmed) { toast.error("카테고리명을 입력해주세요"); return; }
-    if (categories.includes(trimmed)) { toast.error("이미 있는 카테고리예요"); return; }
-    save([...categories, trimmed]);
+    if (cats.includes(trimmed)) { toast.error("이미 있는 카테고리예요"); return; }
+    const updated = { ...allData, [platformKey]: [...cats, trimmed] };
+    onUpdate(updated);
     setNewCat("");
     toast.success(`"${trimmed}" 추가됐어요`);
   };
 
   const remove = (idx: number) => {
-    save(categories.filter((_, i) => i !== idx));
-    toast.success("삭제됐어요");
+    const updated = { ...allData, [platformKey]: cats.filter((_: string, i: number) => i !== idx) };
+    onUpdate(updated);
   };
 
   const moveUp = (idx: number) => {
     if (idx === 0) return;
-    const list = [...categories];
+    const list = [...cats];
     [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
-    save(list);
+    onUpdate({ ...allData, [platformKey]: list });
   };
 
   const moveDown = (idx: number) => {
-    if (idx === categories.length - 1) return;
-    const list = [...categories];
+    if (idx === cats.length - 1) return;
+    const list = [...cats];
     [list[idx], list[idx + 1]] = [list[idx + 1], list[idx]];
-    save(list);
+    onUpdate({ ...allData, [platformKey]: list });
   };
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2 mb-4">
-          <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
-          <span className="font-semibold text-sm text-foreground">카테고리 관리</span>
-          <span className="ml-auto text-xs px-2 py-0.5 rounded-full" style={{ background: "#06b6d420", color: "#06b6d4" }}>
-            {categories.length}개
-          </span>
-        </div>
-        <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-          배포 시 카테고리 선택 목록이에요. 순서대로 1번, 2번으로 표시돼요.
-        </p>
-
-        {/* 카테고리 목록 */}
-        <div className="space-y-2 mb-4">
-          {categories.length === 0 && (
-            <p className="text-xs text-center py-4" style={{ color: "var(--muted-foreground)" }}>카테고리가 없어요. 추가해주세요.</p>
-          )}
-          {categories.map((cat, idx) => (
-            <div key={idx} className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-              <span className="text-xs font-bold w-6 text-center" style={{ color: "#06b6d4" }}>{idx + 1}</span>
-              <span className="flex-1 text-sm text-foreground">{cat}</span>
-              <div className="flex items-center gap-1">
-                <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent/20"
-                  style={{ color: "var(--muted-foreground)" }} onClick={() => moveUp(idx)}>
-                  <ChevronDown className="w-3.5 h-3.5 rotate-180" />
-                </button>
-                <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent/20"
-                  style={{ color: "var(--muted-foreground)" }} onClick={() => moveDown(idx)}>
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-                <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/20"
-                  style={{ color: "#ef4444" }} onClick={() => remove(idx)}>
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
+    <div className="rounded-2xl p-4" style={{ background: "var(--card)", border: `2px solid ${color}30` }}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: color }} />
+        <span className="font-semibold text-sm text-foreground">{label}</span>
+        <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: `${color}20`, color }}>
+          {cats.length}개
+        </span>
+      </div>
+      <div className="space-y-1.5 mb-3">
+        {cats.length === 0 && (
+          <p className="text-xs text-center py-3" style={{ color: "var(--muted-foreground)" }}>카테고리가 없어요</p>
+        )}
+        {cats.map((cat: string, idx: number) => (
+          <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
+            <span className="text-xs font-bold w-5 text-center" style={{ color }}>{idx + 1}</span>
+            <span className="flex-1 text-sm text-foreground">{cat}</span>
+            <div className="flex items-center gap-0.5">
+              <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-accent/20" style={{ color: "var(--muted-foreground)" }} onClick={() => moveUp(idx)}>
+                <ChevronDown className="w-3 h-3 rotate-180" />
+              </button>
+              <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-accent/20" style={{ color: "var(--muted-foreground)" }} onClick={() => moveDown(idx)}>
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20" style={{ color: "#ef4444" }} onClick={() => remove(idx)}>
+                <X className="w-3 h-3" />
+              </button>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input value={newCat} onChange={e => setNewCat(e.target.value)}
+          placeholder="카테고리 입력 후 Enter"
+          className="h-9 text-sm flex-1"
+          onKeyDown={e => e.key === "Enter" && add()} />
+        <button className="h-9 px-3 rounded-xl font-semibold text-white text-xs transition-all active:scale-95"
+          style={{ background: color }} onClick={add}>추가</button>
+      </div>
+    </div>
+  );
+}
 
-        {/* 카테고리 추가 */}
-        <div className="flex gap-2">
-          <Input
-            value={newCat}
-            onChange={e => setNewCat(e.target.value)}
-            placeholder="카테고리명 입력 (예: 생활, 여행, 음식)"
-            className="h-11 text-sm flex-1"
-            onKeyDown={e => e.key === "Enter" && add()}
-          />
-          <button className="h-11 px-4 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
-            style={{ background: "linear-gradient(135deg,#06b6d4,#0284c7)" }}
-            onClick={add}>
-            추가
-          </button>
-        </div>
+function CategoryManager() {
+  const [allData, setAllData] = useState<Record<string, string[]>>(loadPlatformCategories);
+
+  const customList: any[] = (() => {
+    try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
+  })();
+
+  const customPlatforms = customList.map((e: any, idx: number) => ({
+    key: `custom_${idx}`,
+    label: e._name || e.custom_domain || `커스텀 ${idx + 1}`,
+    color: CUSTOM_COLORS[idx % CUSTOM_COLORS.length],
+  }));
+
+  const allPlatforms = [...FIXED_PLATFORMS, ...customPlatforms];
+
+  const handleUpdate = (updated: Record<string, string[]>) => {
+    setAllData(updated);
+    savePlatformCategories(updated);
+  };
+
+  return (
+    <div className="space-y-4 py-2">
+      <div className="rounded-2xl p-4" style={{ background: "oklch(0.6 0.15 220/10%)", border: "1px solid oklch(0.6 0.15 220/30%)" }}>
+        <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+          플랫폼별로 카테고리를 따로 관리해요. 배포 시 선택한 플랫폼의 카테고리만 표시돼요.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {allPlatforms.map(p => (
+          <PlatformCategoryCard key={p.key} platformKey={p.key} label={p.label} color={p.color} allData={allData} onUpdate={handleUpdate} />
+        ))}
       </div>
     </div>
   );
