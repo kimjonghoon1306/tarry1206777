@@ -449,12 +449,7 @@ function PublishPanel({
                 size="sm"
                 variant="outline"
                 className="mt-2 text-xs"
-                onClick={() => {
-                  try {
-                    const u = JSON.parse(localStorage.getItem("ba_user") || "{}");
-                    window.location.href = u.role === "admin" ? "/superadmin" : "/settings";
-                  } catch { window.location.href = "/settings"; }
-                }}
+                onClick={() => (window.location.href = "/settings")}
               >
                 설정 이동
               </Button>
@@ -696,16 +691,7 @@ export default function DeploymentPage() {
   });
 
   const [platforms, setPlatforms] = useState<Platform[]>(() => {
-    const customList = (() => {
-      try {
-        const admin = JSON.parse(localStorage.getItem("admin_custom_list") || "[]");
-        const platform = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
-        const merged = [...admin, ...platform].filter((e, i, arr) =>
-          arr.findIndex(x => x.webhook_url === e.webhook_url) === i
-        );
-        return merged;
-      } catch { return []; }
-    })();
+    const customList = (() => { try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; } })();
     const stored = localStorage.getItem(DEPLOY_PLATFORMS_KEY);
     let base: Platform[] = [];
     if (stored) {
@@ -1525,7 +1511,13 @@ export default function DeploymentPage() {
     let authHeader = "Authorization";
 
     try {
-      const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+      // admin_custom_list + platform_custom_list 합쳐서 읽기 (중복 제거)
+      const adminList = JSON.parse(localStorage.getItem("admin_custom_list") || "[]");
+      const platformList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+      const customList = [...adminList, ...platformList].filter((e, i, arr) =>
+        arr.findIndex(x => x.webhook_url === e.webhook_url) === i
+      );
+
       if (customList.length > 0) {
         // custom_0, custom_1 ... 형식의 id에서 인덱스 추출
         const idxMatch = platformId.match(/^custom_(\d+)$/);
@@ -1554,10 +1546,7 @@ export default function DeploymentPage() {
       }
     } catch {}
 
-    // 2. 기존 방식 fallback
-    if (!url) url = userGet("webhook_url") || "";
-    if (!key) key = userGet("webhook_auth_key") || "";
-    if (authHeader === "Authorization") authHeader = userGet("webhook_auth_header") || "Authorization";
+    // fallback 제거 - 매핑 실패 시 오류 발생 (잘못된 곳으로 발송 방지)
 
     if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트를 등록해주세요.");
     // CORS 우회: Vercel 서버를 프록시로 사용
