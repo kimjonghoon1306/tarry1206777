@@ -53,12 +53,6 @@ const STATS = [
 const LANGUAGES = [
   { flag: "🇰🇷", lang: "한국어", code: "ko" },
   { flag: "🇺🇸", lang: "English", code: "en" },
-  { flag: "🇯🇵", lang: "日本語", code: "ja" },
-  { flag: "🇨🇳", lang: "中文", code: "zh" },
-  { flag: "🇪🇸", lang: "Español", code: "es" },
-  { flag: "🇫🇷", lang: "Français", code: "fr" },
-  { flag: "🇩🇪", lang: "Deutsch", code: "de" },
-  { flag: "🇧🇷", lang: "Português", code: "pt" },
 ];
 
 export default function LandingPage() {
