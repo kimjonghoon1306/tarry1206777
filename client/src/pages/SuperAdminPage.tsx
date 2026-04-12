@@ -230,6 +230,15 @@ function AdminCustomWebhookSection() {
     const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
     platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
     localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
+    // 슈퍼어드민 토큰으로 직접 저장
+    const adminToken = sessionStorage.getItem("bap_admin_auth") || "";
+    if (adminToken) {
+      fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ action: "saveSettings", settings: { admin_custom_list: JSON.stringify(updated) } }),
+      }).catch(() => {});
+    }
     saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain, admin_custom_list: JSON.stringify(updated) });
     setShowAdd(false);
     setUrl(""); setAuthKey(""); setAuthHeader("Authorization"); setCustomDomain(""); setCategoryInput("");
@@ -1774,4 +1783,3 @@ export default function SuperAdminPage() {
   return <AdminDashboard />;
 }
 //fix
-
