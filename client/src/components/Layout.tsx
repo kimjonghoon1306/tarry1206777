@@ -71,6 +71,15 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState(currentLang);
+  const isGuestMode = localStorage.getItem("guest_mode") === "true";
+
+  const handleGuestBlock = (e: React.MouseEvent) => {
+    e.preventDefault();
+    toast.error("🔒 가입 후 이용 가능한 기능이에요!", {
+      action: { label: "회원가입", onClick: () => { localStorage.removeItem("guest_mode"); navigate("/signup"); } },
+      duration: 4000,
+    });
+  };
 
   const handleLangChange = (code: string) => {
     setSelectedLang(code);
@@ -166,19 +175,27 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
           </div>
           {NAV_ITEMS.map((item) => {
             const isActive = location === item.path;
+            const isDashboard = item.path === "/dashboard";
             return (
-              <Link key={item.path} href={item.path}>
-                <div
-                  className={`nav-item ${isActive ? "active" : ""}`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <item.icon className="w-4 h-4 flex-shrink-0" />
-                  <span>{item.label}</span>
-                  {item.path === "/keywords" && (
-                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded badge-active">NEW</span>
-                  )}
-                </div>
-              </Link>
+              <div key={item.path}
+                onClick={isGuestMode && !isDashboard ? handleGuestBlock : undefined}
+                style={isGuestMode && !isDashboard ? { cursor: "not-allowed", opacity: 0.5 } : {}}>
+                <Link href={isGuestMode && !isDashboard ? "#" : item.path}>
+                  <div
+                    className={`nav-item ${isActive ? "active" : ""}`}
+                    onClick={() => !isGuestMode && setSidebarOpen(false)}
+                  >
+                    <item.icon className="w-4 h-4 flex-shrink-0" />
+                    <span>{item.label}</span>
+                    {item.path === "/keywords" && (
+                      <span className="ml-auto text-xs px-1.5 py-0.5 rounded badge-active">NEW</span>
+                    )}
+                    {isGuestMode && !isDashboard && (
+                      <span className="ml-auto text-xs">🔒</span>
+                    )}
+                  </div>
+                </Link>
+              </div>
             );
           })}
         </nav>
