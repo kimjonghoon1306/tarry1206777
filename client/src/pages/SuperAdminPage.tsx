@@ -110,7 +110,7 @@ const ICON_MAP: Record<string, any> = { Bot, Image, Search, BarChart3, FileText,
 
 const API_SECTIONS = [
   {
-    title: "글 생성 AI", icon: "Bot", color: "#10b981", grad: "linear-gradient(135deg,#10b981,#059669)",
+    group: "ai", title: "글 생성 AI", icon: "Bot", color: "#10b981", grad: "linear-gradient(135deg,#10b981,#059669)",
     desc: "Gemini·Groq 무료, Claude·GPT 유료",
     fields: [
       { label: "Gemini API Key", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "무료", badgeColor: "#10b981" },
@@ -120,7 +120,7 @@ const API_SECTIONS = [
     ],
   },
   {
-    title: "이미지 생성 AI", icon: "Image", color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)",
+    group: "ai", title: "이미지 생성 AI", icon: "Image", color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)",
     desc: "OpenAI · Replicate · imgbb",
     fields: [
       { label: "Gemini API Key (글쓰기 공용)", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "글쓰기용", badgeColor: "#4285F4" },
@@ -130,7 +130,7 @@ const API_SECTIONS = [
     ],
   },
   {
-    title: "네이버 검색광고 API", icon: "Search", color: "#03C75A", grad: "linear-gradient(135deg,#03C75A,#02a44a)",
+    group: "keyword", title: "네이버 검색광고 API", icon: "Search", color: "#03C75A", grad: "linear-gradient(135deg,#03C75A,#02a44a)",
     desc: "키워드 수집 · 검색량 조회",
     fields: [
       { label: "API License", key: "naver_access_license", placeholder: "License Key", link: "https://searchad.naver.com", badge: "", badgeColor: "" },
@@ -139,7 +139,7 @@ const API_SECTIONS = [
     ],
   },
   {
-    title: "네이버 데이터랩", icon: "BarChart3", color: "#06b6d4", grad: "linear-gradient(135deg,#06b6d4,#0284c7)",
+    group: "keyword", title: "네이버 데이터랩", icon: "BarChart3", color: "#06b6d4", grad: "linear-gradient(135deg,#06b6d4,#0284c7)",
     desc: "트렌드 · 검색 인사이트",
     fields: [
       { label: "Client ID", key: "naver_datalab_client_id", placeholder: "Client ID", link: "https://developers.naver.com/apps", badge: "", badgeColor: "" },
@@ -147,7 +147,7 @@ const API_SECTIONS = [
     ],
   },
   {
-    title: "블로거 (Blogger)", icon: "FileText", color: "#FF5722", grad: "linear-gradient(135deg,#FF5722,#E64A19)",
+    group: "platform", title: "블로거 (Blogger)", icon: "FileText", color: "#FF5722", grad: "linear-gradient(135deg,#FF5722,#E64A19)",
     desc: "구글 블로거 자동 발행 · 애드센스 최적화",
     fields: [
       { label: "Blog ID", key: "blogger_blog_id", placeholder: "블로그 ID (숫자)", link: "https://www.blogger.com", badge: "자동발행", badgeColor: "#10b981" },
@@ -157,7 +157,7 @@ const API_SECTIONS = [
     ],
   },
   {
-    title: "미디엄 (Medium)", icon: "Send", color: "#000000", grad: "linear-gradient(135deg,#333333,#000000)",
+    group: "platform", title: "미디엄 (Medium)", icon: "Send", color: "#000000", grad: "linear-gradient(135deg,#333333,#000000)",
     desc: "미디엄 자동 발행 · 영문 콘텐츠 최적화",
     fields: [
       { label: "Integration Token", key: "medium_token", placeholder: "Integration Token", link: "https://medium.com/me/settings/security", badge: "자동발행", badgeColor: "#10b981" },
@@ -165,7 +165,7 @@ const API_SECTIONS = [
     ],
   },
   {
-    title: "쿠팡파트너스", icon: "ShoppingCart", color: "#C00F0C", grad: "linear-gradient(135deg,#C00F0C,#9a0b09)",
+    group: "keyword", title: "쿠팡파트너스", icon: "ShoppingCart", color: "#C00F0C", grad: "linear-gradient(135deg,#C00F0C,#9a0b09)",
     desc: "상품 링크 자동 삽입 → 수익",
     fields: [
       { label: "Access Key", key: "coupang_access_key", placeholder: "Access Key", link: "https://partners.coupang.com", badge: "", badgeColor: "" },
@@ -174,7 +174,7 @@ const API_SECTIONS = [
     ],
   },
   {
-    title: "워드프레스", icon: "Globe", color: "#21759B", grad: "linear-gradient(135deg,#21759B,#1a5d7a)",
+    group: "platform", title: "워드프레스", icon: "Globe", color: "#21759B", grad: "linear-gradient(135deg,#21759B,#1a5d7a)",
     desc: "자체 도메인 자동 발행",
     fields: [
       { label: "사이트 URL", key: "wp_url", placeholder: "https://myblog.com", link: "", badge: "", badgeColor: "" },
@@ -205,12 +205,10 @@ function AdminCustomWebhookSection() {
   const [customDomain, setCustomDomain] = useState("");
   const [authHeader, setAuthHeader] = useState("Authorization");
   const [authKey, setAuthKey] = useState("");
-  const [categoryInput, setCategoryInput] = useState("");
 
   const handleSave = () => {
     if (!url.trim()) { toast.error("Webhook URL을 입력해주세요"); return; }
     const normalizedDomain = (customDomain.trim() || url.replace(/^https?:\/\//, "").split("/")[0]).trim();
-    const categories = categoryInput.split(",").map((c: string) => c.trim()).filter(Boolean);
     const entry: Record<string, string> = {
       _name: normalizedDomain || url.replace("https://", "").split("/")[0],
       _type: "custom",
@@ -218,7 +216,6 @@ function AdminCustomWebhookSection() {
       webhook_url: url.trim(),
       webhook_auth_header: authHeader,
       webhook_auth_key: authKey.trim(),
-      categories: JSON.stringify(categories),
     };
     const updated = [...accounts, entry];
     setAccounts(updated);
@@ -320,10 +317,7 @@ function AdminCustomWebhookSection() {
                 <Input value={authKey} onChange={e => setAuthKey(e.target.value)} placeholder="Bearer Token 또는 API 키" className="h-11 text-sm" />
               </div>
             )}
-            <div>
-              <label className="text-xs font-medium text-foreground mb-1.5 block">카테고리 (쉼표 구분, 선택)</label>
-              <Input value={categoryInput} onChange={e => setCategoryInput(e.target.value)} placeholder="여행, 맛집, IT" className="h-11 text-sm" />
-            </div>
+
             <div className="flex gap-2">
               <button onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium border" style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}>취소</button>
               <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }}>저장</button>
@@ -559,8 +553,19 @@ function ApiKeyManager() {
         {saving ? "저장 중..." : "관리자 키 저장"}
       </button>
 
-      {/* 섹션별 키 입력 */}
-      {API_SECTIONS.map(({ title, icon: iconName, color, grad, desc, fields }) => {
+      {/* 섹션별 키 입력 - 그룹별 분리 */}
+      {[
+        { groupKey: "ai",       groupLabel: "🤖 글 · 이미지 AI",  groupColor: "#10b981" },
+        { groupKey: "platform", groupLabel: "📡 배포 플랫폼",      groupColor: "#6366f1" },
+        { groupKey: "keyword",  groupLabel: "🔍 키워드 · 기타",   groupColor: "#f59e0b" },
+      ].map(({ groupKey, groupLabel, groupColor }) => (
+        <div key={groupKey} className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
+            <div className="h-px flex-1" style={{ background: `${groupColor}40` }} />
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: `${groupColor}15`, color: groupColor }}>{groupLabel}</span>
+            <div className="h-px flex-1" style={{ background: `${groupColor}40` }} />
+          </div>
+          {API_SECTIONS.filter((s: any) => s.group === groupKey).map(({ title, icon: iconName, color, grad, desc, fields }) => {
         const Icon = ICON_MAP[iconName] || Key;
         const isOpen = openSections[title] !== false;
         // 중복 키 제거 후 실제 입력 필드 수
@@ -692,7 +697,9 @@ function ApiKeyManager() {
             )}
           </div>
         );
-      })}
+          })}
+        </div>
+      ))}
 
       {/* 커스텀 Webhook 섹션 - 여러 도메인 등록 */}
       <AdminCustomWebhookSection />
@@ -1069,13 +1076,21 @@ function CategoryManager() {
     try { setCustomList(JSON.parse(localStorage.getItem("platform_custom_list") || "[]")); } catch {}
   };
 
+  // 고정 플랫폼에 번호 붙이기 (같은 플랫폼 여러 계정 대비)
+  const fixedCounts: Record<string, number> = {};
+  const numberedFixed = FIXED_PLATFORMS.map(p => {
+    fixedCounts[p.key] = (fixedCounts[p.key] || 0) + 1;
+    return { ...p, label: `${p.label} ${fixedCounts[p.key]}` };
+  });
+
+  // 커스텀 사이트 번호 붙이기
   const customPlatforms = customList.map((e: any, idx: number) => ({
     key: `custom_${idx}`,
-    label: e._name || e.custom_domain || `커스텀 ${idx + 1}`,
+    label: `커스텀 ${idx + 1}${e._name ? ` · ${e._name}` : ""}`,
     color: CUSTOM_COLORS[idx % CUSTOM_COLORS.length],
   }));
 
-  const allPlatforms = [...FIXED_PLATFORMS, ...customPlatforms];
+  const allPlatforms = [...numberedFixed, ...customPlatforms];
 
   const handleUpdate = (updated: Record<string, string[]>) => {
     setAllData(updated);
@@ -1089,18 +1104,11 @@ function CategoryManager() {
         <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
           플랫폼별로 카테고리를 따로 관리해요. 배포 시 선택한 플랫폼의 카테고리만 표시돼요.
         </p>
-        <div className="flex gap-2 shrink-0">
-          <button onClick={refreshCustomList}
-            className="h-8 px-3 rounded-xl text-xs font-semibold transition-all active:scale-95"
-            style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
-            새로고침
-          </button>
-          <button onClick={() => window.location.href = "/settings"}
-            className="h-8 px-3 rounded-xl text-xs font-semibold text-white transition-all active:scale-95"
-            style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }}>
-            + 계정 추가
-          </button>
-        </div>
+        <button onClick={refreshCustomList}
+          className="h-8 px-3 rounded-xl text-xs font-semibold transition-all active:scale-95 shrink-0"
+          style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+          새로고침
+        </button>
       </div>
       {/* 플랫폼별 카테고리 카드 */}
       <div className="grid gap-4 sm:grid-cols-2">
