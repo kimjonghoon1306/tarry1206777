@@ -1060,10 +1060,14 @@ function PlatformCategoryCard({ platformKey, label, color, allData, onUpdate }: 
 
 function CategoryManager() {
   const [allData, setAllData] = useState<Record<string, string[]>>(loadPlatformCategories);
-
-  const customList: any[] = (() => {
+  const [customList, setCustomList] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
-  })();
+  });
+
+  // 커스텀 사이트 목록 새로고침
+  const refreshCustomList = () => {
+    try { setCustomList(JSON.parse(localStorage.getItem("platform_custom_list") || "[]")); } catch {}
+  };
 
   const customPlatforms = customList.map((e: any, idx: number) => ({
     key: `custom_${idx}`,
@@ -1080,16 +1084,35 @@ function CategoryManager() {
 
   return (
     <div className="space-y-4 py-2">
-      <div className="rounded-2xl p-4" style={{ background: "oklch(0.6 0.15 220/10%)", border: "1px solid oklch(0.6 0.15 220/30%)" }}>
+      {/* 안내 + 계정 추가 버튼 */}
+      <div className="rounded-2xl p-4 flex items-center justify-between gap-3" style={{ background: "oklch(0.6 0.15 220/10%)", border: "1px solid oklch(0.6 0.15 220/30%)" }}>
         <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
           플랫폼별로 카테고리를 따로 관리해요. 배포 시 선택한 플랫폼의 카테고리만 표시돼요.
         </p>
+        <div className="flex gap-2 shrink-0">
+          <button onClick={refreshCustomList}
+            className="h-8 px-3 rounded-xl text-xs font-semibold transition-all active:scale-95"
+            style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+            새로고침
+          </button>
+          <button onClick={() => window.location.href = "/settings"}
+            className="h-8 px-3 rounded-xl text-xs font-semibold text-white transition-all active:scale-95"
+            style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }}>
+            + 계정 추가
+          </button>
+        </div>
       </div>
+      {/* 플랫폼별 카테고리 카드 */}
       <div className="grid gap-4 sm:grid-cols-2">
         {allPlatforms.map(p => (
           <PlatformCategoryCard key={p.key} platformKey={p.key} label={p.label} color={p.color} allData={allData} onUpdate={handleUpdate} />
         ))}
       </div>
+      {customPlatforms.length === 0 && (
+        <div className="text-center py-4 text-xs" style={{ color: "var(--muted-foreground)" }}>
+          커스텀 사이트가 없어요. 설정에서 추가하거나 새로고침 해보세요.
+        </div>
+      )}
     </div>
   );
 }
