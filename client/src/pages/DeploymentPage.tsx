@@ -696,7 +696,15 @@ export default function DeploymentPage() {
   });
 
   const [platforms, setPlatforms] = useState<Platform[]>(() => {
-    const customList = (() => { try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; } })();
+    const customList = (() => {
+      try {
+        const admin = JSON.parse(localStorage.getItem("admin_custom_list") || "[]");
+        const platform = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+        return [...admin, ...platform].filter((e, i, arr) =>
+          arr.findIndex(x => x.webhook_url === e.webhook_url) === i
+        );
+      } catch { return []; }
+    })();
     const stored = localStorage.getItem(DEPLOY_PLATFORMS_KEY);
     let base: Platform[] = [];
     if (stored) {
