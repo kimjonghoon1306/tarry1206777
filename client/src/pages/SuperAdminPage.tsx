@@ -1068,20 +1068,31 @@ function PlatformCategoryCard({ platformKey, label, color, allData, onUpdate }: 
 function CategoryManager() {
   const [allData, setAllData] = useState<Record<string, string[]>>(loadPlatformCategories);
   const [customList, setCustomList] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; }
+    try {
+      const admin = JSON.parse(localStorage.getItem("admin_custom_list") || "[]");
+      const platform = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+      // 둘 다 합쳐서 중복 제거 (webhook_url 기준)
+      const merged = [...admin, ...platform].filter((e, i, arr) =>
+        arr.findIndex(x => x.webhook_url === e.webhook_url) === i
+      );
+      return merged;
+    } catch { return []; }
   });
 
   // 커스텀 사이트 목록 새로고침
   const refreshCustomList = () => {
-    try { setCustomList(JSON.parse(localStorage.getItem("platform_custom_list") || "[]")); } catch {}
+    try {
+      const admin = JSON.parse(localStorage.getItem("admin_custom_list") || "[]");
+      const platform = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+      const merged = [...admin, ...platform].filter((e, i, arr) =>
+        arr.findIndex(x => x.webhook_url === e.webhook_url) === i
+      );
+      setCustomList(merged);
+    } catch {}
   };
 
-  // 고정 플랫폼에 번호 붙이기 (같은 플랫폼 여러 계정 대비)
-  const fixedCounts: Record<string, number> = {};
-  const numberedFixed = FIXED_PLATFORMS.map(p => {
-    fixedCounts[p.key] = (fixedCounts[p.key] || 0) + 1;
-    return { ...p, label: `${p.label} ${fixedCounts[p.key]}` };
-  });
+  // 고정 플랫폼 (번호 없이 그대로)
+  const numberedFixed = FIXED_PLATFORMS;
 
   // 커스텀 사이트 번호 붙이기
   const customPlatforms = customList.map((e: any, idx: number) => ({
@@ -1118,7 +1129,7 @@ function CategoryManager() {
       </div>
       {customPlatforms.length === 0 && (
         <div className="text-center py-4 text-xs" style={{ color: "var(--muted-foreground)" }}>
-          커스텀 사이트가 없어요. 설정에서 추가하거나 새로고침 해보세요.
+          커스텀 사이트가 없어요. API 키 탭 → 커스텀 Webhook에서 추가 후 새로고침 해주세요.
         </div>
       )}
     </div>
