@@ -1,8 +1,7 @@
-// BlogAuto Pro - LandingPage v3.1
+// BlogAuto Pro - LandingPage v4.0
 /**
  * BlogAuto Pro - Landing Page
- * Design: Modern Professional Dark SaaS
- * Hero section with CTA, feature highlights, platform overview
+ * Design: Cinematic Dark SaaS — Immersive, Bold, Universal
  */
 
 import { useLocation } from "wouter";
@@ -17,10 +16,8 @@ import {
   Globe,
   Sun,
   Moon,
-  TrendingUp,
   Zap,
   Bot,
-  BarChart3,
   CheckCircle2,
   ArrowRight,
   Shield,
@@ -28,6 +25,9 @@ import {
   DollarSign,
   Download,
   Settings,
+  Sparkles,
+  TrendingUp,
+  BarChart3,
 } from "lucide-react";
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/hero-dashboard-bg-4ZxYwSEJt8froqSKC2fNZb.webp";
@@ -37,41 +37,28 @@ const IMAGE_GEN_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/
 const DEPLOY_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663486730627/d5vsRxSD6NaHGBMn6mcWxj/deployment-visual-Df9Tr6zMZqCfL6CgepL5hz.webp";
 
 const FEATURES = [
-  {
-    icon: Search,
-    title: "스마트 키워드 수집",
-    desc: "애드센스·애드포스트 연동으로 유입량과 클릭량이 높은 키워드를 실시간 자동 수집",
-    img: KEYWORD_IMG,
-    color: "var(--color-emerald)",
-  },
-  {
-    icon: FileText,
-    title: "AI 콘텐츠 자동 생성",
-    desc: "수집된 키워드 기반으로 1,500자 이상의 SEO 최적화 글을 AI가 자동 작성",
-    img: CONTENT_IMG,
-    color: "var(--color-amber-brand)",
-  },
-  {
-    icon: Image,
-    title: "실사 이미지 자동 생성",
-    desc: "글 내용에 맞는 디테일하고 실물 같은 고품질 이미지를 AI로 자동 생성",
-    img: IMAGE_GEN_IMG,
-    color: "oklch(0.6 0.15 220)",
-  },
-  {
-    icon: Send,
-    title: "예약 & 수동 배포",
-    desc: "네이버 블로그, 티스토리 등 지정 사이트에 예약 배포 및 원클릭 수동 배포",
-    img: DEPLOY_IMG,
-    color: "oklch(0.75 0.12 300)",
-  },
+  { icon: Search, title: "스마트 키워드 수집", desc: "애드센스·애드포스트 연동으로 유입량과 클릭량이 높은 키워드를 실시간 자동 수집", img: KEYWORD_IMG, color: "#10b981", num: "01" },
+  { icon: FileText, title: "AI 콘텐츠 자동 생성", desc: "수집된 키워드 기반으로 1,500자 이상의 SEO 최적화 글을 AI가 자동 작성", img: CONTENT_IMG, color: "#f59e0b", num: "02" },
+  { icon: Image, title: "실사 이미지 자동 생성", desc: "글 내용에 맞는 디테일하고 실물 같은 고품질 이미지를 AI로 자동 생성", img: IMAGE_GEN_IMG, color: "#6366f1", num: "03" },
+  { icon: Send, title: "예약 & 수동 배포", desc: "원하는 사이트에 예약 배포 및 원클릭 수동 배포로 완전 자동화", img: DEPLOY_IMG, color: "#ec4899", num: "04" },
 ];
 
 const STATS = [
-  { value: "10,000+", label: "월간 생성 콘텐츠", icon: FileText },
-  { value: "98.7%", label: "자동화 성공률", icon: Zap },
-  { value: "8개", label: "지원 언어", icon: Globe },
-  { value: "₩2.3M", label: "평균 월 수익 증가", icon: DollarSign },
+  { value: "10,000+", label: "월간 생성 콘텐츠", icon: FileText, color: "#10b981" },
+  { value: "98.7%", label: "자동화 성공률", icon: Zap, color: "#f59e0b" },
+  { value: "8개국", label: "언어 지원", icon: Globe, color: "#6366f1" },
+  { value: "₩2.3M", label: "평균 월 수익 증가", icon: DollarSign, color: "#ec4899" },
+];
+
+const LANGUAGES = [
+  { flag: "🇰🇷", lang: "한국어", code: "ko" },
+  { flag: "🇺🇸", lang: "English", code: "en" },
+  { flag: "🇯🇵", lang: "日本語", code: "ja" },
+  { flag: "🇨🇳", lang: "中文", code: "zh" },
+  { flag: "🇪🇸", lang: "Español", code: "es" },
+  { flag: "🇫🇷", lang: "Français", code: "fr" },
+  { flag: "🇩🇪", lang: "Deutsch", code: "de" },
+  { flag: "🇧🇷", lang: "Português", code: "pt" },
 ];
 
 export default function LandingPage() {
@@ -79,508 +66,330 @@ export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 lg:px-12"
-        style={{
-          height: "64px",
-          background: "var(--background)",
-          backdropFilter: "blur(16px)",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
+    <div className="min-h-screen" style={{ background: "#080c10", fontFamily: "'Pretendard Variable', sans-serif" }}>
+      <style>{`
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+        @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.5);opacity:0} }
+        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes glow-pulse { 0%,100%{box-shadow:0 0 20px #10b98140} 50%{box-shadow:0 0 60px #10b98180} }
+        .anim-float { animation: float 6s ease-in-out infinite; }
+        .anim-fadeup { animation: fadeUp 0.8s ease both; }
+        .anim-fadeup-1 { animation: fadeUp 0.8s 0.1s ease both; }
+        .anim-fadeup-2 { animation: fadeUp 0.8s 0.2s ease both; }
+        .anim-fadeup-3 { animation: fadeUp 0.8s 0.3s ease both; }
+        .anim-fadeup-4 { animation: fadeUp 0.8s 0.4s ease both; }
+        .anim-fadeup-5 { animation: fadeUp 0.8s 0.5s ease both; }
+        .anim-glow { animation: glow-pulse 3s ease-in-out infinite; }
+        .feature-hover { transition: all 0.4s cubic-bezier(0.23,1,0.32,1); }
+        .feature-hover:hover { transform: translateY(-6px); }
+        .btn-shine { position:relative; overflow:hidden; }
+        .btn-shine::before { content:''; position:absolute; top:0; left:-100%; width:60%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent); transition:0.6s; }
+        .btn-shine:hover::before { left:150%; }
+        .lang-btn { transition: all 0.3s cubic-bezier(0.23,1,0.32,1); }
+        .lang-btn:hover { transform: translateY(-4px) scale(1.05); }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-4px); }
+        .nav-blur { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .grid-bg { background-image: linear-gradient(rgba(16,185,129,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(16,185,129,0.04) 1px,transparent 1px); background-size: 60px 60px; }
+        .text-gradient { background: linear-gradient(135deg, #10b981, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .text-gradient-cool { background: linear-gradient(135deg, #6366f1, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .border-glow { border: 1px solid rgba(16,185,129,0.2); box-shadow: 0 0 30px rgba(16,185,129,0.05) inset; }
+        .platform-card { transition: all 0.35s cubic-bezier(0.23,1,0.32,1); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
+        .platform-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(16,185,129,0.3); transform: translateY(-4px); }
+      `}</style>
+
+      {/* ── NAV ── */}
+      <nav className="nav-blur fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 lg:px-12"
+        style={{ height: "64px", background: "rgba(8,12,16,0.85)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, var(--color-emerald), var(--color-amber-brand))" }}
-          >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #10b981, #f59e0b)" }}>
             <Bot className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-lg text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            BlogAuto <span className="gradient-text">Pro</span>
+          <span className="font-bold text-lg text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            BlogAuto <span className="text-gradient">Pro</span>
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-8 h-8">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-8 h-8" style={{ color: "#94a3b8" }}>
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/login")}
-            style={{ whiteSpace: "nowrap" }}
-          >
+          <Button variant="outline" size="sm" onClick={() => navigate("/login")}
+            style={{ whiteSpace: "nowrap", borderColor: "rgba(255,255,255,0.15)", color: "#e2e8f0", background: "transparent" }}>
             로그인
           </Button>
-          <Button
-            size="sm"
+          <button className="btn-shine flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all active:scale-95"
+            style={{ background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 4px 20px rgba(16,185,129,0.35)", whiteSpace: "nowrap" }}
             onClick={() => {
               localStorage.setItem("guest_mode", "true");
               toast.success("👀 둘러보기 모드입니다. 실제 기능은 가입 후 이용 가능해요!", { duration: 3000 });
               navigate("/dashboard");
-            }}
-            style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap" }}
-          >
-            둘러보기 <ArrowRight className="w-4 h-4 ml-1 hidden sm:inline-block" />
-          </Button>
-          {/* 운영자 전용 톱니바퀴 - PC/모바일 모두 표시, 맨 오른쪽 */}
-          <button
-            title="운영자"
-            onClick={() => navigate("/superadmin")}
+            }}>
+            둘러보기 <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button title="운영자" onClick={() => navigate("/superadmin")}
             className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
-            style={{ color: "var(--muted-foreground)", background: "var(--card)", border: "1px solid var(--border)" }}
-          >
+            style={{ color: "#64748b", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
             <Settings className="w-4 h-4" />
           </button>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section
-        className="relative flex items-center justify-center overflow-hidden"
-        style={{ minHeight: "100vh", paddingTop: "64px" }}
-      >
-        {/* Background image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${HERO_BG})` }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.75) 50%, var(--background) 100%)" }}
-        />
+      {/* ── HERO ── */}
+      <section className="relative flex items-center justify-center overflow-hidden grid-bg"
+        style={{ minHeight: "100vh", paddingTop: "64px" }}>
+        {/* BG */}
+        <div className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{ backgroundImage: `url(${HERO_BG})` }} />
+        <div className="absolute inset-0"
+          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 40%, rgba(16,185,129,0.08) 0%, transparent 70%), linear-gradient(to bottom, rgba(8,12,16,0.3) 0%, rgba(8,12,16,0.95) 100%)" }} />
 
-        {/* Hero content */}
-        <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          {/* Badge */}
-          <div
-            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium mb-6"
-            style={{
-              background: "oklch(0.696 0.17 162.48 / 15%)",
-              border: "1px solid oklch(0.696 0.17 162.48 / 30%)",
-              color: "var(--color-emerald)",
-            }}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            AI 기반 블로그 완전 자동화
+        {/* 장식 원 */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-10 anim-float"
+          style={{ background: "radial-gradient(circle, #10b981, transparent)", filter: "blur(60px)", animationDelay: "0s" }} />
+        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full opacity-8 anim-float"
+          style={{ background: "radial-gradient(circle, #6366f1, transparent)", filter: "blur(80px)", animationDelay: "2s" }} />
+
+        <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
+          <div className="anim-fadeup inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold mb-8 tracking-widest uppercase"
+            style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#10b981" }}>
+            <Sparkles className="w-3 h-3" /> AI 기반 블로그 완전 자동화 플랫폼
           </div>
 
-          <h1
-            className="text-5xl lg:text-7xl font-black mb-6 leading-tight text-white"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.03em" }}
-          >
-            블로그 수익을
-            <br />
-            <span className="gradient-text">자동으로 극대화</span>
+          <h1 className="anim-fadeup-1 font-black mb-6 leading-tight text-white"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(2.5rem, 7vw, 5rem)", letterSpacing: "-0.04em" }}>
+            블로그 수익을<br />
+            <span className="text-gradient">자동으로 극대화</span>
           </h1>
 
-          <p className="text-lg lg:text-xl mb-10 max-w-2xl mx-auto text-white/80">
-            키워드 수집부터 콘텐츠 작성, 이미지 생성, 자동 배포까지
-            <br className="hidden sm:block" />
+          <p className="anim-fadeup-2 mb-10 max-w-2xl mx-auto leading-relaxed"
+            style={{ fontSize: "clamp(1rem, 2vw, 1.2rem)", color: "rgba(255,255,255,0.6)" }}>
+            키워드 수집부터 콘텐츠 작성, 이미지 생성, 자동 배포까지<br className="hidden sm:block" />
             블로그 운영의 모든 과정을 AI가 완전 자동화합니다
           </p>
 
-          <div className="flex flex-row gap-3 justify-center">
-            <Button
-              size="lg"
-              className="gap-2 text-base px-6 py-5 glow-emerald"
-              style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap" }}
-              onClick={() => navigate("/signup")}
-            >
-              <Bot className="w-5 h-5" />
-              무료로 시작하기
+          <div className="anim-fadeup-3 flex flex-row gap-3 justify-center flex-wrap">
+            <Button size="lg" className="btn-shine gap-2 text-base px-8 py-6 anim-glow"
+              style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white", border: "none", whiteSpace: "nowrap" }}
+              onClick={() => navigate("/signup")}>
+              무료로 시작하기 <ArrowRight className="w-5 h-5" />
             </Button>
-            <Button
-              size="lg"
-              className="gap-2 text-base px-6 py-5"
-              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}
-              onClick={() => navigate("/login")}
-            >
-              <BarChart3 className="w-5 h-5" />
-              로그인
+            <Button size="lg" variant="outline" className="btn-shine gap-2 text-base px-8 py-6"
+              style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.15)", color: "white", whiteSpace: "nowrap" }}
+              onClick={() => {
+                localStorage.setItem("guest_mode", "true");
+                toast.success("👀 둘러보기 모드입니다!", { duration: 3000 });
+                navigate("/dashboard");
+              }}>
+              먼저 둘러보기
             </Button>
           </div>
 
-          {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-12">
-            {[
-              { text: "애드센스 최적화 키워드", ok: true },
-              { text: "애드포스트 최적화 키워드", ok: true },
-              { text: "워드프레스 자동 배포", ok: true },
-              { text: "커스텀 사이트 Webhook 배포", ok: true },
-              { text: "네이버 블로그 원클릭 복사", ok: true },
-              { text: "8개국 언어 지원", ok: true },
-            ].map((item) => (
-              <div key={item.text} className="flex items-center gap-1.5 text-sm"
-                style={{ color: "rgba(255,255,255,0.8)" }}>
-                <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                {item.text}
+          {/* STATS */}
+          <div className="anim-fadeup-4 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-16 max-w-3xl mx-auto">
+            {STATS.map((s) => (
+              <div key={s.label} className="stat-card rounded-2xl p-4 text-center"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div className="text-2xl font-black mb-1" style={{ color: s.color, fontFamily: "'Space Grotesk', sans-serif" }}>{s.value}</div>
+                <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{s.label}</div>
               </div>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* Stats Section */}
-      <section className="py-16 px-6" style={{ background: "var(--card)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
-        <div className="max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div
-                className="text-3xl lg:text-4xl font-black mb-1 gradient-text"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                {stat.value}
-              </div>
-              <div className="text-sm" style={{ color: "var(--muted-foreground)" }}>{stat.label}</div>
-            </div>
-          ))}
+        {/* 스크롤 힌트 */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+          <div className="w-5 h-8 rounded-full border flex items-start justify-center pt-1.5"
+            style={{ borderColor: "rgba(255,255,255,0.15)" }}>
+            <div className="w-1 h-2 rounded-full" style={{ background: "#10b981", animation: "float 2s ease-in-out infinite" }} />
+          </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-24 px-6">
+      {/* ── FEATURES ── */}
+      <section className="py-24 px-6" style={{ background: "#080c10" }}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2
-              className="text-3xl lg:text-5xl font-black mb-4 text-foreground"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              완전 자동화 파이프라인
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "#10b981" }}>FEATURES</p>
+            <h2 className="font-black text-white mb-4"
+              style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", letterSpacing: "-0.03em" }}>
+              블로그 자동화의 모든 것
             </h2>
-            <p style={{ color: "var(--muted-foreground)" }} className="text-lg max-w-2xl mx-auto">
-              수동 작업 없이 수익형 블로그를 운영하는 4단계 자동화 시스템
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {FEATURES.map((feature, idx) => (
-              <div
-                key={feature.title}
-                className="feature-card rounded-2xl overflow-hidden"
-                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-              >
-                {/* Feature image */}
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={feature.img}
-                    alt={feature.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div
-                    className="absolute inset-0"
-                    style={{ background: "linear-gradient(to top, var(--card) 0%, transparent 60%)" }}
-                  />
-                  <div
-                    className="absolute top-4 left-4 w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{ background: `${feature.color}20`, border: `1px solid ${feature.color}40` }}
-                  >
-                    <feature.icon className="w-5 h-5" style={{ color: feature.color }} />
-                  </div>
-                  <div
-                    className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                    style={{ background: feature.color }}
-                  >
-                    {idx + 1}
-                  </div>
-                </div>
-
-                {/* Feature content */}
-                <div className="p-6">
-                  <h3
-                    className="text-xl font-bold mb-2 text-foreground"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-                    {feature.desc}
-                  </p>
-                  <button
-                    className="mt-4 flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
-                    style={{ color: feature.color }}
-                    onClick={() => navigate("/dashboard")}
-                  >
-                    자세히 보기 <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 수익화 전략 섹션 */}
-      <section className="py-20 px-6" style={{ background: "var(--card)", borderTop: "1px solid var(--border)" }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-black mb-4 text-foreground"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              수익화 전략
-            </h2>
-            <p style={{ color: "var(--muted-foreground)" }}>
-              네이버 검색광고 API 기반으로 고수익 키워드를 자동 선별합니다
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "1.05rem" }}>
+              복잡한 설정 없이 바로 시작하는 완전 자동화 파이프라인
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Google AdSense */}
-            <div className="rounded-2xl p-6 feature-card"
-              style={{ background: "var(--background)", border: "2px solid #4285F440" }}>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black text-white"
-                  style={{ background: "#4285F4" }}>G</div>
-                <div>
-                  <div className="font-bold text-foreground">Google AdSense</div>
-                  <div className="text-xs px-2 py-0.5 rounded-full inline-block mt-0.5 font-semibold"
-                    style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-                    CPC 최적화 키워드 수집
+            {FEATURES.map((f, i) => (
+              <div key={f.title} className="feature-hover rounded-3xl overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", animationDelay: `${i * 0.1}s` }}>
+                <div className="relative h-52 overflow-hidden">
+                  <img src={f.img} alt={f.title} className="w-full h-full object-cover" style={{ opacity: 0.7 }} />
+                  <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, transparent 30%, rgba(8,12,16,0.95) 100%)` }} />
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                      style={{ background: `${f.color}20`, border: `1px solid ${f.color}40` }}>
+                      <f.icon className="w-4 h-4" style={{ color: f.color }} />
+                    </div>
+                    <span className="text-xs font-bold" style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Space Grotesk', sans-serif" }}>{f.num}</span>
                   </div>
                 </div>
-              </div>
-              <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
-                CPC(클릭당 단가)가 높은 키워드를 자동 선별해 애드센스 수익을 극대화합니다
-              </p>
-              <div className="space-y-2">
-                {[
-                  "클릭당 단가(CPC) 높은 키워드 자동 선별",
-                  "글로벌 트래픽 유입 최적화",
-                  "워드프레스·커스텀사이트에 자동 발행",
-                ].map(f => (
-                  <div key={f} className="flex items-center gap-2 text-sm text-foreground">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "#4285F4" }} />
-                    {f}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Naver AdPost */}
-            <div className="rounded-2xl p-6 feature-card"
-              style={{ background: "var(--background)", border: "2px solid #03C75A40" }}>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black text-white"
-                  style={{ background: "#03C75A" }}>N</div>
-                <div>
-                  <div className="font-bold text-foreground">Naver AdPost</div>
-                  <div className="text-xs px-2 py-0.5 rounded-full inline-block mt-0.5 font-semibold"
-                    style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-                    CPM 최적화 키워드 수집
-                  </div>
+                <div className="p-6">
+                  <h3 className="font-bold text-white text-lg mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{f.title}</h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.5)" }}>{f.desc}</p>
                 </div>
               </div>
-              <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
-                네이버 검색광고 API로 조회수·클릭량 높은 키워드를 수집해 애드포스트 수익을 높입니다
-              </p>
-              <div className="space-y-2">
-                {[
-                  "네이버 검색광고 API 기반 키워드 수집",
-                  "국내 트래픽 최적화 키워드 자동 추천",
-                  "네이버 블로그 원클릭 복사 배포",
-                ].map(f => (
-                  <div key={f} className="flex items-center gap-2 text-sm text-foreground">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "#03C75A" }} />
-                    {f}
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 배포 플랫폼 섹션 */}
-      <section className="py-20 px-6" style={{ background: "var(--background)", borderTop: "1px solid var(--border)" }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-black mb-4 text-foreground"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              멀티 플랫폼 배포
+      {/* ── PLATFORMS ── */}
+      <section className="py-24 px-6" style={{ background: "rgba(255,255,255,0.01)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "#6366f1" }}>PLATFORMS</p>
+            <h2 className="font-black text-white mb-4"
+              style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", letterSpacing: "-0.03em" }}>
+              모든 플랫폼에 자동 배포
             </h2>
-            <p style={{ color: "var(--muted-foreground)" }}>
-              글 한 편으로 여러 플랫폼에 동시 배포해 수익을 극대화하세요
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-
-            {/* 워드프레스 */}
-            <div className="rounded-2xl p-6 feature-card relative overflow-hidden"
-              style={{ background: "var(--card)", border: "2px solid oklch(0.696 0.17 162.48/50%)" }}>
-              <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10"
-                style={{ background: "var(--color-emerald)" }} />
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-white text-sm"
-                  style={{ background: "#21759B" }}>WP</div>
-                <div>
-                  <div className="font-bold text-foreground">WordPress</div>
-                  <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block"
-                    style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-                    ⚡ 완전 자동 발행
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-                REST API 연동으로 글·이미지·태그·카테고리까지 클릭 한 번에 자동 발행
-              </p>
-              <div className="space-y-1.5">
-                {["즉시 발행 / 예약 발행", "이미지 자동 첨부", "해시태그 자동 등록"].map(f => (
-                  <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "var(--foreground)" }}>
-                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-emerald)" }} />
-                    {f}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 커스텀 웹사이트 */}
-            <div className="rounded-2xl p-6 feature-card relative overflow-hidden"
-              style={{ background: "var(--card)", border: "2px solid oklch(0.696 0.17 162.48/50%)" }}>
-              <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10"
-                style={{ background: "oklch(0.6 0.15 220)" }} />
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-white text-sm"
-                  style={{ background: "oklch(0.65 0.28 350)" }}>C</div>
-                <div>
-                  <div className="font-bold text-foreground">커스텀 사이트</div>
-                  <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block"
-                    style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-                    ⚡ Webhook 자동 발행
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-                직접 만든 사이트나 어떤 CMS든 Webhook URL만 등록하면 자동으로 글이 전송됩니다
-              </p>
-              <div className="space-y-1.5">
-                {["모든 CMS·플랫폼 호환", "인증키 보안 지원", "JSON 데이터 자동 전송"].map(f => (
-                  <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "var(--foreground)" }}>
-                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-emerald)" }} />
-                    {f}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 네이버 블로그 */}
-            <div className="rounded-2xl p-6 feature-card relative overflow-hidden"
-              style={{ background: "var(--card)", border: "2px solid oklch(0.769 0.188 70.08/50%)" }}>
-              <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-10"
-                style={{ background: "var(--color-amber-brand)" }} />
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-white text-sm"
-                  style={{ background: "#03C75A" }}>N</div>
-                <div>
-                  <div className="font-bold text-foreground">네이버 블로그</div>
-                  <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block"
-                    style={{ background: "oklch(0.769 0.188 70.08/20%)", color: "var(--color-amber-brand)" }}>
-                    📋 원클릭 복사 발행
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-                네이버 정책상 자동 발행은 불가하지만, 버튼 하나로 글·이미지·해시태그를 복사해 바로 붙여넣기
-              </p>
-              <div className="space-y-1.5">
-                {["마크다운 → 네이버 형식 자동 변환", "해시태그 포함 복사", "이미지 배치 안내 포함"].map(f => (
-                  <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "var(--foreground)" }}>
-                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-amber-brand)" }} />
-                    {f}
-                  </div>
-                ))}
-              </div>
-            </div>
-
           </div>
 
-          {/* 추가 예정 */}
-          <div className="mt-6 rounded-2xl p-5 text-center"
-            style={{ background: "var(--card)", border: "1px dashed var(--border)" }}>
-            <p className="text-sm font-semibold text-foreground mb-1">🚀 곧 추가 예정</p>
-            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-              티스토리 자동 배포 · 구글 Search Console 색인 요청 · 텔레그램 발행 알림
-            </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {/* WordPress */}
+            <div className="platform-card rounded-2xl p-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white mb-4 text-sm"
+                style={{ background: "#21759B" }}>WP</div>
+              <div className="font-bold text-white mb-1">WordPress</div>
+              <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block mb-3"
+                style={{ background: "rgba(16,185,129,0.15)", color: "#10b981" }}>⚡ 자동 발행</div>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+                WordPress REST API로 글·이미지·카테고리·태그를 완전 자동으로 발행
+              </p>
+            </div>
+
+            {/* Blogger */}
+            <div className="platform-card rounded-2xl p-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white mb-4 text-sm"
+                style={{ background: "#FF5722" }}>B</div>
+              <div className="font-bold text-white mb-1">블로거 (Blogger)</div>
+              <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block mb-3"
+                style={{ background: "rgba(16,185,129,0.15)", color: "#10b981" }}>⚡ 자동 발행</div>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+                구글 블로거 API 연동으로 애드센스 최적화 글 자동 발행
+              </p>
+            </div>
+
+            {/* Medium */}
+            <div className="platform-card rounded-2xl p-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white mb-4 text-sm"
+                style={{ background: "#333" }}>M</div>
+              <div className="font-bold text-white mb-1">미디엄 (Medium)</div>
+              <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block mb-3"
+                style={{ background: "rgba(16,185,129,0.15)", color: "#10b981" }}>⚡ 자동 발행</div>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+                영문 콘텐츠를 미디엄에 자동 발행해 글로벌 트래픽 확보
+              </p>
+            </div>
+
+            {/* Custom */}
+            <div className="platform-card rounded-2xl p-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white mb-4 text-sm"
+                style={{ background: "oklch(0.65 0.28 350)" }}>C</div>
+              <div className="font-bold text-white mb-1">커스텀 사이트</div>
+              <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block mb-3"
+                style={{ background: "rgba(16,185,129,0.15)", color: "#10b981" }}>⚡ Webhook 자동 발행</div>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+                어떤 CMS든 Webhook URL만 등록하면 자동으로 글이 전송됩니다
+              </p>
+            </div>
+
+            {/* Naver */}
+            <div className="platform-card rounded-2xl p-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white mb-4 text-sm"
+                style={{ background: "#03C75A" }}>N</div>
+              <div className="font-bold text-white mb-1">네이버 블로그</div>
+              <div className="text-xs px-2 py-0.5 rounded-full font-bold inline-block mb-3"
+                style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>📋 원클릭 복사</div>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+                버튼 하나로 글·이미지·해시태그를 복사해 바로 붙여넣기
+              </p>
+            </div>
+
+            {/* Coming Soon */}
+            <div className="rounded-2xl p-6 text-center" style={{ background: "rgba(255,255,255,0.01)", border: "1px dashed rgba(255,255,255,0.1)" }}>
+              <div className="text-3xl mb-3">🚀</div>
+              <div className="font-bold text-white mb-2 text-sm">곧 추가 예정</div>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                구글 Search Console 색인 요청<br />텔레그램 발행 알림
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Language Support Section */}
-      <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto text-center">
-          <Globe className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--color-emerald)" }} />
-          <h2
-            className="text-3xl lg:text-4xl font-black mb-4 text-foreground"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            8개국 언어 자동 번역
+      {/* ── LANGUAGE ── */}
+      <section className="py-24 px-6" style={{ background: "#080c10" }}>
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "#ec4899" }}>MULTILINGUAL</p>
+          <h2 className="font-black text-white mb-3"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", letterSpacing: "-0.03em" }}>
+            한국어 · 영어로 동시 배포
           </h2>
-          <p className="text-lg mb-10" style={{ color: "var(--muted-foreground)" }}>
-            언어를 선택하면 모든 콘텐츠가 해당 국가의 언어로 자동 변환됩니다
+          <p className="mb-10" style={{ color: "rgba(255,255,255,0.45)", fontSize: "1rem" }}>
+            언어를 선택하면 콘텐츠가 자동으로 해당 언어로 생성됩니다
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            {[
-              { flag: "🇰🇷", lang: "한국어", code: "ko" },
-              { flag: "🇺🇸", lang: "English", code: "en" },
-              { flag: "🇯🇵", lang: "日本語", code: "ja" },
-              { flag: "🇨🇳", lang: "中文", code: "zh" },
-              { flag: "🇪🇸", lang: "Español", code: "es" },
-              { flag: "🇫🇷", lang: "Français", code: "fr" },
-              { flag: "🇩🇪", lang: "Deutsch", code: "de" },
-              { flag: "🇧🇷", lang: "Português", code: "pt" },
-            ].map((item) => (
-              <button
-                key={item.lang}
-                className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-medium text-foreground feature-card transition-all active:scale-95"
-                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+          <div className="flex flex-wrap justify-center gap-3">
+            {LANGUAGES.map((item) => (
+              <button key={item.lang} className="lang-btn flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                 onClick={() => {
                   localStorage.setItem("content_language", item.code);
                   toast.success(`✅ 콘텐츠 언어가 ${item.lang}(으)로 설정됐어요! 로그인 후 적용됩니다`, { duration: 3000 });
-                }}
-              >
+                }}>
                 <span className="text-xl">{item.flag}</span>
                 {item.lang}
               </button>
             ))}
           </div>
-          <p className="text-sm mt-6" style={{ color: "var(--muted-foreground)" }}>
+          <p className="text-xs mt-6" style={{ color: "rgba(255,255,255,0.3)" }}>
             클릭하면 언어가 설정됩니다 · 로그인 후 콘텐츠 생성 시 자동 적용
           </p>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section
-        className="py-24 px-6 text-center relative overflow-hidden"
-        style={{ background: "var(--card)", borderTop: "1px solid var(--border)" }}
-      >
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: `url(${HERO_BG})`, backgroundSize: "cover", backgroundPosition: "center" }}
-        />
+      {/* ── CTA ── */}
+      <section className="py-28 px-6 text-center relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(99,102,241,0.08) 100%)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: `url(${HERO_BG})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #10b981, transparent)", filter: "blur(80px)" }} />
+
         <div className="relative z-10 max-w-2xl mx-auto">
-          <h2
-            className="text-4xl lg:text-5xl font-black mb-6 text-foreground"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            지금 바로 시작하세요
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold mb-6"
+            style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#10b981" }}>
+            <Zap className="w-3 h-3" /> 지금 바로 시작하세요
+          </div>
+          <h2 className="font-black text-white mb-5"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(2rem, 5vw, 3.5rem)", letterSpacing: "-0.04em" }}>
+            블로그 자동화로<br />수익을 극대화하세요
           </h2>
-          <p className="text-lg mb-8" style={{ color: "var(--muted-foreground)" }}>
-            블로그 자동화로 월 수익을 극대화하고 시간을 절약하세요
+          <p className="mb-10" style={{ color: "rgba(255,255,255,0.5)", fontSize: "1.05rem" }}>
+            복잡한 설정 없이 5분 안에 시작할 수 있습니다
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="gap-2 text-base px-10 py-6 glow-emerald"
-              style={{ background: "var(--color-emerald)", color: "white" }}
-              onClick={() => navigate("/dashboard")}
-            >
+            <Button size="lg" className="btn-shine gap-2 text-base px-10 py-6"
+              style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white", border: "none", boxShadow: "0 8px 32px rgba(16,185,129,0.4)" }}
+              onClick={() => navigate("/dashboard")}>
               대시보드 시작하기 <ArrowRight className="w-5 h-5" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="gap-2 text-base px-10 py-6"
+            <Button size="lg" variant="outline" className="btn-shine gap-2 text-base px-10 py-6"
+              style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.15)", color: "white" }}
               onClick={() => {
                 toast.loading("ZIP 파일 준비 중...", { id: "landing-zip" });
                 setTimeout(() => {
@@ -596,8 +405,7 @@ export default function LandingPage() {
                   URL.revokeObjectURL(url);
                   toast.success("다운로드가 시작되었습니다!", { id: "landing-zip" });
                 }, 1000);
-              }}
-            >
+              }}>
               <Download className="w-5 h-5" />
               ZIP 다운로드
             </Button>
@@ -605,21 +413,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer
-        className="py-8 px-6 text-center text-sm"
-        style={{ color: "var(--muted-foreground)", borderTop: "1px solid var(--border)" }}
-      >
+      {/* ── FOOTER ── */}
+      <footer className="py-8 px-6 text-center text-sm"
+        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center justify-center gap-3 mb-3">
-          <div
-            className="w-6 h-6 rounded-md flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, var(--color-emerald), var(--color-amber-brand))" }}
-          >
+          <div className="w-6 h-6 rounded-md flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #10b981, #f59e0b)" }}>
             <Bot className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold text-foreground">BlogAuto Pro</span>
+          <span className="font-semibold text-white">BlogAuto Pro</span>
         </div>
-        <p>© 2026 BlogAuto Pro. All rights reserved. | 블로그 자동화 플랫폼</p>
+        <p style={{ color: "rgba(255,255,255,0.3)" }}>© 2026 BlogAuto Pro. All rights reserved. | 블로그 자동화 플랫폼</p>
       </footer>
     </div>
   );
