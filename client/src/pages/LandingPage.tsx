@@ -62,36 +62,120 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen" style={{ background: "#080c10", fontFamily: "'Pretendard Variable', sans-serif" }}>
       <style>{`
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-        @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.5);opacity:0} }
-        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes spin-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes glow-pulse { 0%,100%{box-shadow:0 0 20px #10b98140} 50%{box-shadow:0 0 60px #10b98180} }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes glow-pulse { 0%,100%{box-shadow:0 0 20px #10b98150,0 0 40px #10b98120} 50%{box-shadow:0 0 60px #10b98190,0 0 100px #10b98140} }
+        @keyframes neon-flicker { 0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:0.4} 94%{opacity:1} 96%{opacity:0.6} 97%{opacity:1} }
+        @keyframes orbit { from{transform:rotate(0deg) translateX(120px) rotate(0deg)} to{transform:rotate(360deg) translateX(120px) rotate(-360deg)} }
+        @keyframes orbit2 { from{transform:rotate(120deg) translateX(180px) rotate(-120deg)} to{transform:rotate(480deg) translateX(180px) rotate(-480deg)} }
+        @keyframes orbit3 { from{transform:rotate(240deg) translateX(140px) rotate(-240deg)} to{transform:rotate(600deg) translateX(140px) rotate(-600deg)} }
+        @keyframes particle { 0%{transform:translateY(0) translateX(0);opacity:1} 100%{transform:translateY(-120px) translateX(var(--dx));opacity:0} }
+        @keyframes scanline { 0%{top:-10%} 100%{top:110%} }
+        @keyframes counter { from{opacity:0;transform:scale(0.5)} to{opacity:1;transform:scale(1)} }
+        @keyframes tilt3d { 0%,100%{transform:perspective(800px) rotateX(0deg) rotateY(0deg)} 25%{transform:perspective(800px) rotateX(3deg) rotateY(-3deg)} 75%{transform:perspective(800px) rotateX(-3deg) rotateY(3deg)} }
+        @keyframes matrix-rain { 0%{transform:translateY(-100%);opacity:1} 100%{transform:translateY(1000%);opacity:0} }
+        @keyframes rgb-shift { 0%{filter:hue-rotate(0deg)} 100%{filter:hue-rotate(360deg)} }
+        @keyframes bounce-in { 0%{transform:scale(0) rotate(-10deg);opacity:0} 60%{transform:scale(1.1) rotate(2deg)} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+        @keyframes slide-right { from{transform:translateX(-100%);opacity:0} to{transform:translateX(0);opacity:1} }
+        @keyframes morph { 0%,100%{border-radius:60% 40% 30% 70%/60% 30% 70% 40%} 50%{border-radius:30% 60% 70% 40%/50% 60% 30% 60%} }
+
         .anim-float { animation: float 6s ease-in-out infinite; }
         .anim-fadeup { animation: fadeUp 0.8s ease both; }
-        .anim-fadeup-1 { animation: fadeUp 0.8s 0.1s ease both; }
-        .anim-fadeup-2 { animation: fadeUp 0.8s 0.2s ease both; }
-        .anim-fadeup-3 { animation: fadeUp 0.8s 0.3s ease both; }
-        .anim-fadeup-4 { animation: fadeUp 0.8s 0.4s ease both; }
-        .anim-fadeup-5 { animation: fadeUp 0.8s 0.5s ease both; }
+        .anim-fadeup-1 { animation: fadeUp 0.8s 0.15s ease both; }
+        .anim-fadeup-2 { animation: fadeUp 0.8s 0.3s ease both; }
+        .anim-fadeup-3 { animation: fadeUp 0.8s 0.45s ease both; }
+        .anim-fadeup-4 { animation: fadeUp 0.8s 0.6s ease both; }
         .anim-glow { animation: glow-pulse 3s ease-in-out infinite; }
-        .feature-hover { transition: all 0.4s cubic-bezier(0.23,1,0.32,1); }
-        .feature-hover:hover { transform: translateY(-6px); }
-        .btn-shine { position:relative; overflow:hidden; }
-        .btn-shine::before { content:''; position:absolute; top:0; left:-100%; width:60%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent); transition:0.6s; }
-        .btn-shine:hover::before { left:150%; }
-        .lang-btn { transition: all 0.3s cubic-bezier(0.23,1,0.32,1); }
-        .lang-btn:hover { transform: translateY(-4px) scale(1.05); }
-        .stat-card { transition: all 0.3s ease; }
-        .stat-card:hover { transform: translateY(-4px); }
+        .anim-neon { animation: neon-flicker 8s ease-in-out infinite; }
+        .anim-tilt { animation: tilt3d 8s ease-in-out infinite; }
+        .anim-morph { animation: morph 8s ease-in-out infinite; }
+        .anim-rgb { animation: rgb-shift 10s linear infinite; }
+
         .nav-blur { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-        .grid-bg { background-image: linear-gradient(rgba(16,185,129,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(16,185,129,0.04) 1px,transparent 1px); background-size: 60px 60px; }
-        .text-gradient { background: linear-gradient(135deg, #10b981, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .text-gradient-cool { background: linear-gradient(135deg, #6366f1, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .border-glow { border: 1px solid rgba(16,185,129,0.2); box-shadow: 0 0 30px rgba(16,185,129,0.05) inset; }
-        .platform-card { transition: all 0.35s cubic-bezier(0.23,1,0.32,1); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
-        .platform-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(16,185,129,0.3); transform: translateY(-4px); }
+
+        .grid-bg {
+          background-image:
+            linear-gradient(rgba(16,185,129,0.05) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(16,185,129,0.05) 1px,transparent 1px);
+          background-size: 50px 50px;
+        }
+
+        .text-gradient { background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #f59e0b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .text-gradient-hot { background: linear-gradient(135deg, #10b981, #6366f1, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; background-size: 200%; animation: rgb-shift 5s linear infinite; }
+
+        .btn-shine { position:relative; overflow:hidden; cursor:pointer; }
+        .btn-shine::before { content:''; position:absolute; top:0; left:-100%; width:50%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent); transition:0.5s; }
+        .btn-shine:hover::before { left:150%; }
+        .btn-shine:hover { transform: translateY(-2px); }
+        .btn-shine:active { transform: scale(0.97); }
+
+        .feature-card-3d {
+          transition: all 0.4s cubic-bezier(0.23,1,0.32,1);
+          transform-style: preserve-3d;
+          cursor: pointer;
+        }
+        .feature-card-3d:hover {
+          transform: translateY(-10px) rotateX(4deg) rotateY(-4deg);
+          box-shadow: 0 30px 60px rgba(16,185,129,0.15), 0 0 0 1px rgba(16,185,129,0.2);
+        }
+
+        .stat-card {
+          transition: all 0.4s cubic-bezier(0.23,1,0.32,1);
+          position: relative;
+          overflow: hidden;
+        }
+        .stat-card::after {
+          content:'';
+          position:absolute;
+          inset:0;
+          background:linear-gradient(135deg,transparent 60%,rgba(16,185,129,0.08));
+          opacity:0;
+          transition:0.3s;
+        }
+        .stat-card:hover { transform: translateY(-8px) scale(1.03); }
+        .stat-card:hover::after { opacity:1; }
+
+        .lang-btn {
+          transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+          position: relative;
+          overflow: hidden;
+        }
+        .lang-btn:hover { transform: translateY(-6px) scale(1.08); box-shadow: 0 12px 30px rgba(16,185,129,0.25); border-color: rgba(16,185,129,0.5) !important; }
+        .lang-btn:active { transform: scale(0.95); }
+
+        .platform-card {
+          transition: all 0.35s cubic-bezier(0.23,1,0.32,1);
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.06);
+          position: relative;
+          overflow: hidden;
+        }
+        .platform-card::before {
+          content:'';
+          position:absolute;
+          top:-50%;
+          left:-50%;
+          width:200%;
+          height:200%;
+          background:conic-gradient(transparent,rgba(16,185,129,0.05),transparent 30%);
+          animation:rgb-shift 8s linear infinite;
+          opacity:0;
+          transition:0.4s;
+        }
+        .platform-card:hover { transform: translateY(-8px); border-color: rgba(16,185,129,0.3); box-shadow: 0 20px 50px rgba(16,185,129,0.1); }
+        .platform-card:hover::before { opacity:1; }
+
+        .scanline {
+          position:absolute;
+          left:0;right:0;height:2px;
+          background:linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent);
+          animation:scanline 4s linear infinite;
+          pointer-events:none;
+        }
+
+        .orbit-dot-1 { position:absolute; width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 10px #10b981; animation:orbit 6s linear infinite; }
+        .orbit-dot-2 { position:absolute; width:6px; height:6px; border-radius:50%; background:#6366f1; box-shadow:0 0 8px #6366f1; animation:orbit2 9s linear infinite; }
+        .orbit-dot-3 { position:absolute; width:5px; height:5px; border-radius:50%; background:#f59e0b; box-shadow:0 0 8px #f59e0b; animation:orbit3 7s linear infinite; }
       `}</style>
 
       {/* ── NAV ── */}
@@ -103,7 +187,7 @@ export default function LandingPage() {
             <Bot className="w-5 h-5 text-white" />
           </div>
           <span className="font-bold text-lg text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            BlogAuto <span className="text-gradient">Pro</span>
+            BlogAuto <span className="text-gradient-hot">Pro</span>
           </span>
         </div>
 
@@ -141,11 +225,31 @@ export default function LandingPage() {
         <div className="absolute inset-0"
           style={{ background: "radial-gradient(ellipse 80% 60% at 50% 40%, rgba(16,185,129,0.08) 0%, transparent 70%), linear-gradient(to bottom, rgba(8,12,16,0.3) 0%, rgba(8,12,16,0.95) 100%)" }} />
 
-        {/* 장식 원 */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-10 anim-float"
-          style={{ background: "radial-gradient(circle, #10b981, transparent)", filter: "blur(60px)", animationDelay: "0s" }} />
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full opacity-8 anim-float"
-          style={{ background: "radial-gradient(circle, #6366f1, transparent)", filter: "blur(80px)", animationDelay: "2s" }} />
+        {/* 배경 글로우 */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-15 anim-float"
+          style={{ background: "radial-gradient(circle, #10b981, transparent)", filter: "blur(80px)" }} />
+        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full anim-float"
+          style={{ background: "radial-gradient(circle, #6366f1, transparent)", filter: "blur(90px)", opacity: 0.08, animationDelay: "2s" }} />
+        <div className="absolute top-1/2 left-1/2 w-72 h-72 rounded-full anim-float"
+          style={{ background: "radial-gradient(circle, #f59e0b, transparent)", filter: "blur(100px)", opacity: 0.06, animationDelay: "4s" }} />
+
+        {/* 오비팅 파티클 */}
+        <div className="absolute" style={{ top: "30%", left: "15%", width: 0, height: 0 }}>
+          <div className="orbit-dot-1" />
+        </div>
+        <div className="absolute" style={{ top: "60%", right: "15%", width: 0, height: 0 }}>
+          <div className="orbit-dot-2" />
+        </div>
+        <div className="absolute" style={{ top: "45%", left: "50%", width: 0, height: 0 }}>
+          <div className="orbit-dot-3" />
+        </div>
+
+        {/* 스캔라인 */}
+        <div className="scanline" />
+
+        {/* 모핑 블롭 */}
+        <div className="anim-morph absolute opacity-5"
+          style={{ width: 400, height: 400, top: "20%", right: "5%", background: "radial-gradient(circle, #10b981, #6366f1)", filter: "blur(40px)" }} />
 
         <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
           <div className="anim-fadeup inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold mb-8 tracking-widest uppercase"
@@ -219,7 +323,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {FEATURES.map((f, i) => (
-              <div key={f.title} className="feature-hover rounded-3xl overflow-hidden"
+              <div key={f.title} className="feature-card-3d rounded-3xl overflow-hidden"
                 style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", animationDelay: `${i * 0.1}s` }}>
                 <div className="relative h-52 overflow-hidden">
                   <img src={f.img} alt={f.title} className="w-full h-full object-cover" style={{ opacity: 0.7 }} />
