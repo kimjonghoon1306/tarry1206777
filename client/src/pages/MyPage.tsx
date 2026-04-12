@@ -34,10 +34,17 @@ import { toast } from "sonner";
 function getPlatformStatus() {
   return [
     {
-      name: "네이버 블로그",
-      color: "#03C75A",
-      logo: "N",
-      configured: !!(userGet(SETTINGS_KEYS.NAVER_BLOG_ID) && userGet(SETTINGS_KEYS.NAVER_BLOG_TOKEN)),
+      name: "블로거 (Blogger)",
+      color: "#FF5722",
+      logo: "B",
+      configured: !!(userGet("blogger_blog_id") || userGet("blogger_api_key")),
+      settingsPath: "/settings",
+    },
+    {
+      name: "미디엄 (Medium)",
+      color: "#333333",
+      logo: "M",
+      configured: !!userGet("medium_token"),
       settingsPath: "/settings",
     },
     {
@@ -283,7 +290,7 @@ export default function MyPage() {
           <div className="space-y-2">
             {[
               { label: "AI 및 API 설정", desc: "글/이미지 생성 AI와 API 키 관리", icon: Settings, path: "/settings" },
-              { label: "배포 플랫폼 설정", desc: "네이버 블로그, 웹사이트, WordPress 연결", icon: Globe, path: "/settings" },
+              { label: "배포 플랫폼 설정", desc: "블로거, 미디엄, WordPress, 커스텀 사이트 연결", icon: Globe, path: "/settings" },
               { label: "키워드 수집 시작", desc: "새 키워드 수집 파이프라인 실행", icon: Search, path: "/keywords" },
             ].map((item) => (
               <button
