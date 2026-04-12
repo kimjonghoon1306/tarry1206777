@@ -57,7 +57,7 @@ type ContentBlock = TextBlock | SingleImageBlock | ImagePairBlockType;
 
 type Platform = {
   id: string;
-  type: "naver" | "wordpress" | "custom";
+  type: "naver" | "wordpress" | "custom" | "blogger" | "medium";
   name: string;
 };
 
@@ -374,7 +374,8 @@ function PublishPanel({
   const platformBg = (type: string) => {
     if (type === "naver") return "#03C75A";
     if (type === "wordpress") return "#21759B";
-    if (type === "tistory") return "#FF6300";
+    if (type === "blogger") return "#FF5722";
+    if (type === "medium") return "#333333";
     return "oklch(0.65 0.28 350)";
   };
 
@@ -382,7 +383,23 @@ function PublishPanel({
 
   useEffect(() => {
     try {
-      // 1. 관리자 Webhook 섹션 카테고리
+      // platform_categories에서 선택된 플랫폼 카테고리 로드
+      const allCats = JSON.parse(localStorage.getItem("platform_categories") || "{}");
+      if (selectedPlatforms.length > 0) {
+        // 선택된 플랫폼들의 카테고리를 합쳐서 표시
+        const merged: string[] = [];
+        selectedPlatforms.forEach(pid => {
+          const platform = platforms.find(p => p.id === pid);
+          if (!platform) return;
+          const key = platform.type === "custom"
+            ? pid  // custom_0, custom_1 ...
+            : platform.type;
+          const cats = allCats[key] || [];
+          cats.forEach((c: string) => { if (!merged.includes(c)) merged.push(c); });
+        });
+        if (merged.length > 0) { setCategories(merged); return; }
+      }
+      // 선택된 플랫폼 없거나 카테고리 없을 때 기존 방식 fallback
       const adminCats =
         localStorage.getItem("admin_webhook_categories") ||
         localStorage.getItem("u:admin:webhook_categories") ||
@@ -391,27 +408,19 @@ function PublishPanel({
         setCategories(adminCats.split(",").map(c => c.trim()).filter(Boolean));
         return;
       }
-      // 2. 관리자 카테고리 탭 (blogauto_categories - JSON 배열)
       const catTab = localStorage.getItem("blogauto_categories");
       if (catTab) {
         const parsed = JSON.parse(catTab);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setCategories(parsed);
-          return;
-        }
-      }
-      // 3. 일반 유저 - platform_custom_list
-      const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
-      if (customList.length > 0 && customList[0].categories) {
-        setCategories(JSON.parse(customList[0].categories || "[]"));
+        if (Array.isArray(parsed) && parsed.length > 0) { setCategories(parsed); return; }
       }
     } catch {}
-  }, []);
+  }, [selectedPlatforms]);
 
   const platformLabel = (type: string) => {
     if (type === "naver") return "N";
     if (type === "wordpress") return "WP";
-    if (type === "tistory") return "T";
+    if (type === "blogger") return "B";
+    if (type === "medium") return "M";
     return "C";
   };
 
@@ -440,7 +449,12 @@ function PublishPanel({
                 size="sm"
                 variant="outline"
                 className="mt-2 text-xs"
-                onClick={() => (window.location.href = "/settings")}
+                onClick={() => {
+                  try {
+                    const u = JSON.parse(localStorage.getItem("ba_user") || "{}");
+                    window.location.href = u.role === "admin" ? "/superadmin" : "/settings";
+                  } catch { window.location.href = "/settings"; }
+                }}
               >
                 설정 이동
               </Button>
@@ -682,7 +696,16 @@ export default function DeploymentPage() {
   });
 
   const [platforms, setPlatforms] = useState<Platform[]>(() => {
-    const customList = (() => { try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; } })();
+    const customList = (() => {
+      try {
+        const admin = JSON.parse(localStorage.getItem("admin_custom_list") || "[]");
+        const platform = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
+        const merged = [...admin, ...platform].filter((e, i, arr) =>
+          arr.findIndex(x => x.webhook_url === e.webhook_url) === i
+        );
+        return merged;
+      } catch { return []; }
+    })();
     const stored = localStorage.getItem(DEPLOY_PLATFORMS_KEY);
     let base: Platform[] = [];
     if (stored) {
@@ -707,8 +730,10 @@ export default function DeploymentPage() {
     customList.forEach((e: any, idx: number) => {
       defaults.push({ id: `custom_${idx}`, type: "custom", name: e._name || e.custom_domain || `커스텀${idx + 1}` });
     });
-    if (userGet("tistory_access_token"))
-      defaults.push({ id: uid(), type: "tistory" as any, name: "티스토리" });
+    if (userGet("blogger_api_key") || userGet("blogger_blog_id"))
+      defaults.push({ id: uid(), type: "blogger", name: "블로거" });
+    if (userGet("medium_token"))
+      defaults.push({ id: uid(), type: "medium", name: "미디엄" });
     return defaults;
   });
 
@@ -1632,10 +1657,8 @@ export default function DeploymentPage() {
           // 네이버는 자동발행 불가 → 복사 방식으로 안내
           copyForNaver();
           toast.success("📋 네이버 블로그용 글이 복사됐어요! 네이버 블로그에서 붙여넣기하세요.", { duration: 5000 });
-        } else if (platform.type === "tistory") {
-          await publishToTistory(
-            publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null
-          );
+        } else if (platform.type === "blogger" || platform.type === "medium") {
+          await publishToWebhook(platformId);
         } else if (platform.type === "wordpress") {
           await publishToWordPress(
             publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null
