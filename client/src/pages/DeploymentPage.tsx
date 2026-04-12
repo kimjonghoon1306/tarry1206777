@@ -682,18 +682,31 @@ export default function DeploymentPage() {
   });
 
   const [platforms, setPlatforms] = useState<Platform[]>(() => {
+    const customList = (() => { try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; } })();
     const stored = localStorage.getItem(DEPLOY_PLATFORMS_KEY);
+    let base: Platform[] = [];
     if (stored) {
-      try { return JSON.parse(stored); } catch {}
+      try { base = JSON.parse(stored); } catch {}
     }
+    // custom 항목을 항상 customList 기준으로 재생성 (동기화)
+    const nonCustom = base.filter(p => p.type !== "custom");
+    const customPlatforms: Platform[] = customList.map((e: any, idx: number) => ({
+      id: `custom_${idx}`,
+      type: "custom" as const,
+      name: e._name || e.custom_domain || `커스텀${idx + 1}`,
+    }));
+    if (nonCustom.length > 0 || customPlatforms.length > 0) {
+      return [...nonCustom, ...customPlatforms];
+    }
+    // 완전 기본값
     const defaults: Platform[] = [];
     if (userGet("naver_blog_id"))
       defaults.push({ id: uid(), type: "naver", name: "네이버 블로그" });
     if (userGet("wp_url"))
       defaults.push({ id: uid(), type: "wordpress", name: "WordPress" });
-    if (userGet("webhook_url") ||
-       (JSON.parse(localStorage.getItem("platform_custom_list") || "[]").length > 0))
-      defaults.push({ id: uid(), type: "custom", name: "커스텀 사이트" });
+    customList.forEach((e: any, idx: number) => {
+      defaults.push({ id: `custom_${idx}`, type: "custom", name: e._name || e.custom_domain || `커스텀${idx + 1}` });
+    });
     if (userGet("tistory_access_token"))
       defaults.push({ id: uid(), type: "tistory" as any, name: "티스토리" });
     return defaults;
@@ -1489,16 +1502,29 @@ export default function DeploymentPage() {
     try {
       const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
       if (customList.length > 0) {
-        const platform = platforms.find(p => p.id === platformId);
-        const platformName = (platform?.name || "").replace(/^www\./, "");
-        const entry =
-          customList.find((e: any) => (e._name || "").replace(/^www\./, "") === platformName || (e.custom_domain || "").replace(/^www\./, "") === platformName) ||
-          customList.find((e: any) => e.webhook_url && platformName && e.webhook_url.includes(platformName)) ||
-          null;
-        if (entry) {
-          url = entry["webhook_url"] || "";
-          key = entry["webhook_auth_key"] || "";
-          authHeader = entry["webhook_auth_header"] || "Authorization";
+        // custom_0, custom_1 ... 형식의 id에서 인덱스 추출
+        const idxMatch = platformId.match(/^custom_(\d+)$/);
+        if (idxMatch) {
+          const idx = parseInt(idxMatch[1]);
+          const entry = customList[idx];
+          if (entry) {
+            url = entry["webhook_url"] || "";
+            key = entry["webhook_auth_key"] || "";
+            authHeader = entry["webhook_auth_header"] || "Authorization";
+          }
+        } else {
+          // 구형 id 호환: name으로 매핑
+          const platform = platforms.find(p => p.id === platformId);
+          const platformName = (platform?.name || "").replace(/^www\./, "");
+          const entry =
+            customList.find((e: any) => (e._name || "").replace(/^www\./, "") === platformName || (e.custom_domain || "").replace(/^www\./, "") === platformName) ||
+            customList.find((e: any) => e.webhook_url && platformName && e.webhook_url.includes(platformName)) ||
+            null;
+          if (entry) {
+            url = entry["webhook_url"] || "";
+            key = entry["webhook_auth_key"] || "";
+            authHeader = entry["webhook_auth_header"] || "Authorization";
+          }
         }
       }
     } catch {}
