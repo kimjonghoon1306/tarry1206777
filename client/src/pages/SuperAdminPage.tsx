@@ -556,7 +556,7 @@ function ApiKeyManager() {
       {/* 섹션별 키 입력 - 그룹별 분리 */}
       {[
         { groupKey: "ai",       groupLabel: "🤖 글 · 이미지 AI",  groupColor: "#10b981" },
-        { groupKey: "platform", groupLabel: "📡 배포 플랫폼",      groupColor: "#6366f1" },
+        { groupKey: "platform", groupLabel: "📡 배포 플랫폼 · 커스텀 사이트", groupColor: "#6366f1" },
         { groupKey: "keyword",  groupLabel: "🔍 키워드 · 기타",   groupColor: "#f59e0b" },
       ].map(({ groupKey, groupLabel, groupColor }) => (
         <div key={groupKey} className="space-y-2">
@@ -698,11 +698,9 @@ function ApiKeyManager() {
           </div>
         );
           })}
+          {groupKey === "platform" && <AdminCustomWebhookSection />}
         </div>
       ))}
-
-      {/* 커스텀 Webhook 섹션 - 여러 도메인 등록 */}
-      <AdminCustomWebhookSection />
 
       {/* 하단 저장 버튼 */}
       <button
