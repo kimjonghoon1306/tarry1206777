@@ -724,7 +724,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "var(--border)" }}>
             <h3 className="font-semibold text-foreground">최근 발행 글</h3>
             <button className="text-xs font-medium hover:opacity-80" style={{ color: "var(--color-emerald)" }}
-              onClick={() => navigate("/content")}>전체보기</button>
+              onClick={() => isGuestMode ? handleGuestBlock() : navigate("/content")}>전체보기</button>
           </div>
           {/* 동기화 상태 표시 */}
           {isLoggedIn && (
@@ -758,7 +758,7 @@ export default function Dashboard() {
                 })();
                 return (
                   <div key={post.id} className="flex items-center gap-4 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
-                    onClick={() => navigate("/deploy")}>
+                    onClick={() => isGuestMode ? handleGuestBlock() : navigate("/deploy")}>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-foreground truncate">{post.title}</div>
                       <div className="flex items-center gap-3 mt-1">
