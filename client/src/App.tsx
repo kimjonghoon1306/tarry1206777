@@ -62,8 +62,12 @@ function Router() {
 }
 
 function App() {
-  import("./lib/user-storage").then(({ syncAdminSettingsToLocal }) => {
+  import("./lib/user-storage").then(({ syncAdminSettingsToLocal, applyServerSettings }) => {
     syncAdminSettingsToLocal();
+    // 토큰 있으면 서버 설정 복원 (캐시 지워도 복원됨)
+    if (localStorage.getItem("ba_token")) {
+      applyServerSettings();
+    }
   });
 
   return (
@@ -71,7 +75,7 @@ function App() {
       <ThemeProvider defaultTheme="dark" switchable>
         <AuthProvider>
           <TooltipProvider>
-            <Toaster position="top-right" />
+            <Toaster />
             <Router />
           </TooltipProvider>
         </AuthProvider>
