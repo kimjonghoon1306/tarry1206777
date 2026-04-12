@@ -218,7 +218,11 @@ export default function Dashboard() {
     const fetchAll = async () => {
       // 발행 글 목록
       const postsRes = await apiCall("loadPosts");
-      if (postsRes.ok) setServerPosts(postsRes.posts || []);
+      if (postsRes.ok) {
+        setServerPosts(postsRes.posts || []);
+        // Layout 사이드바 발행 글 수 업데이트
+        localStorage.setItem("blogauto_post_count", String((postsRes.posts || []).length));
+      }
 
       // 통계
       const statsRes = await apiCall("loadStats");
@@ -419,18 +423,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-      <div className="p-4 sm:p-6 space-y-5 pb-10" style={{ position: "relative" }}>
-        {/* 게스트 모드 오버레이 - 콘텐츠 클릭 차단 */}
-        {isGuestMode && (
-          <div
-            onClick={handleGuestBlock}
-            style={{
-              position: "fixed", inset: 0, zIndex: 20,
-              cursor: "not-allowed",
-              background: "transparent",
-            }}
-          />
-        )}
+      <div className="p-4 sm:p-6 space-y-5 pb-10">
 
         {/* ── 게스트 둘러보기 배너 ── */}
         {isGuestMode && (
