@@ -4,7 +4,7 @@
  * Fixed sidebar (240px) + top header + main content area
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
