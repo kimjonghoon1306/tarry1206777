@@ -346,8 +346,8 @@ interface PublishPanelProps {
   setScheduleTime: React.Dispatch<React.SetStateAction<string>>;
   isPublishing: boolean;
   onPublish: () => void;
-  selectedCategory: string;
-  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
+  selectedCategories: Record<string, string>;
+  setSelectedCategories: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }
 
 function PublishPanel({
@@ -362,8 +362,8 @@ function PublishPanel({
   setScheduleTime,
   isPublishing,
   onPublish,
-  selectedCategory,
-  setSelectedCategory,
+  selectedCategories,
+  setSelectedCategories,
 }: PublishPanelProps) {
   function togglePlatform(id: string) {
     setSelectedPlatforms((prev) =>
@@ -499,24 +499,46 @@ function PublishPanel({
         </div>
       </div>
 
-      {/* 카테고리 선택 */}
-      <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
-          <span className="text-sm font-semibold text-foreground">카테고리 선택</span>
+      {/* 카테고리 선택 - 플랫폼별 개별 */}
+      {selectedPlatforms.length > 0 && (
+        <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
+            <span className="text-sm font-semibold text-foreground">카테고리 선택</span>
+          </div>
+          <div className="space-y-2">
+            {selectedPlatforms.map(pid => {
+              const platform = platforms.find(p => p.id === pid);
+              if (!platform) return null;
+              const allCats = (() => { try { return JSON.parse(localStorage.getItem("platform_categories") || "{}"); } catch { return {}; } })();
+              const key = platform.type === "custom" ? pid : platform.type;
+              const cats: string[] = allCats[key] || [];
+              return (
+                <div key={pid}>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded text-white text-xs font-black mr-1.5"
+                      style={{ background: platformBg(platform.type), fontSize: 9 }}>
+                      {platformLabel(platform.type)}
+                    </span>
+                    {platform.name}
+                  </label>
+                  <select
+                    className="w-full h-9 rounded-lg px-3 text-sm"
+                    style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                    value={selectedCategories[pid] || ""}
+                    onChange={e => setSelectedCategories(prev => ({ ...prev, [pid]: e.target.value }))}
+                  >
+                    <option value="">선택 안 함 (미분류)</option>
+                    {cats.map((cat, idx) => (
+                      <option key={idx} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <select
-          className="w-full h-10 rounded-lg px-3 text-sm"
-          style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-          value={selectedCategory}
-          onChange={e => setSelectedCategory(e.target.value)}
-        >
-          <option value="">선택 안 함 (미분류)</option>
-          {categories.map((cat, idx) => (
-            <option key={idx} value={cat}>{cat}</option>
-          ))}
-        </select>
-      </div>
+      )}
 
       {/* 발행 방식 */}
       <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -739,7 +761,7 @@ export default function DeploymentPage() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [publishMode, setPublishMode] = useState<"instant" | "scheduled">("instant");
   const [scheduleDate, setScheduleDate] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<Record<string, string>>({});
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -1517,7 +1539,7 @@ export default function DeploymentPage() {
   }
 
   // ── Webhook 발행 ──
-  async function publishToWebhook(platformId: string) {
+  async function publishToWebhook(platformId: string, platformCategory?: string) {
     // 1. platform_custom_list 우선 (신규 방식)
     let url = "";
     let key = "";
@@ -1579,7 +1601,7 @@ export default function DeploymentPage() {
       tags: tagStr,
       slug: slugBase,
       excerpt: buildFinalContent().slice(0, 160),
-      category: selectedCategory || "",
+      category: platformCategory || "",
       status: publishMode === "scheduled" ? "scheduled" : "published",
       publish_at: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
       scheduledAt: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
@@ -1660,13 +1682,13 @@ export default function DeploymentPage() {
           copyForNaver();
           toast.success("📋 네이버 블로그용 글이 복사됐어요! 네이버 블로그에서 붙여넣기하세요.", { duration: 5000 });
         } else if (platform.type === "blogger" || platform.type === "medium") {
-          await publishToWebhook(platformId);
+          await publishToWebhook(platformId, selectedCategories[platformId] || "");
         } else if (platform.type === "wordpress") {
           await publishToWordPress(
             publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null
           );
         } else {
-          await publishToWebhook(platformId);
+          await publishToWebhook(platformId, selectedCategories[platformId] || "");
         }
       }
       // 서버에 발행 글 저장 (대시보드 실시간 연동)
@@ -1870,8 +1892,8 @@ export default function DeploymentPage() {
                   setScheduleTime={setScheduleTime}
                   isPublishing={isPublishing}
                   onPublish={handlePublish}
-                  selectedCategory={selectedCategory}
-                  setSelectedCategory={setSelectedCategory}
+                  selectedCategories={selectedCategories}
+                  setSelectedCategories={setSelectedCategories}
                 />
               </div>
             )}
@@ -2378,8 +2400,8 @@ export default function DeploymentPage() {
                 setScheduleTime={setScheduleTime}
                 isPublishing={isPublishing}
                 onPublish={handlePublish}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
+                selectedCategories={selectedCategories}
+                setSelectedCategories={setSelectedCategories}
               />
             </div>
           </div>
