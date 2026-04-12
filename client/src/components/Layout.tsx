@@ -71,7 +71,14 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState(currentLang);
+  const [totalPosts, setTotalPosts] = useState<number>(0);
   const isGuestMode = localStorage.getItem("guest_mode") === "true";
+
+  useEffect(() => {
+    // 대시보드에서 저장한 발행 글 수 읽기
+    const count = parseInt(localStorage.getItem("blogauto_post_count") || "0");
+    if (count > 0) setTotalPosts(count);
+  }, []);
 
   const handleGuestBlock = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -187,7 +194,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
                     <span>{item.label}</span>
-                    {item.path === "/keywords" && (
+                    {item.path === "/keywords" && !isGuestMode && (
                       <span className="ml-auto text-xs px-1.5 py-0.5 rounded badge-active">NEW</span>
                     )}
                     {isGuestMode && !isDashboard && (
@@ -205,7 +212,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
           {/* Quick stats */}
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div className="rounded-lg p-2 text-center" style={{ background: "oklch(1 0 0 / 4%)" }}>
-              <div className="text-sm font-bold" style={{ color: "var(--color-emerald)" }}>247</div>
+              <div className="text-sm font-bold" style={{ color: "var(--color-emerald)" }}>{totalPosts}</div>
               <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>발행 글</div>
             </div>
             <div className="rounded-lg p-2 text-center" style={{ background: "oklch(1 0 0 / 4%)" }}>
