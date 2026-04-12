@@ -101,51 +101,18 @@ function ApiKeyInput({ label, placeholder, storageKey, link }: {
 }
 
 
-// ── 티스토리 연동 섹션 ──────────────────────────────
-function TistorySection() {
-  const [clientId, setClientId] = React.useState(() => userGetSettingsValue("tistory_client_id"));
-  const [clientSecret, setClientSecret] = React.useState(() => userGetSettingsValue("tistory_client_secret"));
-  const [accessToken, setAccessToken] = React.useState(() => userGetSettingsValue("tistory_access_token"));
-  const [blogName, setBlogName] = React.useState(() => userGetSettingsValue("tistory_blog_name"));
-  const [blogs, setBlogs] = React.useState<{name:string;title:string;url:string}[]>([]);
-  const [showSecret, setShowSecret] = React.useState(false);
+// ── 미디엄 연동 섹션 ──────────────────────────────
+function MediumSection() {
+  const [token, setToken] = React.useState(() => userGetSettingsValue("medium_token"));
+  const [authorId, setAuthorId] = React.useState(() => userGetSettingsValue("medium_author_id"));
   const [showToken, setShowToken] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
 
   const handleSave = () => {
-    if (!clientId || !clientSecret) { toast.error("Client ID와 Secret을 입력해주세요"); return; }
-    userSet("tistory_client_id", clientId);
-    userSet("tistory_client_secret", clientSecret);
-    if (accessToken) userSet("tistory_access_token", accessToken);
-    if (blogName) userSet("tistory_blog_name", blogName);
-    saveSettingsToServer({ tistory_client_id: clientId, tistory_client_secret: clientSecret, tistory_access_token: accessToken, tistory_blog_name: blogName });
-    toast.success("✅ 티스토리 설정 저장됨");
-  };
-
-  const handleGetToken = () => {
-    if (!clientId) { toast.error("Client ID를 먼저 입력해주세요"); return; }
-    const redirectUri = `${window.location.origin}/settings?tistory_callback=1`;
-    const url = `https://www.tistory.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
-    window.open(url, "_blank", "width=600,height=700");
-    toast.info("팝업에서 티스토리 로그인 후 code를 복사해서 아래에 붙여넣으세요");
-  };
-
-  const handleGetBlogList = async () => {
-    if (!accessToken) { toast.error("Access Token을 먼저 입력해주세요"); return; }
-    setLoading(true);
-    try {
-      const resp = await fetch("/api/tistory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "getBlogInfo", accessToken }),
-      });
-      const data = await resp.json();
-      if (!data.ok) throw new Error(data.error);
-      setBlogs(data.blogs);
-      toast.success(`블로그 ${data.blogs.length}개 불러왔어요!`);
-    } catch (e: any) {
-      toast.error("블로그 조회 실패: " + e.message);
-    } finally { setLoading(false); }
+    if (!token) { toast.error("Integration Token을 입력해주세요"); return; }
+    userSet("medium_token", token);
+    if (authorId) userSet("medium_author_id", authorId);
+    saveSettingsToServer({ medium_token: token, medium_author_id: authorId });
+    toast.success("✅ 미디엄 설정 저장됨");
   };
 
   return (
@@ -153,88 +120,45 @@ function TistorySection() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-            style={{ background: "#FF6300" }}>T</div>
-          <h3 className="font-semibold text-foreground">티스토리</h3>
+            style={{ background: "#333333" }}>M</div>
+          <h3 className="font-semibold text-foreground">미디엄 (Medium)</h3>
           <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
             style={{ background: "oklch(0.696 0.17 162.48/20%)", color: "var(--color-emerald)" }}>
-            ⚡ 반자동
+            ⚡ 자동발행
           </span>
         </div>
-        <a href="https://www.tistory.com" target="_blank" rel="noopener noreferrer"
-          className="text-xs flex items-center gap-1 hover:underline" style={{ color: "#FF6300" }}>
-          티스토리 개설하기 <ExternalLink className="w-3 h-3" />
+        <a href="https://medium.com/me/settings/security" target="_blank" rel="noopener noreferrer"
+          className="text-xs flex items-center gap-1 hover:underline" style={{ color: "#333333" }}>
+          토큰 발급받기 <ExternalLink className="w-3 h-3" />
         </a>
       </div>
       <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-        ⚠️ 티스토리 API 신규 앱 등록이 중단되었습니다. 기존 발급자만 사용 가능하며, Access Token을 직접 입력해주세요.
+        미디엄 Settings → Security → Integration tokens 에서 토큰을 발급받아 입력해주세요.
       </p>
       <div className="space-y-3">
         <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client ID</label>
-          <Input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="티스토리 앱 Client ID" className="text-sm font-mono" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Client Secret</label>
+          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Integration Token</label>
           <div className="relative">
-            <Input type={showSecret ? "text" : "password"} value={clientSecret} onChange={e => setClientSecret(e.target.value)}
-              placeholder="Client Secret" className="text-sm font-mono pr-10" />
+            <Input type={showToken ? "text" : "password"} value={token} onChange={e => setToken(e.target.value)}
+              placeholder="Integration Token" className="text-sm font-mono pr-10" />
             <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-              onClick={() => setShowSecret(v => !v)}>
-              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              onClick={() => setShowToken(v => !v)}>
+              {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
         </div>
         <div>
-          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Access Token</label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input type={showToken ? "text" : "password"} value={accessToken} onChange={e => setAccessToken(e.target.value)}
-                placeholder="OAuth Access Token" className="text-sm font-mono pr-10" />
-              <button className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }}
-                onClick={() => setShowToken(v => !v)}>
-                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={handleGetToken}>
-              토큰 발급
-            </Button>
-          </div>
+          <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>Author ID (선택)</label>
+          <Input value={authorId} onChange={e => setAuthorId(e.target.value)}
+            placeholder="Author ID" className="text-sm font-mono" />
         </div>
-        {blogs.length > 0 && (
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>블로그 선택</label>
-            <div className="space-y-1.5">
-              {blogs.map(b => (
-                <button key={b.name}
-                  className="w-full flex items-center justify-between p-2.5 rounded-lg text-sm transition-all"
-                  style={{
-                    background: blogName === b.name ? "oklch(0.696 0.17 162.48/10%)" : "var(--background)",
-                    border: `1px solid ${blogName === b.name ? "oklch(0.696 0.17 162.48/40%)" : "var(--border)"}`,
-                  }}
-                  onClick={() => { setBlogName(b.name); userSet("tistory_blog_name", b.name); }}>
-                  <span className="text-foreground">{b.title}</span>
-                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{b.url}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Button className="gap-2" style={{ background: "#FF6300", color: "white" }} onClick={handleSave}>
-            <Key className="w-4 h-4" /> 저장
-          </Button>
-          {accessToken && (
-            <Button variant="outline" className="gap-2 text-xs" onClick={handleGetBlogList} disabled={loading}>
-              {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              블로그 목록
-            </Button>
-          )}
-        </div>
+        <Button className="gap-2" style={{ background: "#333333", color: "white" }} onClick={handleSave}>
+          <Key className="w-4 h-4" /> 저장
+        </Button>
       </div>
     </div>
   );
 }
-
 // ── 쿠팡파트너스 섹션 ────────────────────────────────
 function CoupangSection() {
   const [accessKey, setAccessKey] = React.useState(() => userGetSettingsValue("coupang_access_key"));
@@ -1120,14 +1044,16 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* 네이버 블로그 - 자동발행 불가 안내 */}
+        {/* 블로거 (Blogger) */}
         <PlatformSection
-          title="네이버 블로그 (원클릭 복사)" color="#03C75A" logo="N" type="naver"
-          desc="⚠️ 네이버 API 정책상 자동 발행 불가 · 배포 관리에서 '네이버 복사' 버튼으로 원클릭 복사 후 붙여넣기"
-          link=""
+          title="블로거 (Blogger)" color="#FF5722" logo="B" type="blogger"
+          desc="구글 블로거 자동 발행 · Google Cloud Console에서 API 키 발급"
+          link="https://console.cloud.google.com/apis/credentials"
           fields={[
-            { label: "블로그 ID", key: "naver_blog_id", placeholder: "myblog (naver.com/myblog)" },
-            { label: "Access Token", key: "naver_blog_access_token", placeholder: "네이버 OAuth Access Token", secret: true },
+            { label: "Blog ID", key: "blogger_blog_id", placeholder: "블로그 ID (숫자)" },
+            { label: "Google API Key", key: "blogger_api_key", placeholder: "AIza...", secret: true },
+            { label: "OAuth Client ID", key: "blogger_client_id", placeholder: "Client ID" },
+            { label: "OAuth Client Secret", key: "blogger_client_secret", placeholder: "Client Secret", secret: true },
           ]}
         />
 
@@ -1147,8 +1073,8 @@ export default function SettingsPage() {
           ]}
         />
 
-        {/* 티스토리 */}
-        <TistorySection />
+        {/* 미디엄 (Medium) */}
+        <MediumSection />
 
         {/* 쿠팡파트너스 */}
         <CoupangSection />
