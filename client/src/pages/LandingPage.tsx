@@ -395,8 +395,8 @@ export default function LandingPage() {
           <p style={{color:"rgba(255,255,255,0.44)",fontSize:"1.08rem",marginBottom:48}}>복잡한 설정 없이 5분 안에 시작할 수 있습니다</p>
           <div style={{display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
             <button className="btn-main" style={{padding:"19px 48px",fontSize:16,display:"flex",alignItems:"center",gap:9}}
-              onClick={()=>navigate("/dashboard")}>
-              대시보드 시작하기 <ArrowRight style={{width:19,height:19}}/>
+              onClick={()=>navigate("/signup")}>
+              무료로 시작하기 <ArrowRight style={{width:19,height:19}}/>
             </button>
             <button className="btn-ghost" style={{padding:"19px 38px",fontSize:15,display:"flex",alignItems:"center",gap:9}}
               onClick={()=>{
