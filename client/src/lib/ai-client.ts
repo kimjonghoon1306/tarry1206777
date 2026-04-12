@@ -201,50 +201,22 @@ POST2: (연관 주제 블로그 제목 2)|(이유)
 POST3: (연관 주제 블로그 제목 3)|(이유)
 [관련글끝]`
 
-  // ── Gemini → 브라우저 직접 호출 (Vercel 서버 IP 차단 우회) ──
+  // ── Gemini → Vercel 서버 경유 (안정적 처리) ──
   if (provider === "gemini") {
-    const GEMINI_MODELS = [
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-lite",
-      "gemini-2.5-flash",
-      "gemini-2.5-flash-lite",
-    ];
-    const maxTok = Math.min(8192, Math.max(4000, Math.ceil(minChars * 1.8)));
-    let lastErr = "";
-    for (const model of GEMINI_MODELS) {
-      try {
-        const resp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { maxOutputTokens: maxTok },
-            }),
-          }
-        );
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          const msg = (err.error?.message || "").toLowerCase();
-          const status = resp.status;
-          if (status === 401 || status === 403 || msg.includes("api key") || msg.includes("api_key")) {
-            throw new Error("Gemini API 키가 잘못되었습니다. 설정에서 확인해주세요.");
-          }
-          lastErr = `${model} 오류(${status})`;
-          continue;
-        }
-        const data = await resp.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        if (!text) { lastErr = `${model} 빈 응답`; continue; }
-        return ensureMinChars(text, minChars, keyword, title);
-      } catch (e: any) {
-        if (e.message?.includes("API 키")) throw e;
-        lastErr = e.message;
-        continue;
-      }
+    const adPlatform = localStorage.getItem("selected_ad_platform") || "";
+    const resp = await fetch("/api/generate-content", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, apiKey, keyword, title, language, minChars, stylePrompt, adPlatform }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || `Gemini 서버 오류 (${resp.status})`);
     }
-    throw new Error(`Gemini 글 생성 실패: ${lastErr}`);
+    const data = await resp.json();
+    const content = data.content || "";
+    if (!content) throw new Error("Gemini 응답이 비어있습니다. API 키를 확인해주세요.");
+    return content;
   }
 
   // ── Claude ──
