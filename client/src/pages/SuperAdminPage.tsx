@@ -230,16 +230,15 @@ function AdminCustomWebhookSection() {
     const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
     platforms.push({ id: Math.random().toString(36).slice(2), type: "custom", name: entry._name });
     localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(platforms));
-    // 슈퍼어드민 토큰으로 직접 저장
-    const adminToken = sessionStorage.getItem("bap_admin_auth") || "";
-    if (adminToken) {
+    // 슈퍼어드민 전용 글로벌 설정으로 저장
+    const adminTk = sessionStorage.getItem("bap_admin_auth") || "";
+    if (adminTk) {
       fetch("/api/auth", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-        body: JSON.stringify({ action: "saveSettings", settings: { admin_custom_list: JSON.stringify(updated) } }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminTk}` },
+        body: JSON.stringify({ action: "saveAdminGlobalSettings", settings: { admin_custom_list: JSON.stringify(updated) } }),
       }).catch(() => {});
     }
-    saveSettingsToServer({ [SETTINGS_KEYS.WEBHOOK_URL]: url, webhook_auth_header: authHeader, [SETTINGS_KEYS.WEBHOOK_KEY]: authKey, custom_domain: normalizedDomain, admin_custom_list: JSON.stringify(updated) });
     setShowAdd(false);
     setUrl(""); setAuthKey(""); setAuthHeader("Authorization"); setCustomDomain(""); setCategoryInput("");
     toast.success("✅ 웹사이트 등록됐어요!");
@@ -1701,6 +1700,21 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
             if (typeof v === "string") localStorage.setItem(`u:admin:${k}`, v);
           });
         }
+        // 글로벌 설정 복원
+        try {
+          const gr = await fetch("/api/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${d.token}` },
+            body: JSON.stringify({ action: "loadAdminGlobalSettings" }),
+          });
+          const gd = await gr.json();
+          if (gd.ok && gd.settings?.admin_custom_list) {
+            localStorage.setItem("admin_custom_list", gd.settings.admin_custom_list);
+          }
+          if (gd.ok && gd.settings?.platform_categories) {
+            localStorage.setItem("platform_categories", gd.settings.platform_categories);
+          }
+        } catch {}
         onAuth();
       } else {
         toast.error("비밀번호가 올바르지 않아요");
