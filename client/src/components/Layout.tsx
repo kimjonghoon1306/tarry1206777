@@ -29,6 +29,7 @@ import {
   Bot,
   User,
   LogOut,
+  Gift,
 } from "lucide-react";
 import { clearUserLocalCache } from "@/lib/user-storage";
 import { Button } from "@/components/ui/button";
@@ -51,13 +52,14 @@ const LANGUAGES = [
 ];
 
 const NAV_ITEMS = [
-  { path: "/dashboard", icon: LayoutDashboard, label: "대시보드", labelEn: "Dashboard" },
-  { path: "/keywords", icon: Search, label: "키워드 수집", labelEn: "Keywords" },
-  { path: "/content", icon: FileText, label: "콘텐츠 생성", labelEn: "Content" },
-  { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images" },
-  { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy" },
-  { path: "/mypage", icon: User, label: "마이페이지", labelEn: "My Page" },
-  { path: "/settings", icon: Settings, label: "설정", labelEn: "Settings" },
+  { path: "/dashboard", icon: LayoutDashboard, label: "대시보드", labelEn: "Dashboard", pink: false },
+  { path: "/keywords", icon: Search, label: "키워드 수집", labelEn: "Keywords", pink: false },
+  { path: "/content", icon: FileText, label: "콘텐츠 생성", labelEn: "Content", pink: false },
+  { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images", pink: false },
+  { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy", pink: false },
+  { path: "/campaigns", icon: Gift, label: "체험단 허브", labelEn: "Campaigns", pink: true },
+  { path: "/mypage", icon: User, label: "마이페이지", labelEn: "My Page", pink: false },
+  { path: "/settings", icon: Settings, label: "설정", labelEn: "Settings", pink: false },
 ];
 
 interface LayoutProps {
@@ -65,6 +67,13 @@ interface LayoutProps {
   currentLang?: string;
   onLangChange?: (lang: string) => void;
 }
+
+const PINK_KEYFRAME = `
+@keyframes pinkPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(236,72,153,0); }
+  50% { box-shadow: 0 0 8px 2px rgba(236,72,153,0.35); }
+}
+`;
 
 export default function Layout({ children, currentLang = "ko", onLangChange }: LayoutProps) {
   const [location, navigate] = useLocation();
@@ -120,6 +129,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
 
   return (
     <div className="min-h-screen bg-background flex">
+      <style>{PINK_KEYFRAME}</style>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -191,11 +201,22 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                   <div
                     className={`nav-item ${isActive ? "active" : ""}`}
                     onClick={() => !isGuestMode && setSidebarOpen(false)}
+                    style={item.pink ? {
+                      color: isActive ? "#fff" : "#f472b6",
+                      background: isActive ? "linear-gradient(90deg,#be185d,#ec4899)" : "rgba(236,72,153,0.08)",
+                      border: "1px solid rgba(236,72,153,0.25)",
+                      borderRadius: "8px",
+                      marginTop: "4px",
+                      animation: "pinkPulse 2.5s ease-in-out infinite",
+                    } : {}}
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
                     <span>{item.label}</span>
                     {item.path === "/keywords" && !isGuestMode && (
                       <span className="ml-auto text-xs px-1.5 py-0.5 rounded badge-active">NEW</span>
+                    )}
+                    {item.pink && !isGuestMode && (
+                      <span className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{background:"rgba(236,72,153,0.2)",color:"#f472b6"}}>HOT</span>
                     )}
                     {isGuestMode && !isDashboard && (
                       <span className="ml-auto text-xs">🔒</span>
