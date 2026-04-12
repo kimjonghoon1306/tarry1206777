@@ -129,7 +129,7 @@ export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div style={{minHeight:"100vh",background:"#060a0e",fontFamily:"'Pretendard Variable',sans-serif",overflowX:"hidden"}}>
+    <div className="landing-wrap" style={{minHeight:"100vh",background:theme==="light"?"#0d1a13":"#060a0e",fontFamily:"'Pretendard Variable',sans-serif",overflowX:"hidden"}}>
       <style>{`
         @keyframes barUp { from{transform:scaleY(0) translateY(10px);opacity:0} to{transform:scaleY(1) translateY(0);opacity:1} }
         @keyframes typeIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
@@ -193,6 +193,12 @@ export default function LandingPage() {
         * { box-sizing: border-box; }
         body { overflow-x: hidden; }
         @media(min-width:640px){ #nav-login { display:flex !important; } }
+        @media(prefers-color-scheme:light), [data-theme="light"] * {
+          /* 랜딩페이지는 브랜드 특성상 다크 유지 */
+        }
+        .landing-light-mode { background: #0f1f18 !important; }
+        html[class*="light"] .landing-wrap,
+        body[class*="light"] .landing-wrap { background: #0d1a13 !important; }
       `}</style>
 
       {/* NAV */}
@@ -244,16 +250,16 @@ export default function LandingPage() {
             <span style={{fontSize:12,fontWeight:700,color:"#10b981",letterSpacing:"0.12em",textTransform:"uppercase"}}>AI 기반 블로그 완전 자동화 플랫폼</span>
           </div>
 
-          <h1 style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:900,lineHeight:1.08,color:"white",marginBottom:28,letterSpacing:"-0.045em",fontSize:"clamp(2.8rem,7.5vw,5.8rem)",animation:"fadeUp 0.9s ease both"}}>
+          <h1 style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:900,lineHeight:1.08,color:"white",marginBottom:28,letterSpacing:"-0.045em",fontSize:"clamp(2.8rem,7.5vw,5.8rem)",animation:"fadeUp 0.9s ease forwards"}}>
             블로그 수익을<br/><span className="txt-grad">자동으로 극대화</span>
           </h1>
 
-          <p style={{fontSize:"clamp(1rem,2vw,1.18rem)",color:"rgba(255,255,255,0.52)",lineHeight:1.85,marginBottom:44,maxWidth:580,margin:"0 auto 44px",animation:"fadeUp 0.9s 0.15s ease both"}}>
+          <p style={{fontSize:"clamp(1rem,2vw,1.18rem)",color:"rgba(255,255,255,0.52)",lineHeight:1.85,marginBottom:44,maxWidth:580,margin:"0 auto 44px",animation:"fadeUp 0.9s 0.15s ease forwards"}}>
             키워드 수집부터 콘텐츠 작성, 이미지 생성, 자동 배포까지<br/>
             블로그 운영의 모든 과정을 AI가 완전 자동화합니다
           </p>
 
-          <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap",marginBottom:64,animation:"fadeUp 0.9s 0.3s ease both"}}>
+          <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap",marginBottom:64,animation:"fadeUp 0.9s 0.3s ease forwards"}}>
             <button className="btn-main" style={{padding:"17px 38px",fontSize:16,display:"flex",alignItems:"center",gap:8}}
               onClick={()=>navigate("/signup")}>
               <Sparkles style={{width:18,height:18}}/> 무료로 시작하기
@@ -268,9 +274,9 @@ export default function LandingPage() {
             </button>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,maxWidth:680,margin:"0 auto",animation:"fadeUp 0.9s 0.45s ease both"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,maxWidth:680,margin:"0 auto",animation:"fadeUp 0.9s 0.45s ease forwards"}}>
             {STATS.map((s,i)=>(
-              <div key={s.label} className="stat-card" style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:"18px 8px",textAlign:"center",animation:`countUp 0.6s ${0.6+i*0.1}s ease both`}}>
+              <div key={s.label} className="stat-card" style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:"18px 8px",textAlign:"center",animation:`countUp 0.6s ${0.6+i*0.1}s ease forwards`}}>
                 <div style={{fontSize:"clamp(1.3rem,3vw,1.9rem)",fontWeight:900,color:s.color,fontFamily:"'Space Grotesk',sans-serif",marginBottom:5}}>{s.value}</div>
                 <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",lineHeight:1.5}}>{s.label}</div>
               </div>
