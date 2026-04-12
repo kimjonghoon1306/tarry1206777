@@ -86,7 +86,7 @@ function loadRealData() {
         views: 0,
         clicks: 0,
         date: "방금",
-        platform: platforms[0]?.type === "naver" ? "네이버" : platforms[0]?.type === "tistory" ? "티스토리" : "블로그",
+        platform: platforms[0]?.type === "blogger" ? "블로거" : platforms[0]?.type === "medium" ? "미디엄" : "블로그",
       });
     }
 
@@ -265,7 +265,7 @@ export default function Dashboard() {
     const content = JSON.parse(localStorage.getItem("blogauto_content") || "{}");
     const gallery = JSON.parse(localStorage.getItem("imggen_gallery") || "[]");
     const coupangKey = userGet("coupang_access_key");
-    const tistoryToken = userGet("tistory_access_token");
+    const platformToken = userGet("medium_token") || userGet("blogger_api_key");
 
     if (content?.title && !existing.find(n => n.message.includes(content.title?.slice(0, 10)))) {
       newNotifs.push({ id: Date.now().toString(), type: "success", message: `글 생성 완료: "${content.title?.slice(0, 20)}..."`, time: "방금", read: false });
@@ -276,8 +276,8 @@ export default function Dashboard() {
     if (!coupangKey && !existing.find(n => n.message.includes("쿠팡"))) {
       newNotifs.push({ id: (Date.now() + 2).toString(), type: "warning", message: "쿠팡파트너스 미연동 · 설정에서 API 키 입력 시 수익 극대화 가능", time: "추천", read: false });
     }
-    if (!tistoryToken && !existing.find(n => n.message.includes("티스토리"))) {
-      newNotifs.push({ id: (Date.now() + 3).toString(), type: "info", message: "티스토리 연동 시 자동 발행 가능 · 설정에서 연동하세요", time: "추천", read: false });
+    if (!platformToken && !existing.find(n => n.message.includes("미디엄"))) {
+      newNotifs.push({ id: (Date.now() + 3).toString(), type: "info", message: "미디엄/블로거 연동 시 자동 발행 가능 · 설정에서 연동하세요", time: "추천", read: false });
     }
 
     if (newNotifs.length > 0) {
@@ -815,7 +815,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               { title: "쿠팡파트너스 연동", desc: "글마다 관련 상품 자동 삽입 → 클릭당 수익", icon: ShoppingCart, color: "#C00F0C", action: () => navigate("/settings"), badge: userGet("coupang_access_key") ? "연동됨" : "미연동" },
-              { title: "티스토리 자동 발행", desc: "애드센스 + 자동 발행 조합으로 수익 극대화", icon: Send, color: "#FF6300", action: () => navigate("/settings"), badge: userGet("tistory_access_token") ? "연동됨" : "미연동" },
+              { title: "블로거/미디엄 자동 발행", desc: "애드센스 + 자동 발행 조합으로 수익 극대화", icon: Send, color: "#FF5722", action: () => navigate("/settings"), badge: (userGet("blogger_api_key") || userGet("medium_token")) ? "연동됨" : "미연동" },
               { title: "워드프레스 자동 발행", desc: "자체 도메인 + 애드센스 최고 수익 조합", icon: Globe, color: "#21759B", action: () => navigate("/settings"), badge: userGet("wp_url") ? "연동됨" : "미연동" },
             ].map(item => (
               <button key={item.title}
