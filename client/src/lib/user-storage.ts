@@ -152,6 +152,13 @@ export async function applyServerSettings(): Promise<void> {
   for (const [key, value] of Object.entries(serverSettings)) {
     if (typeof value === "string") {
       localStorage.setItem(`u:${uid}:${key}`, value);
+      // admin_custom_list, platform_custom_list는 직접 키로도 복원
+      if (key === "admin_custom_list" && value.trim()) {
+        localStorage.setItem("admin_custom_list", value);
+      }
+      if (key === "platform_categories" && value.trim()) {
+        localStorage.setItem("platform_categories", value);
+      }
     }
   }
   // admin 설정도 같이 동기화
