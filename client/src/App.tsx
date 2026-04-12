@@ -71,7 +71,7 @@ function App() {
       <ThemeProvider defaultTheme="dark" switchable>
         <AuthProvider>
           <TooltipProvider>
-            <Toaster />
+            <Toaster position="top-right" />
             <Router />
           </TooltipProvider>
         </AuthProvider>
