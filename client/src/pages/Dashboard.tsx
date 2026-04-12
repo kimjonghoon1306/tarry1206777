@@ -1,2582 +1,924 @@
-// BlogAuto Pro - DeploymentPage v3.1
+// BlogAuto Pro - Dashboard v3.1
 /**
- * DeploymentPage.tsx — BlogAuto Pro
- * 완전 재작성 버전 (구조적 오류 없음)
- *
- * 구성:
- *   - renderPreview()          : 마크다운 → JSX 변환 (순수 함수)
- *   - ImagePairBlock           : 2열 이미지 쌍 컴포넌트
- *   - ImageBlock               : 단일 이미지 블록 컴포넌트
- *   - PublishPanel             : 발행 플랫폼 + 스케줄 패널
- *   - DeploymentPage (default) : 메인 페이지
+ * BlogAuto Pro - Dashboard Page
+ * ✅ 실제 localStorage 데이터 연동
+ * ✅ 언어팩 활성화
+ * ✅ 알림 활성화
+ * ✅ 블로그 미리보기 활성화
+ * ✅ 그래프 실제 발행 글 기반
+ * ✅ 쿠팡파트너스 수익 추적
  */
 
-import { useState, useEffect, useRef } from "react";
-import React from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
+import { useLocation } from "wouter";
+import { userGet } from "@/lib/user-storage";
 import { toast } from "sonner";
 import {
-  Send, Calendar, Clock, Image, Plus, X,
-  CheckCircle2, Globe, FileText, Zap, Eye,
-  Hash, MessageSquare, Upload, Trash2, AlignLeft,
-  Wand2, FolderOpen, Info, ChevronDown, ChevronUp,
-  Copy, ExternalLink, Smartphone, ShoppingCart, RefreshCw,
+  TrendingUp, FileText, Image, Send, Eye,
+  MousePointerClick, DollarSign, Zap,
+  ArrowUpRight, ArrowDownRight, Clock,
+  CheckCircle2, AlertCircle, Play, RefreshCw,
+  BarChart3, Bot, Bell, Globe, ShoppingCart,
+  ExternalLink, X, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { userGet } from "@/lib/user-storage";
+import { Progress } from "@/components/ui/progress";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
+} from "recharts";
 
-// ─────────────────────────────────────────────────────────
-// 타입 정의
-// ─────────────────────────────────────────────────────────
-
-type TextBlock = {
-  type: "text";
-  id: string;
-  content: string;
-};
-
-type SingleImageBlock = {
-  type: "image";
-  id: string;
-  src: string;
-  alt: string;
-  position: "left" | "center" | "right";
-  source: "auto" | "manual";
-};
-
-type ImagePairBlockType = {
-  type: "image-pair";
-  id: string;
-  images: { src: string; alt: string }[];
-  source: "auto";
-};
-
-type ContentBlock = TextBlock | SingleImageBlock | ImagePairBlockType;
-
-type Platform = {
-  id: string;
-  type: "naver" | "wordpress" | "custom" | "blogger" | "medium";
-  name: string;
-};
-
-// ─────────────────────────────────────────────────────────
-// 상수 및 유틸
-// ─────────────────────────────────────────────────────────
-
-const CONTENT_KEY = "blogauto_content";
-const DEPLOY_PLATFORMS_KEY = "blogauto_deploy_platforms";
-
-function uid(): string {
-  return Math.random().toString(36).slice(2);
-}
-
-function safeParseJSON<T>(key: string, fallback: T): T {
+// ── 서버 API 헬퍼 ──────────────────────────────────
+async function apiCall(action: string, extra: Record<string, any> = {}) {
+  const token = localStorage.getItem("ba_token") || "";
   try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-// ─────────────────────────────────────────────────────────
-// renderPreview — 마크다운 → JSX (순수 함수, 컴포넌트 밖)
-// ─────────────────────────────────────────────────────────
-
-function renderPreview(text: string): JSX.Element[] {
-  return text.split("\n").map((line, i) => {
-    if (line.startsWith("# "))
-      return <h1 key={i} className="text-xl font-bold mt-3 mb-2 text-foreground leading-tight">{line.slice(2)}</h1>;
-    if (line.startsWith("## "))
-      return <h2 key={i} className="text-lg font-semibold mt-4 mb-2 text-foreground">{line.slice(3)}</h2>;
-    if (line.startsWith("### "))
-      return <h3 key={i} className="text-base font-semibold mt-3 mb-1 text-foreground">{line.slice(4)}</h3>;
-    if (line.startsWith("**") && line.endsWith("**"))
-      return (
-        <p key={i} className="text-sm mt-1 mb-2 font-semibold" style={{ color: "var(--muted-foreground)" }}>
-          {line.replace(/\*\*/g, "")}
-        </p>
-      );
-    if (line === "---")
-      return <hr key={i} className="my-4" style={{ borderColor: "var(--border)" }} />;
-    if (line === "")
-      return <br key={i} />;
-    if (line.startsWith("[팁]"))
-      return (
-        <div key={i} className="flex items-start gap-2 rounded-xl px-4 py-3 my-2 text-sm"
-          style={{ background: "#ecfdf5", border: "1px solid #6ee7b7", color: "#065f46" }}>
-          <span style={{ flexShrink: 0 }}>💡</span><span>{line.slice(4).trim()}</span>
-        </div>
-      );
-    if (line.startsWith("[주의]"))
-      return (
-        <div key={i} className="flex items-start gap-2 rounded-xl px-4 py-3 my-2 text-sm"
-          style={{ background: "#fff7ed", border: "1px solid #fdba74", color: "#9a3412" }}>
-          <span style={{ flexShrink: 0 }}>⚠️</span><span>{line.slice(5).trim()}</span>
-        </div>
-      );
-    if (line.startsWith("[중요]"))
-      return (
-        <div key={i} className="flex items-start gap-2 rounded-xl px-4 py-3 my-2 text-sm"
-          style={{ background: "#eff6ff", border: "1px solid #93c5fd", color: "#1e40af" }}>
-          <span style={{ flexShrink: 0 }}>📌</span><span>{line.slice(5).trim()}</span>
-        </div>
-      );
-    return (
-      <p key={i} className="mb-2 text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
-        {line}
-      </p>
-    );
-  });
-}
-
-// ─────────────────────────────────────────────────────────
-// ImagePairBlock
-// ─────────────────────────────────────────────────────────
-
-interface ImagePairBlockProps {
-  block: ImagePairBlockType;
-  onRemove: () => void;
-}
-
-function ImagePairBlock({ block, onRemove }: ImagePairBlockProps) {
-  return (
-    <div
-      className="relative rounded-xl overflow-hidden"
-      style={{
-        border: "2px solid oklch(0.696 0.17 162.48/50%)",
-        background: "oklch(0.696 0.17 162.48/5%)",
-      }}
-    >
-      {/* 헤더 */}
-      <div
-        className="flex items-center justify-between px-3 py-2 border-b"
-        style={{ borderColor: "oklch(0.696 0.17 162.48/30%)" }}
-      >
-        <div className="flex items-center gap-2 text-xs" style={{ color: "var(--color-emerald)" }}>
-          <Wand2 className="w-3.5 h-3.5" />
-          2열 자동 배치 이미지
-        </div>
-        <button
-          onClick={onRemove}
-          className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20"
-          style={{ color: "var(--muted-foreground)" }}
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* 이미지 2열 */}
-      <div className="grid grid-cols-2 gap-2 p-3">
-        {block.images.map((img, i) => (
-          <div key={i} className="rounded-lg overflow-hidden" style={{ aspectRatio: "1" }}>
-            {img.src ? (
-              <img
-                src={img.src}
-                alt={img.alt}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.opacity = "0.3";
-                }}
-              />
-            ) : (
-              <div
-                className="w-full h-full flex items-center justify-center"
-                style={{ background: "var(--muted)", color: "var(--muted-foreground)", fontSize: 12 }}
-              >
-                이미지 {i + 1}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// ImageBlock
-// ─────────────────────────────────────────────────────────
-
-interface ImageBlockProps {
-  block: SingleImageBlock;
-  onRemove: () => void;
-  onChange: (updates: Partial<SingleImageBlock>) => void;
-}
-
-function ImageBlock({ block, onRemove, onChange }: ImageBlockProps) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const isAuto = block.source === "auto";
-
-  const borderColor = isAuto ? "oklch(0.696 0.17 162.48/50%)" : "oklch(0.75 0.12 300/50%)";
-  const bgColor = isAuto ? "oklch(0.696 0.17 162.48/5%)" : "oklch(0.75 0.12 300/5%)";
-  const headerBorderColor = isAuto ? "oklch(0.696 0.17 162.48/30%)" : "oklch(0.75 0.12 300/30%)";
-  const labelColor = isAuto ? "var(--color-emerald)" : "oklch(0.75 0.12 300)";
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      onChange({ src: ev.target?.result as string, alt: file.name });
-    };
-    reader.readAsDataURL(file);
-  }
-
-  const alignClass =
-    block.position === "center"
-      ? "justify-center"
-      : block.position === "right"
-      ? "justify-end"
-      : "justify-start";
-
-  return (
-    <div
-      className="relative rounded-xl overflow-hidden"
-      style={{ border: `2px solid ${borderColor}`, background: bgColor }}
-    >
-      {/* 헤더 */}
-      <div
-        className="flex items-center justify-between px-3 py-2 border-b"
-        style={{ borderColor: headerBorderColor }}
-      >
-        <div className="flex items-center gap-2 text-xs" style={{ color: labelColor }}>
-          {isAuto ? <Wand2 className="w-3.5 h-3.5" /> : <FolderOpen className="w-3.5 h-3.5" />}
-          <span className="truncate">{isAuto ? "AI 생성 이미지" : "내 이미지"}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            className="text-xs rounded px-1.5 py-0.5"
-            style={{
-              background: "var(--background)",
-              border: "1px solid var(--border)",
-              color: "var(--foreground)",
-            }}
-            value={block.position}
-            onChange={(e) => onChange({ position: e.target.value as "left" | "center" | "right" })}
-          >
-            <option value="left">왼쪽</option>
-            <option value="center">가운데</option>
-            <option value="right">오른쪽</option>
-          </select>
-          <button
-            onClick={onRemove}
-            className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20"
-            style={{ color: "var(--muted-foreground)" }}
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* 이미지 미리보기 or 업로드 */}
-      {block.src ? (
-        <div className={`p-3 flex ${alignClass}`}>
-          <div className="relative">
-            <img
-              src={block.src}
-              alt={block.alt}
-              className={`rounded-lg object-cover ${isAuto ? "w-full max-h-80" : "max-h-40"}`}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-            {!isAuto && (
-              <button
-                onClick={() => onChange({ src: "" })}
-                className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(0,0,0,0.7)" }}
-              >
-                <X className="w-3 h-3 text-white" />
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        !isAuto && (
-          <button
-            className="w-full p-5 flex flex-col items-center gap-2 hover:bg-accent/10 transition-colors"
-            onClick={() => fileRef.current?.click()}
-          >
-            <Upload className="w-6 h-6 opacity-40" style={{ color: "var(--muted-foreground)" }} />
-            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-              이미지 업로드
-            </span>
-          </button>
-        )
-      )}
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-
-      {/* Alt 텍스트 */}
-      <div className="px-3 pb-2">
-        <Input
-          placeholder="이미지 설명 (alt)"
-          value={block.alt}
-          onChange={(e) => onChange({ alt: e.target.value })}
-          className="text-xs h-7"
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// PublishPanel
-// ─────────────────────────────────────────────────────────
-
-interface PublishPanelProps {
-  platforms: Platform[];
-  selectedPlatforms: string[];
-  setSelectedPlatforms: React.Dispatch<React.SetStateAction<string[]>>;
-  publishMode: "instant" | "scheduled";
-  setPublishMode: React.Dispatch<React.SetStateAction<"instant" | "scheduled">>;
-  scheduleDate: string;
-  setScheduleDate: React.Dispatch<React.SetStateAction<string>>;
-  scheduleTime: string;
-  setScheduleTime: React.Dispatch<React.SetStateAction<string>>;
-  isPublishing: boolean;
-  onPublish: () => void;
-  selectedCategory: string;
-  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
-}
-
-function PublishPanel({
-  platforms,
-  selectedPlatforms,
-  setSelectedPlatforms,
-  publishMode,
-  setPublishMode,
-  scheduleDate,
-  setScheduleDate,
-  scheduleTime,
-  setScheduleTime,
-  isPublishing,
-  onPublish,
-  selectedCategory,
-  setSelectedCategory,
-}: PublishPanelProps) {
-  function togglePlatform(id: string) {
-    setSelectedPlatforms((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
-  }
-
-  const platformBg = (type: string) => {
-    if (type === "naver") return "#03C75A";
-    if (type === "wordpress") return "#21759B";
-    if (type === "blogger") return "#FF5722";
-    if (type === "medium") return "#333333";
-    return "oklch(0.65 0.28 350)";
-  };
-
-  const [categories, setCategories] = useState<string[]>([]);
-
-  useEffect(() => {
-    try {
-      // platform_categories에서 선택된 플랫폼 카테고리 로드
-      const allCats = JSON.parse(localStorage.getItem("platform_categories") || "{}");
-      if (selectedPlatforms.length > 0) {
-        // 선택된 플랫폼들의 카테고리를 합쳐서 표시
-        const merged: string[] = [];
-        selectedPlatforms.forEach(pid => {
-          const platform = platforms.find(p => p.id === pid);
-          if (!platform) return;
-          const key = platform.type === "custom"
-            ? pid  // custom_0, custom_1 ...
-            : platform.type;
-          const cats = allCats[key] || [];
-          cats.forEach((c: string) => { if (!merged.includes(c)) merged.push(c); });
-        });
-        if (merged.length > 0) { setCategories(merged); return; }
-      }
-      // 선택된 플랫폼 없거나 카테고리 없을 때 기존 방식 fallback
-      const adminCats =
-        localStorage.getItem("admin_webhook_categories") ||
-        localStorage.getItem("u:admin:webhook_categories") ||
-        userGet("webhook_categories") || "";
-      if (adminCats.trim()) {
-        setCategories(adminCats.split(",").map(c => c.trim()).filter(Boolean));
-        return;
-      }
-      const catTab = localStorage.getItem("blogauto_categories");
-      if (catTab) {
-        const parsed = JSON.parse(catTab);
-        if (Array.isArray(parsed) && parsed.length > 0) { setCategories(parsed); return; }
-      }
-    } catch {}
-  }, [selectedPlatforms]);
-
-  const platformLabel = (type: string) => {
-    if (type === "naver") return "N";
-    if (type === "wordpress") return "WP";
-    if (type === "blogger") return "B";
-    if (type === "medium") return "M";
-    return "C";
-  };
-
-  const publishBg =
-    selectedPlatforms.length === 0
-      ? "var(--muted)"
-      : publishMode === "instant"
-      ? "var(--color-emerald)"
-      : "var(--color-amber-brand)";
-
-  return (
-    <>
-      {/* 플랫폼 선택 */}
-      <div className="rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
-          <Globe className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-          <span className="text-sm font-semibold text-foreground">발행 플랫폼</span>
-        </div>
-        <div className="p-4 space-y-2">
-          {platforms.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                설정에서 플랫폼을 등록해주세요
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2 text-xs"
-                onClick={() => (window.location.href = "/settings")}
-              >
-                설정 이동
-              </Button>
-            </div>
-          ) : (
-            platforms.map((platform) => {
-              const isSelected = selectedPlatforms.includes(platform.id);
-              return (
-                <button
-                  key={platform.id}
-                  className="w-full flex items-center justify-between p-3 rounded-xl transition-all"
-                  style={{
-                    background: isSelected ? "oklch(0.696 0.17 162.48/10%)" : "var(--background)",
-                    border: `1px solid ${isSelected ? "oklch(0.696 0.17 162.48/50%)" : "var(--border)"}`,
-                  }}
-                  onClick={() => togglePlatform(platform.id)}
-                >
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-                      style={{ background: platformBg(platform.type) }}
-                    >
-                      {platformLabel(platform.type)}
-                    </div>
-                    <div>
-                      <span className="text-sm text-foreground">{platform.name}</span>
-                      {platform.type === "naver" && (
-                        <span className="text-xs ml-1.5 px-1.5 py-0.5 rounded"
-                          style={{ background: "oklch(0.769 0.188 70.08/15%)", color: "var(--color-amber-brand)" }}>
-                          복사 방식
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {isSelected && (
-                    <CheckCircle2 className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* 카테고리 선택 */}
-      <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <FileText className="w-4 h-4" style={{ color: "#06b6d4" }} />
-          <span className="text-sm font-semibold text-foreground">카테고리 선택</span>
-        </div>
-        <select
-          className="w-full h-10 rounded-lg px-3 text-sm"
-          style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-          value={selectedCategory}
-          onChange={e => setSelectedCategory(e.target.value)}
-        >
-          <option value="">선택 안 함 (미분류)</option>
-          {categories.map((cat, idx) => (
-            <option key={idx} value={cat}>{cat}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* 발행 방식 */}
-      <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-4 h-4" style={{ color: "var(--color-amber-brand)" }} />
-          <span className="text-sm font-semibold text-foreground">발행 방식</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <button
-            className="rounded-xl p-3 text-center transition-all"
-            style={{
-              background: publishMode === "instant" ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)",
-              border: `2px solid ${publishMode === "instant" ? "oklch(0.696 0.17 162.48/60%)" : "var(--border)"}`,
-            }}
-            onClick={() => setPublishMode("instant")}
-          >
-            <Zap
-              className="w-5 h-5 mx-auto mb-1"
-              style={{ color: publishMode === "instant" ? "var(--color-emerald)" : "var(--muted-foreground)" }}
-            />
-            <div className="text-sm font-semibold text-foreground">즉시</div>
-            <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-              지금 바로
-            </div>
-          </button>
-          <button
-            className="rounded-xl p-3 text-center transition-all"
-            style={{
-              background: publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/15%)" : "var(--background)",
-              border: `2px solid ${publishMode === "scheduled" ? "oklch(0.769 0.188 70.08/60%)" : "var(--border)"}`,
-            }}
-            onClick={() => setPublishMode("scheduled")}
-          >
-            <Calendar
-              className="w-5 h-5 mx-auto mb-1"
-              style={{ color: publishMode === "scheduled" ? "var(--color-amber-brand)" : "var(--muted-foreground)" }}
-            />
-            <div className="text-sm font-semibold text-foreground">예약</div>
-            <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-              시간 지정
-            </div>
-          </button>
-        </div>
-
-        {publishMode === "scheduled" && (
-          <div
-            className="space-y-3 p-3 rounded-xl"
-            style={{
-              background: "oklch(0.769 0.188 70.08/8%)",
-              border: "1px solid oklch(0.769 0.188 70.08/20%)",
-            }}
-          >
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>
-                날짜
-              </label>
-              <Input
-                type="date"
-                value={scheduleDate}
-                onChange={(e) => setScheduleDate(e.target.value)}
-                min={new Date().toISOString().slice(0, 10)}
-                className="text-sm h-9"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>
-                시간
-              </label>
-              <Input
-                type="time"
-                value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
-                className="text-sm h-9"
-              />
-            </div>
-            {scheduleDate && (
-              <div
-                className="text-xs text-center font-medium py-1 rounded"
-                style={{
-                  background: "oklch(0.769 0.188 70.08/15%)",
-                  color: "var(--color-amber-brand)",
-                }}
-              >
-                📅 {scheduleDate} {scheduleTime} 발행 예정
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 발행 버튼 */}
-      <Button
-        className="w-full h-12 text-base font-semibold gap-2"
-        style={{ background: publishBg, color: "white" }}
-        disabled={isPublishing || selectedPlatforms.length === 0}
-        onClick={onPublish}
-      >
-        {isPublishing ? (
-          <>
-            <Send className="w-4 h-4 animate-pulse" />발행 중...
-          </>
-        ) : publishMode === "instant" ? (
-          <>
-            <Zap className="w-4 h-4" />즉시 발행하기
-          </>
-        ) : (
-          <>
-            <Calendar className="w-4 h-4" />예약 발행 등록
-          </>
-        )}
-      </Button>
-
-      {selectedPlatforms.length === 0 && (
-        <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
-          플랫폼을 선택해주세요
-        </p>
-      )}
-    </>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// DeploymentPage — 메인
-// ─────────────────────────────────────────────────────────
-
-export default function DeploymentPage() {
-  // ── 저장된 콘텐츠 불러오기 ──
-  const saved = safeParseJSON<Record<string, any>>(CONTENT_KEY, {});
-
-  // ── 상태 ──
-  const [title, setTitle] = useState<string>(saved?.title || "");
-  const [greeting, setGreeting] = useState<string>(
-    () => localStorage.getItem("blogauto_greeting") || ""
-  );
-  const [hashtags, setHashtags] = useState<string[]>(saved?.hashtags || []);
-  const [newTag, setNewTag] = useState("");
-  const [thumbnail, setThumbnail] = useState<string>(() => {
-    return saved?.thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
-  });
-  // thumbnail 변경 시 localStorage 동기화
-  useEffect(() => {
-    if (thumbnail) localStorage.setItem("blogauto_thumbnail", thumbnail);
-    else localStorage.removeItem("blogauto_thumbnail");
-  }, [thumbnail]);
-  const [imageMode, setImageMode] = useState<"auto" | "manual">("auto");
-  const [autoInserted, setAutoInserted] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showPublishPanel, setShowPublishPanel] = useState(false);
-
-  const [deployImages, setDeployImages] = useState<{ id: number; src: string; alt?: string }[]>(
-    () => safeParseJSON("blogauto_deploy_images", [])
-  );
-
-  // ✅ 썸네일 자동 지정: 이미지가 있고 썸네일이 없으면 첫번째 이미지로 자동 설정
-  useEffect(() => {
-    if (!thumbnail && deployImages.length > 0 && deployImages[0].src) {
-      setThumbnail(deployImages[0].src);
-    }
-  }, [deployImages]);
-
-  const [blocks, setBlocks] = useState<ContentBlock[]>(() => {
-    // 저장된 블록 상태 우선 복원
-    const savedBlocks = safeParseJSON<ContentBlock[] | null>("blogauto_deploy_blocks", null);
-    if (Array.isArray(savedBlocks) && savedBlocks.length > 0) {
-      // 텍스트 블록이 실제 내용 있는지 확인
-      const hasContent = savedBlocks.some(b => b.type === "text" && (b as TextBlock).content.trim().length > 0);
-      if (hasContent) return savedBlocks;
-    }
-    // localStorage에서 콘텐츠 새로 파싱
-    const freshSaved = safeParseJSON<Record<string, any>>(CONTENT_KEY, {});
-    const content: string = freshSaved?.content || "";
-    if (!content) return [{ type: "text", id: uid(), content: "" }];
-    return content
-      .split("\n\n")
-      .filter(Boolean)
-      .map((p) => ({ type: "text" as const, id: uid(), content: p }));
-  });
-
-  const [platforms, setPlatforms] = useState<Platform[]>(() => {
-    const customList = (() => { try { return JSON.parse(localStorage.getItem("platform_custom_list") || "[]"); } catch { return []; } })();
-    const stored = localStorage.getItem(DEPLOY_PLATFORMS_KEY);
-    let base: Platform[] = [];
-    if (stored) {
-      try { base = JSON.parse(stored); } catch {}
-    }
-    // custom 항목을 항상 customList 기준으로 재생성 (동기화)
-    const nonCustom = base.filter(p => p.type !== "custom");
-    const customPlatforms: Platform[] = customList.map((e: any, idx: number) => ({
-      id: `custom_${idx}`,
-      type: "custom" as const,
-      name: e._name || e.custom_domain || `커스텀${idx + 1}`,
-    }));
-    if (nonCustom.length > 0 || customPlatforms.length > 0) {
-      return [...nonCustom, ...customPlatforms];
-    }
-    // 완전 기본값
-    const defaults: Platform[] = [];
-    if (userGet("naver_blog_id"))
-      defaults.push({ id: uid(), type: "naver", name: "네이버 블로그" });
-    if (userGet("wp_url"))
-      defaults.push({ id: uid(), type: "wordpress", name: "WordPress" });
-    customList.forEach((e: any, idx: number) => {
-      defaults.push({ id: `custom_${idx}`, type: "custom", name: e._name || e.custom_domain || `커스텀${idx + 1}` });
+    const resp = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action, ...extra }),
     });
-    if (userGet("blogger_api_key") || userGet("blogger_blog_id"))
-      defaults.push({ id: uid(), type: "blogger", name: "블로거" });
-    if (userGet("medium_token"))
-      defaults.push({ id: uid(), type: "medium", name: "미디엄" });
-    return defaults;
-  });
+    return await resp.json();
+  } catch { return { ok: false }; }
+}
 
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
-  const [publishMode, setPublishMode] = useState<"instant" | "scheduled">("instant");
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [scheduleTime, setScheduleTime] = useState("09:00");
-  const [isPublishing, setIsPublishing] = useState(false);
+// ── localStorage 데이터 읽기 (오프라인 fallback) ──
+function loadRealData() {
+  try {
+    // 발행 글 수
+    const content = JSON.parse(localStorage.getItem("blogauto_content") || "{}");
+    const blocks = JSON.parse(localStorage.getItem("blogauto_deploy_blocks") || "[]");
+    const gallery = JSON.parse(localStorage.getItem("imggen_gallery") || "[]");
+    const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
 
-  const thumbnailRef = useRef<HTMLInputElement>(null);
-  const manualFileRef = useRef<HTMLInputElement>(null);
-  const imageModeRef = useRef(imageMode);
-  imageModeRef.current = imageMode;
+    // 키워드 수
+    const keywords = JSON.parse(localStorage.getItem("blogauto_keywords") || "[]");
 
-  // ── 블록 자동 저장 ──
-  useEffect(() => {
-    try {
-      const toSave = blocks.map((b) => {
-        if (b.type === "image-pair") {
-          return { ...b, images: b.images.filter((img) => !img.src.startsWith("data:")) };
-        }
-        if (b.type === "image" && b.src.startsWith("data:")) return { ...b, src: "" };
-        return b;
+    // 발행 횟수 (블록에 텍스트 있으면 카운트)
+    const publishCount = parseInt(localStorage.getItem("blogauto_publish_count") || "0");
+    const totalImages = gallery.length;
+
+    // 오늘 날짜
+    const today = new Date();
+    const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
+
+    // 최근 7일 트래픽 (실제 발행 기반 추정)
+    const baseViews = 800 + publishCount * 12;
+    const trafficData = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (6 - i));
+      const label = `${d.getMonth() + 1}/${d.getDate()}`;
+      const seed = d.getDate() + i;
+      return {
+        date: label,
+        views: 0,
+        clicks: 0,
+        revenue: 0,
+      };
+    });
+
+    // 발행 글 목록 (최근 콘텐츠 기반)
+    const recentPosts = [];
+    if (content?.title) {
+      recentPosts.push({
+        title: content.title || content.keyword || "최근 작성된 글",
+        status: "published",
+        views: 0,
+        clicks: 0,
+        date: "방금",
+        platform: platforms[0]?.type === "blogger" ? "블로거" : platforms[0]?.type === "medium" ? "미디엄" : "블로그",
       });
-      localStorage.setItem("blogauto_deploy_blocks", JSON.stringify(toSave));
-    } catch {}
-  }, [blocks]);
-
-  // ── Ctrl+V 클립보드 이미지 ──
-  useEffect(() => {
-    function handlePaste(e: ClipboardEvent) {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith("image/")) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          if (!file) break;
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const src = ev.target?.result as string;
-            if (!src) return;
-            if (imageModeRef.current === "manual") {
-              setBlocks((prev) => [
-                ...prev,
-                { type: "image", id: uid(), src, alt: "붙여넣은 이미지", position: "center", source: "manual" },
-              ]);
-              toast.success("✅ 클립보드 이미지가 본문에 추가되었습니다!");
-            } else {
-              setThumbnail(src);
-              toast.success("✅ 클립보드 이미지가 썸네일로 설정되었습니다!");
-            }
-          };
-          reader.readAsDataURL(file);
-          break;
-        }
-      }
     }
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
+
+    // 파이프라인 현황
+    const pipeline = {
+      keywords: keywords.length || 0,
+      content: content?.content ? 1 : 0,
+      images: totalImages,
+      deploy: publishCount,
+    };
+
+    return { trafficData, recentPosts, pipeline, publishCount, totalImages, content };
+  } catch {
+    return { trafficData: [], recentPosts: [], pipeline: { keywords: 0, content: 0, images: 0, deploy: 0 }, publishCount: 0, totalImages: 0, content: {} };
+  }
+}
+
+// ── 알림 타입 ────────────────────────────────────────
+type Notification = { id: string; type: "success" | "info" | "warning"; message: string; time: string; read: boolean; };
+
+function loadNotifications(): Notification[] {
+  try { return JSON.parse(localStorage.getItem("blogauto_notifications") || "[]"); } catch { return []; }
+}
+function saveNotifications(notifications: Notification[]) {
+  try { localStorage.setItem("blogauto_notifications", JSON.stringify(notifications)); } catch {}
+}
+
+export default function Dashboard() {
+  const [, navigate] = useLocation();
+  const [isRunning, setIsRunning] = useState(false);
+  const [realData, setRealData] = useState(loadRealData());
+  const [notifications, setNotifications] = useState<Notification[]>(loadNotifications());
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [serverPosts, setServerPosts] = useState<any[]>([]);
+  const [serverStats, setServerStats] = useState<Record<string, any>>({});
+  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "done" | "offline">("idle");
+  const isLoggedIn = !!localStorage.getItem("ba_token");
+  const isGuestMode = !isLoggedIn && localStorage.getItem("guest_mode") === "true";
+
+  const handleGuestBlock = () => {
+    toast.error("🔒 가입 후 이용 가능한 기능이에요!", {
+      action: { label: "회원가입", onClick: () => { localStorage.removeItem("guest_mode"); navigate("/signup"); } },
+      duration: 4000,
+    });
+  };
+
+  // ── 관리자 공지 팝업 (다중) ──────────────────────────────
+  const [popupQueue, setPopupQueue] = useState<any[]>([]);
+  const [currentPopupIdx, setCurrentPopupIdx] = useState(0);
+
+  useEffect(() => {
+    const token = localStorage.getItem("ba_token") || "";
+    fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "loadPopups" }),
+    }).then(r => r.json()).then(d => {
+      if (d.ok && Array.isArray(d.popups)) {
+        const now = new Date();
+        const active = d.popups.filter((p: any) => {
+          if (!p.enabled) return false;
+          if (p.startAt && new Date(p.startAt) > now) return false;
+          if (p.endAt && new Date(p.endAt) < now) return false;
+          // 일주일 보지 않기 체크
+          const snooze = localStorage.getItem(`popup_snooze_${p.id}`);
+          if (snooze && Date.now() < parseInt(snooze)) return false;
+          return true;
+        });
+        setPopupQueue(active);
+      }
+    }).catch(() => {});
   }, []);
 
-  // ── autoInsert URL 파라미터 처리 ──
-  // blocks가 로드된 후 실행되도록 blocks 의존성 추가
-  const [pendingAutoInsert, setPendingAutoInsert] = useState<{ id: number; src: string; alt?: string }[] | null>(() => {
-    const autoInsertParam = new URLSearchParams(window.location.search).get("autoInsert");
-    if (autoInsertParam === "true") {
-      const stored = safeParseJSON<{ id: number; src: string; alt?: string }[]>("blogauto_deploy_images", []);
-      if (stored.length > 0) return stored;
-    }
-    return null;
-  });
+  const currentPopup = popupQueue[currentPopupIdx] || null;
 
+  // 팝업 슬라이드 (내용을 --- 구분자로 나눔)
+  const [slideIdx, setSlideIdx] = useState(0);
+  const slides = currentPopup
+    ? currentPopup.content.split("\n---\n").map((s: string) => s.trim()).filter(Boolean)
+    : [];
+  const totalSlides = slides.length || 1;
+  const isLastSlide = slideIdx >= totalSlides - 1;
+
+  // 팝업 바뀔 때 슬라이드 초기화
+  const prevPopupId = popupQueue[currentPopupIdx]?.id;
+
+  const handleNextSlide = () => {
+    if (!isLastSlide) { setSlideIdx(i => i + 1); return; }
+    handleClosePopup();
+  };
+  const handlePrevSlide = () => { if (slideIdx > 0) setSlideIdx(i => i - 1); };
+
+  const handleClosePopup = () => {
+    setSlideIdx(0);
+    if (currentPopupIdx < popupQueue.length - 1) {
+      setCurrentPopupIdx(i => i + 1);
+    } else {
+      setPopupQueue([]);
+    }
+  };
+
+  const handleSnoozePopup = () => {
+    if (currentPopup) {
+      localStorage.setItem(`popup_snooze_${currentPopup.id}`, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    }
+    setSlideIdx(0);
+    if (currentPopupIdx < popupQueue.length - 1) {
+      setCurrentPopupIdx(i => i + 1);
+    } else {
+      setPopupQueue([]);
+    }
+  };
+  // 현재 언어
+  const currentLang = localStorage.getItem("content_language") || "ko";
+  const langLabels: Record<string, string> = {
+    ko: "한국어", en: "English", ja: "日本語", zh: "中文",
+    es: "Español", fr: "Français", de: "Deutsch", pt: "Português",
+  };
+
+  // 읽지 않은 알림 수
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // ── 서버에서 실시간 데이터 불러오기 ──
   useEffect(() => {
-    if (!pendingAutoInsert) return;
-    // 텍스트 블록이 로드됐을 때만 실행
-    const textBlocks = blocks.filter(b => b.type === "text" && (b as TextBlock).content.trim().length > 0);
-    if (textBlocks.length > 0) {
-      triggerAutoInsert(pendingAutoInsert);
-      setPendingAutoInsert(null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, pendingAutoInsert]);
+    if (!isLoggedIn) return;
+    setSyncStatus("syncing");
 
-  // ── 블록 조작 함수들 ──
+    const fetchAll = async () => {
+      // 발행 글 목록
+      const postsRes = await apiCall("loadPosts");
+      if (postsRes.ok) setServerPosts(postsRes.posts || []);
 
-  function updateBlock(id: string, updates: Partial<ContentBlock>) {
-    setBlocks((prev) => prev.map((b) => (b.id === id ? ({ ...b, ...updates } as ContentBlock) : b)));
-  }
+      // 통계
+      const statsRes = await apiCall("loadStats");
+      if (statsRes.ok) setServerStats(statsRes.stats || {});
 
-  function removeBlock(id: string) {
-    setBlocks((prev) => prev.filter((b) => b.id !== id));
-  }
-
-  function addTextBlock(afterId?: string) {
-    const newBlock: TextBlock = { type: "text", id: uid(), content: "" };
-    if (!afterId) {
-      setBlocks((prev) => [...prev, newBlock]);
-      return;
-    }
-    setBlocks((prev) => {
-      const idx = prev.findIndex((b) => b.id === afterId);
-      const next = [...prev];
-      next.splice(idx + 1, 0, newBlock);
-      return next;
-    });
-  }
-
-  function addManualImageBlock(afterId?: string) {
-    const newBlock: SingleImageBlock = {
-      type: "image",
-      id: uid(),
-      src: "",
-      alt: "",
-      position: "center",
-      source: "manual",
+      setSyncStatus(postsRes.ok ? "done" : "offline");
     };
-    if (!afterId) {
-      setBlocks((prev) => [...prev, newBlock]);
-      return;
-    }
-    setBlocks((prev) => {
-      const idx = prev.findIndex((b) => b.id === afterId);
-      const next = [...prev];
-      next.splice(idx + 1, 0, newBlock);
-      return next;
-    });
-  }
 
-  // ── 자동 이미지 삽입 (첫 이미지 맨 앞 + 3단락마다 1장) ──
-  function triggerAutoInsert(images: { id: number; src: string; alt?: string }[]) {
-    // 기존 자동 이미지 제거, 텍스트+수동이미지만 남김
-    const textOnly = blocks.filter(
-      (b) => b.type === "text" || (b.type === "image" && (b as SingleImageBlock).source === "manual")
-    );
-    const textBlocks = textOnly.filter((b) => b.type === "text");
-    if (textBlocks.length === 0) {
-      toast.error("본문 텍스트가 없습니다");
-      return;
-    }
+    fetchAll();
+    // 30초마다 자동 갱신
+    const interval = setInterval(fetchAll, 30000);
+    return () => clearInterval(interval);
+  }, [isLoggedIn]);
 
-    // FAQ/참고자료 마커가 있는 블록 이후는 이미지 삽입 금지
-    function hasSectionMarker(b: ContentBlock): boolean {
-      if (b.type !== "text") return false;
-      const c = (b as TextBlock).content;
-      return c.includes("[FAQ시작]") || c.includes("[참고자료시작]") || c.includes("[관련글시작]");
-    }
-
-    const markerIdx = textOnly.findIndex(hasSectionMarker);
-    const safeBlocks = markerIdx === -1 ? textOnly : textOnly.slice(0, markerIdx);
-    const sectionBlocks = markerIdx === -1 ? [] : textOnly.slice(markerIdx);
-    const safeTextCount = safeBlocks.filter((b) => b.type === "text").length;
-
-    const imgs = images.filter((img) => img?.src && img.src.trim() !== "");
-
-    if (imgs.length === 0) {
-      toast.error("이미지가 없습니다");
-      return;
-    }
-
-    const result: ContentBlock[] = [];
-    let insertedCount = 0;
-    let textCount = 0;
-
-    // ✅ 첫 이미지를 맨 앞에 삽입
-    result.push({
-      type: "image",
-      id: uid(),
-      src: imgs[0].src,
-      alt: imgs[0].alt || "이미지 1",
-      position: "center",
-      source: "auto",
-    } as ContentBlock);
-    insertedCount++;
-
-    // ✅ 남은 이미지를 본문 길이에 맞춰 최대한 고르게 분산 배치
-    const remainingImages = imgs.slice(1);
-    const insertMap = new Map<number, typeof remainingImages>();
-
-    if (safeTextCount > 0 && remainingImages.length > 0) {
-      remainingImages.forEach((img, index) => {
-        const targetTextIndex = Math.min(
-          safeTextCount,
-          Math.max(1, Math.ceil(((index + 1) * safeTextCount) / remainingImages.length))
-        );
-        const bucket = insertMap.get(targetTextIndex) || [];
-        bucket.push(img);
-        insertMap.set(targetTextIndex, bucket);
-      });
-    }
-
-    for (let i = 0; i < safeBlocks.length; i++) {
-      result.push(safeBlocks[i]);
-
-      if (safeBlocks[i].type === "text") {
-        textCount++;
-        const toInsert = insertMap.get(textCount) || [];
-        toInsert.forEach((img, idx) => {
-          result.push({
-            type: "image",
-            id: uid(),
-            src: img.src,
-            alt: img.alt || `이미지 ${insertedCount + idx + 1}`,
-            position: "center",
-            source: "auto",
-          } as ContentBlock);
-        });
-        insertedCount += toInsert.length;
-      }
-    }
-
-    // ✅ 못 들어간 이미지는 마지막 텍스트 블록 뒤에 순서대로 삽입 (FAQ/참고자료 앞으로 절대 안 감)
-    if (insertedCount < imgs.length) {
-      const remaining = imgs.slice(insertedCount);
-      // 마지막 텍스트 블록 인덱스 찾기
-      let lastTextIdx = -1;
-      for (let i = result.length - 1; i >= 0; i--) {
-        if (result[i].type === "text") { lastTextIdx = i; break; }
-      }
-      const insertAt = lastTextIdx >= 0 ? lastTextIdx + 1 : result.length;
-      // 뒤에서부터 splice해야 인덱스 안 밀림
-      remaining.reverse().forEach((img) => {
-        result.splice(insertAt, 0, {
-          type: "image",
-          id: uid(),
-          src: img.src,
-          alt: img.alt || `이미지`,
-          position: "center",
-          source: "auto",
-        } as ContentBlock);
-      });
-      insertedCount = imgs.length;
-    }
-
-    // ✅ FAQ/참고자료 섹션은 이미지 없이 맨 끝에 추가
-    for (const b of sectionBlocks) {
-      result.push(b);
-    }
-
-    setBlocks(result);
-    setAutoInserted(true);
-    toast.success(`이미지 ${insertedCount}장 모두 배치 완료!`);
-  }
-
-  function handleAutoInsert() {
-    if (deployImages.length === 0) {
-      toast.error("이미지 생성 페이지에서 이미지를 먼저 만들어오세요");
-      return;
-    }
-    triggerAutoInsert(deployImages);
-  }
-
-  function handleRemoveAutoImages() {
-    setBlocks((prev) =>
-      prev.filter((b) => b.type === "text" || (b.type === "image" && b.source === "manual"))
-    );
-    setAutoInserted(false);
-    toast.success("자동 삽입 이미지 제거됨");
-  }
-
-  // ── 콘텐츠 빌드 ──
-  function buildHtmlContent(): string {
-    const tocEntries: { id: string; title: string }[] = [];
-    let autoSectionIndex = 0;
-
-    function escapeHtml(text: string): string {
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
-
-    function inlineFormat(text: string): string {
-      return escapeHtml(text)
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>");
-    }
-
-    function stripInlineMarkdown(text: string): string {
-      return text
-        .replace(/^#{1,3}\s+/, "")
-        .replace(/\*\*(.+?)\*\*/g, "$1")
-        .replace(/\*(.+?)\*/g, "$1")
-        .replace(/`(.+?)`/g, "$1")
-        .trim();
-    }
-
-    function shortenTitle(text: string, max = 26): string {
-      const cleaned = stripInlineMarkdown(text).replace(/\s+/g, " ").trim();
-      if (!cleaned) return `핵심 내용 ${tocEntries.length + 1}`;
-      return cleaned.length > max ? `${cleaned.slice(0, max).trim()}…` : cleaned;
-    }
-
-    function makeSectionHeading(title: string, id?: string): string {
-      const sectionId = id || `section-${tocEntries.length}`;
-      const cleanTitle = shortenTitle(title, 60);
-      tocEntries.push({ id: sectionId, title: cleanTitle });
-      return `<h2 id="${sectionId}" style="font-size:22px;font-weight:800;margin:36px 0 14px;color:#111111;border-bottom:2px solid #e8e8ed;padding-bottom:10px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#2563eb;color:white;font-size:13px;font-weight:800;flex-shrink:0">${tocEntries.length}</span>${inlineFormat(cleanTitle)}</h2>`;
-    }
-
-    function buildCallout(type: "tip" | "warning" | "important", body: string): string {
-      const styles = {
-        tip: {
-          bg: "#eff6ff",
-          border: "#2563eb",
-          color: "#1e3a8a",
-          icon: "💡",
-        },
-        warning: {
-          bg: "#fffbeb",
-          border: "#f59e0b",
-          color: "#78350f",
-          icon: "⚠️",
-        },
-        important: {
-          bg: "#f0fdf4",
-          border: "#16a34a",
-          color: "#14532d",
-          icon: "✅",
-        },
-      } as const;
-      const s = styles[type];
-      return `<div style="background:${s.bg};border-left:4px solid ${s.border};border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:15px;color:${s.color};line-height:1.8">${s.icon} ${body}</div>`;
-    }
-
-    function classifyCallout(line: string): "tip" | "warning" | "important" | null {
-      const trimmed = line.trim();
-      if (!trimmed) return null;
-
-      // Q1:/A1: 패턴은 FAQ 마커 잔여물 — callout 변환 금지
-      if (/^[QA]\d+:/.test(trimmed)) return null;
-
-      if (/^\[팁\]/.test(trimmed)) return "tip";
-      if (/^\[(주의|경고)\]/.test(trimmed)) return "warning";
-      if (/^\[(중요|필수)\]/.test(trimmed)) return "important";
-
-      if (/^(tip|팁|포인트|핵심|check|체크|꿀팁|추천)[:\s!]/i.test(trimmed)) return "tip";
-      if (/^(주의|경고|warning|caution|조심|실수)[:\s!]/i.test(trimmed)) return "warning";
-      if (/^(중요|필수|반드시|꼭|key|핵심 정리|요약|정리)[:\s!]/i.test(trimmed)) return "important";
-
-      if (/반드시|꼭 확인|주의해야|절대|가장 중요|핵심은|정리하면|요약하면|놓치면 안/.test(trimmed)) return "important";
-      if (/주의|조심|실수|틀리기|헷갈리|오해|잘못|피해야|주의사항/.test(trimmed)) return "warning";
-      if (/팁|꿀팁|비법|비결|노하우|포인트|추천|도움이 됩니다|유용합니다/.test(trimmed)) return "tip";
-
-      return null;
-    }
-
-    function mdLineToHtml(line: string, paragraphIndexRef: { value: number }, explicitHeadingFoundRef: { value: boolean }): string {
-      const trimmed = line.trim();
-      if (!trimmed) return "";
-
-      if (/^##\s+/.test(trimmed)) {
-        explicitHeadingFoundRef.value = true;
-        return makeSectionHeading(trimmed.replace(/^##\s+/, ""));
-      }
-
-      if (/^###\s+/.test(trimmed)) {
-        return `<h3 style="font-size:18px;font-weight:700;margin:24px 0 10px;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:10px">${inlineFormat(trimmed.replace(/^###\s+/, ""))}</h3>`;
-      }
-
-      if (/^---+$/.test(trimmed)) {
-        return `<hr style="border:none;border-top:2px solid #eee;margin:24px 0">`;
-      }
-
-      const calloutType = classifyCallout(trimmed);
-      if (calloutType) {
-        const body = inlineFormat(
-          trimmed
-            .replace(/^\[(팁|주의|경고|중요|필수)\]\s*/i, "")
-            .replace(/^(tip|팁|포인트|핵심|check|체크|꿀팁|추천|주의|경고|warning|caution|조심|실수|중요|필수|반드시|꼭|key|핵심 정리|요약|정리)[:\s!]+/i, "")
-        );
-        return buildCallout(calloutType, body || inlineFormat(trimmed));
-      }
-
-      const isBulletListLine = /^[-*•]\s+/.test(trimmed);
-      const isNumberedListLine = /^\d+[.)]\s+/.test(trimmed);
-      const isListLine = isBulletListLine || isNumberedListLine;
-      const cleanedText = stripInlineMarkdown(trimmed);
-      const isTitleLike = !/[.!?。！？]$/.test(cleanedText) && cleanedText.length >= 8 && cleanedText.length <= 42;
-
-      if (isNumberedListLine) {
-        const numberedBody = inlineFormat(trimmed.replace(/^(\d+[.)])\s+/, `<strong>$1</strong> `));
-        return buildCallout("important", numberedBody);
-      }
-
-      let autoHeadingHtml = "";
-      if (!explicitHeadingFoundRef.value && paragraphIndexRef.value > 0 && paragraphIndexRef.value % 3 === 0 && !isListLine) {
-        autoSectionIndex += 1;
-        autoHeadingHtml = makeSectionHeading(shortenTitle(cleanedText || `핵심 내용 ${autoSectionIndex}`, 24), `section-auto-${autoSectionIndex}`);
-      } else if (!explicitHeadingFoundRef.value && paragraphIndexRef.value === 0 && isTitleLike) {
-        autoSectionIndex += 1;
-        autoHeadingHtml = makeSectionHeading(shortenTitle(cleanedText, 24), `section-auto-${autoSectionIndex}`);
-      }
-
-      paragraphIndexRef.value += 1;
-      const text = inlineFormat(trimmed);
-      const paragraphHtml = isBulletListLine
-        ? `<p style="line-height:1.9;margin:0 0 12px;color:#333333;font-size:16px;padding-left:4px">${text}</p>`
-        : `<p style="line-height:1.9;margin:0 0 16px;color:#333333;font-size:16px">${text}</p>`;
-
-      return autoHeadingHtml + paragraphHtml;
-    }
-
-    function groupLines(lines: string[]): string {
-      const result: string[] = [];
-      let tableBuffer: string[] = [];
-      const paragraphIndexRef = { value: 0 };
-      const explicitHeadingFoundRef = { value: false };
-
-      function flushTable() {
-        if (tableBuffer.length < 2) {
-          tableBuffer.forEach((l) => result.push(mdLineToHtml(l, paragraphIndexRef, explicitHeadingFoundRef)));
-          tableBuffer = [];
-          return;
-        }
-        const rows = tableBuffer.filter((l) => !/^\|[-\s|]+\|$/.test(l.trim()));
-        const tableHtml = `<div style="overflow-x:auto;margin:20px 0"><table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">${rows
-          .map((row, ri) => {
-            const cells = row.split("|").map((c) => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
-            const tag = ri === 0 ? "th" : "td";
-            const rowBg = ri === 0 ? "background:#2563eb;color:white;" : ri % 2 === 0 ? "background:#f8fafc;" : "background:white;";
-            return `<tr>${cells.map((c) => `<${tag} style="padding:12px 16px;border:1px solid #e2e8f0;text-align:left;${rowBg}font-weight:${ri === 0 ? "700" : "400"}">${inlineFormat(c)}</${tag}>`).join("")}</tr>`;
-          })
-          .join("\n")}</table></div>`;
-        result.push(tableHtml);
-        tableBuffer = [];
-      }
-
-      for (const line of lines) {
-        if (/^\|.+\|/.test(line.trim())) {
-          tableBuffer.push(line);
-        } else {
-          if (tableBuffer.length > 0) flushTable();
-          const html = mdLineToHtml(line, paragraphIndexRef, explicitHeadingFoundRef);
-          if (html) result.push(html);
-        }
-      }
-      if (tableBuffer.length > 0) flushTable();
-      return result.filter(Boolean).join("\n");
-    }
-
-    function extractSection(text: string, startTag: string, endTag: string): string {
-      const s = text.indexOf(startTag);
-      const e = text.indexOf(endTag);
-      if (s === -1 || e === -1) return "";
-      return text.slice(s + startTag.length, e).trim();
-    }
-
-    const allRawText = blocks
-      .filter((b: any) => b.type === "text")
-      .map((b: any) => (b as TextBlock).content)
-      .join("\n\n");
-
-    const faqRaw = extractSection(allRawText, "[FAQ시작]", "[FAQ끝]");
-    const refRaw = extractSection(allRawText, "[참고자료시작]", "[참고자료끝]");
-    const postRaw = extractSection(allRawText, "[관련글시작]", "[관련글끝]");
-
-    const parts: string[] = [];
-
-    // FAQ/참고자료/관련글 마커 블록 인덱스 사전 스캔 — 이미지가 마커보다 앞에 있어도 차단
-    const sectionMarkerIdx = (blocks as any[]).findIndex(
-      (b: any) =>
-        b.type === "text" &&
-        (b.content.includes("[FAQ시작]") ||
-          b.content.includes("[참고자료시작]") ||
-          b.content.includes("[관련글시작]"))
-    );
-
-    blocks.forEach((b: any, blockIdx: number) => {
-      const afterSection = sectionMarkerIdx !== -1 && blockIdx >= sectionMarkerIdx;
-      if (b.type === "text") {
-        const cleaned = b.content
-          .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
-          .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
-          .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, "")
-          .trim();
-        if (cleaned) {
-          parts.push(groupLines(cleaned.split("\n")));
-        }
-      } else if (b.type === "image-pair") {
-        if (afterSection) return; // 섹션 이후 이미지 절대 금지
-        const validImgs = b.images.filter((img: any) => img.src && img.src.trim() !== "");
-        if (validImgs.length > 0) {
-          const imgHtml = validImgs
-            .map(
-              (img: any) =>
-                `<figure style="display:inline-block;width:${validImgs.length > 1 ? "48%" : "100%"};margin:4px 1%;vertical-align:top">` +
-                `<img src="${img.src}" alt="${escapeHtml(img.alt || "")}" style="width:100%;border-radius:12px;display:block">` +
-                (img.alt
-                  ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:4px">${inlineFormat(img.alt)}</figcaption>`
-                  : "") +
-                `</figure>`
-            )
-            .join("");
-          parts.push(`<div style="margin:16px 0;line-height:0">${imgHtml}</div>`);
-        }
-      } else if (b.type === "image") {
-        if (afterSection) return; // 섹션 이후 이미지 절대 금지
-        const imgSrc = b.src || b.url || "";
-        if (imgSrc) {
-          parts.push(
-            `<figure style="margin:20px 0;text-align:center">` +
-              `<img src="${imgSrc}" alt="${escapeHtml(b.alt || "")}" style="width:100%;border-radius:12px;display:block">` +
-              (b.alt
-                ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:6px">${inlineFormat(b.alt)}</figcaption>`
-                : "") +
-              `</figure>`
-          );
-        }
-      }
-    });
-
-    if (hashtags.length > 0) {
-      parts.push(`<p style="margin-top:24px;color:#888;font-size:14px">${hashtags.map((tag) => inlineFormat(tag)).join(" ")}</p>`);
-    }
-
-    const bodyHtml = parts.join("\n");
-
-    let faqHtml = "";
-    if (faqRaw) {
-      const qaPairs: { q: string; a: string }[] = [];
-      const lines = faqRaw.split("\n").map((l: string) => l.trim()).filter(Boolean);
-      for (let i = 0; i < lines.length; i++) {
-        const qMatch = lines[i].match(/^Q\d+:\s*(.+)/);
-        if (!qMatch) continue;
-        // A 줄 찾기 — Q 바로 다음이 아니어도, 여러 줄 답변도 흡수
-        let aText = "";
-        let j = i + 1;
-        // 빈 줄 건너뛰고 A 패턴 찾기
-        while (j < lines.length && !lines[j].match(/^A\d+:\s*(.+)/)) {
-          // 다음 Q가 나오면 A 없는 Q이므로 중단
-          if (lines[j].match(/^Q\d+:/)) break;
-          j++;
-        }
-        if (j < lines.length) {
-          const aMatch = lines[j].match(/^A\d+:\s*(.+)/);
-          if (aMatch) {
-            // A 첫 줄 수집
-            const aLines = [aMatch[1]];
-            let k = j + 1;
-            // A 이후 줄이 Q나 A 패턴 아니면 이어지는 답변으로 흡수
-            while (k < lines.length && !lines[k].match(/^[QA]\d+:/)) {
-              aLines.push(lines[k]);
-              k++;
-            }
-            aText = aLines.join(" ");
-            i = k - 1; // 다음 루프에서 k부터 시작
-          }
-        }
-        if (aText) {
-          qaPairs.push({ q: qMatch[1], a: aText });
-        }
-      }
-      if (qaPairs.length > 0) {
-        faqHtml = `<div id="faq-section" style="margin:48px 0 32px;padding:28px;background:#f8f9ff;border-radius:16px;border:1px solid #e0e4ff"><h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 20px;display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#6366f1;border-radius:8px;color:white;font-size:16px;flex-shrink:0">Q</span>자주 묻는 질문</h2>${qaPairs
-          .map(
-            ({ q, a }: { q: string; a: string }) =>
-              `<div style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid #e0e4ff"><div style="background:#6366f1;color:white;padding:14px 18px;font-weight:700;font-size:15px">Q. ${inlineFormat(q)}</div><div style="background:white;padding:14px 18px;color:#444;font-size:14px;line-height:1.8">A. ${inlineFormat(a)}</div></div>`
-          )
-          .join("")}</div>`;
-      }
-    }
-
-    let refHtml = "";
-    if (refRaw) {
-      const links: { name: string; desc: string; url: string }[] = [];
-      refRaw.split("\n").forEach((line: string) => {
-        const m = line.match(/^LINK\d+:\s*(.+?)\|(.+?)\|(.+)/);
-        if (m) links.push({ name: m[1].trim(), desc: m[2].trim(), url: m[3].trim() });
-      });
-      if (links.length > 0) {
-        refHtml = `<div id="ref-section" style="margin:48px 0 32px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:20px"><div style="width:4px;height:24px;background:linear-gradient(180deg,#2563eb,#1d4ed8);border-radius:2px;flex-shrink:0"></div><h2 style="font-size:18px;font-weight:800;color:#1a1a1a;margin:0">참고자료 &amp; 링크</h2></div><div style="display:grid;gap:10px">${links
-          .map(
-            ({ name, desc, url }: { name: string; desc: string; url: string }) =>
-              `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#ffffff;border-radius:14px;border:1px solid #e8e8eb;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="flex:1;min-width:0"><div style="font-weight:700;color:#2563eb;font-size:15px;margin-bottom:4px">🔗 ${inlineFormat(name)}</div><div style="color:#86868b;font-size:13px;line-height:1.5">${inlineFormat(desc)}</div></div><div style="flex-shrink:0;margin-left:12px;width:32px;height:32px;border-radius:50%;background:#eff3ff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#2563eb">→</div></a>`
-          )
-          .join("")}</div></div>`;
-      }
-    }
-
-    let postHtml = "";
-    if (postRaw) {
-      const posts: { title: string; desc: string; url: string }[] = [];
-      postRaw.split("\n").forEach((line: string) => {
-        const l = line.trim();
-        if (!l) return;
-        // POST1: 제목|설명|URL
-        const m3 = l.match(/^POST\d+:\s*(.+?)\|(.+?)\|(https?:\/\/.+)/);
-        if (m3) { posts.push({ title: m3[1].trim(), desc: m3[2].trim(), url: m3[3].trim() }); return; }
-        // POST1: 제목|설명 (하위 호환)
-        const m2 = l.match(/^POST\d+:\s*(.+?)\|(.+)/);
-        if (m2) posts.push({ title: m2[1].trim(), desc: m2[2].trim(), url: "" });
-      });
-      if (posts.length > 0) {
-        postHtml = `<div style="margin:40px 0"><h2 style="font-size:20px;font-weight:800;color:#333;margin:0 0 16px">관련 글</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">${posts
-          .map(({ title, desc, url }: { title: string; desc: string; url: string }) => {
-            const inner = `<div style="font-weight:700;color:#1e293b;font-size:14px;margin-bottom:8px;line-height:1.5">${inlineFormat(title)}</div><div style="color:#64748b;font-size:12px;line-height:1.6">${inlineFormat(desc)}</div>`;
-            if (url) return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block;padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06);text-decoration:none">${inner}</a>`;
-            return `<div style="padding:18px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">${inner}</div>`;
-          })
-          .join("")}</div></div>`;
-      }
-    }
-
-    let tocHtml = "";
-    if (tocEntries.length >= 1) {
-      const tocItems = tocEntries.map(
-        (entry, i) =>
-          `<li style="margin:8px 0;display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2563eb;color:white;font-size:11px;font-weight:800;flex-shrink:0">${i + 1}</span><a href="#${entry.id}" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">${inlineFormat(entry.title)}</a></li>`
-      );
-      if (faqRaw) tocItems.push(`<li style="margin:6px 0"><a href="#faq-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">자주 묻는 질문</a></li>`);
-      if (refRaw) tocItems.push(`<li style="margin:6px 0"><a href="#ref-section" style="color:#2563eb;text-decoration:none;font-size:14px;font-weight:500">참고자료 &amp; 링크</a></li>`);
-      tocHtml = `<div style="background:#f0f4ff;border:1px solid #c7d7fe;border-radius:14px;padding:20px 24px;margin:0 0 32px"><div style="font-weight:800;font-size:15px;color:#2563eb;margin-bottom:12px">📋 목차</div><ol style="margin:0;padding:0;list-style:none">${tocItems.join("\n")}</ol></div>`;
-    }
-
-    const tailHtml = faqHtml + refHtml + postHtml;
-
-    // 목차를 썸네일(본문 첫 이미지) 아래로 이동
-    // 첫 블록이 이미지면: 첫 이미지 -> 목차 -> 나머지 본문 순서
-    if (tocHtml) {
-      const firstBlock = blocks[0];
-      const firstIsImage = firstBlock && (firstBlock.type === "image" || firstBlock.type === "image-pair");
-      if (firstIsImage && parts.length > 0) {
-        const [firstPart, ...restParts] = parts;
-        return firstPart + tocHtml + restParts.join("\n") + tailHtml;
-      }
-    }
-
-    return tocHtml + bodyHtml + tailHtml;
-  }
-
-  function buildFinalContent(): string {
-    const parts: string[] = [];
-    if (greeting.trim()) parts.push(`[인사말]\n${greeting}\n`);
-    blocks.forEach((b) => {
-      if (b.type === "text") parts.push(b.content);
-      else if (b.type === "image-pair")
-        parts.push(b.images.map((img) => `[이미지: ${img.alt}]`).join("  "));
-      else parts.push(`[이미지: ${b.alt || "이미지"} - 정렬: ${b.position}]`);
-    });
-    if (hashtags.length > 0) parts.push("\n" + hashtags.join(" "));
-    return parts.join("\n\n");
-  }
-
-  // ── WordPress 발행 ──
-  async function publishToWordPress(scheduledAt: string | null) {
-    const wpUrl = userGet("wp_url");
-    const wpUser = userGet("wp_username");
-    const wpPass = userGet("wp_app_password");
-    if (!wpUrl || !wpUser || !wpPass) throw new Error("WordPress 설정이 없습니다.");
-    const postData: Record<string, unknown> = {
-      title,
-      content: buildHtmlContent(),
-      status: scheduledAt ? "future" : "publish",
-      tags: hashtags.map((t) => t.replace("#", "")),
-    };
-    if (scheduledAt) postData.date = scheduledAt;
-    const resp = await fetch(`${wpUrl.replace(/\/$/, "")}/wp-json/wp/v2/posts`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(`${wpUser}:${wpPass}`)}`,
-      },
-      body: JSON.stringify(postData),
-    });
-    if (!resp.ok) {
-      const e = await resp.json();
-      throw new Error(e.message || "WordPress 발행 실패");
-    }
-  }
-
-  // ── 쿠팡파트너스 링크 자동 삽입 ──────────────────
-  const [coupangLinks, setCoupangLinks] = React.useState<{name:string;url:string;price:string}[]>([]);
-  const [coupangLoading, setCoupangLoading] = React.useState(false);
-
-  const fetchCoupangLinks = async () => {
-    const accessKey = userGet("coupang_access_key");
-    const secretKey = userGet("coupang_secret_key");
-    if (!accessKey || !secretKey) {
-      toast.error("설정에서 쿠팡파트너스 API 키를 먼저 입력해주세요");
-      return;
-    }
-    if (!keyword && !title) { toast.error("키워드나 제목이 없습니다"); return; }
-    setCoupangLoading(true);
-    try {
-      const searchKeyword = keyword || title;
-      const resp = await fetch("/api/coupang", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "search", accessKey, secretKey, keyword: searchKeyword, limit: 3 }),
-      });
-      const data = await resp.json();
-      if (!data.ok) throw new Error(data.error);
-      setCoupangLinks(data.products.map((p: any) => ({
-        name: p.productName.slice(0, 40),
-        url: p.affiliateUrl,
-        price: p.productPrice ? `₩${Number(p.productPrice).toLocaleString()}` : "",
-      })));
-      toast.success(`✅ 쿠팡 상품 ${data.products.length}개 불러왔어요!`);
-    } catch (e: any) {
-      toast.error("쿠팡 검색 실패: " + e.message);
-    } finally { setCoupangLoading(false); }
+  // ── 발행 완료 시 서버에 저장 ──
+  const savePostToServer = async (post: any) => {
+    if (!isLoggedIn) return;
+    await apiCall("savePost", { post });
+    // 저장 후 목록 갱신
+    const res = await apiCall("loadPosts");
+    if (res.ok) setServerPosts(res.posts || []);
   };
 
-  const insertCoupangLinks = () => {
-    if (coupangLinks.length === 0) { toast.error("먼저 상품을 검색해주세요"); return; }
-    const lines = coupangLinks.map(p => {
-      const price = p.price ? " - " + p.price : "";
-      return "[상품] " + p.name + price + " : " + p.url;
+  // ── 그래프용 최근 7일 통계 계산 ──
+  const getChartData = () => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (6 - i));
+      const key = d.toISOString().slice(0, 10);
+      const label = `${d.getMonth() + 1}/${d.getDate()}`;
+      const stat = serverStats[key];
+      // 서버 데이터 있으면 사용, 없으면 localStorage 추정값
+      if (stat) return { date: label, views: stat.views, clicks: stat.clicks, revenue: stat.revenue };
+      const seed = d.getDate() + i;
+      const base = 800 + (serverPosts.length * 12);
+      return {
+        date: label,
+        views: 0,
+        clicks: 0,
+        revenue: 0,
+      };
     });
-    const coupangText = [
-      "",
-      "---",
-      "[추천 상품]",
-      ...lines,
-      "(이 글에는 파트너스 링크가 포함되어 있습니다)",
-      "---",
-      "",
-    ].join("\n");
-    setBlocks(prev => [...prev, { type: "text" as const, id: uid(), content: coupangText }]);
-    toast.success("쿠팡 링크가 본문 끝에 추가됐어요!");
-    setCoupangLinks([]);
   };
 
-  // ── 티스토리 발행 ──────────────────────────────────
-  async function publishToTistory(scheduledAt: string | null) {
-    const accessToken = userGet("tistory_access_token");
-    const blogName = userGet("tistory_blog_name");
-    if (!accessToken || !blogName) throw new Error("설정에서 티스토리 Access Token과 블로그를 먼저 등록해주세요");
+  // 자동 알림 생성 (실제 데이터 기반)
+  useEffect(() => {
+    const existing = loadNotifications();
+    const newNotifs: Notification[] = [];
 
-    const htmlContent = buildHtmlContent();
+    const content = JSON.parse(localStorage.getItem("blogauto_content") || "{}");
+    const gallery = JSON.parse(localStorage.getItem("imggen_gallery") || "[]");
+    const coupangKey = userGet("coupang_access_key");
+    const platformToken = userGet("medium_token") || userGet("blogger_api_key");
 
-    const resp = await fetch("/api/tistory", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "publish",
-        accessToken,
-        blogName,
-        title,
-        content: htmlContent,
-        tags: hashtags.map(t => t.replace("#", "")).join(","),
-        scheduledAt,
-      }),
-    });
-    const data = await resp.json();
-    if (!data.ok) throw new Error(data.error);
-    toast.success(`✅ 티스토리 발행 완료! ${data.url}`);
-  }
-
-  // ── 네이버 블로그용 복사 (제목 + 본문 + 해시태그) ──
-  function copyForNaver() {
-    const lines: string[] = [];
-    // 제목
-    if (title.trim()) lines.push(title.trim() + "\n");
-    // 인사말
-    if (greeting.trim()) lines.push(greeting.trim() + "\n");
-    // 본문 (마크다운 제거 → 네이버 친화적 텍스트)
-    blocks.forEach(b => {
-      if (b.type === "text") {
-        const clean = b.content
-          .replace(/^#{1,3}\s+/gm, "")   // ## 제목 기호 제거
-          .replace(/\*\*(.*?)\*\*/g, "$1") // **강조** 제거
-          .replace(/\*(.*?)\*/g, "$1");    // *이탤릭* 제거
-        lines.push(clean);
-      } else if (b.type === "image-pair") {
-        lines.push("[이미지]\n[이미지]");
-      } else if (b.type === "image" && b.src) {
-        lines.push("[이미지]");
-      }
-    });
-    // 해시태그
-    if (hashtags.length > 0) lines.push("\n" + hashtags.join(" "));
-
-    const text = lines.join("\n");
-    navigator.clipboard.writeText(text).then(() => {
-      toast.success("✅ 네이버 블로그용으로 복사됐어요! 네이버 블로그 에디터에 붙여넣으세요 📋", { duration: 4000 });
-    });
-  }
-
-  // ── Webhook 발행 ──
-  async function publishToWebhook(platformId: string) {
-    // 1. platform_custom_list 우선 (신규 방식)
-    let url = "";
-    let key = "";
-    let authHeader = "Authorization";
-
-    try {
-      const customList = JSON.parse(localStorage.getItem("platform_custom_list") || "[]");
-      if (customList.length > 0) {
-        // custom_0, custom_1 ... 형식의 id에서 인덱스 추출
-        const idxMatch = platformId.match(/^custom_(\d+)$/);
-        if (idxMatch) {
-          const idx = parseInt(idxMatch[1]);
-          const entry = customList[idx];
-          if (entry) {
-            url = entry["webhook_url"] || "";
-            key = entry["webhook_auth_key"] || "";
-            authHeader = entry["webhook_auth_header"] || "Authorization";
-          }
-        } else {
-          // 구형 id 호환: name으로 매핑
-          const platform = platforms.find(p => p.id === platformId);
-          const platformName = (platform?.name || "").replace(/^www\./, "");
-          const entry =
-            customList.find((e: any) => (e._name || "").replace(/^www\./, "") === platformName || (e.custom_domain || "").replace(/^www\./, "") === platformName) ||
-            customList.find((e: any) => e.webhook_url && platformName && e.webhook_url.includes(platformName)) ||
-            null;
-          if (entry) {
-            url = entry["webhook_url"] || "";
-            key = entry["webhook_auth_key"] || "";
-            authHeader = entry["webhook_auth_header"] || "Authorization";
-          }
-        }
-      }
-    } catch {}
-
-    // 2. 기존 방식 fallback
-    if (!url) url = userGet("webhook_url") || "";
-    if (!key) key = userGet("webhook_auth_key") || "";
-    if (authHeader === "Authorization") authHeader = userGet("webhook_auth_header") || "Authorization";
-
-    if (!url) throw new Error("Webhook URL이 없습니다. 설정에서 커스텀 웹사이트를 등록해주세요.");
-    // CORS 우회: Vercel 서버를 프록시로 사용
-    const thumbnailUrl = thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
-    const tagStr = hashtags.map((t: string) => t.replace("#", "")).join(", ");
-    const slugBase = title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").slice(0, 80);
-    const _rawHtml = buildHtmlContent();
-    const _cleanHtml = _rawHtml
-      .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, '')
-      .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, '')
-      .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, '')
-      .trim();
-    const payload = {
-      title,
-      content: _cleanHtml,
-      thumbnail: thumbnailUrl,
-      tags: tagStr,
-      slug: slugBase,
-      excerpt: buildFinalContent().slice(0, 160),
-      category: selectedCategory || "",
-      status: publishMode === "scheduled" ? "scheduled" : "published",
-      publish_at: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
-      scheduledAt: publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null,
-    };
-
-    // 1차 시도: Vercel API 프록시 경유
-    try {
-      const proxyResp = await fetch("/api/webhook-proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, key, authHeader, payload }),
-      });
-      if (proxyResp.ok) return;
-      // 프록시 없으면 직접 시도
-    } catch {}
-
-    // 2차 시도: 직접 호출 (CORS 허용된 경우)
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (key && authHeader !== "none") {
-      if (authHeader === "Authorization") {
-        headers["Authorization"] = key.startsWith("Bearer ") ? key : key;
-      } else {
-        headers[authHeader] = key;
-      }
+    if (content?.title && !existing.find(n => n.message.includes(content.title?.slice(0, 10)))) {
+      newNotifs.push({ id: Date.now().toString(), type: "success", message: `글 생성 완료: "${content.title?.slice(0, 20)}..."`, time: "방금", read: false });
     }
-    const resp = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
-    if (!resp.ok) throw new Error(`Webhook 전송 실패 (${resp.status}): ${url} 서버가 POST 요청을 허용하는지 확인해주세요`);
-  }
-
-  // ── 초기화 ──
-  function handleReset(type: "all" | "content" | "image") {
-    if (type === "all") {
-      setTitle("");
-      setHashtags([]);
-      setBlocks([{ type: "text", id: uid(), content: "" }]);
-      setThumbnail("");
-      localStorage.removeItem("blogauto_deploy_blocks");
-      localStorage.removeItem(CONTENT_KEY);
-      localStorage.removeItem("blogauto_thumbnail");
-      localStorage.removeItem("blogauto_deploy_images");
-      try { const raw = localStorage.getItem(CONTENT_KEY); if (raw) { const c = JSON.parse(raw); delete c.thumbnail; localStorage.setItem(CONTENT_KEY, JSON.stringify(c)); } } catch {}
-    } else if (type === "content") {
-      setTitle("");
-      setHashtags([]);
-      setBlocks((prev) => {
-        const imgBlocks = prev.filter((b) => b.type === "image" || b.type === "image-pair");
-        return imgBlocks.length > 0 ? [...imgBlocks, { type: "text", id: uid(), content: "" }] : [{ type: "text", id: uid(), content: "" }];
-      });
-      localStorage.removeItem(CONTENT_KEY);
-    } else if (type === "image") {
-      setThumbnail("");
-      setDeployImages([]);  // 자동 썸네일 재설정 방지
-      setBlocks((prev) => prev.filter((b) => b.type === "text"));
-      localStorage.removeItem("blogauto_thumbnail");
-      localStorage.removeItem("blogauto_deploy_images");
-      try { const raw = localStorage.getItem(CONTENT_KEY); if (raw) { const c = JSON.parse(raw); delete c.thumbnail; localStorage.setItem(CONTENT_KEY, JSON.stringify(c)); } } catch {}
+    if (gallery.length > 0 && !existing.find(n => n.message.includes("이미지"))) {
+      newNotifs.push({ id: (Date.now() + 1).toString(), type: "info", message: `이미지 ${gallery.length}개 생성됨 · 배포 관리에서 삽입 가능`, time: "최근", read: false });
     }
-  }
-
-  // ── 발행 핸들러 ──
-  async function handlePublish() {
-    if (selectedPlatforms.length === 0) { toast.error("발행할 플랫폼을 선택해주세요"); return; }
-    if (!title.trim()) { toast.error("제목을 입력해주세요"); return; }
-    if (publishMode === "scheduled" && !scheduleDate) { toast.error("예약 날짜를 선택해주세요"); return; }
-
-    setIsPublishing(true);
-    toast.loading("발행 중...", { id: "publish" });
-    try {
-      for (const platformId of selectedPlatforms) {
-        const platform = platforms.find((p) => p.id === platformId);
-        if (!platform) continue;
-        if (platform.type === "naver") {
-          // 네이버는 자동발행 불가 → 복사 방식으로 안내
-          copyForNaver();
-          toast.success("📋 네이버 블로그용 글이 복사됐어요! 네이버 블로그에서 붙여넣기하세요.", { duration: 5000 });
-        } else if (platform.type === "blogger" || platform.type === "medium") {
-          await publishToWebhook(platformId);
-        } else if (platform.type === "wordpress") {
-          await publishToWordPress(
-            publishMode === "scheduled" ? `${scheduleDate}T${scheduleTime}:00` : null
-          );
-        } else {
-          await publishToWebhook(platformId);
-        }
-      }
-      // 서버에 발행 글 저장 (대시보드 실시간 연동)
-      const token = localStorage.getItem("ba_token");
-      if (token) {
-        const postData = {
-          id: Date.now().toString(),
-          title,
-          keyword: localStorage.getItem("blogauto_content") ? JSON.parse(localStorage.getItem("blogauto_content") || "{}").keyword || "" : "",
-          platform: selectedPlatforms.map(id => platforms.find(p => p.id === id)?.name || "").filter(Boolean).join(", "),
-          status: publishMode === "instant" ? "published" : "scheduled",
-          views: 0,
-          clicks: 0,
-          hashtags,
-          createdAt: new Date().toISOString(),
-        };
-        fetch("/api/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ action: "savePost", post: postData }),
-        }).catch(() => {});
-
-        // 발행 카운트 증가
-        const cnt = parseInt(localStorage.getItem("blogauto_publish_count") || "0");
-        localStorage.setItem("blogauto_publish_count", String(cnt + 1));
-      }
-
-      toast.success(
-        publishMode === "instant"
-          ? "발행 완료! 대시보드에서 실시간 확인하세요"
-          : `${scheduleDate} ${scheduleTime}에 예약됨`,
-        { id: "publish" }
-      );
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "알 수 없는 오류";
-      toast.error(`발행 실패: ${msg}`, { id: "publish" });
-    } finally {
-      setIsPublishing(false);
+    if (!coupangKey && !existing.find(n => n.message.includes("쿠팡"))) {
+      newNotifs.push({ id: (Date.now() + 2).toString(), type: "warning", message: "쿠팡파트너스 미연동 · 설정에서 API 키 입력 시 수익 극대화 가능", time: "추천", read: false });
     }
-  }
+    if (!platformToken && !existing.find(n => n.message.includes("미디엄"))) {
+      newNotifs.push({ id: (Date.now() + 3).toString(), type: "info", message: "미디엄/블로거 연동 시 자동 발행 가능 · 설정에서 연동하세요", time: "추천", read: false });
+    }
 
-  // ── 파생 값 ──
-  const autoCount = blocks.filter((b) => b.type === "image" && b.source === "auto").length;
-  const manualCount = blocks.filter((b) => b.type === "image" && b.source === "manual").length;
+    if (newNotifs.length > 0) {
+      const updated = [...newNotifs, ...existing].slice(0, 20);
+      setNotifications(updated);
+      saveNotifications(updated);
+    }
+  }, []);
 
-  const publishBtnBg =
-    selectedPlatforms.length === 0
-      ? "var(--muted)"
-      : publishMode === "instant"
-      ? "var(--color-emerald)"
-      : "var(--color-amber-brand)";
+  const markAllRead = () => {
+    const updated = notifications.map(n => ({ ...n, read: true }));
+    setNotifications(updated);
+    saveNotifications(updated);
+  };
 
-  // ── 썸네일 파일 처리 ──
-  function handleThumbnailFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setThumbnail(ev.target?.result as string);
-    reader.readAsDataURL(file);
-  }
+  const deleteNotification = (id: string) => {
+    const updated = notifications.filter(n => n.id !== id);
+    setNotifications(updated);
+    saveNotifications(updated);
+  };
 
-  // ── 수동 이미지 파일 처리 ──
-  function handleManualFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const src = ev.target?.result as string;
-      setBlocks((prev) => [
-        ...prev,
-        { type: "image", id: uid(), src, alt: file.name, position: "center", source: "manual" },
-      ]);
-      toast.success("✅ 이미지 추가됨!");
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  }
+  const handleRefresh = async () => {
+    setRealData(loadRealData());
+    if (isLoggedIn) {
+      setSyncStatus("syncing");
+      const postsRes = await apiCall("loadPosts");
+      if (postsRes.ok) setServerPosts(postsRes.posts || []);
+      const statsRes = await apiCall("loadStats");
+      if (statsRes.ok) setServerStats(statsRes.stats || {});
+      setSyncStatus("done");
+      toast.success("서버에서 최신 데이터 불러왔어요!");
+    } else {
+      toast.success("새로고침됐어요! (로그인하면 서버 데이터 동기화)");
+    }
+  };
 
-  // ─────────────────────────────────────────────────────────
-  // JSX
-  // ─────────────────────────────────────────────────────────
+  const handleRunAutomation = () => {
+    setIsRunning(true);
+    toast.loading("자동화 파이프라인 실행 중...", { id: "automation" });
+    // 발행 카운트 증가
+    const count = parseInt(localStorage.getItem("blogauto_publish_count") || "0");
+    setTimeout(() => {
+      localStorage.setItem("blogauto_publish_count", String(count + 3));
+      setIsRunning(false);
+      toast.success("자동화 완료! 콘텐츠 생성 페이지로 이동해 글을 작성하세요", { id: "automation" });
+      handleRefresh();
+    }, 2500);
+  };
+
+  // 실제 발행 글 수
+  const publishCount = parseInt(localStorage.getItem("blogauto_publish_count") || "0");
+  const todayViews = realData.trafficData.at(-1)?.views || 0;
+  const todayClicks = realData.trafficData.at(-1)?.clicks || 0;
+  const todayRevenue = realData.trafficData.at(-1)?.revenue || 0;
+  const prevRevenue = realData.trafficData.at(-2)?.revenue || 1;
+  const revenueChange = (((todayRevenue - prevRevenue) / prevRevenue) * 100).toFixed(1);
+
+  // 블로그 미리보기용 콘텐츠
+  const previewContent = JSON.parse(localStorage.getItem("blogauto_content") || "{}");
+  const previewBlocks = JSON.parse(localStorage.getItem("blogauto_deploy_blocks") || "[]");
+
+  const today = new Date();
+  const dateStr = `오늘 ${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+
+  const notifColors = { success: "var(--color-emerald)", info: "oklch(0.6 0.15 220)", warning: "var(--color-amber-brand)" };
 
   return (
-    <>
-      <Layout>
-        <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-44 sm:pb-6">
+    <Layout>
+      {/* ── 관리자 공지 팝업 (슬라이드 카드) ── */}
+      {currentPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}>
+          <div className="w-full max-w-sm rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
 
-          {/* 헤더 */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div>
-              <h1
-                className="text-lg sm:text-2xl font-bold text-foreground"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                배포 관리
-              </h1>
-              <p className="text-xs sm:text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-                이미지 삽입 · 글 편집 · 발행
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              {/* 쿠팡파트너스 링크 버튼 */}
-              {userGet("coupang_access_key") && (
-                <Button size="sm" className="gap-1.5 h-9"
-                  style={{ background: "#C00F0C", color: "white" }}
-                  onClick={fetchCoupangLinks}
-                  disabled={coupangLoading}>
-                  {coupangLoading
-                    ? <RefreshCw className="w-4 h-4 animate-spin" />
-                    : <ShoppingCart className="w-4 h-4" />}
-                  <span className="hidden sm:inline">쿠팡 링크</span>
-                  <span className="sm:hidden">쿠팡</span>
-                </Button>
-              )}
-              {/* 초기화 버튼 그룹 */}
-              <div className="flex items-center gap-1">
-                <button
-                  className="flex items-center gap-1 px-2.5 h-9 rounded-lg text-xs font-semibold transition-colors"
-                  style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
-                  onClick={() => { if (confirm("이미지를 초기화할까요?")) handleReset("image"); }}>
-                  <Image className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">이미지초기화</span>
-                </button>
-                <button
-                  className="flex items-center gap-1 px-2.5 h-9 rounded-lg text-xs font-semibold transition-colors"
-                  style={{ background: "rgba(245,158,11,0.12)", color: "#d97706", border: "1px solid rgba(245,158,11,0.3)" }}
-                  onClick={() => { if (confirm("글을 초기화할까요?")) handleReset("content"); }}>
-                  <FileText className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">글초기화</span>
-                </button>
+            {/* 헤더 */}
+            <div className="flex items-center gap-3 px-5 pt-5 pb-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg" style={{ background: currentPopup.color ? `${currentPopup.color}20` : "oklch(0.696 0.17 162.48 / 15%)" }}>
+                {currentPopup.emoji || <Zap className="w-4 h-4" style={{ color: currentPopup.color || "var(--color-emerald)" }} />}
               </div>
-              {/* 네이버 블로그 복사 버튼 */}
-              <Button size="sm" className="gap-1.5 h-9"
-                style={{ background: "#03C75A", color: "white" }}
-                onClick={copyForNaver}>
-                <Copy className="w-4 h-4" />
-                <span className="hidden sm:inline">네이버 복사</span>
-                <span className="sm:hidden">N복사</span>
-              </Button>
-              <Button size="sm" className="gap-1.5" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
-                <Eye className="w-4 h-4" />
-                <span className="hidden sm:inline">구독자 미리보기</span>
-                <span className="sm:hidden">미리보기</span>
-              </Button>
-              <Button
-                size="sm"
-                className="gap-1.5"
-                style={{ background: "var(--color-emerald)", color: "white" }}
-                disabled={isPublishing || selectedPlatforms.length === 0}
-                onClick={handlePublish}
-              >
-                <Send className="w-4 h-4" />
-                {isPublishing ? "발행 중..." : publishMode === "instant" ? "즉시 발행" : "예약 발행"}
-              </Button>
+              <h2 className="font-bold text-foreground text-base flex-1">{currentPopup.title}</h2>
+              <button onClick={handleSnoozePopup} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--muted-foreground)", background: "var(--muted)" }}>
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
-          </div>
 
-          {/* 모바일: 발행 설정 접기/펼치기 */}
-          <div className="lg:hidden">
-            <button
-              className="w-full flex items-center justify-between p-3 rounded-xl transition-all"
-              style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-              onClick={() => setShowPublishPanel((v) => !v)}
-            >
-              <div className="flex items-center gap-2">
-                <Send className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                <span className="text-sm font-semibold text-foreground">발행 설정</span>
-                {selectedPlatforms.length > 0 && (
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "oklch(0.696 0.17 162.48/15%)",
-                      color: "var(--color-emerald)",
-                    }}
-                  >
-                    {selectedPlatforms.length}개 선택됨
-                  </span>
-                )}
-              </div>
-              {showPublishPanel ? (
-                <ChevronUp className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
-              ) : (
-                <ChevronDown className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
-              )}
-            </button>
-
-            {showPublishPanel && (
-              <div
-                className="mt-2 rounded-xl p-4 space-y-4"
-                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-              >
-                <PublishPanel
-                  platforms={platforms}
-                  selectedPlatforms={selectedPlatforms}
-                  setSelectedPlatforms={setSelectedPlatforms}
-                  publishMode={publishMode}
-                  setPublishMode={setPublishMode}
-                  scheduleDate={scheduleDate}
-                  setScheduleDate={setScheduleDate}
-                  scheduleTime={scheduleTime}
-                  setScheduleTime={setScheduleTime}
-                  isPublishing={isPublishing}
-                  onPublish={handlePublish}
-                  selectedCategory={selectedCategory}
-                  setSelectedCategory={setSelectedCategory}
-                />
+            {/* 슬라이드 인디케이터 */}
+            {totalSlides > 1 && (
+              <div className="flex items-center gap-1.5 px-5 pt-3">
+                {Array.from({ length: totalSlides }).map((_, i) => (
+                  <div key={i} className="h-1 rounded-full transition-all" style={{ flex: i === slideIdx ? 2 : 1, background: i === slideIdx ? "var(--color-emerald)" : "var(--border)" }} />
+                ))}
               </div>
             )}
-          </div>
 
-          {/* 메인 그리드 */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-
-            {/* 왼쪽: 에디터 */}
-            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-
-              {/* 제목 */}
-              <div
-                className="rounded-xl p-3 sm:p-4"
-                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-              >
-                <label
-                  className="text-xs font-semibold uppercase tracking-wider mb-2 block"
-                  style={{ color: "var(--muted-foreground)" }}
-                >
-                  글 제목
-                </label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="제목을 입력하세요..."
-                  className="text-sm sm:text-base font-semibold h-10 sm:h-11"
-                />
+            {/* 슬라이드 내용 */}
+            <div className="px-5 py-4 min-h-[140px]">
+              <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "var(--muted-foreground)" }}>
+                {totalSlides > 1 ? slides[slideIdx] : currentPopup.content}
               </div>
+            </div>
 
-              {/* 썸네일 */}
-              <div
-                className="rounded-xl p-3 sm:p-4"
-                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <label
-                    className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1"
-                    style={{ color: "var(--muted-foreground)" }}
-                  >
-                    <Image className="w-3.5 h-3.5" />썸네일
-                  </label>
-                  {thumbnail && (
-                    <button onClick={() => setThumbnail("")} style={{ color: "var(--muted-foreground)" }}>
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                {thumbnail ? (
-                  <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                    <img
-                      src={thumbnail}
-                      alt="썸네일"
-                      className="w-full h-full object-cover"
-                      onError={() => {
-                        setThumbnail("");
-                        toast.error("썸네일을 불러올 수 없습니다");
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {deployImages.length > 0 && (
-                      <div>
-                        <p className="text-xs mb-2" style={{ color: "var(--muted-foreground)" }}>
-                          생성된 이미지에서 선택:
-                        </p>
-                        <div className="flex gap-2 overflow-x-auto pb-1">
-                          {deployImages.slice(0, 6).map((img, i) => (
-                            <button
-                              key={i}
-                              className="shrink-0 rounded-lg overflow-hidden"
-                              style={{ width: 56, height: 56, border: "1px solid var(--border)" }}
-                              onClick={() => {
-                                setThumbnail(img.src);
-                                toast.success("썸네일 설정!");
-                              }}
-                            >
-                              <img
-                                src={img.src}
-                                alt=""
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = "none";
-                                }}
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <button
-                      className="w-full rounded-xl flex flex-col items-center justify-center gap-2 py-4 transition-colors hover:bg-accent/10"
-                      style={{ border: "2px dashed var(--border)", background: "var(--background)" }}
-                      onClick={() => thumbnailRef.current?.click()}
-                    >
-                      <Upload className="w-5 h-5 opacity-30" style={{ color: "var(--muted-foreground)" }} />
-                      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>이미지 업로드</p>
-                    </button>
-                  </div>
+            {/* 하단 버튼 */}
+            <div className="px-5 pb-5 space-y-2">
+              <div className="flex gap-2">
+                {slideIdx > 0 && (
+                  <button onClick={handlePrevSlide}
+                    className="py-2.5 px-4 rounded-xl font-semibold text-sm transition-all active:scale-95"
+                    style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                    ← 이전
+                  </button>
                 )}
-
-                <input
-                  ref={thumbnailRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleThumbnailFile}
-                />
+                <button onClick={handleNextSlide}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
+                  style={{ background: currentPopup.color || "var(--color-emerald)" }}>
+                  {isLastSlide ? "확인했어요 ✓" : "다음 →"}
+                </button>
               </div>
+              {isLastSlide && currentPopup.fileUrl && (
+                <a href={currentPopup.fileUrl} target="_blank" rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+                  style={{ background: currentPopup.color || "var(--color-emerald)" }}>
+                  📥 파일 다운로드
+                </a>
+              )}
+              {isLastSlide && (
+                <button onClick={handleSnoozePopup}
+                  className="w-full py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
+                  style={{ color: "var(--muted-foreground)" }}>
+                  일주일 동안 보지 않기
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="p-4 sm:p-6 space-y-5 pb-10" style={{ position: "relative" }}>
+        {/* 게스트 모드 오버레이 - 콘텐츠 클릭 차단 */}
+        {isGuestMode && (
+          <div
+            onClick={handleGuestBlock}
+            style={{
+              position: "fixed", inset: 0, zIndex: 20,
+              cursor: "not-allowed",
+              background: "transparent",
+            }}
+          />
+        )}
 
-              {/* 인사말 */}
-              <div
-                className="rounded-xl p-3 sm:p-4"
-                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-              >
-                <label
-                  className="text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1"
-                  style={{ color: "var(--muted-foreground)" }}
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />글쓴이 인사말
-                </label>
-                <Textarea
-                  value={greeting}
-                  onChange={(e) => setGreeting(e.target.value)}
-                  placeholder="안녕하세요! 오늘도 유용한 정보를 가지고 왔어요 😊"
-                  className="text-sm min-h-14 resize-none"
-                />
-              </div>
+        {/* ── 게스트 둘러보기 배너 ── */}
+        {isGuestMode && (
+          <div
+            className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl px-4 py-3"
+            style={{ background: "oklch(0.769 0.188 70.08/15%)", border: "1px solid oklch(0.769 0.188 70.08/40%)" }}
+          >
+            <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--color-amber-brand)" }}>
+              👀 둘러보기 모드 — 모든 기능은 가입 후 이용 가능해요
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => { localStorage.removeItem("guest_mode"); navigate("/login"); }}
+                style={{ whiteSpace: "nowrap", fontSize: 12 }}>
+                로그인
+              </Button>
+              <Button size="sm" onClick={() => { localStorage.removeItem("guest_mode"); navigate("/signup"); }}
+                style={{ background: "var(--color-emerald)", color: "white", whiteSpace: "nowrap", fontSize: 12 }}>
+                무료 가입하기
+              </Button>
+            </div>
+          </div>
+        )}
 
-              {/* 쿠팡 상품 미리보기 */}
-              {coupangLinks.length > 0 && (
-                <div className="rounded-xl p-4" style={{ background: "oklch(0.65 0.22 25/8%)", border: "2px solid #C00F0C40" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-4 h-4" style={{ color: "#C00F0C" }} />
-                      <span className="text-sm font-semibold text-foreground">쿠팡 추천 상품 ({coupangLinks.length}개)</span>
-                    </div>
+        {/* ── 헤더 ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              대시보드
+            </h1>
+            <p className="text-xs sm:text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+              {dateStr} · 자동화 시스템 정상 운영 중 · {langLabels[currentLang]} 모드
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* 알림 버튼 */}
+            <div className="relative">
+              <button
+                className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-accent/20"
+                style={{ border: "1px solid var(--border)", background: "var(--card)" }}
+                onClick={() => setShowNotifications(v => !v)}>
+                <Bell className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-xs font-bold flex items-center justify-center text-white"
+                    style={{ background: "oklch(0.65 0.22 25)", fontSize: 10 }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* 알림 드롭다운 */}
+              {showNotifications && (
+                <div className="absolute right-0 top-11 rounded-2xl shadow-2xl z-50" style={{ width: "min(320px, calc(100vw - 32px))", right: 0 }}
+                  style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                  <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
+                    <span className="font-semibold text-sm text-foreground">알림 {unreadCount > 0 && `(${unreadCount})`}</span>
                     <div className="flex gap-2">
-                      <Button size="sm" className="text-xs gap-1.5 h-8"
-                        style={{ background: "#C00F0C", color: "white" }}
-                        onClick={insertCoupangLinks}>
-                        <Plus className="w-3 h-3" /> 본문에 삽입
-                      </Button>
-                      <button className="w-7 h-7 flex items-center justify-center rounded"
-                        style={{ color: "var(--muted-foreground)" }}
-                        onClick={() => setCoupangLinks([])}>
+                      {unreadCount > 0 && (
+                        <button className="text-xs hover:underline" style={{ color: "var(--color-emerald)" }} onClick={markAllRead}>
+                          모두 읽음
+                        </button>
+                      )}
+                      <button onClick={() => setShowNotifications(false)} style={{ color: "var(--muted-foreground)" }}>
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    {coupangLinks.map((p, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs p-2 rounded-lg"
-                        style={{ background: "var(--background)" }}>
-                        <ShoppingCart className="w-3 h-3 shrink-0" style={{ color: "#C00F0C" }} />
-                        <span className="flex-1 truncate text-foreground">{p.name}</span>
-                        {p.price && <span style={{ color: "#C00F0C", fontWeight: 600 }}>{p.price}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 이미지 삽입 모드 */}
-              <div
-                className="rounded-xl overflow-hidden"
-                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-              >
-                <div className="px-3 sm:px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Image className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                    <span className="text-sm font-semibold text-foreground">이미지 삽입</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* 자동 모드 */}
-                    <button
-                      className="rounded-xl p-2.5 sm:p-3 text-left transition-all"
-                      style={{
-                        background: imageMode === "auto" ? "oklch(0.696 0.17 162.48/15%)" : "var(--background)",
-                        border: `2px solid ${imageMode === "auto" ? "oklch(0.696 0.17 162.48/60%)" : "var(--border)"}`,
-                      }}
-                      onClick={() => setImageMode("auto")}
-                    >
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Wand2 className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--color-emerald)" }} />
-                        <span className="text-xs sm:text-sm font-semibold text-foreground">자동</span>
-                      </div>
-                      <p className="text-xs hidden sm:block" style={{ color: "var(--muted-foreground)" }}>
-                        AI 이미지 자동 배치
-                      </p>
-                      {autoCount > 0 && (
-                        <span
-                          className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded-full"
-                          style={{
-                            background: "oklch(0.696 0.17 162.48/15%)",
-                            color: "var(--color-emerald)",
-                          }}
-                        >
-                          {autoCount}개
-                        </span>
-                      )}
-                    </button>
-
-                    {/* 수동 모드 */}
-                    <button
-                      className="rounded-xl p-2.5 sm:p-3 text-left transition-all"
-                      style={{
-                        background: imageMode === "manual" ? "oklch(0.75 0.12 300/15%)" : "var(--background)",
-                        border: `2px solid ${imageMode === "manual" ? "oklch(0.75 0.12 300/60%)" : "var(--border)"}`,
-                      }}
-                      onClick={() => setImageMode("manual")}
-                    >
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <FolderOpen className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.75 0.12 300)" }} />
-                        <span className="text-xs sm:text-sm font-semibold text-foreground">수동</span>
-                      </div>
-                      <p className="text-xs hidden sm:block" style={{ color: "var(--muted-foreground)" }}>
-                        원하는 위치에 삽입
-                      </p>
-                      {manualCount > 0 && (
-                        <span
-                          className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded-full"
-                          style={{
-                            background: "oklch(0.75 0.12 300/15%)",
-                            color: "oklch(0.75 0.12 300)",
-                          }}
-                        >
-                          {manualCount}개
-                        </span>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* 자동 모드 액션 */}
-                  {imageMode === "auto" && (
-                    <div className="mt-3 flex items-center gap-2 flex-wrap">
-                      <div
-                        className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg flex-1"
-                        style={{
-                          background: "oklch(0.696 0.17 162.48/8%)",
-                          color: "var(--muted-foreground)",
-                          border: "1px solid oklch(0.696 0.17 162.48/20%)",
-                        }}
-                      >
-                        <Info className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--color-emerald)" }} />
-                        {deployImages.length > 0 ? `${deployImages.length}개 준비됨` : "이미지 생성 먼저"}
-                      </div>
-                      {autoInserted ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1.5 text-xs shrink-0 border-red-400/50 text-red-400"
-                          onClick={handleRemoveAutoImages}
-                        >
-                          <X className="w-3.5 h-3.5" /> 제거
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="gap-1.5 text-xs shrink-0"
-                          style={{ background: "var(--color-emerald)", color: "white" }}
-                          onClick={handleAutoInsert}
-                          disabled={deployImages.length === 0}
-                        >
-                          <Wand2 className="w-3.5 h-3.5" /> 자동 삽입
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 수동 모드 액션 */}
-                  {imageMode === "manual" && (
-                    <div className="mt-3 flex items-center gap-2 flex-wrap">
-                      <button
-                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg"
-                        style={{
-                          background: "oklch(0.75 0.12 300/12%)",
-                          border: "1px solid oklch(0.75 0.12 300/30%)",
-                          color: "oklch(0.75 0.12 300)",
-                        }}
-                        onClick={() => manualFileRef.current?.click()}
-                      >
-                        <Upload className="w-3.5 h-3.5" /> 파일 첨부
-                      </button>
-                      <div
-                        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg"
-                        style={{
-                          background: "oklch(0.696 0.17 162.48/10%)",
-                          border: "1px solid oklch(0.696 0.17 162.48/25%)",
-                          color: "var(--color-emerald)",
-                        }}
-                      >
-                        ⌨️ Ctrl+V
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <input
-                  ref={manualFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleManualFile}
-                />
-
-                {/* 본문 블록 에디터 헤더 */}
-                <div
-                  className="flex items-center justify-between px-3 sm:px-4 py-3 border-b"
-                  style={{ borderColor: "var(--border)" }}
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                    <span className="text-sm font-semibold text-foreground">본문 편집</span>
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full"
-                      style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
-                    >
-                      {blocks.length}블록
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1 text-xs h-7 px-2"
-                      onClick={() => addTextBlock()}
-                    >
-                      <AlignLeft className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">텍스트</span>
-                    </Button>
-                    {imageMode === "manual" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 text-xs h-7 px-2"
-                        style={{ borderColor: "oklch(0.75 0.12 300/50%)", color: "oklch(0.75 0.12 300)" }}
-                        onClick={() => addManualImageBlock()}
-                      >
-                        <Image className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">이미지</span>
-                      </Button>
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>알림이 없어요</div>
+                    ) : (
+                      notifications.map(n => (
+                        <div key={n.id}
+                          className="flex items-start gap-3 px-4 py-3 border-b transition-colors"
+                          style={{ borderColor: "var(--border)", background: n.read ? "transparent" : `${notifColors[n.type]}08` }}>
+                          <div className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                            style={{ background: n.read ? "var(--muted)" : notifColors[n.type] }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-foreground leading-relaxed">{n.message}</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>{n.time}</p>
+                          </div>
+                          <button className="shrink-0 opacity-50 hover:opacity-100" onClick={() => deleteNotification(n.id)}>
+                            <X className="w-3 h-3" style={{ color: "var(--muted-foreground)" }} />
+                          </button>
+                        </div>
+                      ))
                     )}
                   </div>
+                  <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border)" }}>
+                    <button className="text-xs w-full text-center hover:underline" style={{ color: "var(--color-emerald)" }}
+                      onClick={() => { navigate("/settings"); setShowNotifications(false); }}>
+                      설정에서 알림 관리
+                    </button>
+                  </div>
                 </div>
-
-                {/* 블록 목록 */}
-                <div className="p-3 sm:p-4 space-y-3">
-                  {blocks.map((block, idx) => (
-                    <div key={block.id}>
-                      {block.type === "text" ? (
-                        <div className="relative group/block">
-                          <Textarea
-                            value={block.content}
-                            onChange={(e) => updateBlock(block.id, { content: e.target.value })}
-                            placeholder="내용 입력..."
-                            className="text-sm leading-relaxed resize-none min-h-20"
-                            style={{ background: "var(--background)" }}
-                            onInput={(e) => {
-                              const el = e.target as HTMLTextAreaElement;
-                              el.style.height = "auto";
-                              el.style.height = el.scrollHeight + "px";
-                            }}
-                          />
-                          <div className="flex items-center gap-1 mt-1 sm:mt-0 sm:absolute sm:right-2 sm:top-2 sm:opacity-0 sm:group-hover/block:opacity-100 transition-opacity">
-                            {imageMode === "manual" && (
-                              <button
-                                onClick={() => addManualImageBlock(block.id)}
-                                className="w-7 h-7 flex items-center justify-center rounded text-xs"
-                                style={{
-                                  background: "oklch(0.75 0.12 300/20%)",
-                                  color: "oklch(0.75 0.12 300)",
-                                }}
-                                title="아래에 이미지 삽입"
-                              >
-                                <Image className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => addTextBlock(block.id)}
-                              className="w-7 h-7 flex items-center justify-center rounded text-xs"
-                              style={{
-                                background: "oklch(0.696 0.17 162.48/20%)",
-                                color: "var(--color-emerald)",
-                              }}
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                            {blocks.length > 1 && (
-                              <button
-                                onClick={() => removeBlock(block.id)}
-                                className="w-7 h-7 flex items-center justify-center rounded"
-                                style={{
-                                  background: "oklch(0.65 0.22 25/20%)",
-                                  color: "oklch(0.65 0.22 25)",
-                                }}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ) : block.type === "image-pair" ? (
-                        <ImagePairBlock
-                          block={block as ImagePairBlockType}
-                          onRemove={() => removeBlock(block.id)}
-                        />
-                      ) : (
-                        <ImageBlock
-                          block={block as SingleImageBlock}
-                          onRemove={() => removeBlock(block.id)}
-                          onChange={(updates) => updateBlock(block.id, updates)}
-                        />
-                      )}
-
-                      {idx < blocks.length - 1 && (
-                        <div className="flex items-center justify-center my-1">
-                          <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-                          <span
-                            className="mx-2 text-xs opacity-30"
-                            style={{ color: "var(--muted-foreground)" }}
-                          >
-                            {idx + 2}
-                          </span>
-                          <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 해시태그 */}
-              <div
-                className="rounded-xl p-3 sm:p-4"
-                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <Hash className="w-4 h-4" style={{ color: "var(--color-emerald)" }} />
-                  <span className="text-sm font-semibold text-foreground">해시태그</span>
-                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>5~8개 권장</span>
-                </div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {hashtags.map((tag, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
-                      style={{
-                        background: "oklch(0.696 0.17 162.48/15%)",
-                        color: "var(--color-emerald)",
-                        border: "1px solid oklch(0.696 0.17 162.48/30%)",
-                      }}
-                    >
-                      {tag}
-                      <button onClick={() => setHashtags((prev) => prev.filter((_, j) => j !== i))}>
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="#해시태그 입력"
-                    className="text-sm h-9"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && newTag.trim()) {
-                        if (hashtags.length >= 8) { toast.error("최대 8개"); return; }
-                        setHashtags((prev) => [...prev, `#${newTag.replace("#", "").trim()}`]);
-                        setNewTag("");
-                      }
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-9 shrink-0"
-                    onClick={() => {
-                      if (!newTag.trim() || hashtags.length >= 8) return;
-                      setHashtags((prev) => [...prev, `#${newTag.replace("#", "").trim()}`]);
-                      setNewTag("");
-                    }}
-                  >
-                    추가
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* 오른쪽: 발행 설정 (데스크탑) */}
-            <div className="hidden lg:block space-y-4">
-              <PublishPanel
-                platforms={platforms}
-                selectedPlatforms={selectedPlatforms}
-                setSelectedPlatforms={setSelectedPlatforms}
-                publishMode={publishMode}
-                setPublishMode={setPublishMode}
-                scheduleDate={scheduleDate}
-                setScheduleDate={setScheduleDate}
-                scheduleTime={scheduleTime}
-                setScheduleTime={setScheduleTime}
-                isPublishing={isPublishing}
-                onPublish={handlePublish}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-              />
-            </div>
+            {/* 언어 표시 */}
+            <button className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+              style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
+              onClick={() => navigate("/settings")}>
+              <Globe className="w-3.5 h-3.5" />
+              {langLabels[currentLang]}
+            </button>
+
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4" /> <span className="hidden sm:inline">새로고침</span>
+            </Button>
+            <Button size="sm" className="gap-1.5"
+              style={{ background: isRunning ? "var(--muted)" : "var(--color-emerald)", color: "white" }}
+              onClick={handleRunAutomation} disabled={isRunning}>
+              {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              {isRunning ? "실행 중..." : "자동화 실행"}
+            </Button>
           </div>
         </div>
-      </Layout>
 
-      {/* 모바일 하단 고정 버튼 */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t"
-        style={{ background: "var(--card)", borderColor: "var(--border)" }}
-      >
-        {/* 네이버 복사 버튼 - 가장 크게 강조 */}
-        <div className="px-3 pt-2">
-          <button
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
-            style={{ background: "#03C75A", color: "white" }}
-            onClick={copyForNaver}
-          >
-            <Copy className="w-4 h-4" />
-            네이버 블로그 복사하기 📋
-          </button>
-        </div>
-        <div className="flex gap-2 px-3 py-2">
-          <Button className="flex-1 gap-1.5 h-10" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
-            <Eye className="w-4 h-4" /> 미리보기
-          </Button>
-          <Button
-            className="flex-1 gap-1.5 h-10 font-semibold"
-            style={{ background: publishBtnBg, color: "white" }}
-            disabled={isPublishing || selectedPlatforms.length === 0}
-            onClick={handlePublish}
-          >
-            {isPublishing ? (
-              <><Send className="w-4 h-4 animate-pulse" />발행 중...</>
-            ) : publishMode === "instant" ? (
-              <><Zap className="w-4 h-4" />즉시 발행</>
-            ) : (
-              <><Calendar className="w-4 h-4" />예약</>
-            )}
-          </Button>
-        </div>
-        {selectedPlatforms.length === 0 && (
-          <p className="text-xs text-center pb-1" style={{ color: "var(--muted-foreground)" }}>
-            워드프레스/커스텀 발행은 설정에서 플랫폼 등록 필요
-          </p>
-        )}
-      </div>
-
-      {/* 구독자 미리보기 풀스크린 모달 */}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--background)" }}>
-          {/* 모달 헤더 */}
-          <div
-            className="flex items-center justify-between px-4 py-3 border-b shrink-0"
-            style={{ borderColor: "var(--border)", background: "var(--card)" }}
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ background: "var(--color-emerald)" }} />
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">구독자 시점 미리보기</span>
-                <button className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-semibold"
-                  style={{ background: "#03C75A", color: "white" }}
-                  onClick={copyForNaver}>
-                  <Copy className="w-3 h-3" /> 네이버 복사
-                </button>
-              </div>
-              <span
-                className="text-xs px-2 py-0.5 rounded-full hidden sm:inline"
-                style={{
-                  background: "oklch(0.696 0.17 162.48/10%)",
-                  color: "var(--color-emerald)",
-                }}
-              >
-                실제 발행 모습
-              </span>
-            </div>
-            <button
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent/20"
-              style={{ color: "var(--muted-foreground)" }}
-              onClick={() => setShowPreview(false)}
-            >
-              <X className="w-5 h-5" />
+        {/* ── 수익 최적화 팁 배너 ── */}
+        {!userGet("coupang_access_key") && (
+          <div className="rounded-xl px-4 py-3 flex items-center gap-3"
+            style={{ background: "oklch(0.769 0.188 70.08/8%)", border: "1px solid oklch(0.769 0.188 70.08/30%)" }}>
+            <ShoppingCart className="w-4 h-4 shrink-0" style={{ color: "var(--color-amber-brand)" }} />
+            <p className="text-xs flex-1" style={{ color: "var(--muted-foreground)" }}>
+              <strong style={{ color: "var(--foreground)" }}>수익 극대화 팁:</strong> 쿠팡파트너스 연동 시 글마다 관련 상품 링크 자동 삽입 → 추가 수익 발생
+            </p>
+            <button className="text-xs font-semibold shrink-0 px-3 py-1.5 rounded-lg"
+              style={{ background: "var(--color-amber-brand)", color: "white" }}
+              onClick={() => navigate("/settings")}>
+              연동하기
             </button>
           </div>
+        )}
 
-          {/* 미리보기 본문 */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
+        {/* ── 핵심 지표 카드 ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {[
+            { label: "오늘 방문자", value: todayViews > 0 ? todayViews.toLocaleString() : "—", change: "GSC 연동 필요", up: true, icon: Eye, color: "var(--color-emerald)" },
+            { label: "광고 클릭", value: todayClicks > 0 ? todayClicks.toLocaleString() : "—", change: "애드센스 연동 필요", up: true, icon: MousePointerClick, color: "var(--color-amber-brand)" },
+            { label: "오늘 수익", value: todayRevenue > 0 ? "₩" + todayRevenue.toLocaleString() : "—", change: "애드센스 연동 필요", up: true, icon: DollarSign, color: "oklch(0.6 0.15 220)" },
 
-              {thumbnail && (
-                <div className="rounded-xl overflow-hidden mb-5" style={{ aspectRatio: "16/9" }}>
-                  <img src={thumbnail} alt="썸네일" className="w-full h-full object-cover" />
+          ].map(metric => (
+            <div key={metric.label} className="rounded-xl p-4 feature-card"
+              style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>{metric.label}</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${metric.color}20` }}>
+                  <metric.icon className="w-4 h-4" style={{ color: metric.color }} />
                 </div>
-              )}
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-foreground mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                {metric.value}
+              </div>
+              <div className="flex items-center gap-1 text-xs font-medium"
+                style={{ color: metric.up ? "var(--color-emerald)" : "oklch(0.65 0.22 25)" }}>
+                {metric.up ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                {metric.change} 어제 대비
+              </div>
+            </div>
+          ))}
+        </div>
 
-              {title && (
-                <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 leading-tight">
-                  {title}
-                </h1>
-              )}
+        {/* ── 트래픽 그래프 + 인기 키워드 ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-foreground">트래픽 & 수익 추이</h3>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                  최근 7일 · {Object.keys(serverStats).length > 0 ? "서버 실시간 데이터" : isLoggedIn ? "추정 데이터" : "예시 데이터"}
+                </p>
+              </div>
+              <div className="flex gap-3 text-xs">
+                <span className="flex items-center gap-1.5" style={{ color: "var(--color-emerald)" }}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: "var(--color-emerald)" }} /> 방문자
+                </span>
+                <span className="flex items-center gap-1.5" style={{ color: "var(--color-amber-brand)" }}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: "var(--color-amber-brand)" }} /> 클릭
+                </span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={getChartData()}>
+                <defs>
+                  <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="oklch(0.696 0.17 162.48)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="oklch(0.696 0.17 162.48)" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="clicksGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="oklch(0.769 0.188 70.08)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="oklch(0.769 0.188 70.08)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 5%)" />
+                <XAxis dataKey="date" tick={{ fill: "oklch(0.62 0.015 286.067)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "oklch(0.62 0.015 286.067)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: "8px", color: "var(--foreground)", fontSize: "12px" }} />
+                <Area type="monotone" dataKey="views" stroke="oklch(0.696 0.17 162.48)" fill="url(#viewsGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="clicks" stroke="oklch(0.769 0.188 70.08)" fill="url(#clicksGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
 
-              {/* 제목 아래 목차 표시 */}
-              {(() => {
-                const allText = blocks.filter(b => b.type === "text").map(b => (b as TextBlock).content).join("\n");
-                const h2s = [...allText.matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
-                if (h2s.length < 1) return null;
+          {/* 인기 키워드 */}
+          <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-foreground">인기 키워드</h3>
+              <button className="text-xs font-medium hover:opacity-80" style={{ color: "var(--color-emerald)" }}
+                onClick={() => navigate("/keywords")}>전체보기</button>
+            </div>
+            <div className="space-y-3">
+              {[
+                { keyword: "맛집 추천", volume: 8900 },
+                { keyword: "여행 코스", volume: 7200 },
+                { keyword: "재테크 방법", volume: 6500 },
+                { keyword: "다이어트 식단", volume: 5800 },
+                { keyword: "인테리어 소품", volume: 4900 },
+              ].map((kw, idx) => (
+                <div key={kw.keyword}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded text-xs font-bold flex items-center justify-center"
+                        style={{ background: idx === 0 ? "var(--color-amber-brand)" : "var(--muted)", color: idx === 0 ? "white" : "var(--muted-foreground)" }}>
+                        {idx + 1}
+                      </span>
+                      <span className="text-sm text-foreground">{kw.keyword}</span>
+                    </div>
+                    <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{kw.volume.toLocaleString()}</span>
+                  </div>
+                  <Progress value={(kw.volume / 8900) * 100} className="h-1.5" style={{ background: "var(--muted)" }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── 블로그 미리보기 버튼 ── */}
+        <div className="rounded-xl p-4 flex items-center justify-between"
+          style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-3">
+            <Eye className="w-5 h-5" style={{ color: "oklch(0.75 0.12 300)" }} />
+            <div>
+              <p className="text-sm font-semibold text-foreground">블로그 미리보기</p>
+              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                {previewContent?.title ? `"${previewContent.title.slice(0, 30)}..."` : "최근 작성된 글 미리보기"}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" className="gap-1.5"
+            style={{ background: "oklch(0.72 0.18 350)", color: "white" }}
+            onClick={() => {
+              if (!previewContent?.content && previewBlocks.length === 0) {
+                toast.info("먼저 콘텐츠를 생성해주세요!");
+                navigate("/content");
+              } else {
+                setShowPreview(true);
+              }
+            }}>
+            <Eye className="w-4 h-4" /> 미리보기 열기
+          </Button>
+        </div>
+
+        {/* ── 자동화 파이프라인 ── */}
+        <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-foreground">자동화 파이프라인 현황</h3>
+            <span className="text-xs badge-active px-2.5 py-1 rounded-full">실시간</span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { step: "키워드 수집", count: realData.pipeline.keywords || 142, status: "완료", icon: TrendingUp, color: "var(--color-emerald)", path: "/keywords" },
+              { step: "콘텐츠 생성", count: realData.pipeline.content || 38, status: "진행 중", icon: Bot, color: "var(--color-amber-brand)", path: "/content" },
+              { step: "이미지 생성", count: realData.pipeline.images || 24, status: "대기 중", icon: Image, color: "oklch(0.6 0.15 220)", path: "/images" },
+              { step: "배포 예약", count: realData.pipeline.deploy || 12, status: "예약됨", icon: Send, color: "oklch(0.75 0.12 300)", path: "/deploy" },
+            ].map(step => (
+              <button key={step.step}
+                className="rounded-lg p-4 text-center transition-all hover:scale-105 active:scale-95"
+                style={{ background: "var(--background)", border: "1px solid var(--border)" }}
+                onClick={() => navigate(step.path)}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3"
+                  style={{ background: `${step.color}20` }}>
+                  <step.icon className="w-5 h-5" style={{ color: step.color }} />
+                </div>
+                <div className="text-xl font-black text-foreground mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {step.count}
+                </div>
+                <div className="text-xs text-foreground mb-1">{step.step}</div>
+                <div className="text-xs px-2 py-0.5 rounded-full inline-block"
+                  style={{ background: `${step.color}20`, color: step.color }}>
+                  {step.status}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 최근 발행 글 ── */}
+        <div className="rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "var(--border)" }}>
+            <h3 className="font-semibold text-foreground">최근 발행 글</h3>
+            <button className="text-xs font-medium hover:opacity-80" style={{ color: "var(--color-emerald)" }}
+              onClick={() => navigate("/content")}>전체보기</button>
+          </div>
+          {/* 동기화 상태 표시 */}
+          {isLoggedIn && (
+            <div className="px-4 py-2 flex items-center gap-2 border-b" style={{ borderColor: "var(--border)" }}>
+              <div className="w-2 h-2 rounded-full"
+                style={{ background: syncStatus === "done" ? "var(--color-emerald)" : syncStatus === "syncing" ? "var(--color-amber-brand)" : "var(--muted-foreground)", animation: syncStatus === "syncing" ? "pulse 1s infinite" : "none" }} />
+              <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                {syncStatus === "done" ? "서버 실시간 동기화됨" : syncStatus === "syncing" ? "동기화 중..." : syncStatus === "offline" ? "오프라인 모드" : "대기 중"}
+              </span>
+              <span className="text-xs ml-auto" style={{ color: "var(--muted-foreground)" }}>{serverPosts.length}개 글</span>
+            </div>
+          )}
+
+          <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+            {/* 서버 발행 글 목록 (로그인 시) */}
+            {isLoggedIn && serverPosts.length > 0 ? (
+              serverPosts.slice(0, 5).map((post: any) => {
+                const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+                  published: { label: "발행됨", color: "var(--color-emerald)", bg: "oklch(0.696 0.17 162.48 / 15%)" },
+                  scheduled: { label: "예약됨", color: "var(--color-amber-brand)", bg: "oklch(0.769 0.188 70.08 / 15%)" },
+                  generating: { label: "생성 중", color: "oklch(0.6 0.15 220)", bg: "oklch(0.6 0.15 220 / 15%)" },
+                };
+                const cfg = STATUS_CONFIG[post.status] || STATUS_CONFIG.published;
+                const timeAgo = (() => {
+                  const diff = Date.now() - new Date(post.createdAt).getTime();
+                  const mins = Math.floor(diff / 60000);
+                  if (mins < 1) return "방금";
+                  if (mins < 60) return `${mins}분 전`;
+                  if (mins < 1440) return `${Math.floor(mins / 60)}시간 전`;
+                  return `${Math.floor(mins / 1440)}일 전`;
+                })();
                 return (
-                  <div className="rounded-xl p-5 mb-5" style={{ background: "#f0f4ff", border: "1px solid #c7d7fe" }}>
-                    <div className="font-bold text-sm mb-3" style={{ color: "#2563eb" }}>📋 목차</div>
-                    <ol className="space-y-1.5" style={{ margin: 0, padding: 0, listStyle: "none" }}>
-                      {h2s.map((t, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <span style={{
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            width: 22, height: 22, borderRadius: "50%",
-                            background: "#2563eb", color: "white",
-                            fontSize: 11, fontWeight: 700, flexShrink: 0,
-                          }}>{i + 1}</span>
-                          <span style={{ color: "#2563eb", fontSize: 14, fontWeight: 500 }}>{t}</span>
-                        </li>
-                      ))}
-                    </ol>
+                  <div key={post.id} className="flex items-center gap-4 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
+                    onClick={() => navigate("/deploy")}>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-foreground truncate">{post.title}</div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: cfg.bg, color: cfg.color }}>{cfg.label}</span>
+                        <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{post.platform}</span>
+                        <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{timeAgo}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                      <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {(post.views || 0).toLocaleString()}</span>
+                      <span className="flex items-center gap-1"><MousePointerClick className="w-3.5 h-3.5" /> {post.clicks || 0}</span>
+                    </div>
                   </div>
                 );
-              })()}
-
-              {greeting && (
-                <div
-                  className="rounded-xl p-4 mb-5 text-sm leading-relaxed"
-                  style={{
-                    background: "oklch(0.696 0.17 162.48/8%)",
-                    border: "1px solid oklch(0.696 0.17 162.48/20%)",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  {greeting}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {blocks.map((block) => {
-                  if (block.type === "text") {
-                    return (
-                      <div key={block.id} className="text-sm leading-relaxed">
-                        {renderPreview(block.content)}
-                      </div>
-                    );
-                  }
-                  if (block.type === "image-pair") {
-                    return (
-                      <div key={block.id} className="grid grid-cols-2 gap-2">
-                        {block.images.map((img, i) => (
-                          <img
-                            key={i}
-                            src={img.src}
-                            alt={img.alt}
-                            className="w-full rounded-xl object-cover"
-                            style={{ aspectRatio: "1" }}
-                          />
-                        ))}
-                      </div>
-                    );
-                  }
-                  return block.src ? (
-                    <div key={block.id}>
-                      <img
-                        src={block.src}
-                        alt={block.alt}
-                        className="w-full rounded-xl object-cover"
-                      />
-                    </div>
-                  ) : null;
-                })}
+              })
+            ) : isLoggedIn && syncStatus === "syncing" ? (
+              <div className="py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+                <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
+                서버에서 불러오는 중...
               </div>
+            ) : isLoggedIn ? (
+              <div className="py-8 text-center">
+                <p className="text-sm mb-3" style={{ color: "var(--muted-foreground)" }}>아직 발행된 글이 없어요</p>
+                <Button size="sm" style={{ background: "var(--color-emerald)", color: "white" }}
+                  onClick={() => navigate("/content")}>
+                  첫 글 작성하기
+                </Button>
+              </div>
+            ) : (
+              /* 비로그인 - 빈 상태 */
+              [].map(post => {
+                const cfg = post.status === "published"
+                  ? { label: "발행됨", color: "var(--color-emerald)", bg: "oklch(0.696 0.17 162.48 / 15%)" }
+                  : { label: "예약됨", color: "var(--color-amber-brand)", bg: "oklch(0.769 0.188 70.08 / 15%)" };
+                return (
+                  <div key={post.title} className="flex items-center gap-4 p-4 hover:bg-accent/30 transition-colors cursor-pointer"
+                    onClick={() => navigate("/login")}>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-foreground truncate">{post.title}</div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: cfg.bg, color: cfg.color }}>{cfg.label}</span>
+                        <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{post.platform}</span>
+                        <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{post.date}</span>
+                      </div>
+                    </div>
+                    {post.status === "published" && (
+                      <div className="flex gap-3 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                        <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {post.views.toLocaleString()}</span>
+                        <span className="flex items-center gap-1"><MousePointerClick className="w-3.5 h-3.5" /> {post.clicks}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
 
-              {hashtags.length > 0 && (
-                <div
-                  className="flex flex-wrap gap-2 mt-6 pt-5"
-                  style={{ borderTop: "1px solid var(--border)" }}
-                >
-                  {hashtags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className="text-sm px-3 py-1 rounded-full"
-                      style={{
-                        background: "oklch(0.696 0.17 162.48/10%)",
-                        color: "var(--color-emerald)",
-                      }}
-                    >
-                      {tag}
+        {/* ── 수익화 아이템 추천 ── */}
+        <div className="rounded-xl p-5" style={{ background: "oklch(0.696 0.17 162.48/6%)", border: "2px solid oklch(0.696 0.17 162.48/25%)" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
+            <h3 className="font-semibold text-foreground">수익화 추천 아이템</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              { title: "쿠팡파트너스 연동", desc: "글마다 관련 상품 자동 삽입 → 클릭당 수익", icon: ShoppingCart, color: "#C00F0C", action: () => navigate("/settings"), badge: userGet("coupang_access_key") ? "연동됨" : "미연동" },
+              { title: "블로거/미디엄 자동 발행", desc: "애드센스 + 자동 발행 조합으로 수익 극대화", icon: Send, color: "#FF5722", action: () => navigate("/settings"), badge: (userGet("blogger_api_key") || userGet("medium_token")) ? "연동됨" : "미연동" },
+              { title: "워드프레스 자동 발행", desc: "자체 도메인 + 애드센스 최고 수익 조합", icon: Globe, color: "#21759B", action: () => navigate("/settings"), badge: userGet("wp_url") ? "연동됨" : "미연동" },
+            ].map(item => (
+              <button key={item.title}
+                className="flex items-start gap-3 p-3.5 rounded-xl text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+                onClick={item.action}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: `${item.color}20` }}>
+                  <item.icon className="w-4 h-4" style={{ color: item.color }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground">{item.title}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full"
+                      style={{ background: item.badge === "연동됨" ? "oklch(0.696 0.17 162.48/20%)" : "var(--muted)", color: item.badge === "연동됨" ? "var(--color-emerald)" : "var(--muted-foreground)" }}>
+                      {item.badge}
                     </span>
-                  ))}
+                  </div>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{item.desc}</p>
                 </div>
-              )}
+                <ChevronRight className="w-4 h-4 shrink-0 mt-1" style={{ color: "var(--muted-foreground)" }} />
+              </button>
+            ))}
+          </div>
+        </div>
 
-              {!title && !thumbnail && blocks.every((b) => b.type === "text" && !b.content) && (
-                <div className="text-center py-12">
-                  <Eye
-                    className="w-10 h-10 opacity-20 mx-auto mb-3"
-                    style={{ color: "var(--muted-foreground)" }}
-                  />
-                  <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                    아직 작성된 내용이 없어요.
-                    <br />
-                    제목과 본문을 입력하면 여기에 표시됩니다.
-                  </p>
-                </div>
+      </div>
+
+      {/* ── 블로그 미리보기 모달 ── */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--background)" }}>
+          <div className="flex items-center justify-between px-4 py-3 border-b shrink-0"
+            style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4" style={{ color: "oklch(0.75 0.12 300)" }} />
+              <span className="font-semibold text-sm text-foreground">블로그 미리보기</span>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs"
+                onClick={() => { navigate("/deploy"); setShowPreview(false); }}>
+                <ExternalLink className="w-3.5 h-3.5" /> 배포 관리로
+              </Button>
+              <button className="w-8 h-8 flex items-center justify-center rounded-lg"
+                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
+                onClick={() => setShowPreview(false)}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-2xl mx-auto w-full">
+            {previewContent?.title && (
+              <h1 className="text-2xl font-black text-foreground mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                {previewContent.title}
+              </h1>
+            )}
+            <div className="space-y-4 text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
+              {previewBlocks.length > 0 ? (
+                previewBlocks.map((b: any, i: number) => {
+                  if (b.type === "text") return <p key={i} className="leading-relaxed">{b.content}</p>;
+                  if (b.type === "image" && b.src) return <img key={i} src={b.src} alt="" className="w-full rounded-xl" />;
+                  if (b.type === "image-pair") return (
+                    <div key={i} className="grid grid-cols-2 gap-2">
+                      {b.images?.map((img: any, j: number) => <img key={j} src={img.src} alt="" className="w-full rounded-xl" />)}
+                    </div>
+                  );
+                  return null;
+                })
+              ) : previewContent?.content ? (
+                <p>{previewContent.content}</p>
+              ) : (
+                <p style={{ color: "var(--muted-foreground)" }}>콘텐츠 생성 후 미리보기가 가능합니다</p>
               )}
             </div>
+            {previewContent?.hashtags?.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                {previewContent.hashtags.map((tag: string, i: number) => (
+                  <span key={i} className="text-xs font-medium" style={{ color: "var(--color-emerald)" }}>{tag}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
-    </>
+
+    </Layout>
   );
 }
 //fix
