@@ -6,10 +6,11 @@ function ensureMarkers(text) {
   // 이미 마커가 있으면 그대로 반환
   if (text.includes("[FAQ시작]") && text.includes("[참고자료시작]")) return text;
 
-  // Q1:/A1: 패턴 → [FAQ시작]~[FAQ끝]
-  if (!text.includes("[FAQ시작]") && /Q1\s*:/i.test(text)) {
+  // Q1:/A1: 패턴 또는 **Q1** 또는 질문1: 등 다양한 FAQ 패턴 감지
+  const faqPattern = /Q1\s*[:.：]|\*\*Q1\*\*|질문\s*1\s*[:.：]|FAQ\s*1\s*[:.：]/i;
+  if (!text.includes("[FAQ시작]") && faqPattern.test(text)) {
     text = text.replace(
-      /(Q1\s*:[\s\S]*?)(?=\nLINK1\s*:|\nPOST1\s*:|$)/i,
+      /((?:Q1|\*\*Q1\*\*|질문\s*1)\s*[:.：][\s\S]*?)(?=\nLINK1\s*[:.：]|\nPOST1\s*[:.：]|\n\[참고자료|\n\[관련글|$)/i,
       "[FAQ시작]\n$1\n[FAQ끝]"
     );
   }
