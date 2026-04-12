@@ -129,7 +129,7 @@ export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div style={{minHeight:"100vh",background:"#060a0e",fontFamily:"'Pretendard Variable',sans-serif"}}>
+    <div style={{minHeight:"100vh",background:"#060a0e",fontFamily:"'Pretendard Variable',sans-serif",overflowX:"hidden"}}>
       <style>{`
         @keyframes barUp { from{transform:scaleY(0) translateY(10px);opacity:0} to{transform:scaleY(1) translateY(0);opacity:1} }
         @keyframes typeIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
@@ -190,6 +190,9 @@ export default function LandingPage() {
         .scanline { position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,rgba(16,185,129,0.45),transparent);animation:scanline 5.5s linear infinite;pointer-events:none; }
         @media(min-width:640px){.stat-grid{grid-template-columns:repeat(4,1fr)!important;}}
         @media(max-width:480px){.nav-btns .login-btn{display:none!important;} .hero-title{font-size:2.5rem!important;} .cta-flex{flex-direction:column!important;align-items:stretch!important;}}
+        * { box-sizing: border-box; }
+        body { overflow-x: hidden; }
+        @media(min-width:640px){ #nav-login { display:flex !important; } }
       `}</style>
 
       {/* NAV */}
@@ -204,10 +207,10 @@ export default function LandingPage() {
           <button style={{width:34,height:34,borderRadius:8,background:"transparent",border:"none",color:"#94a3b8",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={toggleTheme}>
             {theme==="dark"?<Sun style={{width:16,height:16}}/>:<Moon style={{width:16,height:16}}/>}
           </button>
-          <button className="btn-ghost" style={{padding:"8px 18px",fontSize:14}} onClick={()=>navigate("/login")}>로그인</button>
-          <button className="btn-main" style={{padding:"9px 20px",fontSize:14,display:"flex",alignItems:"center",gap:6}}
+          <button className="btn-ghost" style={{padding:"8px 16px",fontSize:13,display:"none"}} id="nav-login" onClick={()=>navigate("/login")}>로그인</button>
+          <button className="btn-main" style={{padding:"9px 16px",fontSize:13,display:"flex",alignItems:"center",gap:5}}
             onClick={()=>{localStorage.setItem("guest_mode","true");toast.success("👀 둘러보기 모드입니다. 실제 기능은 가입 후 이용 가능해요!",{duration:3000});navigate("/dashboard");}}>
-            둘러보기 <ArrowRight style={{width:14,height:14}}/>
+            둘러보기 <ArrowRight style={{width:13,height:13}}/>
           </button>
           <button style={{width:34,height:34,borderRadius:"50%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",color:"#64748b",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
             title="운영자" onClick={()=>navigate("/superadmin")}>
@@ -224,11 +227,18 @@ export default function LandingPage() {
 
         {/* 오비팅 파티클 */}
         <div className="od1" style={{position:"absolute",top:"32%",left:"18%",width:0,height:0}}/>
-        <div className="od2" style={{position:"absolute",top:"58%",right:"16%",width:0,height:0}}/>
-        <div className="od3" style={{position:"absolute",top:"22%",right:"28%",width:0,height:0}}/>
+        <div className="od2" style={{position:"absolute",top:"58%",right:"20%",width:0,height:0}}/>
+        <div className="od3" style={{position:"absolute",top:"22%",right:"32%",width:0,height:0}}/>
         <div className="scanline"/>
 
         <div style={{position:"relative",zIndex:10,textAlign:"center",padding:"40px 20px",maxWidth:920,margin:"0 auto"}}>
+          {/* 히어로 로고 */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:24}}>
+            <div style={{width:48,height:48,borderRadius:16,background:"linear-gradient(135deg,#10b981,#059669)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 30px rgba(16,185,129,0.5)",animation:"glowPulse 3s ease-in-out infinite"}}>
+              <Bot style={{width:26,height:26,color:"white"}}/>
+            </div>
+            <span style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:900,fontSize:22,color:"white"}}>BlogAuto <span className="txt-grad">Pro</span></span>
+          </div>
           <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(16,185,129,0.08)",border:"1px solid rgba(16,185,129,0.22)",borderRadius:999,padding:"7px 20px",marginBottom:32,animation:"borderGlow 3s ease-in-out infinite"}}>
             <Sparkles style={{width:13,height:13,color:"#10b981"}}/>
             <span style={{fontSize:12,fontWeight:700,color:"#10b981",letterSpacing:"0.12em",textTransform:"uppercase"}}>AI 기반 블로그 완전 자동화 플랫폼</span>
@@ -238,12 +248,12 @@ export default function LandingPage() {
             블로그 수익을<br/><span className="txt-grad">자동으로 극대화</span>
           </h1>
 
-          <p style={{fontSize:"clamp(1rem,2vw,1.18rem)",color:"rgba(255,255,255,0.52)",lineHeight:1.85,marginBottom:44,maxWidth:580,margin:"0 auto 44px",animation:"fadeUp 0.9s 0.15s ease both",opacity:0}}>
+          <p style={{fontSize:"clamp(1rem,2vw,1.18rem)",color:"rgba(255,255,255,0.52)",lineHeight:1.85,marginBottom:44,maxWidth:580,margin:"0 auto 44px",animation:"fadeUp 0.9s 0.15s ease both"}}>
             키워드 수집부터 콘텐츠 작성, 이미지 생성, 자동 배포까지<br/>
             블로그 운영의 모든 과정을 AI가 완전 자동화합니다
           </p>
 
-          <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap",marginBottom:64,animation:"fadeUp 0.9s 0.3s ease both",opacity:0}}>
+          <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap",marginBottom:64,animation:"fadeUp 0.9s 0.3s ease both"}}>
             <button className="btn-main" style={{padding:"17px 38px",fontSize:16,display:"flex",alignItems:"center",gap:8}}
               onClick={()=>navigate("/signup")}>
               <Sparkles style={{width:18,height:18}}/> 무료로 시작하기
@@ -258,9 +268,9 @@ export default function LandingPage() {
             </button>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,maxWidth:680,margin:"0 auto",animation:"fadeUp 0.9s 0.45s ease both",opacity:0}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,maxWidth:680,margin:"0 auto",animation:"fadeUp 0.9s 0.45s ease both"}}>
             {STATS.map((s,i)=>(
-              <div key={s.label} className="stat-card" style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:"18px 8px",textAlign:"center",animation:`countUp 0.6s ${0.6+i*0.1}s ease both`,opacity:0}}>
+              <div key={s.label} className="stat-card" style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:18,padding:"18px 8px",textAlign:"center",animation:`countUp 0.6s ${0.6+i*0.1}s ease both`}}>
                 <div style={{fontSize:"clamp(1.3rem,3vw,1.9rem)",fontWeight:900,color:s.color,fontFamily:"'Space Grotesk',sans-serif",marginBottom:5}}>{s.value}</div>
                 <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",lineHeight:1.5}}>{s.label}</div>
               </div>
