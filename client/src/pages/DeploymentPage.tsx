@@ -449,7 +449,12 @@ function PublishPanel({
                 size="sm"
                 variant="outline"
                 className="mt-2 text-xs"
-                onClick={() => (window.location.href = "/settings")}
+                onClick={() => {
+                  try {
+                    const u = JSON.parse(localStorage.getItem("ba_user") || "{}");
+                    window.location.href = u.role === "admin" ? "/superadmin" : "/settings";
+                  } catch { window.location.href = "/settings"; }
+                }}
               >
                 설정 이동
               </Button>
