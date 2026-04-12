@@ -147,21 +147,21 @@ const API_SECTIONS = [
     ],
   },
   {
-    title: "네이버 블로그", icon: "FileText", color: "#22c55e", grad: "linear-gradient(135deg,#22c55e,#16a34a)",
-    desc: "네이버 블로그 복사 발행",
+    title: "블로거 (Blogger)", icon: "FileText", color: "#FF5722", grad: "linear-gradient(135deg,#FF5722,#E64A19)",
+    desc: "구글 블로거 자동 발행 · 애드센스 최적화",
     fields: [
-      { label: "블로그 ID", key: "naver_blog_id", placeholder: "myblog (naver.com/myblog)", link: "", badge: "", badgeColor: "" },
-      { label: "Access Token", key: "naver_blog_access_token", placeholder: "OAuth Access Token", link: "", badge: "", badgeColor: "" },
+      { label: "Blog ID", key: "blogger_blog_id", placeholder: "블로그 ID (숫자)", link: "https://www.blogger.com", badge: "자동발행", badgeColor: "#10b981" },
+      { label: "Google API Key", key: "blogger_api_key", placeholder: "AIza...", link: "https://console.cloud.google.com/apis/credentials", badge: "발급", badgeColor: "#4285F4" },
+      { label: "OAuth Client ID", key: "blogger_client_id", placeholder: "Client ID", link: "https://console.cloud.google.com/apis/credentials", badge: "", badgeColor: "" },
+      { label: "OAuth Client Secret", key: "blogger_client_secret", placeholder: "Client Secret", link: "", badge: "", badgeColor: "" },
     ],
   },
   {
-    title: "티스토리", icon: "Send", color: "#FF6300", grad: "linear-gradient(135deg,#FF6300,#cc4f00)",
-    desc: "반자동 발행 (기존 API 발급자 전용)",
+    title: "미디엄 (Medium)", icon: "Send", color: "#000000", grad: "linear-gradient(135deg,#333333,#000000)",
+    desc: "미디엄 자동 발행 · 영문 콘텐츠 최적화",
     fields: [
-      { label: "Client ID", key: "tistory_client_id", placeholder: "Client ID", link: "https://www.tistory.com", badge: "반자동", badgeColor: "#FF6300" },
-      { label: "Client Secret", key: "tistory_client_secret", placeholder: "Client Secret", link: "", badge: "", badgeColor: "" },
-      { label: "Access Token", key: "tistory_access_token", placeholder: "OAuth Access Token", link: "", badge: "", badgeColor: "" },
-      { label: "블로그 이름", key: "tistory_blog_name", placeholder: "myblog", link: "", badge: "", badgeColor: "" },
+      { label: "Integration Token", key: "medium_token", placeholder: "Integration Token", link: "https://medium.com/me/settings/security", badge: "자동발행", badgeColor: "#10b981" },
+      { label: "Author ID (선택)", key: "medium_author_id", placeholder: "Author ID", link: "https://api.medium.com/v1/me", badge: "", badgeColor: "" },
     ],
   },
   {
