@@ -209,7 +209,7 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
       <div style={{ position:"fixed", inset:0, background:"radial-gradient(ellipse at 10% 5%, rgba(249,115,22,0.05) 0%, transparent 40%), radial-gradient(ellipse at 90% 95%, rgba(236,72,153,0.05) 0%, transparent 40%)", pointerEvents:"none" }} />
 
       {/* ── 탑바 ── */}
-      <div className="ca-topbar" style={{ position:"sticky", top:0, zIndex:50, background:"var(--background)cc", backdropFilter:"blur(12px)", borderBottom:"1px solid var(--border)", padding:"12px 24px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"12px" }}>
+      <div className="ca-topbar" style={{ position:"sticky", top:0, zIndex:50, background:"var(--background)cc", backdropFilter:"blur(12px)", borderBottom:"1px solid var(--border)", padding:"16px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"14px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:"12px" }}>
           <button className="ca-back" onClick={()=>navigate("/campaigns")}
             style={{ width:42, height:42, borderRadius:"50%", background:"var(--muted)", border:"1px solid var(--border)", fontSize:"20px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
@@ -220,7 +220,7 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
             <div style={{ fontSize:"11px", color:"var(--muted-foreground)" }}>강남맛집체험단 · 디너의여왕</div>
           </div>
         </div>
-        <div className="ca-topbtns" style={{ display:"flex", gap:"8px" }}>
+        <div className="ca-topbtns" style={{ display:"flex", gap:"12px" }}>
           <button onClick={fetchAll} disabled={loading} className="ca-btn"
             style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", padding:"9px 14px", borderRadius:"10px", background:"var(--muted)", border:"1px solid var(--border)", color:"var(--foreground)", fontWeight:500 }}>
             <RefreshCw style={{ width:13, height:13, animation:loading?"spin 1s linear infinite":"none" }} />
