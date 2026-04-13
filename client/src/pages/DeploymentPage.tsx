@@ -1250,31 +1250,31 @@ export default function DeploymentPage() {
       } else if (b.type === "image-pair") {
         if (afterSection) return; // 섹션 이후 이미지 절대 금지
         const validImgs = b.images.filter((img: any) => img.src && img.src.trim() !== "");
-        if (validImgs.length > 0) {
-          const imgHtml = validImgs
-            .map(
-              (img: any) =>
-                `<figure style="display:inline-block;width:${validImgs.length > 1 ? "48%" : "100%"};margin:4px 1%;vertical-align:top">` +
+        validImgs.forEach((img: any) => {
+          parts.push(
+            `<div style="padding:32px 0">` +
+              `<figure style="margin:0;text-align:center">` +
                 `<img src="${img.src}" alt="${escapeHtml(img.alt || "")}" style="width:100%;border-radius:12px;display:block">` +
                 (img.alt
-                  ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:4px">${inlineFormat(img.alt)}</figcaption>`
+                  ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:6px">${inlineFormat(img.alt)}</figcaption>`
                   : "") +
-                `</figure>`
-            )
-            .join("");
-          parts.push(`<div style="margin:16px 0;line-height:0">${imgHtml}</div>`);
-        }
+              `</figure>` +
+            `</div>`
+          );
+        });
       } else if (b.type === "image") {
         if (afterSection) return; // 섹션 이후 이미지 절대 금지
         const imgSrc = b.src || b.url || "";
         if (imgSrc) {
           parts.push(
-            `<figure style="margin:20px 0;text-align:center">` +
-              `<img src="${imgSrc}" alt="${escapeHtml(b.alt || "")}" style="width:100%;border-radius:12px;display:block">` +
-              (b.alt
-                ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:6px">${inlineFormat(b.alt)}</figcaption>`
-                : "") +
-              `</figure>`
+            `<div style="padding:32px 0">` +
+              `<figure style="margin:0;text-align:center">` +
+                `<img src="${imgSrc}" alt="${escapeHtml(b.alt || "")}" style="width:100%;border-radius:12px;display:block">` +
+                (b.alt
+                  ? `<figcaption style="font-size:12px;color:#888;text-align:center;margin-top:6px">${inlineFormat(b.alt)}</figcaption>`
+                  : "") +
+              `</figure>` +
+            `</div>`
           );
         }
       }
