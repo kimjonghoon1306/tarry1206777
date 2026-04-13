@@ -5,29 +5,47 @@
  */
 
 import { useState, useEffect } from "react";
-import { RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, LogOut, Eye, EyeOff } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, LogOut, Eye, EyeOff, Sun, Moon, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useLocation } from "wouter";
 
-const SESS_KEY = "campaign_admin_sess"; // bap_admin_auth 와 완전히 다른 키
+const SESS_KEY = "campaign_admin_sess";
 
-// ── API 헬퍼 ───────────────────────────────────────────
 async function campApi(action: string, extra: Record<string, any> = {}, token?: string) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   try {
     const res = await fetch("/api/scrape-campaigns", {
-      method: "POST",
-      headers,
+      method: "POST", headers,
       body: JSON.stringify({ action, ...extra }),
     });
     return await res.json();
   } catch { return { ok: false, error: "네트워크 오류" }; }
 }
 
-// ── 비번 게이트 ────────────────────────────────────────
+// ── 공통 상단바 (테마 + 대시보드) ────────────────────────
+function TopBar() {
+  const { theme, toggleTheme } = useTheme();
+  const [, navigate] = useLocation();
+  return (
+    <div style={{ position:"fixed", top:0, right:0, left:0, zIndex:50, display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 20px", background:"var(--background)", borderBottom:"1px solid var(--border)" }}>
+      <button onClick={() => navigate("/dashboard")}
+        style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", padding:"7px 14px", borderRadius:"8px", background:"var(--muted)", color:"var(--foreground)", border:"1px solid var(--border)", cursor:"pointer" }}>
+        <LayoutDashboard style={{ width:13, height:13 }} /> 대시보드로 돌아가기
+      </button>
+      <button onClick={toggleTheme}
+        style={{ width:34, height:34, borderRadius:"50%", background:"var(--muted)", border:"1px solid var(--border)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--foreground)" }}>
+        {theme === "dark" ? <Sun style={{ width:15, height:15 }} /> : <Moon style={{ width:15, height:15 }} />}
+      </button>
+    </div>
+  );
+}
+
+// ── 비번 게이트 ────────────────────────────────────────────
 function LoginGate({ onAuth }: { onAuth: (token: string) => void }) {
-  const [pw, setPw]       = useState("");
-  const [show, setShow]   = useState(false);
+  const [pw, setPw]         = useState("");
+  const [show, setShow]     = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
@@ -46,7 +64,8 @@ function LoginGate({ onAuth }: { onAuth: (token: string) => void }) {
 
   return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--background)" }}>
-      <div style={{ width:"100%", maxWidth:360, padding:"40px 32px", background:"var(--muted)", border:"1px solid var(--border)", borderRadius:"16px" }}>
+      <TopBar />
+      <div style={{ width:"100%", maxWidth:360, padding:"40px 32px", background:"var(--muted)", border:"1px solid var(--border)", borderRadius:"16px", marginTop:56 }}>
         <div style={{ textAlign:"center", marginBottom:"28px" }}>
           <div style={{ fontSize:"32px", marginBottom:"8px" }}>🛡️</div>
           <div style={{ fontSize:"18px", fontWeight:700, color:"var(--foreground)" }}>체험단 관리자</div>
@@ -75,17 +94,21 @@ function LoginGate({ onAuth }: { onAuth: (token: string) => void }) {
   );
 }
 
-// ── 메인 관리자 화면 ────────────────────────────────────
+// ── 관리자 대시보드 ────────────────────────────────────────
 function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => void }) {
   const [status, setStatus]       = useState<any[]>([]);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [total, setTotal]         = useState(0);
   const [scraping, setScraping]   = useState(false);
   const [loading, setLoading]     = useState(true);
+
   // 비번 변경
-  const [curPw, setCurPw]   = useState("");
-  const [newPw, setNewPw]   = useState("");
-  const [confPw, setConfPw] = useState("");
+  const [curPw, setCurPw]     = useState("");
+  const [newPw, setNewPw]     = useState("");
+  const [confPw, setConfPw]   = useState("");
+  const [showCur, setShowCur] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConf, setShowConf] = useState(false);
   const [chPwLoading, setChPwLoading] = useState(false);
 
   useEffect(() => { fetchStatus(); }, []);
@@ -100,13 +123,13 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
 
   async function handleScrape() {
     setScraping(true);
-    toast.loading("전체 사이트 스크래핑 중... (최대 30초)", { id: "scrape" });
+    toast.loading("전체 사이트 스크래핑 중... (최대 30초)", { id:"scrape" });
     const d = await campApi("scrape", {}, token);
     if (d.ok) {
-      toast.success(`완료! 총 ${d.total}개 수집`, { id: "scrape" });
+      toast.success(`완료! 총 ${d.total}개 수집`, { id:"scrape" });
       await fetchStatus();
     } else {
-      toast.error(d.error || "스크래핑 실패", { id: "scrape" });
+      toast.error(d.error || "스크래핑 실패", { id:"scrape" });
     }
     setScraping(false);
   }
@@ -135,9 +158,29 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     catch { return ts; }
   };
 
+  const pwField = (
+    label: string, val: string, set: (v: string) => void,
+    show: boolean, setShow: (v: boolean) => void
+  ) => (
+    <div key={label} style={{ position:"relative" }}>
+      <input
+        type={show ? "text" : "password"}
+        placeholder={label}
+        value={val}
+        onChange={e => set(e.target.value)}
+        style={{ width:"100%", padding:"10px 44px 10px 14px", borderRadius:"8px", border:"1px solid var(--border)", background:"var(--background)", color:"var(--foreground)", fontSize:"13px", outline:"none", boxSizing:"border-box" }}
+      />
+      <button onClick={() => setShow(!show)}
+        style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"var(--muted-foreground)" }}>
+        {show ? <EyeOff style={{ width:14, height:14 }} /> : <Eye style={{ width:14, height:14 }} />}
+      </button>
+    </div>
+  );
+
   return (
-    <div style={{ minHeight:"100vh", background:"var(--background)", padding:"28px 24px 60px" }}>
-      <div style={{ maxWidth:860, margin:"0 auto" }}>
+    <div style={{ minHeight:"100vh", background:"var(--background)", paddingTop:56 }}>
+      <TopBar />
+      <div style={{ maxWidth:860, margin:"0 auto", padding:"28px 24px 60px" }}>
 
         {/* 헤더 */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"28px", flexWrap:"wrap", gap:"12px" }}>
@@ -229,31 +272,26 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           </div>
         </div>
 
-        {/* 비밀번호 변경 */}
+        {/* 비밀번호 변경 (눈 아이콘 포함) */}
         <div style={{ background:"var(--muted)", border:"1px solid var(--border)", borderRadius:"12px", padding:"20px 24px" }}>
           <div style={{ fontSize:"14px", fontWeight:600, color:"var(--foreground)", marginBottom:"16px" }}>🔑 비밀번호 변경</div>
           <div style={{ display:"flex", flexDirection:"column", gap:"10px", maxWidth:360 }}>
-            {[
-              { label:"현재 비밀번호", val:curPw, set:setCurPw },
-              { label:"새 비밀번호",   val:newPw, set:setNewPw },
-              { label:"새 비밀번호 확인", val:confPw, set:setConfPw },
-            ].map(f => (
-              <input key={f.label} type="password" placeholder={f.label} value={f.val}
-                onChange={e => f.set(e.target.value)}
-                style={{ padding:"10px 14px", borderRadius:"8px", border:"1px solid var(--border)", background:"var(--background)", color:"var(--foreground)", fontSize:"13px", outline:"none" }} />
-            ))}
+            {pwField("현재 비밀번호", curPw, setCurPw, showCur, setShowCur)}
+            {pwField("새 비밀번호",   newPw, setNewPw, showNew, setShowNew)}
+            {pwField("새 비밀번호 확인", confPw, setConfPw, showConf, setShowConf)}
             <button onClick={handleChangePw} disabled={chPwLoading}
               style={{ padding:"10px", borderRadius:"8px", background:"rgba(236,72,153,0.15)", color:"#f472b6", border:"1px solid rgba(236,72,153,0.4)", fontWeight:600, fontSize:"13px", cursor:"pointer" }}>
               {chPwLoading ? "변경 중..." : "비밀번호 변경"}
             </button>
           </div>
         </div>
+
       </div>
     </div>
   );
 }
 
-// ── 메인 컴포넌트 ────────────────────────────────────────
+// ── 메인 컴포넌트 ─────────────────────────────────────────
 export default function AdminCampaignPage() {
   const [token, setToken] = useState<string | null>(null);
 
