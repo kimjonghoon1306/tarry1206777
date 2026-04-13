@@ -54,25 +54,19 @@ async function kvSet(key, value) {
   return false;
 }
 
-// 소형 문자열 전용 - URL 길이 제한 없음 (비번 같은 작은 값용)
 async function kvSetSmall(key, value) {
   if (!KV_URL || !KV_TOKEN) return false;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${KV_TOKEN}` },
+        method: "POST", headers: { Authorization: `Bearer ${KV_TOKEN}` },
       });
       const d = await r.json();
       if (d.result === "OK") return true;
-    } catch {
-      if (attempt < 2) await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
-    }
+    } catch { if (attempt < 2) await new Promise(r => setTimeout(r, 200*(attempt+1))); }
   }
   return false;
 }
-
-// true=존재 | false=진짜없음 | null=KV오류
 async function kvExists(key) {
   if (!KV_URL || !KV_TOKEN) return null;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -83,13 +77,10 @@ async function kvExists(key) {
       const d = await r.json();
       if (d.result === null || d.result === undefined) return false;
       return true;
-    } catch {
-      if (attempt < 2) await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
-    }
+    } catch { if (attempt < 2) await new Promise(r => setTimeout(r, 200*(attempt+1))); }
   }
   return null;
 }
-
 async function kvDel(key) {
   if (!KV_URL || !KV_TOKEN) return;
   try {
@@ -193,44 +184,16 @@ const parseSignedToken = (token) => {
 };
 const mkToken = (userId) => signTokenPayload({ uid: userId, iat: Date.now(), exp: Date.now() + 1000 * 60 * 60 * 24 * 30 });
 
-let _adminPwReady = false; // 인스턴스당 1번만 실행
-
 // ── 관리자 초기화 ──
-// admin:pw 전용 소형 키를 기준으로 판단
-// KV 오류(null) 시 절대 건드리지 않음
 async function initAdmin() {
-  if (_adminPwReady) return; // 이미 이 인스턴스에서 확인됨
-
-  const pwExists = await kvExists("admin:pw");
-  if (pwExists === null) return; // KV 오류 → 건드리지 않음
-
-  if (pwExists === true) {
-    _adminPwReady = true;
-    return; // 비번 키 있음 → 정상
-  }
-
-  // admin:pw 없음 → user:admin 확인 (마이그레이션 대비)
-  const adminExists = await kvExists("user:admin");
-  if (adminExists === null) return; // KV 오류 → 건드리지 않음
-
-  if (adminExists === true) {
-    // user:admin은 있는데 admin:pw만 없는 경우 → admin:pw 동기화
-    const u = await getUser("admin");
-    if (u?.password) {
-      await kvSetSmall("admin:pw", u.password);
-      _adminPwReady = true;
-    }
-    return;
-  }
-
-  // 둘 다 없음 → 최초 생성
+  const exists = await kvExists("user:admin");
+  if (exists !== false) return; // null(KV오류) 또는 true(존재) → 절대 건드리지 않음
   await setUser("admin", {
     profile: { name: "관리자", email: "admin@blogauto.pro", role: "admin", createdAt: new Date().toISOString() },
     password: b64("123456"),
   });
   await kvSetSmall("admin:pw", b64("123456"));
   await setEmailIndex("admin@blogauto.pro", "admin");
-  _adminPwReady = true;
 }
 
 async function getUserRole(token) {
@@ -290,7 +253,6 @@ export default async function handler(req, res) {
     }
     const u = await getUser(userId);
     if (!u) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
-    // admin은 전용 소형 키 우선 (대형 객체 저장 실패 대비)
     let storedPw = u.password;
     if (userId === "admin") {
       const adminPw = await kvGet("admin:pw");
@@ -354,8 +316,7 @@ export default async function handler(req, res) {
     if (!newPassword || newPassword.length < 4) return res.json({ ok: false, error: "새 비밀번호는 4자 이상이어야 해요" });
     u.password = b64(newPassword);
     await setUser("admin", u);
-    await kvSetSmall("admin:pw", b64(newPassword)); // 전용 소형 키에 확실히 저장
-    _adminPwReady = true; // 플래그 유지
+    await kvSetSmall("admin:pw", b64(newPassword));
     return res.json({ ok: true });
   }
 
@@ -423,8 +384,7 @@ export default async function handler(req, res) {
     if (secretKey !== "blogauto-reset-2026") return res.json({ ok: false, error: "잘못된 키" });
     const existing = await getUser("admin") || {};
     await setUser("admin", { ...existing, password: b64("123456") });
-    await kvSetSmall("admin:pw", b64("123456")); // 전용 키도 초기화
-    _adminPwReady = true;
+    await kvSetSmall("admin:pw", b64("123456"));
     return res.json({ ok: true, message: "비밀번호가 123456으로 초기화되었습니다" });
   }
 
