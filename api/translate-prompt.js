@@ -48,6 +48,10 @@ Examples:
 "수면 가이드" → bedroom pillow white sheets sleep peaceful night
 "제주도 여행" → jeju island ocean cliff scenic landscape blue sky
 "취업 준비" → resume document briefcase office laptop professional
+"데이트 장소" → romantic garden fountain bench flowers scenic path
+"카페 추천" → cozy cafe latte art ceramic cup warm bokeh light
+"여행 코스" → scenic road trip map landscape golden hour nature
+"맛집 후기" → gourmet food dish plating restaurant table elegant
 
 Output:`;
 
@@ -156,6 +160,9 @@ function universalFallback(topic, variation = 0) {
     { test: /육아|아기|임신|출산|어린이|육아용품/, imgs: ["baby toy nursery crib soft pastel", "pregnancy maternity soft gentle items", "children book colorful toy playful", "stroller bottle pacifier nursery"] },
     { test: /뷰티|스킨케어|화장품|메이크업|패션|옷/, imgs: ["skincare serum bottle beauty elegant", "makeup palette brush cosmetics", "fashion clothing rack modern display", "perfume bottle elegant background"] },
     { test: /반려동물|강아지|고양이|펫/, imgs: ["dog toy collar leash treat", "cat toy indoor cozy bowl", "pet food bowl accessories home", "animal shelter cage toy warm"] },
+    { test: /데이트|연인|커플|로맨스|감성|데이트장소|데이트코스/, imgs: ["romantic garden fountain bench flowers path", "cozy cafe table flowers warm candle bokeh", "sunset park scenic bench couple spot", "rooftop terrace fairy lights city view night"] },
+    { test: /맛집|레스토랑|음식점|식당|카페|브런치/, imgs: ["gourmet food dish elegant plating table", "cafe interior warm light latte art cup", "restaurant ambiance table setting candle", "brunch plate colorful fresh food morning"] },
+    { test: /여행지|여행코스|관광지|명소|드라이브|힐링/, imgs: ["scenic landscape golden hour road path", "nature trail forest light peaceful green", "ocean cliff view horizon sunrise calm", "mountain valley fog misty landscape"] },
   ];
 
   for (const cat of categories) {
