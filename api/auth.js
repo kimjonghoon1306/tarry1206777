@@ -256,14 +256,14 @@ export default async function handler(req, res) {
     if (userId === "admin") {
       const inputHash = b64(password);
       const adminPw = await kvGet("admin:pw");
-      let loginOk = false;
-      if (adminPw && typeof adminPw === "string" && adminPw === inputHash) {
-        loginOk = true; // admin:pw 일치
-      } else if (u.password === inputHash) {
-        loginOk = true; // user:admin 폴백 → admin:pw 자동 수정
+      if (!adminPw || typeof adminPw !== "string") {
+        // admin:pw 없음 → user:admin 폴백 후 admin:pw 초기화
+        if (u.password !== inputHash) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
         await kvSetSmall("admin:pw", inputHash);
+      } else {
+        // admin:pw 있음 → 무조건 admin:pw 기준 (덮어쓰기 없음)
+        if (adminPw !== inputHash) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
       }
-      if (!loginOk) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
     } else {
       if (u.password !== b64(password)) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
     }
