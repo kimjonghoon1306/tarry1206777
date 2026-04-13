@@ -483,3 +483,4 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
     </div>
   );
 }
+
