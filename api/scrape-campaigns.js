@@ -106,62 +106,152 @@ function extractReward(text) {
 }
 
 let gId = Date.now();
+
+// 사이트별 개별 공고 URL 패턴
+const URL_PATTERNS = {
+  dinnerqueen: /\/taste\/\d+/,
+  modan:       /\/shop_view\/\?idx=\d+/,
+};
+
 function parseHtml(html, site) {
   const results = [];
   const seen = new Set();
-  const re = /<a[^>]+href=["']([^"'#][^"']*)["'][^>]*>([\s\S]{4,150}?)<\/a>/gi;
+  const pattern = URL_PATTERNS[site.key];
+  const baseUrl = (() => { try { return new URL(site.url).origin; } catch { return ""; } })();
+  const re = /<a[^>]+href=["']([^"'#][^"']*?)["'][^>]*>([\s\S]{2,200}?)<\/a>/gi;
   let m;
   while ((m = re.exec(html)) !== null) {
     let [, href, rawText] = m;
     const text = rawText.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    if (!text || seen.has(text) || !isCampaignLike(text)) continue;
-    seen.add(text);
-    const fullUrl = href.startsWith("http") ? href : site.url.replace(/\/$/, "") + (href.startsWith("/") ? href : "/" + href);
-    const { reward, rewardVal } = extractReward(text);
-    results.push({
-      id: `${site.key}_${++gId}`,
-      title: text.slice(0, 60),
-      source: site.name,
-      region: extractRegion(text),
-      tags: [],
-      reward, rewardVal,
-      deadline: Math.floor(Math.random() * 12) + 1,
-      url: fullUrl,
-      scraped: true,
-    });
+    if (!text || text.length < 4) continue;
+
+    if (pattern) {
+      // URL 패턴 있는 사이트: 해당 패턴 링크만 수집
+      const fullHref = href.startsWith("http") ? href : baseUrl + (href.startsWith("/") ? href : "/" + href);
+      if (!pattern.test(fullHref) || seen.has(fullHref)) continue;
+      seen.add(fullHref);
+      const { reward, rewardVal } = extractReward(text);
+      results.push({
+        id: `${site.key}_${++gId}`,
+        title: text.slice(0, 60),
+        source: site.name,
+        region: extractRegion(text),
+        tags: [],
+        reward, rewardVal,
+        deadline: Math.floor(Math.random() * 12) + 1,
+        url: fullHref,
+        scraped: true,
+      });
+    } else {
+      // 패턴 없는 사이트: 키워드 매칭
+      if (!isCampaignLike(text) || seen.has(text)) continue;
+      seen.add(text);
+      const fullUrl = href.startsWith("http") ? href : baseUrl + (href.startsWith("/") ? href : "/" + href);
+      const { reward, rewardVal } = extractReward(text);
+      results.push({
+        id: `${site.key}_${++gId}`,
+        title: text.slice(0, 60),
+        source: site.name,
+        region: extractRegion(text),
+        tags: [],
+        reward, rewardVal,
+        deadline: Math.floor(Math.random() * 12) + 1,
+        url: fullUrl,
+        scraped: true,
+      });
+    }
     if (results.length >= 15) break;
   }
   return results;
 }
-
 const SITES = [
-  { name: "강남맛집체험단", url: "https://강남맛집.net",          key: "gangnam"     },
-  { name: "디너의여왕",     url: "https://dinnerqueen.net",       key: "dinnerqueen" },
-  { name: "파블로",         url: "https://pavlovu.com",           key: "pavlovu"     },
-  { name: "모두의체험단",   url: "https://www.modan.kr",          key: "modan"       },
-  { name: "태그바이",       url: "https://www.tagby.io/recruit",  key: "tagby"       },
+  { name: "강남맛집체험단", url: "https://xn--939au0g4vj8sq.net", fallback: "http://xn--939au0g4vj8sq.net", key: "gangnam",     timeout: 8000 },
+  { name: "디너의여왕",     url: "https://dinnerqueen.net",          key: "dinnerqueen", timeout: 5000 },
+  { name: "레뷰",           url: "https://www.revu.net/campaign",    key: "revu",        timeout: 5000 },
+  { name: "모두의체험단",   url: "https://www.modan.kr",             key: "modan",       timeout: 5000 },
+  { name: "태그바이",       url: "https://www.tagby.io/recruit",     key: "tagby",       timeout: 5000 },
 ];
+
+const HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+  "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+};
+
+async function fetchHtml(url, timeout) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, { signal: controller.signal, headers: HEADERS });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
+// 태그바이: Next.js __NEXT_DATA__ 파싱
+function parseNextData(html, site) {
+  try {
+    const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (!match) return [];
+    const json = JSON.parse(match[1]);
+    const props = json?.props?.pageProps;
+    if (!props) return [];
+    // 다양한 구조 시도
+    const items = props.campaigns || props.list || props.data || props.recruits || [];
+    if (!Array.isArray(items) || items.length === 0) return [];
+    return items.slice(0, 15).map((item, i) => ({
+      id: `${site.key}_${Date.now()}_${i}`,
+      title: (item.title || item.name || item.campaignName || "").slice(0, 60),
+      source: site.name,
+      region: extractRegion(item.title || item.name || ""),
+      tags: [],
+      reward: item.reward || item.rewardAmount || "정보 확인 필요",
+      rewardVal: parseInt(item.rewardValue || item.amount || 0) || 0,
+      deadline: parseInt(item.dDay || item.deadline || 7) || 7,
+      url: item.url || item.link || site.url,
+      scraped: true,
+    })).filter(c => c.title.length > 4);
+  } catch { return []; }
+}
 
 async function scrapeSite(site) {
   const now = new Date().toISOString();
+  const timeout = site.timeout || 5000;
+
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 9000);
-    const res = await fetch(site.url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
-      },
-    });
-    clearTimeout(timer);
-    if (!res.ok) return { name: site.name, ok: false, error: `HTTP ${res.status}`, campaigns: [], scrapedAt: now };
-    const html = await res.text();
+    // 강남맛집체험단: fallback URL 시도
+    let html = "";
+    try {
+      html = await fetchHtml(site.url, timeout);
+    } catch (e) {
+      if (site.fallback) {
+        html = await fetchHtml(site.fallback, timeout);
+      } else {
+        throw e;
+      }
+    }
+
+    // 태그바이: Next.js 구조 시도
+    if (site.key === "tagby") {
+      const nextCampaigns = parseNextData(html, site);
+      if (nextCampaigns.length > 0) {
+        return { name: site.name, ok: true, campaigns: nextCampaigns, count: nextCampaigns.length, scrapedAt: now };
+      }
+    }
+
+    // 일반 HTML 파싱
     const campaigns = parseHtml(html, site);
     return { name: site.name, ok: true, campaigns, count: campaigns.length, scrapedAt: now };
+
   } catch (e) {
-    return { name: site.name, ok: false, error: e.name === "AbortError" ? "타임아웃(9초)" : String(e.message || e), campaigns: [], scrapedAt: now };
+    const errMsg = e.name === "AbortError" ? `타임아웃(${timeout/1000}초)` : String(e.message || e);
+    return { name: site.name, ok: false, error: errMsg, campaigns: [], scrapedAt: now };
   }
 }
 
@@ -176,31 +266,11 @@ export default async function handler(req, res) {
   const { action } = body;
   const token = (req.headers.authorization || "").replace("Bearer ", "").trim();
 
-  // ── [공개] 캠페인 목록 로드 (캐시 1시간 초과 시 자동 수집) ─
+  // ── [공개] 캠페인 목록 로드 ────────────────────────────
   if (!action || action === "load") {
     const cached = await kvGet(CACHE_KEY);
     if (cached) {
       const data = typeof cached === "object" ? cached : JSON.parse(cached);
-      const updatedAt = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-      const oneHour = 60 * 60 * 1000;
-      // 캐시가 1시간 이상 지났으면 백그라운드에서 자동 수집
-      if (Date.now() - updatedAt > oneHour) {
-        (async () => {
-          try {
-            const results = await Promise.allSettled(SITES.map(s => scrapeSite(s)));
-            const siteResults = results.map((r, i) =>
-              r.status === "fulfilled" ? r.value
-              : { name: SITES[i].name, ok: false, error: "예외", campaigns: [], scrapedAt: new Date().toISOString() }
-            );
-            const allCampaigns = siteResults.flatMap(r => r.campaigns || []);
-            await kvSet(CACHE_KEY, { campaigns: allCampaigns, updatedAt: new Date().toISOString() });
-            await kvSet(STATUS_KEY, siteResults.map(r => ({
-              name: r.name, ok: r.ok, count: r.campaigns?.length || 0,
-              error: r.error || null, scrapedAt: r.scrapedAt,
-            })));
-          } catch {}
-        })();
-      }
       return res.json({ ok: true, campaigns: data.campaigns || [], updatedAt: data.updatedAt });
     }
     return res.json({ ok: true, campaigns: [], updatedAt: null });
