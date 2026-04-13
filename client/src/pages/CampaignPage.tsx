@@ -103,8 +103,7 @@ export default function CampaignPage() {
   const urgentCount = filtered.filter(c => c.deadline <= 3).length;
 
   const handleApply = (url: string, title: string) => {
-    toast.success("공고 페이지로 이동합니다", { description: title, duration: 1500 });
-    setTimeout(() => window.open(url, "_blank"), 400);
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
