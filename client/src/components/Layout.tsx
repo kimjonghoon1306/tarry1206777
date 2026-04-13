@@ -31,7 +31,7 @@ import {
   LogOut,
   Gift,
 } from "lucide-react";
-import { clearUserLocalCache } from "@/lib/user-storage";
+import { clearUserLocalCache, loadNotificationsFromServer, markNotificationsRead } from "@/lib/user-storage";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -81,12 +81,24 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState(currentLang);
   const [totalPosts, setTotalPosts] = useState<number>(0);
+  const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; desc: string; createdAt: string; read: boolean }[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const isGuestMode = localStorage.getItem("guest_mode") === "true";
 
   useEffect(() => {
     // 대시보드에서 저장한 발행 글 수 읽기
     const count = parseInt(localStorage.getItem("blogauto_post_count") || "0");
     if (count > 0) setTotalPosts(count);
+  }, []);
+
+  useEffect(() => {
+    // 알림 불러오기 (로그인 상태일 때만)
+    if (!isGuestMode && localStorage.getItem("ba_token")) {
+      loadNotificationsFromServer().then(list => {
+        setNotifications(list);
+        setUnreadCount(list.filter(n => !n.read).length);
+      });
+    }
   }, []);
 
   const handleGuestBlock = (e: React.MouseEvent) => {
@@ -349,32 +361,58 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             </Button>
 
             {/* Notifications */}
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={(open) => {
+              if (open && unreadCount > 0) {
+                markNotificationsRead();
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                setUnreadCount(0);
+              }
+            }}>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-9 h-9 relative"
-                >
+                <Button variant="ghost" size="icon" className="w-9 h-9 relative">
                   <Bell className="w-4 h-4" />
-                  <span
-                    className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-                    style={{ background: "var(--color-emerald)" }}
-                  />
+                  {unreadCount > 0 ? (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 min-w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
+                      style={{ background: "#ef4444", color: "white", padding: "0 3px" }}
+                    >
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  ) : (
+                    <span
+                      className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                      style={{ background: "var(--color-emerald)" }}
+                    />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--muted-foreground)" }}>
-                  알림
+              <DropdownMenuContent align="end" className="w-72">
+                <div className="px-3 py-2 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+                  <span className="text-xs font-semibold" style={{ color: "var(--muted-foreground)" }}>알림</span>
+                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{notifications.length}개</span>
                 </div>
-                <DropdownMenuItem className="flex flex-col items-start gap-0.5 py-2">
-                  <span className="text-sm font-medium">새로운 업데이트가 있어요</span>
-                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>BlogAuto Pro v5.0 출시</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start gap-0.5 py-2">
-                  <span className="text-sm font-medium">자동화 시스템 정상 운영 중</span>
-                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>오늘 · 시스템 상태 양호</span>
-                </DropdownMenuItem>
+                {notifications.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+                    알림이 없습니다
+                  </div>
+                ) : (
+                  notifications.slice(0, 10).map(n => (
+                    <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 py-2.5 px-3">
+                      <div className="flex items-center gap-1.5 w-full">
+                        <span className="text-sm font-medium flex-1" style={{ color: "var(--foreground)" }}>
+                          {n.type === "deploy" ? "🚀" : n.type === "content" ? "✍️" : n.type === "image" ? "🖼️" : "🔍"} {n.title}
+                        </span>
+                        {!n.read && (
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "var(--color-emerald)" }} />
+                        )}
+                      </div>
+                      <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{n.desc}</span>
+                      <span className="text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.6 }}>
+                        {new Date(n.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -410,6 +448,27 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
               style={{ color: "var(--muted-foreground)" }}
             >
               <Settings className="w-4 h-4" />
+            </button>
+
+            {/* 체험단 허브 관리자 버튼 */}
+            <button
+              title="체험단 허브 관리자"
+              onClick={() => navigate("/admin-campaigns")}
+              className="flex items-center justify-center rounded-full transition-all hover:bg-accent/20"
+              style={{
+                width: 32, height: 32,
+                color: "var(--muted-foreground)",
+                position: "relative",
+                animation: "campGlow 3s ease-in-out infinite",
+              }}
+            >
+              <span style={{ fontSize: 15 }}>⚙️</span>
+              <style>{`
+                @keyframes campGlow {
+                  0%,100% { filter: drop-shadow(0 0 0px rgba(236,72,153,0)); }
+                  50%     { filter: drop-shadow(0 0 5px rgba(236,72,153,0.7)); }
+                }
+              `}</style>
             </button>
           </div>
         </header>
