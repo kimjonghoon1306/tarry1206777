@@ -109,8 +109,8 @@ let gId = Date.now();
 
 // 사이트별 개별 공고 URL 패턴
 const URL_PATTERNS = {
+  gangnam:     /\/cp\/\?id=\d+/,
   dinnerqueen: /\/taste\/\d+/,
-  modan:       /\/shop_view\/\?idx=\d+/,
 };
 
 function parseHtml(html, site) {
@@ -165,7 +165,7 @@ function parseHtml(html, site) {
   return results;
 }
 const SITES = [
-  { name: "강남맛집체험단", url: "https://xn--939au0g4vj8sq.net", fallback: "http://xn--939au0g4vj8sq.net", key: "gangnam",     timeout: 8000 },
+  { name: "강남맛집체험단", url: "https://강남맛집.net",           fallback: "http://강남맛집.net",           key: "gangnam",     timeout: 8000 },
   { name: "디너의여왕",     url: "https://dinnerqueen.net",          key: "dinnerqueen", timeout: 5000 },
   { name: "레뷰",           url: "https://www.revu.net/campaign",    key: "revu",        timeout: 5000 },
   { name: "모두의체험단",   url: "https://www.modan.kr",             key: "modan",       timeout: 5000 },
