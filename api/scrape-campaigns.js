@@ -24,7 +24,7 @@ const STATUS_KEY   = "campaigns:status";
 const CAMP_PW_KEY  = "campaign_admin_pw";     // 캠페인 전용 비번 KV 키
 const CAMP_SESS_PFX = "campaign_session:";    // 세션 KV 접두사 (BlogAuto Pro의 session: 과 분리)
 
-const DEFAULT_PW = Buffer.from("123456").toString("base64");
+const DEFAULT_PW = Buffer.from("캠페인관리1234").toString("base64");
 
 // ── KV 헬퍼 (auth.js 와 동일 패턴) ─────────────────────
 async function kvGet(key) {
@@ -176,11 +176,31 @@ export default async function handler(req, res) {
   const { action } = body;
   const token = (req.headers.authorization || "").replace("Bearer ", "").trim();
 
-  // ── [공개] 캠페인 목록 로드 ────────────────────────────
+  // ── [공개] 캠페인 목록 로드 (캐시 1시간 초과 시 자동 수집) ─
   if (!action || action === "load") {
     const cached = await kvGet(CACHE_KEY);
     if (cached) {
       const data = typeof cached === "object" ? cached : JSON.parse(cached);
+      const updatedAt = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+      const oneHour = 60 * 60 * 1000;
+      // 캐시가 1시간 이상 지났으면 백그라운드에서 자동 수집
+      if (Date.now() - updatedAt > oneHour) {
+        (async () => {
+          try {
+            const results = await Promise.allSettled(SITES.map(s => scrapeSite(s)));
+            const siteResults = results.map((r, i) =>
+              r.status === "fulfilled" ? r.value
+              : { name: SITES[i].name, ok: false, error: "예외", campaigns: [], scrapedAt: new Date().toISOString() }
+            );
+            const allCampaigns = siteResults.flatMap(r => r.campaigns || []);
+            await kvSet(CACHE_KEY, { campaigns: allCampaigns, updatedAt: new Date().toISOString() });
+            await kvSet(STATUS_KEY, siteResults.map(r => ({
+              name: r.name, ok: r.ok, count: r.campaigns?.length || 0,
+              error: r.error || null, scrapedAt: r.scrapedAt,
+            })));
+          } catch {}
+        })();
+      }
       return res.json({ ok: true, campaigns: data.campaigns || [], updatedAt: data.updatedAt });
     }
     return res.json({ ok: true, campaigns: [], updatedAt: null });
@@ -263,4 +283,3 @@ export default async function handler(req, res) {
 
   return res.json({ ok: false, error: "알 수 없는 액션" });
 }
-
