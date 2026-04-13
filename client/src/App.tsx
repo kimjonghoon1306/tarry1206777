@@ -58,7 +58,7 @@ function Router() {
       <Route path="/admin" component={() => <PrivateRoute component={MyPage} />} />
       <Route path="/mypage" component={() => <PrivateRoute component={MyPage} />} />
       <Route path="/campaigns" component={() => <PrivateRoute component={CampaignPage} />} />
-      <Route path="/admin-campaigns" component={() => <PrivateRoute component={AdminCampaignPage} />} />
+      <Route path="/admin-campaigns" component={AdminCampaignPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
