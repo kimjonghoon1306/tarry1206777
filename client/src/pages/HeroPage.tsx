@@ -1,13 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Sun, Moon } from "lucide-react";
 
 export default function HeroPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const [, navigate] = useLocation();
-  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     let animId: number;
@@ -117,27 +114,6 @@ export default function HeroPage() {
       style={{ position: "relative", width: "100%", height: "100vh", overflow: "hidden", background: "#050a12" }}
     >
       <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
-
-      {/* 테마 토글 버튼 (우상단) */}
-      <button
-        onClick={toggleTheme}
-        title={theme === "dark" ? "라이트 모드" : "다크 모드"}
-        style={{
-          position: "absolute", top: 16, right: 16, zIndex: 20,
-          width: 38, height: 38, borderRadius: "50%", cursor: "pointer",
-          background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)",
-          backdropFilter: "blur(8px)", color: "#fff",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "all 0.2s",
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.18)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; }}
-      >
-        {theme === "dark"
-          ? <Sun  style={{ width: 16, height: 16 }} />
-          : <Moon style={{ width: 16, height: 16 }} />
-        }
-      </button>
 
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 40%, #020d07 100%)", zIndex: 5, pointerEvents: "none" }} />
 
