@@ -1,37 +1,29 @@
 /**
  * api/scrape-campaigns.js
- * 체험단 허브 — 스크래퍼 + 캠페인 전용 관리자 인증
+ * 체험단 허브 — 캠페인 전용 관리자 인증 + Railway 크롤링 트리거
  *
- * [공개] action: "load"               — 캐시된 캠페인 목록 반환
+ * [공개] action: "load"               — KV 캐시에서 캠페인 목록 반환
  * [관리자] action: "loginCampaignAdmin" — 캠페인 전용 비번으로 로그인
  * [관리자] action: "logoutCampaignAdmin"— 세션 삭제
- * [관리자] action: "scrape"            — 실시간 스크래핑 후 KV 저장
+ * [관리자] action: "scrape"            — Railway에 크롤링 트리거 (Railway가 KV에 직접 저장)
  * [관리자] action: "status"            — 사이트별 수집 상태 조회
  * [관리자] action: "changeCampaignPw"  — 관리자 비번 변경
- *
- * BlogAuto Pro 계정과 완전히 분리된 독립 인증 시스템
- * - 세션 KV 키: campaign_session:{token}  (session:{token} 과 다른 네임스페이스)
- * - sessionStorage 키: campaign_admin_sess (bap_admin_auth 와 다름)
  */
 
 import crypto from "crypto";
 
 const KV_URL   = process.env.KV_REST_API_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN;
-
-// Railway Puppeteer 서버 (JS 렌더링 사이트용)
-// 미설정 시 기존 fetch 방식으로 자동 fallback — 벽돌 없음
 const RAILWAY_URL    = (process.env.RAILWAY_SCRAPER_URL || "").replace(/\/$/, "");
 const RAILWAY_SECRET = process.env.SCRAPER_SECRET || "";
 
-const CACHE_KEY    = "campaigns:data";
-const STATUS_KEY   = "campaigns:status";
-const CAMP_PW_KEY  = "campaign_admin_pw";     // 캠페인 전용 비번 KV 키
-const CAMP_SESS_PFX = "campaign_session:";    // 세션 KV 접두사 (BlogAuto Pro의 session: 과 분리)
+const CACHE_KEY     = "campaigns:data";
+const STATUS_KEY    = "campaigns:status";
+const CAMP_PW_KEY   = "campaign_admin_pw";
+const CAMP_SESS_PFX = "campaign_session:";
+const DEFAULT_PW    = Buffer.from("캠페인관리1234").toString("base64");
 
-const DEFAULT_PW = Buffer.from("캠페인관리1234").toString("base64");
-
-// ── KV 헬퍼 (auth.js 와 동일 패턴) ─────────────────────
+// ── KV 헬퍼 ──────────────────────────────────────────
 async function kvGet(key) {
   if (!KV_URL || !KV_TOKEN) return null;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -83,7 +75,7 @@ async function kvDel(key) {
   } catch {}
 }
 
-// ── 캠페인 전용 세션 검증 (BlogAuto Pro 세션과 완전 분리) ──
+// ── 캠페인 전용 세션 검증 ─────────────────────────────
 async function checkCampaignAdmin(token) {
   if (!token) return false;
   try {
@@ -92,85 +84,6 @@ async function checkCampaignAdmin(token) {
   } catch { return false; }
 }
 
-// ── 스크래핑 유틸 ─────────────────────────────────────
-const KW = ["체험단","모집","리뷰어","블로그","인스타","후기","체험","무료","협찬","서포터즈"];
-const REGIONS = ["서울","경기","부산","인천","대구","광주","대전","울산","강원","제주","전국","온라인"];
-
-function isCampaignLike(text) {
-  if (!text || text.length < 6 || text.length > 120) return false;
-  return KW.some(k => text.includes(k));
-}
-function extractRegion(text) {
-  for (const r of REGIONS) if (text.includes(r)) return r;
-  return "전국";
-}
-function extractReward(text) {
-  const m = text.match(/(\d+)\s*만\s*원/);
-  if (m) return { reward: `${m[1]}만원 상당`, rewardVal: parseInt(m[1]) * 10000 };
-  return { reward: "정보 확인 필요", rewardVal: 0 };
-}
-
-let gId = Date.now();
-
-// 사이트별 개별 공고 URL 패턴
-// gangnam만 URL 패턴 적용, dinnerqueen은 키워드 매칭
-const URL_PATTERNS = {
-  gangnam:     /\/cp\/\?id=\d+/,
-  dinnerqueen: /\/taste\/\d+/,   // JS 렌더링 후에만 보이는 패턴
-};
-
-
-function parseHtml(html, site) {
-  const results = [];
-  const seen = new Set();
-  const pattern = URL_PATTERNS[site.key];
-  const baseUrl = (() => { try { return new URL(site.url).origin; } catch { return ""; } })();
-  const re = /<a[^>]+href=["']([^"'#][^"']*?)["'][^>]*>([\s\S]{2,200}?)<\/a>/gi;
-  let m;
-  while ((m = re.exec(html)) !== null) {
-    let [, href, rawText] = m;
-    const text = rawText.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    if (!text || text.length < 4) continue;
-
-    if (pattern) {
-      // URL 패턴 있는 사이트: 해당 패턴 링크만 수집
-      const fullHref = href.startsWith("http") ? href : baseUrl + (href.startsWith("/") ? href : "/" + href);
-      if (!pattern.test(fullHref) || seen.has(fullHref)) continue;
-      seen.add(fullHref);
-      const { reward, rewardVal } = extractReward(text);
-      results.push({
-        id: `${site.key}_${++gId}`,
-        title: text.slice(0, 60),
-        source: site.name,
-        region: extractRegion(text),
-        tags: [],
-        reward, rewardVal,
-        deadline: Math.floor(Math.random() * 12) + 1,
-        url: fullHref,
-        scraped: true,
-      });
-    } else {
-      // 패턴 없는 사이트: 키워드 매칭
-      if (!isCampaignLike(text) || seen.has(text)) continue;
-      seen.add(text);
-      const fullUrl = href.startsWith("http") ? href : baseUrl + (href.startsWith("/") ? href : "/" + href);
-      const { reward, rewardVal } = extractReward(text);
-      results.push({
-        id: `${site.key}_${++gId}`,
-        title: text.slice(0, 60),
-        source: site.name,
-        region: extractRegion(text),
-        tags: [],
-        reward, rewardVal,
-        deadline: Math.floor(Math.random() * 12) + 1,
-        url: fullUrl,
-        scraped: true,
-      });
-    }
-    if (results.length >= 15) break;
-  }
-  return results;
-}
 // ── 메인 핸들러 ───────────────────────────────────────
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -196,21 +109,15 @@ export default async function handler(req, res) {
   if (action === "loginCampaignAdmin") {
     const { password } = body;
     if (!password) return res.json({ ok: false, error: "비밀번호를 입력해주세요" });
-
-    // KV에 저장된 비번 없으면 기본값 사용
     let storedPw = await kvGet(CAMP_PW_KEY);
     if (!storedPw) {
       await kvSet(CAMP_PW_KEY, DEFAULT_PW);
       storedPw = DEFAULT_PW;
     }
-
     const inputB64 = Buffer.from(password).toString("base64");
     if (inputB64 !== storedPw) return res.json({ ok: false, error: "비밀번호가 올바르지 않습니다" });
-
-    // 세션 토큰 생성 (BlogAuto Pro 세션과 완전히 다른 KV 키 사용)
     const sessionToken = crypto.randomBytes(24).toString("hex");
     await kvSet(`${CAMP_SESS_PFX}${sessionToken}`, "campaign_admin");
-
     return res.json({ ok: true, token: sessionToken });
   }
 
@@ -225,7 +132,7 @@ export default async function handler(req, res) {
     const admin = await checkCampaignAdmin(token);
     if (!admin) return res.json({ ok: false, error: "인증이 필요합니다" });
     const { currentPw, newPw } = body;
-    let storedPw = await kvGet(CAMP_PW_KEY) || DEFAULT_PW;
+    const storedPw = await kvGet(CAMP_PW_KEY) || DEFAULT_PW;
     if (Buffer.from(currentPw || "").toString("base64") !== storedPw)
       return res.json({ ok: false, error: "현재 비밀번호가 올바르지 않습니다" });
     if (!newPw || newPw.length < 4) return res.json({ ok: false, error: "새 비밀번호는 4자 이상이어야 합니다" });
@@ -234,16 +141,12 @@ export default async function handler(req, res) {
   }
 
   // ── [관리자] 실시간 스크래핑 ───────────────────────────
-  // Railway 서버에 크롤링 트리거 → Railway가 KV에 직접 저장
+  // Railway가 크롤링 후 KV에 직접 저장 — Vercel 타임아웃 없음
   if (action === "scrape") {
     const admin = await checkCampaignAdmin(token);
     if (!admin) return res.json({ ok: false, error: "캠페인 관리자 인증이 필요합니다" });
+    if (!RAILWAY_URL) return res.json({ ok: false, error: "RAILWAY_SCRAPER_URL 환경변수 미설정" });
 
-    if (!RAILWAY_URL) {
-      return res.json({ ok: false, error: "RAILWAY_SCRAPER_URL 환경변수 미설정" });
-    }
-
-    // Railway에 크롤링 트리거 — 응답 기다리지 않음 (백그라운드 실행)
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 3000);
     fetch(`${RAILWAY_URL}/crawl`, {
@@ -262,7 +165,6 @@ export default async function handler(req, res) {
   if (action === "status") {
     const admin = await checkCampaignAdmin(token);
     if (!admin) return res.json({ ok: false, error: "캠페인 관리자 인증이 필요합니다" });
-
     const status = await kvGet(STATUS_KEY);
     const cached = await kvGet(CACHE_KEY);
     const data = cached ? (typeof cached === "object" ? cached : JSON.parse(cached)) : null;
@@ -271,4 +173,3 @@ export default async function handler(req, res) {
 
   return res.json({ ok: false, error: "알 수 없는 액션" });
 }
-
