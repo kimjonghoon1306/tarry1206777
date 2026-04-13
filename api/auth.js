@@ -200,6 +200,8 @@ async function getUserRole(token) {
   if (!token) return null;
   const uid = await getSession(token);
   if (!uid) return null;
+  // admin 토큰은 JWT 자체로 신뢰 (KV 읽기 실패해도 권한 유지)
+  if (uid === "admin") return { uid: "admin", role: "admin" };
   const u = await getUser(uid);
   return { uid, role: u?.profile?.role || "user" };
 }
