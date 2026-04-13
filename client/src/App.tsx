@@ -22,6 +22,7 @@ import AdminPage from "./pages/AdminPage";
 import MonetizationPage from "./pages/MonetizationPage";
 import AdminRevenueDashboard from "./pages/AdminRevenueDashboard";
 import CampaignPage from "./pages/CampaignPage";
+import AdminCampaignPage from "./pages/AdminCampaignPage";
 
 function PrivateRoute({ component: Component }: { component: React.ComponentType }) {
   const [, navigate] = useLocation();
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/admin" component={() => <PrivateRoute component={MyPage} />} />
       <Route path="/mypage" component={() => <PrivateRoute component={MyPage} />} />
       <Route path="/campaigns" component={() => <PrivateRoute component={CampaignPage} />} />
+      <Route path="/admin-campaigns" component={() => <PrivateRoute component={AdminCampaignPage} />} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
