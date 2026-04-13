@@ -2,25 +2,23 @@ name: Auto Scrape Campaigns
 
 on:
   schedule:
-    - cron: '0 * * * *'   # 매 1시간마다
-  workflow_dispatch:        # 수동 실행 버튼
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - name: Login
-        id: login
+      - name: Login and Scrape
         run: |
           TOKEN=$(curl -s -X POST "${{ secrets.APP_URL }}/api/scrape-campaigns" \
             -H "Content-Type: application/json" \
             -d "{\"action\":\"loginCampaignAdmin\",\"password\":\"${{ secrets.CAMPAIGN_ADMIN_PASSWORD }}\"}" \
             | jq -r '.token // empty')
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-
-      - name: Scrape
-        run: |
+          
+          echo "Token received: $TOKEN"
+          
           curl -s -X POST "${{ secrets.APP_URL }}/api/scrape-campaigns" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ steps.login.outputs.token }}" \
+            -H "Authorization: Bearer $TOKEN" \
             -d '{"action":"scrape"}'
