@@ -346,6 +346,15 @@ export default async function handler(req, res) {
   }
 
   // ── admin 복구 (profile 없을 때) ─────────────────
+  // ── 관리자 비번 강제 초기화 (긴급용) ────────────────────
+  if (action === "forceResetAdminPw") {
+    const { secretKey } = body;
+    if (secretKey !== "blogauto-reset-2026") return res.json({ ok: false, error: "잘못된 키" });
+    const existing = await getUser("admin") || {};
+    await setUser("admin", { ...existing, password: b64("123456") });
+    return res.json({ ok: true, message: "비밀번호가 123456으로 초기화되었습니다" });
+  }
+
   if (action === "repairAdmin") {
     const tk = (req.headers.authorization || "").replace("Bearer ", "");
     const parsed = parseSignedToken(tk);
@@ -522,6 +531,50 @@ export default async function handler(req, res) {
     if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
     const u = await getUser(uid);
     return res.json({ ok: true, stats: u?.stats || {} });
+  }
+
+  // ── 알림 저장 ─────────────────────────────────────────
+  if (action === "saveNotification") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
+    const { type, title, desc } = body;
+    const u = await getUser(uid);
+    if (!u.notifications) u.notifications = [];
+    const entry = {
+      id: Date.now().toString(),
+      type: type || "info",
+      title: title || "",
+      desc: desc || "",
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    u.notifications.unshift(entry);
+    u.notifications = u.notifications.slice(0, 50);
+    await setUser(uid, u);
+    return res.json({ ok: true, notification: entry });
+  }
+
+  // ── 알림 불러오기 ────────────────────────────────────
+  if (action === "loadNotifications") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
+    const u = await getUser(uid);
+    return res.json({ ok: true, notifications: u?.notifications || [] });
+  }
+
+  // ── 알림 전체 읽음 처리 ──────────────────────────────
+  if (action === "markNotificationsRead") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = await getSession(tk);
+    if (!uid) return res.json({ ok: false, error: "로그인이 필요해요" });
+    const u = await getUser(uid);
+    if (u.notifications) {
+      u.notifications = u.notifications.map(n => ({ ...n, read: true }));
+      await setUser(uid, u);
+    }
+    return res.json({ ok: true });
   }
 
   return res.json({ ok: false, error: "알 수 없는 요청" });
