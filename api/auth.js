@@ -206,7 +206,7 @@ export default async function handler(req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch {} }
   const { action } = body || {};
 
-  await initAdmin();
+  // initAdmin() 제거 - admin은 이미 생성됨, 매 요청마다 호출 시 비번 초기화 위험
 
   // ── 회원가입 ──────────────────────────────────────────
   if (action === "signup") {
