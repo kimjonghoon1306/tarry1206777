@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { userGet } from "@/lib/user-storage";
+import { userGet, addNotification } from "@/lib/user-storage";
 
 // ─────────────────────────────────────────────────────────
 // 타입 정의
@@ -1325,7 +1325,8 @@ export default function DeploymentPage() {
     if (refRaw) {
       const links: { name: string; desc: string; url: string }[] = [];
       refRaw.split("\n").forEach((line: string) => {
-        const m = line.match(/^LINK\d+:\s*(.+?)\|(.+?)\|(.+)/);
+        const m = line.match(/^LINK\d+:\s*(.+?)\|(.+?)\|(.+)/)
+                || line.match(/^([^|\n]+?)\|([^|\n]+?)\|(https?:\/\/[^\s|]+)/);
         if (m) links.push({ name: m[1].trim(), desc: m[2].trim(), url: m[3].trim() });
       });
       if (links.length > 0) {
@@ -1721,6 +1722,13 @@ export default function DeploymentPage() {
           ? "발행 완료! 대시보드에서 실시간 확인하세요"
           : `${scheduleDate} ${scheduleTime}에 예약됨`,
         { id: "publish" }
+      );
+      addNotification(
+        "deploy",
+        publishMode === "instant" ? "글 발행 완료" : "예약 발행 등록",
+        publishMode === "instant"
+          ? `${selectedPlatforms.length}개 플랫폼에 발행됨`
+          : `${scheduleDate} ${scheduleTime} 예약됨`
       );
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "알 수 없는 오류";
