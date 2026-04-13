@@ -43,8 +43,8 @@ const CSS = `
 @media (max-width: 640px) {
   .ca-grid2   { grid-template-columns: 1fr !important; }
   .ca-grid3   { grid-template-columns: 1fr 1fr !important; }
-  .ca-topbar  { flex-wrap: wrap; gap: 8px !important; }
-  .ca-topbtns { flex-wrap: wrap; }
+  .ca-topbar  { flex-wrap: wrap; gap: 10px !important; padding: 14px 16px !important; }
+  .ca-topbtns { flex-wrap: wrap; gap: 10px !important; }
   .ca-main    { padding: 16px !important; }
 }
 `;
