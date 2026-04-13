@@ -40,10 +40,10 @@ async function kvSet(key, value) {
   if (!KV_URL || !KV_TOKEN) return false;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const r = await fetch(`${KV_URL}/`, {
+      const serialized = JSON.stringify(value);
+      const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(serialized)}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${KV_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify(["SET", key, JSON.stringify(value)]),
+        headers: { Authorization: `Bearer ${KV_TOKEN}` },
       });
       const d = await r.json();
       if (d.result === "OK") return true;
@@ -54,17 +54,25 @@ async function kvSet(key, value) {
   return false;
 }
 
-async function kvDel(key) {
-  if (!KV_URL || !KV_TOKEN) return;
-  try {
-    await fetch(`${KV_URL}/del/${encodeURIComponent(key)}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${KV_TOKEN}` },
-    });
-  } catch {}
+// 소형 문자열 전용 - URL 길이 제한 없음 (비번 같은 작은 값용)
+async function kvSetSmall(key, value) {
+  if (!KV_URL || !KV_TOKEN) return false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${KV_TOKEN}` },
+      });
+      const d = await r.json();
+      if (d.result === "OK") return true;
+    } catch {
+      if (attempt < 2) await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+    }
+  }
+  return false;
 }
 
-// true=존재, false=없음, null=KV오류
+// true=존재 | false=진짜없음 | null=KV오류
 async function kvExists(key) {
   if (!KV_URL || !KV_TOKEN) return null;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -80,6 +88,16 @@ async function kvExists(key) {
     }
   }
   return null;
+}
+
+async function kvDel(key) {
+  if (!KV_URL || !KV_TOKEN) return;
+  try {
+    await fetch(`${KV_URL}/del/${encodeURIComponent(key)}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${KV_TOKEN}` },
+    });
+  } catch {}
 }
 
 const _mem = {};
@@ -175,17 +193,44 @@ const parseSignedToken = (token) => {
 };
 const mkToken = (userId) => signTokenPayload({ uid: userId, iat: Date.now(), exp: Date.now() + 1000 * 60 * 60 * 24 * 30 });
 
-// ── 관리자 초기화 (KV 오류 시 비번 절대 덮어쓰지 않음) ──
+let _adminPwReady = false; // 인스턴스당 1번만 실행
+
+// ── 관리자 초기화 ──
+// admin:pw 전용 소형 키를 기준으로 판단
+// KV 오류(null) 시 절대 건드리지 않음
 async function initAdmin() {
-  const exists = await kvExists("user:admin");
-  if (exists === null) return;  // KV 오류 → 건드리지 않음
-  if (exists === true) return;  // admin 존재 → 건드리지 않음
-  // 진짜 없는 경우만 생성
+  if (_adminPwReady) return; // 이미 이 인스턴스에서 확인됨
+
+  const pwExists = await kvExists("admin:pw");
+  if (pwExists === null) return; // KV 오류 → 건드리지 않음
+
+  if (pwExists === true) {
+    _adminPwReady = true;
+    return; // 비번 키 있음 → 정상
+  }
+
+  // admin:pw 없음 → user:admin 확인 (마이그레이션 대비)
+  const adminExists = await kvExists("user:admin");
+  if (adminExists === null) return; // KV 오류 → 건드리지 않음
+
+  if (adminExists === true) {
+    // user:admin은 있는데 admin:pw만 없는 경우 → admin:pw 동기화
+    const u = await getUser("admin");
+    if (u?.password) {
+      await kvSetSmall("admin:pw", u.password);
+      _adminPwReady = true;
+    }
+    return;
+  }
+
+  // 둘 다 없음 → 최초 생성
   await setUser("admin", {
     profile: { name: "관리자", email: "admin@blogauto.pro", role: "admin", createdAt: new Date().toISOString() },
     password: b64("123456"),
   });
+  await kvSetSmall("admin:pw", b64("123456"));
   await setEmailIndex("admin@blogauto.pro", "admin");
+  _adminPwReady = true;
 }
 
 async function getUserRole(token) {
@@ -206,7 +251,7 @@ export default async function handler(req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch {} }
   const { action } = body || {};
 
-  // initAdmin() 제거 - admin은 이미 생성됨, 매 요청마다 호출 시 비번 초기화 위험
+  await initAdmin();
 
   // ── 회원가입 ──────────────────────────────────────────
   if (action === "signup") {
@@ -245,7 +290,13 @@ export default async function handler(req, res) {
     }
     const u = await getUser(userId);
     if (!u) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
-    if (u.password !== b64(password)) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
+    // admin은 전용 소형 키 우선 (대형 객체 저장 실패 대비)
+    let storedPw = u.password;
+    if (userId === "admin") {
+      const adminPw = await kvGet("admin:pw");
+      if (adminPw && typeof adminPw === "string") storedPw = adminPw;
+    }
+    if (storedPw !== b64(password)) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
     const tk = mkToken(userId);
     await setSession(tk, userId);
     return res.json({ ok: true, token: tk, user: { id: userId, ...u.profile } });
@@ -302,7 +353,9 @@ export default async function handler(req, res) {
     if (u.password !== b64(currentPassword)) return res.json({ ok: false, error: "현재 비밀번호가 올바르지 않아요" });
     if (!newPassword || newPassword.length < 4) return res.json({ ok: false, error: "새 비밀번호는 4자 이상이어야 해요" });
     u.password = b64(newPassword);
-    await setUser("admin", u); // ✅ KV에 저장 → 배포해도 유지
+    await setUser("admin", u);
+    await kvSetSmall("admin:pw", b64(newPassword)); // 전용 소형 키에 확실히 저장
+    _adminPwReady = true; // 플래그 유지
     return res.json({ ok: true });
   }
 
@@ -370,6 +423,8 @@ export default async function handler(req, res) {
     if (secretKey !== "blogauto-reset-2026") return res.json({ ok: false, error: "잘못된 키" });
     const existing = await getUser("admin") || {};
     await setUser("admin", { ...existing, password: b64("123456") });
+    await kvSetSmall("admin:pw", b64("123456")); // 전용 키도 초기화
+    _adminPwReady = true;
     return res.json({ ok: true, message: "비밀번호가 123456으로 초기화되었습니다" });
   }
 
