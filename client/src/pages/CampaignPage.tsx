@@ -11,6 +11,9 @@ import { toast } from "sonner";
 const SOURCES = [
   { name: "강남맛집체험단", key: "gangnam",     url: "https://강남맛집.net",    color: "#f97316", bg: "rgba(249,115,22,0.08)",  border: "rgba(249,115,22,0.25)", label: "맛집 전문" },
   { name: "디너의여왕",     key: "dinnerqueen", url: "https://dinnerqueen.net", color: "#ec4899", bg: "rgba(236,72,153,0.08)",  border: "rgba(236,72,153,0.25)", label: "다이닝 특화" },
+  { name: "모두의체험단",   key: "modan",       url: "https://www.modan.kr",    color: "#8b5cf6", bg: "rgba(139,92,246,0.08)",  border: "rgba(139,92,246,0.25)", label: "종합 체험단" },
+  { name: "레뷰",           key: "revu",        url: "https://www.revu.net",    color: "#06b6d4", bg: "rgba(6,182,212,0.08)",   border: "rgba(6,182,212,0.25)",  label: "SNS 특화" },
+  { name: "태그바이",       key: "tagby",       url: "https://www.tagby.io",    color: "#10b981", bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.25)", label: "인플루언서" },
 ];
 
 const FALLBACK: any[] = [
