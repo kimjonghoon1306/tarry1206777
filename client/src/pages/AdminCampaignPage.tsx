@@ -5,7 +5,8 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { RefreshCw, CheckCircle, XCircle, Clock, ExternalLink, LogOut, Eye, EyeOff, TrendingUp, Zap } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Clock, ExternalLink, LogOut, Eye, EyeOff, TrendingUp, Zap, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
@@ -65,6 +66,7 @@ function LoginGate({ onAuth }: { onAuth:(t:string)=>void }) {
   const [show, setShow]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [, navigate]      = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   async function login() {
     if (!pw.trim()) { toast.error("비밀번호를 입력해주세요"); return; }
@@ -83,6 +85,10 @@ function LoginGate({ onAuth }: { onAuth:(t:string)=>void }) {
       <button className="ca-back" onClick={() => navigate("/campaigns")}
         style={{ position:"fixed", top:16, left:16, width:46, height:46, borderRadius:"50%", background:"var(--muted)", border:"1px solid var(--border)", fontSize:"22px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:10 }}>
         🏠
+      </button>
+      <button onClick={toggleTheme} className="ca-btn"
+        style={{ position:"fixed", top:16, right:16, width:42, height:42, borderRadius:"50%", background:"var(--muted)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--foreground)", cursor:"pointer", zIndex:10 }}>
+        {theme==="dark" ? <Sun style={{width:16,height:16}}/> : <Moon style={{width:16,height:16}}/>}
       </button>
 
       <div style={{ width:"100%", maxWidth:420, background:"var(--muted)", border:"1px solid var(--border)", borderRadius:"24px", padding:"48px 40px", animation:"scaleIn 0.45s ease both", position:"relative", zIndex:1, boxShadow:"0 24px 48px rgba(0,0,0,0.15)" }}>
@@ -126,6 +132,7 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
   const [loading, setLoading]     = useState(true);
   const [siteFilter, setSiteFilter] = useState("전체");
   const [, navigate]              = useLocation();
+  const { theme, toggleTheme }     = useTheme();
 
   // 비번
   const [curPw,  setCurPw]    = useState("");
@@ -227,6 +234,10 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
           <button onClick={onLogout} className="ca-btn"
             style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", padding:"9px 14px", borderRadius:"10px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", color:"#ef4444" }}>
             <LogOut style={{ width:13, height:13 }} />
+          </button>
+          <button onClick={toggleTheme} className="ca-btn"
+            style={{ width:38, height:38, borderRadius:"50%", background:"var(--muted)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--foreground)", flexShrink:0 }}>
+            {theme==="dark" ? <Sun style={{width:15,height:15}}/> : <Moon style={{width:15,height:15}}/>}
           </button>
         </div>
       </div>
