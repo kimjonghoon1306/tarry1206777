@@ -38,15 +38,16 @@ async function kvGet(key) {
 
 async function kvSet(key, value) {
   if (!KV_URL || !KV_TOKEN) return false;
+  const serialized = JSON.stringify(value);
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const serialized = JSON.stringify(value);
-      const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(serialized)}`, {
+      const r = await fetch(`${KV_URL}/pipeline`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${KV_TOKEN}` },
+        headers: { Authorization: `Bearer ${KV_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify([["SET", key, serialized]]),
       });
       const d = await r.json();
-      if (d.result === "OK") return true;
+      if (Array.isArray(d) && d[0]?.result === "OK") return true;
     } catch {
       if (attempt < 2) await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
     }
@@ -54,19 +55,7 @@ async function kvSet(key, value) {
   return false;
 }
 
-async function kvSetSmall(key, value) {
-  if (!KV_URL || !KV_TOKEN) return false;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}`, {
-        method: "POST", headers: { Authorization: `Bearer ${KV_TOKEN}` },
-      });
-      const d = await r.json();
-      if (d.result === "OK") return true;
-    } catch { if (attempt < 2) await new Promise(r => setTimeout(r, 200*(attempt+1))); }
-  }
-  return false;
-}
+// true=존재 | false=진짜없음 | null=KV오류
 async function kvExists(key) {
   if (!KV_URL || !KV_TOKEN) return null;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -77,7 +66,9 @@ async function kvExists(key) {
       const d = await r.json();
       if (d.result === null || d.result === undefined) return false;
       return true;
-    } catch { if (attempt < 2) await new Promise(r => setTimeout(r, 200*(attempt+1))); }
+    } catch {
+      if (attempt < 2) await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+    }
   }
   return null;
 }
@@ -187,12 +178,11 @@ const mkToken = (userId) => signTokenPayload({ uid: userId, iat: Date.now(), exp
 // ── 관리자 초기화 ──
 async function initAdmin() {
   const exists = await kvExists("user:admin");
-  if (exists !== false) return; // null(KV오류) 또는 true(존재) → 절대 건드리지 않음
+  if (exists !== false) return; // null(KV오류) or true(존재) → 절대 건드리지 않음
   await setUser("admin", {
     profile: { name: "관리자", email: "admin@blogauto.pro", role: "admin", createdAt: new Date().toISOString() },
     password: b64("123456"),
   });
-  await kvSetSmall("admin:pw", b64("123456"));
   await setEmailIndex("admin@blogauto.pro", "admin");
 }
 
@@ -253,12 +243,7 @@ export default async function handler(req, res) {
     }
     const u = await getUser(userId);
     if (!u) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
-    let storedPw = u.password;
-    if (userId === "admin") {
-      const adminPw = await kvGet("admin:pw");
-      if (adminPw && typeof adminPw === "string") storedPw = adminPw;
-    }
-    if (storedPw !== b64(password)) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
+    if (u.password !== b64(password)) return res.json({ ok: false, error: "아이디 또는 비밀번호를 확인해주세요" });
     const tk = mkToken(userId);
     await setSession(tk, userId);
     return res.json({ ok: true, token: tk, user: { id: userId, ...u.profile } });
@@ -315,8 +300,7 @@ export default async function handler(req, res) {
     if (u.password !== b64(currentPassword)) return res.json({ ok: false, error: "현재 비밀번호가 올바르지 않아요" });
     if (!newPassword || newPassword.length < 4) return res.json({ ok: false, error: "새 비밀번호는 4자 이상이어야 해요" });
     u.password = b64(newPassword);
-    await setUser("admin", u);
-    await kvSetSmall("admin:pw", b64(newPassword));
+    await setUser("admin", u); // ✅ KV에 저장 → 배포해도 유지
     return res.json({ ok: true });
   }
 
@@ -384,7 +368,6 @@ export default async function handler(req, res) {
     if (secretKey !== "blogauto-reset-2026") return res.json({ ok: false, error: "잘못된 키" });
     const existing = await getUser("admin") || {};
     await setUser("admin", { ...existing, password: b64("123456") });
-    await kvSetSmall("admin:pw", b64("123456"));
     return res.json({ ok: true, message: "비밀번호가 123456으로 초기화되었습니다" });
   }
 
