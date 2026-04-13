@@ -1357,7 +1357,7 @@ export default function DeploymentPage() {
         if (!l) return;
         // POST1: 제목|설명|URL
         const m3 = l.match(/^POST\d+:\s*(.+?)\|(.+?)\|(https?:\/\/.+)/);
-        if (m3) { posts.push({ title: m3[1].trim(), desc: m3[2].trim(), url: m3[3].trim() }); return; }
+        if (m3) { posts.push({ title: m3[1].trim(), desc: m3[2].trim(), url: "" }); return; }
         // POST1: 제목|설명 (하위 호환)
         const m2 = l.match(/^POST\d+:\s*(.+?)\|(.+)/);
         if (m2) posts.push({ title: m2[1].trim(), desc: m2[2].trim(), url: "" });
