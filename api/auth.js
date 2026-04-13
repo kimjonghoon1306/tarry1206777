@@ -64,6 +64,24 @@ async function kvDel(key) {
   } catch {}
 }
 
+// 키 존재 여부 확인: true=존재, false=진짜없음, null=KV오류
+async function kvExists(key) {
+  if (!KV_URL || !KV_TOKEN) return null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetch(`${KV_URL}/get/${encodeURIComponent(key)}`, {
+        headers: { Authorization: `Bearer ${KV_TOKEN}` },
+      });
+      const d = await r.json();
+      if (d.result === null || d.result === undefined) return false;
+      return true;
+    } catch {
+      if (attempt < 2) await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+    }
+  }
+  return null; // 3회 모두 실패 = KV 오류
+}
+
 const _mem = {};
 
 async function getUser(userId) {
@@ -157,23 +175,18 @@ const parseSignedToken = (token) => {
 };
 const mkToken = (userId) => signTokenPayload({ uid: userId, iat: Date.now(), exp: Date.now() + 1000 * 60 * 60 * 24 * 30 });
 
-// ── 관리자 초기화 (KV 저장 성공 시에만 메모리 반영 → KV 읽기 실패로 인한 비번 리셋 방지) ──
+// ── 관리자 초기화 ──
+// kvExists로 에러(null) vs 진짜없음(false) 구분 → KV 오류 시 비번 절대 덮어쓰지 않음
 async function initAdmin() {
-  const existing = await getUser("admin");
-  if (existing) return; // admin 이미 있으면 절대 건드리지 않음
-
-  // admin이 없는 경우: KV에 먼저 쓰기 시도
-  const newAdmin = {
+  const exists = await kvExists("user:admin");
+  if (exists === null) return;  // KV 오류 → 아무것도 하지 않음 (기존 비번 보존)
+  if (exists === true) return;  // admin 존재 → 건드리지 않음
+  // exists === false: admin이 진짜 없음 → 최초 생성
+  await setUser("admin", {
     profile: { name: "관리자", email: "admin@blogauto.pro", role: "admin", createdAt: new Date().toISOString() },
     password: b64("123456"),
-  };
-  const saved = await kvSet("user:admin", newAdmin);
-  if (saved) {
-    // KV 저장 성공한 경우에만 메모리에도 반영
-    _mem["user:admin"] = newAdmin;
-    await setEmailIndex("admin@blogauto.pro", "admin");
-  }
-  // KV 저장 실패 시 메모리에 저장 안 함 → 다음 요청에서 재시도 (기존 비번 보존)
+  });
+  await setEmailIndex("admin@blogauto.pro", "admin");
 }
 
 async function getUserRole(token) {
