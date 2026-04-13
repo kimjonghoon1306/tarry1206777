@@ -108,9 +108,9 @@ function extractReward(text) {
 let gId = Date.now();
 
 // 사이트별 개별 공고 URL 패턴
+// gangnam만 URL 패턴 적용, dinnerqueen은 키워드 매칭
 const URL_PATTERNS = {
-  gangnam:     /\/cp\/\?id=\d+/,
-  dinnerqueen: /\/taste\/\d+/,
+  gangnam: /\/cp\/\?id=\d+/,
 };
 
 function parseHtml(html, site) {
