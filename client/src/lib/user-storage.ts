@@ -165,6 +165,47 @@ export async function applyServerSettings(): Promise<void> {
   await syncAdminSettingsToLocal();
 }
 
+// ── 알림 추가 (서버 저장) ────────────────────────────────
+export async function addNotification(type: string, title: string, desc: string): Promise<void> {
+  const token = getCurrentToken();
+  if (!token) return;
+  try {
+    await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "saveNotification", type, title, desc }),
+    });
+  } catch {}
+}
+
+// ── 알림 불러오기 ────────────────────────────────────────
+export async function loadNotificationsFromServer(): Promise<{ id: string; type: string; title: string; desc: string; createdAt: string; read: boolean }[]> {
+  const token = getCurrentToken();
+  if (!token) return [];
+  try {
+    const resp = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "loadNotifications" }),
+    });
+    const d = await resp.json();
+    return d.ok ? d.notifications : [];
+  } catch { return []; }
+}
+
+// ── 알림 전체 읽음 처리 ──────────────────────────────────
+export async function markNotificationsRead(): Promise<void> {
+  const token = getCurrentToken();
+  if (!token) return;
+  try {
+    await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "markNotificationsRead" }),
+    });
+  } catch {}
+}
+
 // ── 로그아웃: 현재 유저 로컬 캐시 전체 삭제 ─────────────
 export function clearUserLocalCache(): void {
   const uid = getCurrentUserId();
