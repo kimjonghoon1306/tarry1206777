@@ -119,31 +119,6 @@ const URL_PATTERNS = {
   dinnerqueen: /\/taste\/\d+/,   // JS 렌더링 후에만 보이는 패턴
 };
 
-// Railway Puppeteer 서버를 통한 JS 렌더링 fetch
-// Railway 미설정 시 null 반환 → 호출부에서 일반 fetch로 fallback
-async function fetchHtmlPuppeteer(url, timeoutMs = 25000) {
-  if (!RAILWAY_URL) return null;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${RAILWAY_URL}/scrape`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(RAILWAY_SECRET ? { Authorization: `Bearer ${RAILWAY_SECRET}` } : {}),
-      },
-      body: JSON.stringify({ url, waitFor: 2500 }),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.ok ? data.html : null;
-  } catch {
-    clearTimeout(timer);
-    return null;
-  }
-}
 
 function parseHtml(html, site) {
   const results = [];
@@ -196,119 +171,6 @@ function parseHtml(html, site) {
   }
   return results;
 }
-const SITES = [
-  { name: "강남맛집체험단", url: "https://xn--939au0g4vj8sq.net", fallback: "http://xn--939au0g4vj8sq.net", key: "gangnam",     timeout: 8000 },
-  { name: "디너의여왕",     url: "https://dinnerqueen.net",         key: "dinnerqueen", timeout: 5000 },
-  { name: "레뷰",           url: "https://www.revu.net/campaign",    key: "revu",        timeout: 5000 },
-  { name: "모두의체험단",   url: "https://www.modan.kr",             key: "modan",       timeout: 5000 },
-  { name: "태그바이",       url: "https://www.tagby.io/recruit",     key: "tagby",       timeout: 5000 },
-];
-
-const HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-  "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-  "Accept-Encoding": "gzip, deflate, br",
-  "Cache-Control": "no-cache",
-};
-
-async function fetchHtml(url, timeout) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  try {
-    const res = await fetch(url, { signal: controller.signal, headers: HEADERS });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.text();
-  } catch (e) {
-    clearTimeout(timer);
-    throw e;
-  }
-}
-
-// 태그바이: Next.js __NEXT_DATA__ 파싱
-function parseNextData(html, site) {
-  try {
-    const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-    if (!match) return [];
-    const json = JSON.parse(match[1]);
-    const props = json?.props?.pageProps;
-    if (!props) return [];
-    // 다양한 구조 시도
-    const items = props.campaigns || props.list || props.data || props.recruits || [];
-    if (!Array.isArray(items) || items.length === 0) return [];
-    return items.slice(0, 15).map((item, i) => ({
-      id: `${site.key}_${Date.now()}_${i}`,
-      title: (item.title || item.name || item.campaignName || "").slice(0, 60),
-      source: site.name,
-      region: extractRegion(item.title || item.name || ""),
-      tags: [],
-      reward: item.reward || item.rewardAmount || "정보 확인 필요",
-      rewardVal: parseInt(item.rewardValue || item.amount || 0) || 0,
-      deadline: parseInt(item.dDay || item.deadline || 7) || 7,
-      url: item.url || item.link || site.url,
-      scraped: true,
-    })).filter(c => c.title.length > 4);
-  } catch { return []; }
-}
-
-async function scrapeSite(site) {
-  const now = new Date().toISOString();
-  const timeout = site.timeout || 5000;
-
-  // JS 렌더링이 필요한 사이트 목록
-  const JS_SITES = ["gangnam"];  // dinnerqueen은 메모리 이슈로 기존 fetch 사용
-
-  try {
-    let html = "";
-
-    if (JS_SITES.includes(site.key)) {
-      // 1차 시도: Railway Puppeteer (JS 완전 렌더링)
-      html = await fetchHtmlPuppeteer(site.url) || "";
-
-      // Railway 미설정이거나 실패 시 → 기존 fetch fallback
-      if (!html) {
-        try {
-          html = await fetchHtml(site.url, timeout);
-        } catch (e) {
-          if (site.fallback) {
-            html = await fetchHtml(site.fallback, timeout);
-          } else {
-            throw e;
-          }
-        }
-      }
-    } else {
-      // 일반 사이트: 기존 fetch 방식 그대로
-      try {
-        html = await fetchHtml(site.url, timeout);
-      } catch (e) {
-        if (site.fallback) {
-          html = await fetchHtml(site.fallback, timeout);
-        } else {
-          throw e;
-        }
-      }
-    }
-
-    // 태그바이: Next.js 구조 시도
-    if (site.key === "tagby") {
-      const nextCampaigns = parseNextData(html, site);
-      if (nextCampaigns.length > 0) {
-        return { name: site.name, ok: true, campaigns: nextCampaigns, count: nextCampaigns.length, scrapedAt: now };
-      }
-    }
-
-    // 일반 HTML 파싱
-    const campaigns = parseHtml(html, site);
-    return { name: site.name, ok: true, campaigns, count: campaigns.length, scrapedAt: now };
-
-  } catch (e) {
-    const errMsg = e.name === "AbortError" ? `타임아웃(${timeout/1000}초)` : String(e.message || e);
-    return { name: site.name, ok: false, error: errMsg, campaigns: [], scrapedAt: now };
-  }
-}
-
 // ── 메인 핸들러 ───────────────────────────────────────
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -372,26 +234,28 @@ export default async function handler(req, res) {
   }
 
   // ── [관리자] 실시간 스크래핑 ───────────────────────────
+  // Railway 서버에 크롤링 트리거 → Railway가 KV에 직접 저장
   if (action === "scrape") {
     const admin = await checkCampaignAdmin(token);
     if (!admin) return res.json({ ok: false, error: "캠페인 관리자 인증이 필요합니다" });
 
-    const results = await Promise.allSettled(SITES.map(s => scrapeSite(s)));
-    const siteResults = results.map((r, i) =>
-      r.status === "fulfilled" ? r.value
-      : { name: SITES[i].name, ok: false, error: "예외 발생", campaigns: [], scrapedAt: new Date().toISOString() }
-    );
-    const allCampaigns = siteResults.flatMap(r => r.campaigns || []);
-    const updatedAt = new Date().toISOString();
+    if (!RAILWAY_URL) {
+      return res.json({ ok: false, error: "RAILWAY_SCRAPER_URL 환경변수 미설정" });
+    }
 
-    await kvSet(CACHE_KEY, { campaigns: allCampaigns, updatedAt });
-    await kvSet(STATUS_KEY, siteResults.map(r => ({
-      name: r.name, ok: r.ok, count: r.campaigns?.length || 0,
-      error: r.error || null, scrapedAt: r.scrapedAt,
-    })));
+    // Railway에 크롤링 트리거 — 응답 기다리지 않음 (백그라운드 실행)
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 3000);
+    fetch(`${RAILWAY_URL}/crawl`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(RAILWAY_SECRET ? { Authorization: `Bearer ${RAILWAY_SECRET}` } : {}),
+      },
+      signal: controller.signal,
+    }).catch(() => {});
 
-    return res.json({ ok: true, total: allCampaigns.length, updatedAt,
-      sites: siteResults.map(r => ({ name: r.name, ok: r.ok, count: r.campaigns?.length || 0, error: r.error || null })) });
+    return res.json({ ok: true, message: "크롤링 시작됨 — 1분 후 새로고침하세요", triggered: true });
   }
 
   // ── [관리자] 상태 조회 ─────────────────────────────────
