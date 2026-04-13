@@ -15,6 +15,9 @@ const SESS_KEY = "campaign_admin_sess";
 const SITES = [
   { name:"강남맛집체험단", url:"https://강남맛집.net",    key:"gangnam",     color:"#f97316", grad:"linear-gradient(135deg,#f97316,#fb923c)", bg:"rgba(249,115,22,0.08)", border:"rgba(249,115,22,0.2)" },
   { name:"디너의여왕",     url:"https://dinnerqueen.net", key:"dinnerqueen", color:"#ec4899", grad:"linear-gradient(135deg,#be185d,#ec4899)", bg:"rgba(236,72,153,0.08)", border:"rgba(236,72,153,0.2)" },
+  { name:"모두의체험단",   url:"https://www.modan.kr",    key:"modan",       color:"#8b5cf6", grad:"linear-gradient(135deg,#7c3aed,#8b5cf6)", bg:"rgba(139,92,246,0.08)", border:"rgba(139,92,246,0.2)" },
+  { name:"레뷰",           url:"https://www.revu.net",    key:"revu",        color:"#06b6d4", grad:"linear-gradient(135deg,#0891b2,#06b6d4)", bg:"rgba(6,182,212,0.08)",  border:"rgba(6,182,212,0.2)"  },
+  { name:"태그바이",       url:"https://www.tagby.io",    key:"tagby",       color:"#10b981", grad:"linear-gradient(135deg,#059669,#10b981)", bg:"rgba(16,185,129,0.08)", border:"rgba(16,185,129,0.2)" },
 ];
 
 const CSS = `
