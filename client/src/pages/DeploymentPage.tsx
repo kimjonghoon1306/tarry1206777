@@ -1200,9 +1200,16 @@ export default function DeploymentPage() {
     }
 
     function extractSection(text: string, startTag: string, endTag: string): string {
-      const s = text.indexOf(startTag);
+      let s = text.indexOf(startTag);
       const e = text.indexOf(endTag);
-      if (s === -1 || e === -1) return "";
+      if (e === -1) return "";
+      if (s === -1) {
+        // fallback: AI가 [] 괄호 없이 생성한 경우 (예: FAQ시작 → [FAQ시작])
+        const bare = startTag.replace(/^\[|\]$/g, "");
+        const bi = text.indexOf(bare);
+        if (bi !== -1) return text.slice(bi + bare.length, e).trim();
+        return "";
+      }
       return text.slice(s + startTag.length, e).trim();
     }
 
@@ -1221,9 +1228,9 @@ export default function DeploymentPage() {
     const sectionMarkerIdx = (blocks as any[]).findIndex(
       (b: any) =>
         b.type === "text" &&
-        (b.content.includes("[FAQ시작]") ||
-          b.content.includes("[참고자료시작]") ||
-          b.content.includes("[관련글시작]"))
+        (b.content.includes("[FAQ시작]") || b.content.includes("FAQ시작") ||
+          b.content.includes("[참고자료시작]") || b.content.includes("참고자료시작") ||
+          b.content.includes("[관련글시작]") || b.content.includes("관련글시작"))
     );
 
     blocks.forEach((b: any, blockIdx: number) => {
@@ -1231,8 +1238,11 @@ export default function DeploymentPage() {
       if (b.type === "text") {
         const cleaned = b.content
           .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
+          .replace(/FAQ시작[\s\S]*?\[FAQ끝\]/g, "")
           .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
+          .replace(/참고자료시작[\s\S]*?\[참고자료끝\]/g, "")
           .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, "")
+          .replace(/관련글시작[\s\S]*?\[관련글끝\]/g, "")
           .trim();
         if (cleaned) {
           parts.push(groupLines(cleaned.split("\n")));
@@ -1592,8 +1602,11 @@ export default function DeploymentPage() {
     const _rawHtml = buildHtmlContent();
     const _cleanHtml = _rawHtml
       .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, '')
+      .replace(/FAQ시작[\s\S]*?\[FAQ끝\]/g, '')
       .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, '')
+      .replace(/참고자료시작[\s\S]*?\[참고자료끝\]/g, '')
       .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, '')
+      .replace(/관련글시작[\s\S]*?\[관련글끝\]/g, '')
       .trim();
     const payload = {
       title,
