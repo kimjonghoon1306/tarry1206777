@@ -115,13 +115,13 @@ let gId = Date.now();
 // 사이트별 개별 공고 URL 패턴
 // gangnam만 URL 패턴 적용, dinnerqueen은 키워드 매칭
 const URL_PATTERNS = {
-  gangnam:     /\/cp\/[?]id=\d+/,
-  dinnerqueen: /\/taste\/\d+/,
+  gangnam:     /\/cp\/\?id=\d+/,
+  dinnerqueen: /\/taste\/\d+/,   // JS 렌더링 후에만 보이는 패턴
 };
 
 // Railway Puppeteer 서버를 통한 JS 렌더링 fetch
 // Railway 미설정 시 null 반환 → 호출부에서 일반 fetch로 fallback
-async function fetchHtmlPuppeteer(url, timeoutMs = 7000) {
+async function fetchHtmlPuppeteer(url, timeoutMs = 25000) {
   if (!RAILWAY_URL) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -132,7 +132,7 @@ async function fetchHtmlPuppeteer(url, timeoutMs = 7000) {
         "Content-Type": "application/json",
         ...(RAILWAY_SECRET ? { Authorization: `Bearer ${RAILWAY_SECRET}` } : {}),
       },
-      body: JSON.stringify({ url, waitFor: 1500 }),
+      body: JSON.stringify({ url, waitFor: 2500 }),
       signal: controller.signal,
     });
     clearTimeout(timer);
@@ -257,7 +257,7 @@ async function scrapeSite(site) {
   const timeout = site.timeout || 5000;
 
   // JS 렌더링이 필요한 사이트 목록
-  const JS_SITES = ["gangnam", "dinnerqueen"];
+  const JS_SITES = ["gangnam"];  // dinnerqueen은 메모리 이슈로 기존 fetch 사용
 
   try {
     let html = "";
