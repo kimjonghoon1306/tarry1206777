@@ -115,12 +115,13 @@ let gId = Date.now();
 // 사이트별 개별 공고 URL 패턴
 // gangnam만 URL 패턴 적용, dinnerqueen은 키워드 매칭
 const URL_PATTERNS = {
-  gangnam:     /\/cp\/[?]id=\d+/,  // /cp/?id=숫자 패턴
+  gangnam:     /\/cp\/[?]id=\d+/,
+  dinnerqueen: /\/taste\/\d+/,
 };
 
 // Railway Puppeteer 서버를 통한 JS 렌더링 fetch
 // Railway 미설정 시 null 반환 → 호출부에서 일반 fetch로 fallback
-async function fetchHtmlPuppeteer(url, timeoutMs = 25000) {
+async function fetchHtmlPuppeteer(url, timeoutMs = 7000) {
   if (!RAILWAY_URL) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -131,7 +132,7 @@ async function fetchHtmlPuppeteer(url, timeoutMs = 25000) {
         "Content-Type": "application/json",
         ...(RAILWAY_SECRET ? { Authorization: `Bearer ${RAILWAY_SECRET}` } : {}),
       },
-      body: JSON.stringify({ url, waitFor: 3500 }),
+      body: JSON.stringify({ url, waitFor: 1500 }),
       signal: controller.signal,
     });
     clearTimeout(timer);
@@ -197,7 +198,7 @@ function parseHtml(html, site) {
 }
 const SITES = [
   { name: "강남맛집체험단", url: "https://xn--939au0g4vj8sq.net", fallback: "http://xn--939au0g4vj8sq.net", key: "gangnam",     timeout: 8000 },
-  { name: "디너의여왕",     url: "https://dinnerqueen.net",         key: "dinnerqueen", timeout: 8000 },
+  { name: "디너의여왕",     url: "https://dinnerqueen.net",         key: "dinnerqueen", timeout: 5000 },
   { name: "레뷰",           url: "https://www.revu.net/campaign",    key: "revu",        timeout: 5000 },
   { name: "모두의체험단",   url: "https://www.modan.kr",             key: "modan",       timeout: 5000 },
   { name: "태그바이",       url: "https://www.tagby.io/recruit",     key: "tagby",       timeout: 5000 },
