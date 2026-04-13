@@ -349,18 +349,34 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             </Button>
 
             {/* Notifications */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-9 h-9 relative"
-              onClick={() => toast.info("알림이 없습니다")}
-            >
-              <Bell className="w-4 h-4" />
-              <span
-                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-                style={{ background: "var(--color-emerald)" }}
-              />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-9 h-9 relative"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span
+                    className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                    style={{ background: "var(--color-emerald)" }}
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--muted-foreground)" }}>
+                  알림
+                </div>
+                <DropdownMenuItem className="flex flex-col items-start gap-0.5 py-2">
+                  <span className="text-sm font-medium">새로운 업데이트가 있어요</span>
+                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>BlogAuto Pro v5.0 출시</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex flex-col items-start gap-0.5 py-2">
+                  <span className="text-sm font-medium">자동화 시스템 정상 운영 중</span>
+                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>오늘 · 시스템 상태 양호</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* User avatar */}
             <DropdownMenu>
