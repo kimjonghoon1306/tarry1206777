@@ -24,7 +24,7 @@ const STATUS_KEY   = "campaigns:status";
 const CAMP_PW_KEY  = "campaign_admin_pw";     // 캠페인 전용 비번 KV 키
 const CAMP_SESS_PFX = "campaign_session:";    // 세션 KV 접두사 (BlogAuto Pro의 session: 과 분리)
 
-const DEFAULT_PW = Buffer.from("캠페인관리1234").toString("base64");
+const DEFAULT_PW = Buffer.from("123456").toString("base64");
 
 // ── KV 헬퍼 (auth.js 와 동일 패턴) ─────────────────────
 async function kvGet(key) {
