@@ -12,8 +12,8 @@
 
 import crypto from "crypto";
 
-const KV_URL   = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+const KV_URL   = process.env.UPSTASH_REDIS_REST_URL   || process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 const RAILWAY_URL    = (process.env.RAILWAY_SCRAPER_URL || "").replace(/\/$/, "");
 const RAILWAY_SECRET = process.env.SCRAPER_SECRET || "";
 
