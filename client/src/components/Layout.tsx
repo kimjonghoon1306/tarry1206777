@@ -140,7 +140,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
   const currentLangInfo = LANGUAGES.find(l => l.code === selectedLang) || LANGUAGES[0];
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex" style={{ overflowX:"hidden", maxWidth:"100vw" }}>
       <style>{PINK_KEYFRAME}</style>
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -386,28 +386,32 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <div className="px-3 py-2 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
-                  <span className="text-xs font-semibold" style={{ color: "var(--muted-foreground)" }}>알림</span>
-                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{notifications.length}개</span>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                style={{ width: "min(320px, calc(100vw - 24px))", maxHeight: 420, overflowY: "auto", padding: 0 }}
+              >
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>알림</span>
+                  <span style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--muted)", padding: "2px 8px", borderRadius: 12, fontWeight: 600 }}>{notifications.length}개</span>
                 </div>
                 {notifications.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  <div style={{ padding: "32px 16px", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
                     알림이 없습니다
                   </div>
                 ) : (
-                  notifications.slice(0, 10).map(n => (
-                    <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 py-2.5 px-3">
-                      <div className="flex items-center gap-1.5 w-full">
-                        <span className="text-sm font-medium flex-1" style={{ color: "var(--foreground)" }}>
-                          {n.type === "deploy" ? "🚀" : n.type === "content" ? "✍️" : n.type === "image" ? "🖼️" : "🔍"} {n.title}
+                  notifications.slice(0, 10).map((n, i) => (
+                    <DropdownMenuItem key={n.id}
+                      style={{ flexDirection: "column", alignItems: "flex-start", gap: 3, padding: "12px 16px", borderBottom: i < notifications.length - 1 ? "1px solid var(--border)" : "none", cursor: "default" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+                        <span style={{ fontSize: 16, flexShrink: 0 }}>
+                          {n.type === "deploy" ? "🚀" : n.type === "content" ? "✍️" : n.type === "image" ? "🖼️" : "🔍"}
                         </span>
-                        {!n.read && (
-                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "var(--color-emerald)" }} />
-                        )}
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", flex: 1 }}>{n.title}</span>
+                        {!n.read && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--color-emerald)", flexShrink: 0 }} />}
                       </div>
-                      <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{n.desc}</span>
-                      <span className="text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.6 }}>
+                      <span style={{ fontSize: 12, color: "var(--muted-foreground)", paddingLeft: 24 }}>{n.desc}</span>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.55, paddingLeft: 24 }}>
                         {new Date(n.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </DropdownMenuItem>
@@ -449,33 +453,12 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             >
               <Settings className="w-4 h-4" />
             </button>
-
-            {/* 체험단 허브 관리자 버튼 */}
-            <button
-              title="체험단 허브 관리자"
-              onClick={() => navigate("/admin-campaigns")}
-              className="flex items-center justify-center rounded-full transition-all hover:bg-accent/20"
-              style={{
-                width: 32, height: 32,
-                color: "var(--muted-foreground)",
-                position: "relative",
-                animation: "campGlow 3s ease-in-out infinite",
-              }}
-            >
-              <span style={{ fontSize: 15 }}>⚙️</span>
-              <style>{`
-                @keyframes campGlow {
-                  0%,100% { filter: drop-shadow(0 0 0px rgba(236,72,153,0)); }
-                  50%     { filter: drop-shadow(0 0 5px rgba(236,72,153,0.7)); }
-                }
-              `}</style>
-            </button>
           </div>
         </header>
 
         {/* Page content with left padding for sidebar on desktop */}
-        <main className="flex-1 overflow-auto" style={{ paddingLeft: "0" }}>
-          <div className="lg:pl-60">
+        <main className="flex-1 overflow-auto" style={{ paddingLeft: "0", overflowX:"hidden" }}>
+          <div className="lg:pl-60" style={{ minWidth:0, width:"100%" }}>
             {children}
           </div>
         </main>
@@ -483,4 +466,3 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
     </div>
   );
 }
-
