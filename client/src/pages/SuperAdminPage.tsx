@@ -1725,60 +1725,135 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
-      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
-        <button className="flex items-center gap-2 text-sm font-medium opacity-70 hover:opacity-100" style={{ color: "var(--foreground)" }} onClick={() => window.location.href = "/"}>
-          <Home className="w-4 h-4" /> 홈으로
-        </button>
-        <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "#10b98115", color: "#10b981" }}>운영자 전용</span>
+    <div className="min-h-screen flex flex-col" style={{ background: "#080b14", position:"relative", overflow:"hidden" }}>
+
+      {/* ── 화려한 배경 ── */}
+      <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0 }}>
+        {/* 메시 그라데이션 */}
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 15% 15%, rgba(16,185,129,0.3) 0%, transparent 45%), radial-gradient(ellipse at 85% 10%, rgba(99,102,241,0.35) 0%, transparent 45%), radial-gradient(ellipse at 70% 85%, rgba(236,72,153,0.25) 0%, transparent 45%), radial-gradient(ellipse at 10% 80%, rgba(245,158,11,0.2) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.15) 0%, transparent 55%)" }} />
+
+        {/* 움직이는 오브 */}
+        <div style={{ position:"absolute", top:"5%", left:"10%", width:350, height:350, borderRadius:"50%", background:"radial-gradient(circle,rgba(16,185,129,0.4) 0%,transparent 70%)", animation:"sadmin_orb1 9s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:"15%", right:"5%", width:280, height:280, borderRadius:"50%", background:"radial-gradient(circle,rgba(99,102,241,0.45) 0%,transparent 70%)", animation:"sadmin_orb2 11s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", bottom:"10%", left:"15%", width:240, height:240, borderRadius:"50%", background:"radial-gradient(circle,rgba(236,72,153,0.35) 0%,transparent 70%)", animation:"sadmin_orb3 8s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", bottom:"20%", right:"15%", width:200, height:200, borderRadius:"50%", background:"radial-gradient(circle,rgba(245,158,11,0.3) 0%,transparent 70%)", animation:"sadmin_orb4 10s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:"45%", left:"45%", width:180, height:180, borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.3) 0%,transparent 70%)", animation:"sadmin_orb5 7s ease-in-out infinite", transform:"translate(-50%,-50%)" }} />
+
+        {/* 격자 패턴 */}
+        <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(16,185,129,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.04) 1px,transparent 1px)", backgroundSize:"50px 50px" }} />
+
+        {/* 빛 기둥 */}
+        <div style={{ position:"absolute", top:0, left:"40%", width:2, height:"45%", background:"linear-gradient(180deg,rgba(16,185,129,0.7),transparent)", filter:"blur(1px)", animation:"sadmin_beam1 5s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:0, left:"60%", width:1, height:"35%", background:"linear-gradient(180deg,rgba(99,102,241,0.6),transparent)", animation:"sadmin_beam2 7s ease-in-out infinite 1s" }} />
+        <div style={{ position:"absolute", top:0, left:"25%", width:1, height:"30%", background:"linear-gradient(180deg,rgba(245,158,11,0.5),transparent)", animation:"sadmin_beam2 6s ease-in-out infinite 2s" }} />
+
+        {/* 별 파티클 */}
+        {[
+          {x:8,y:12,s:3,d:6,dl:0,c:"#6ee7b7"},{x:88,y:8,s:2,d:8,dl:1,c:"#a5b4fc"},
+          {x:20,y:82,s:4,d:5,dl:2,c:"#f9a8d4"},{x:78,y:78,s:3,d:9,dl:0.5,c:"#fcd34d"},
+          {x:45,y:6,s:2,d:7,dl:1.5,c:"#10b981"},{x:30,y:40,s:3,d:6,dl:3,c:"#6366f1"},
+          {x:72,y:45,s:2,d:8,dl:2,c:"#ec4899"},{x:55,y:88,s:4,d:5,dl:1,c:"#f59e0b"},
+          {x:15,y:55,s:2,d:9,dl:0.8,c:"#67e8f9"},{x:85,y:55,s:3,d:6,dl:2.5,c:"#6ee7b7"},
+          {x:60,y:20,s:2,d:7,dl:1.8,c:"#a5b4fc"},{x:38,y:70,s:3,d:8,dl:0.3,c:"#fcd34d"},
+        ].map((p,i)=>(
+          <div key={i} style={{ position:"absolute", left:`${p.x}%`, top:`${p.y}%`, width:p.s, height:p.s, borderRadius:"50%", background:p.c, boxShadow:`0 0 ${p.s*4}px ${p.c}`, animation:`sadmin_star ${p.d}s ease-in-out infinite ${p.dl}s` }} />
+        ))}
+
+        {/* 수평 글리치 라인 */}
+        <div style={{ position:"absolute", top:"38%", left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)", animation:"sadmin_line 7s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:"62%", left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(99,102,241,0.3),transparent)", animation:"sadmin_line 9s ease-in-out infinite 3s" }} />
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-sm">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 relative"
-              style={{ background: "linear-gradient(135deg, #10b981, #6366f1)" }}>
-              <Shield className="w-10 h-10 text-white" />
-              <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
-                style={{ background: "#f59e0b" }}>
-                <Lock className="w-3.5 h-3.5 text-white" />
-              </div>
-            </div>
-            <h1 className="text-2xl font-black text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>관리자 인증</h1>
-            <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>운영자 전용 관리 패널</p>
-          </div>
+      <style>{`
+        @keyframes sadmin_orb1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(50px,-40px) scale(1.15)} 66%{transform:translate(-30px,40px) scale(0.9)} }
+        @keyframes sadmin_orb2 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-60px,50px) scale(1.2)} 66%{transform:translate(40px,-30px) scale(0.85)} }
+        @keyframes sadmin_orb3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(70px,-50px) scale(1.1)} }
+        @keyframes sadmin_orb4 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-60px,30px) scale(1.15)} }
+        @keyframes sadmin_orb5 { 0%,100%{transform:translate(-50%,-50%) scale(1)} 50%{transform:translate(-50%,-50%) scale(1.4)} }
+        @keyframes sadmin_star { 0%,100%{transform:translateY(0) scale(1);opacity:0.7} 50%{transform:translateY(-18px) scale(1.4);opacity:1} }
+        @keyframes sadmin_beam1 { 0%,100%{opacity:0.4;transform:translateX(-50%) scaleY(1)} 50%{opacity:0.9;transform:translateX(-50%) scaleY(1.15)} }
+        @keyframes sadmin_beam2 { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
+        @keyframes sadmin_line { 0%,100%{opacity:0;transform:scaleX(0)} 30%,70%{opacity:1;transform:scaleX(1)} }
+        @keyframes sadmin_card { 0%,100%{box-shadow:0 0 30px rgba(16,185,129,0.2),0 0 60px rgba(99,102,241,0.1)} 50%{box-shadow:0 0 50px rgba(16,185,129,0.4),0 0 100px rgba(99,102,241,0.2)} }
+        @keyframes sadmin_icon { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-8px) rotate(5deg)} }
+        @keyframes sadmin_ring { 0%,100%{transform:scale(1);opacity:0.4} 50%{transform:scale(1.15);opacity:0.8} }
+        @keyframes sadmin_border { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+        @keyframes sadmin_in { from{opacity:0;transform:translateY(20px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+      `}</style>
 
-          <div className="rounded-2xl p-6 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-            <div className="relative">
-              <Input
-                type={show ? "text" : "password"}
-                placeholder="관리자 비밀번호"
-                value={pw}
-                onChange={e => setPw(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                className="h-12 pr-12 text-base"
-                name="blogauto-admin-passcode"
-                autoComplete="new-password"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                inputMode="text"
-              />
-              <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1" style={{ color: "var(--muted-foreground)" }} onClick={() => setShow(v => !v)}>
-                {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+      {/* 탑바 - 유리 효과 */}
+      <div style={{ position:"relative", zIndex:10, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px", borderBottom:"1px solid rgba(255,255,255,0.08)", background:"rgba(8,11,20,0.6)", backdropFilter:"blur(16px)" }}>
+        <button className="flex items-center gap-2 text-sm font-medium opacity-70 hover:opacity-100" style={{ color: "#fff" }} onClick={() => window.location.href = "/"}>
+          <Home className="w-4 h-4" /> 홈으로
+        </button>
+        <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "rgba(16,185,129,0.15)", color: "#10b981", border:"1px solid rgba(16,185,129,0.3)" }}>운영자 전용</span>
+      </div>
+
+      {/* 중앙 카드 */}
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:20, position:"relative", zIndex:1 }}>
+        <div style={{ width:"100%", maxWidth:380, animation:"sadmin_in 0.6s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+
+          {/* 카드 글로우 테두리 */}
+          <div style={{ position:"relative" }}>
+            <div style={{ position:"absolute", inset:-2, borderRadius:26, background:"linear-gradient(135deg,#10b981,#6366f1,#ec4899,#10b981)", backgroundSize:"300% 300%", animation:"sadmin_border 4s linear infinite", zIndex:-1, opacity:0.8 }} />
+
+            <div style={{ background:"rgba(8,11,20,0.85)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:24, padding:"44px 40px", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", animation:"sadmin_card 4s ease-in-out infinite" }}>
+
+              {/* 아이콘 */}
+              <div style={{ textAlign:"center", marginBottom:32 }}>
+                <div style={{ position:"relative", display:"inline-block", marginBottom:18 }}>
+                  <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto relative"
+                    style={{ background:"linear-gradient(135deg, #10b981, #6366f1)", animation:"sadmin_icon 4s ease-in-out infinite", boxShadow:"0 12px 40px rgba(16,185,129,0.5)" }}>
+                    <Shield className="w-10 h-10 text-white" />
+                    <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
+                      style={{ background: "#f59e0b", boxShadow:"0 4px 12px rgba(245,158,11,0.5)" }}>
+                      <Lock className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  </div>
+                  {/* 링 애니메이션 */}
+                  <div style={{ position:"absolute", inset:-8, borderRadius:"50%", border:"2px solid rgba(16,185,129,0.4)", animation:"sadmin_ring 2s ease-in-out infinite" }} />
+                  <div style={{ position:"absolute", inset:-16, borderRadius:"50%", border:"1px solid rgba(99,102,241,0.25)", animation:"sadmin_ring 2s ease-in-out infinite 0.5s" }} />
+                </div>
+                <h1 className="text-2xl font-black" style={{ fontFamily:"'Space Grotesk', sans-serif", color:"#fff", letterSpacing:"-0.04em" }}>관리자 인증</h1>
+                <p className="text-sm mt-1" style={{ color:"rgba(255,255,255,0.45)" }}>운영자 전용 관리 패널</p>
+              </div>
+
+              {/* 입력 + 버튼 — 원본 그대로 */}
+              <div className="space-y-4">
+                <div className="relative">
+                  <Input
+                    type={show ? "text" : "password"}
+                    placeholder="관리자 비밀번호"
+                    value={pw}
+                    onChange={e => setPw(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                    className="h-12 pr-12 text-base"
+                    name="blogauto-admin-passcode"
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    inputMode="text"
+                    style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"#fff" }}
+                  />
+                  <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1" style={{ color: "rgba(255,255,255,0.4)" }} onClick={() => setShow(v => !v)}>
+                    {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <button
+                  className="w-full h-12 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+                  style={{ background: loading ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #10b981, #6366f1)", boxShadow: loading ? "none" : "0 8px 32px rgba(16,185,129,0.4)" }}
+                  onClick={handleSubmit} disabled={loading}>
+                  {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+                  {loading ? "인증 중..." : "접속하기"}
+                </button>
+              </div>
+
+              <button className="w-full mt-4 text-sm text-center hover:underline" style={{ color: "rgba(255,255,255,0.35)" }} onClick={() => window.location.href = "/dashboard"}>
+                대시보드로 이동
               </button>
             </div>
-            <button
-              className="w-full h-12 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
-              style={{ background: loading ? "var(--muted)" : "linear-gradient(135deg, #10b981, #6366f1)" }}
-              onClick={handleSubmit} disabled={loading}>
-              {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
-              {loading ? "인증 중..." : "접속하기"}
-            </button>
           </div>
-          <button className="w-full mt-4 text-sm text-center hover:underline" style={{ color: "var(--muted-foreground)" }} onClick={() => window.location.href = "/dashboard"}>
-            대시보드로 이동
-          </button>
         </div>
       </div>
     </div>
