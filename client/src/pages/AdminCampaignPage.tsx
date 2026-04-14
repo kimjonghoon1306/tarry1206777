@@ -544,3 +544,4 @@ export default function AdminCampaignPage() {
   if (!token) return <LoginGate onAuth={tk=>setToken(tk)} />;
   return <AdminDashboard token={token} onLogout={()=>{ sessionStorage.removeItem(SESS_KEY); setToken(null); }} />;
 }
+
