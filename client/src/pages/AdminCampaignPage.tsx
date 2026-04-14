@@ -426,7 +426,7 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:14, fontWeight:700, color:"var(--foreground)", marginBottom:5, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.title}</div>
                       <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                        <span style={{ fontSize:11, color:"#a78bfa", fontWeight:700, background:"rgba(167,139,250,0.1)", padding:"2px 8px", borderRadius:6 }}>{c.source}</span>
+                        <span style={{ fontSize:11, color:"#a78bfa", fontWeight:700, background:"rgba(167,139,250,0.1)", padding:"2px 8px", borderRadius:6, whiteSpace:"nowrap", flexShrink:0 }}>{c.source}</span>
                         <span style={{ fontSize:11, color:"var(--muted-foreground)", display:"flex", alignItems:"center", gap:3 }}>📍 {c.region||"전국"}</span>
                       </div>
                     </div>
