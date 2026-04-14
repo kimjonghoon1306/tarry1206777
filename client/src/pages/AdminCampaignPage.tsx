@@ -162,38 +162,88 @@ function LoginGate({ onAuth }: { onAuth:(t:string)=>void }) {
   }
 
   return (
-    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--background)", padding:20, fontFamily:"Pretendard, sans-serif", position:"relative", overflow:"hidden" }}>
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:20, fontFamily:"Pretendard, sans-serif", position:"relative", overflow:"hidden", background:"#0a0a0f" }}>
       <style>{CSS}</style>
+
+      {/* ── 화려한 배경 ── */}
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:"-20%", left:"-10%", width:600, height:600, borderRadius:"50%", background:"radial-gradient(circle,rgba(124,58,237,0.15) 0%,transparent 70%)" }} />
-        <div style={{ position:"absolute", bottom:"-20%", right:"-10%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle,rgba(167,139,250,0.1) 0%,transparent 70%)" }} />
-        <Particles />
+
+        {/* 메시 그라데이션 배경 */}
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 20% 20%, rgba(124,58,237,0.35) 0%, transparent 50%), radial-gradient(ellipse at 80% 10%, rgba(236,72,153,0.25) 0%, transparent 45%), radial-gradient(ellipse at 60% 80%, rgba(6,182,212,0.2) 0%, transparent 50%), radial-gradient(ellipse at 10% 70%, rgba(251,146,60,0.2) 0%, transparent 45%), radial-gradient(ellipse at 90% 90%, rgba(167,139,250,0.3) 0%, transparent 50%)" }} />
+
+        {/* 움직이는 오브 1 - 보라 */}
+        <div style={{ position:"absolute", top:"10%", left:"15%", width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle,rgba(124,58,237,0.5) 0%,transparent 70%)", animation:"orb1 8s ease-in-out infinite" }} />
+        {/* 움직이는 오브 2 - 핑크 */}
+        <div style={{ position:"absolute", top:"20%", right:"10%", width:250, height:250, borderRadius:"50%", background:"radial-gradient(circle,rgba(236,72,153,0.4) 0%,transparent 70%)", animation:"orb2 10s ease-in-out infinite" }} />
+        {/* 움직이는 오브 3 - 시안 */}
+        <div style={{ position:"absolute", bottom:"15%", left:"20%", width:200, height:200, borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.35) 0%,transparent 70%)", animation:"orb3 7s ease-in-out infinite" }} />
+        {/* 움직이는 오브 4 - 오렌지 */}
+        <div style={{ position:"absolute", bottom:"25%", right:"20%", width:180, height:180, borderRadius:"50%", background:"radial-gradient(circle,rgba(251,146,60,0.3) 0%,transparent 70%)", animation:"orb4 9s ease-in-out infinite" }} />
+        {/* 움직이는 오브 5 - 에메랄드 */}
+        <div style={{ position:"absolute", top:"50%", left:"50%", width:220, height:220, borderRadius:"50%", background:"radial-gradient(circle,rgba(52,211,153,0.25) 0%,transparent 70%)", animation:"orb5 11s ease-in-out infinite", transform:"translate(-50%,-50%)" }} />
+
+        {/* 글리치 라인 */}
+        <div style={{ position:"absolute", top:"35%", left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(167,139,250,0.3),transparent)", animation:"glitchLine 6s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:"65%", left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(236,72,153,0.2),transparent)", animation:"glitchLine 8s ease-in-out infinite 2s" }} />
+
+        {/* 별 파티클 */}
+        {[
+          {x:5,y:10,s:3,d:5,dl:0,c:"#c4b5fd"},{x:90,y:15,s:2,d:7,dl:1,c:"#f9a8d4"},
+          {x:15,y:85,s:4,d:6,dl:2,c:"#67e8f9"},{x:80,y:80,s:3,d:8,dl:0.5,c:"#fcd34d"},
+          {x:50,y:5,s:2,d:5,dl:1.5,c:"#a78bfa"},{x:25,y:45,s:3,d:9,dl:3,c:"#f472b6"},
+          {x:75,y:50,s:2,d:7,dl:2,c:"#34d399"},{x:40,y:90,s:4,d:6,dl:1,c:"#fb923c"},
+          {x:60,y:30,s:2,d:8,dl:0.8,c:"#a78bfa"},{x:10,y:60,s:3,d:5,dl:2.5,c:"#67e8f9"},
+          {x:85,y:40,s:2,d:7,dl:1.8,c:"#f9a8d4"},{x:35,y:20,s:3,d:9,dl:0.3,c:"#fcd34d"},
+        ].map((p,i)=>(
+          <div key={i} style={{ position:"absolute", left:`${p.x}%`, top:`${p.y}%`, width:p.s, height:p.s, borderRadius:"50%", background:p.c, boxShadow:`0 0 ${p.s*3}px ${p.c}`, animation:`starFloat ${p.d}s ease-in-out infinite ${p.dl}s` }} />
+        ))}
+
+        {/* 격자 패턴 */}
+        <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(167,139,250,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,250,0.03) 1px,transparent 1px)", backgroundSize:"60px 60px" }} />
+
+        {/* 상단 빛줄기 */}
+        <div style={{ position:"absolute", top:0, left:"50%", transform:"translateX(-50%)", width:2, height:"40%", background:"linear-gradient(180deg,rgba(167,139,250,0.6),transparent)", filter:"blur(1px)", animation:"lightBeam 4s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:0, left:"30%", width:1, height:"30%", background:"linear-gradient(180deg,rgba(236,72,153,0.4),transparent)", animation:"lightBeam 6s ease-in-out infinite 1s" }} />
+        <div style={{ position:"absolute", top:0, left:"70%", width:1, height:"25%", background:"linear-gradient(180deg,rgba(6,182,212,0.4),transparent)", animation:"lightBeam 5s ease-in-out infinite 2s" }} />
       </div>
+
+      {/* 추가 CSS 애니메이션 */}
+      <style>{`
+        @keyframes orb1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(60px,-40px) scale(1.15)} 66%{transform:translate(-30px,50px) scale(0.9)} }
+        @keyframes orb2 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-50px,60px) scale(1.2)} 66%{transform:translate(40px,-30px) scale(0.85)} }
+        @keyframes orb3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(80px,-60px) scale(1.1)} }
+        @keyframes orb4 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-70px,40px) scale(1.15)} }
+        @keyframes orb5 { 0%,100%{transform:translate(-50%,-50%) scale(1)} 50%{transform:translate(-50%,-50%) scale(1.3)} }
+        @keyframes starFloat { 0%,100%{transform:translateY(0) scale(1);opacity:0.7} 50%{transform:translateY(-20px) scale(1.3);opacity:1} }
+        @keyframes glitchLine { 0%,100%{opacity:0;transform:scaleX(0)} 30%,70%{opacity:1;transform:scaleX(1)} }
+        @keyframes lightBeam { 0%,100%{opacity:0.3;transform:translateX(-50%) scaleY(1)} 50%{opacity:0.8;transform:translateX(-50%) scaleY(1.2)} }
+      `}</style>
+
       <button className="ca-back" onClick={() => navigate("/campaigns")}
-        style={{ position:"fixed", top:20, left:20, width:48, height:48, borderRadius:"50%", background:"var(--muted)", border:"1px solid var(--border)", fontSize:22, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:10 }}>🏠</button>
+        style={{ position:"fixed", top:20, left:20, width:48, height:48, borderRadius:"50%", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", fontSize:22, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:10, backdropFilter:"blur(10px)" }}>🏠</button>
       <button onClick={toggleTheme} className="ca-btn"
-        style={{ position:"fixed", top:20, right:20, width:44, height:44, borderRadius:"50%", background:"var(--muted)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--foreground)", zIndex:10 }}>
+        style={{ position:"fixed", top:20, right:20, width:44, height:44, borderRadius:"50%", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", zIndex:10, backdropFilter:"blur(10px)" }}>
         {theme==="dark" ? <Sun style={{width:17,height:17}}/> : <Moon style={{width:17,height:17}}/>}
       </button>
 
       <div style={{ width:"100%", maxWidth:440, position:"relative", zIndex:1, animation:"scaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}>
         <div style={{ position:"absolute", inset:-2, borderRadius:28, background:"linear-gradient(135deg,#7c3aed,#a78bfa,#c4b5fd,#7c3aed)", backgroundSize:"300% 300%", animation:"borderSpin 4s linear infinite", zIndex:-1, opacity:0.7 }} />
-        <div style={{ background:"var(--muted)", border:"1px solid rgba(167,139,250,0.3)", borderRadius:26, padding:"52px 44px", boxShadow:"0 32px 64px rgba(0,0,0,0.2)" }}>
+        <div style={{ background:"rgba(10,10,20,0.85)", border:"1px solid rgba(167,139,250,0.3)", borderRadius:26, padding:"52px 44px", boxShadow:"0 32px 64px rgba(0,0,0,0.5)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)" }}>
           <div style={{ textAlign:"center", marginBottom:40 }}>
             <div style={{ position:"relative", display:"inline-block", marginBottom:20 }}>
               <div style={{ width:80, height:80, borderRadius:22, background:"linear-gradient(135deg,#7c3aed,#a78bfa)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, boxShadow:"0 12px 32px rgba(124,58,237,0.5)", animation:"float 3.5s ease-in-out infinite" }}>🛡️</div>
               <div style={{ position:"absolute", inset:-6, borderRadius:28, border:"2px solid rgba(167,139,250,0.35)", animation:"pulse 2s ease-in-out infinite" }} />
             </div>
-            <div style={{ fontSize:28, fontWeight:900, color:"var(--foreground)", letterSpacing:"-0.04em", marginBottom:8 }}>체험단 관리자</div>
-            <div style={{ fontSize:13, color:"var(--muted-foreground)" }}>모두의체험단 수집 관리 시스템</div>
+            <div style={{ fontSize:28, fontWeight:900, color:"#fff", letterSpacing:"-0.04em", marginBottom:8 }}>체험단 관리자</div>
+            <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>모두의체험단 수집 관리 시스템</div>
           </div>
           <div style={{ position:"relative", marginBottom:14 }}>
             <input type={show?"text":"password"} placeholder="관리자 비밀번호" value={pw}
               className="ca-input"
               onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()}
-              style={{ width:"100%", padding:"16px 52px 16px 20px", borderRadius:14, border:"1px solid var(--border)", background:"var(--background)", color:"var(--foreground)", fontSize:15, fontFamily:"Pretendard, sans-serif" }} />
+              style={{ width:"100%", padding:"16px 52px 16px 20px", borderRadius:14, border:"1px solid rgba(167,139,250,0.3)", background:"rgba(255,255,255,0.06)", color:"#fff", fontSize:15, fontFamily:"Pretendard, sans-serif" }} />
             <button onClick={()=>setShow(s=>!s)} className="ca-btn"
-              style={{ position:"absolute", right:16, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"var(--muted-foreground)", padding:4 }}>
+              style={{ position:"absolute", right:16, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"rgba(255,255,255,0.5)", padding:4 }}>
               {show?<EyeOff style={{width:18,height:18}}/>:<Eye style={{width:18,height:18}}/>}
             </button>
           </div>
