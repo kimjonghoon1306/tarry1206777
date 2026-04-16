@@ -83,7 +83,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
   const [totalPosts, setTotalPosts] = useState<number>(0);
   const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; desc: string; createdAt: string; read: boolean }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const isGuestMode = localStorage.getItem("guest_mode") === "true";
+  const isGuestMode = localStorage.getItem("guest_mode") === "true" && !localStorage.getItem("ba_token");
 
   useEffect(() => {
     // 대시보드에서 저장한 발행 글 수 읽기
