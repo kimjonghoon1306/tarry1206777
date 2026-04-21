@@ -476,7 +476,7 @@ export default function Dashboard() {
               {/* 알림 드롭다운 */}
               <style>{`
                 .notif-dropdown { position: fixed; top: 68px; right: 16px; }
-                @media (min-width: 1024px) { .notif-dropdown { right: 80px; } }
+                @media (min-width: 1024px) { .notif-dropdown { right: auto; left: 260px; } }
               `}</style>
               {showNotifications && (
                 <div className="notif-dropdown rounded-2xl shadow-2xl z-50"
