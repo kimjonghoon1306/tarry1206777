@@ -444,28 +444,28 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <div className="px-3 py-2 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
-                  <span className="text-xs font-semibold" style={{ color: "var(--muted-foreground)" }}>알림</span>
-                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{notifications.length}개</span>
+              <DropdownMenuContent align="end" className="w-80" style={{ minWidth: "320px", maxWidth: "360px" }}>
+                <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+                  <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>알림</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>{notifications.length}개</span>
                 </div>
                 {notifications.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
                     알림이 없습니다
                   </div>
                 ) : (
                   notifications.slice(0, 10).map(n => (
-                    <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 py-2.5 px-3">
-                      <div className="flex items-center gap-1.5 w-full">
-                        <span className="text-sm font-medium flex-1" style={{ color: "var(--foreground)" }}>
+                    <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-3 px-4" style={{ cursor: "default" }}>
+                      <div className="flex items-start gap-2 w-full">
+                        <span className="text-sm font-medium leading-snug flex-1" style={{ color: "var(--foreground)", wordBreak: "keep-all", whiteSpace: "normal" }}>
                           {n.type === "deploy" ? "🚀" : n.type === "content" ? "✍️" : n.type === "image" ? "🖼️" : "🔍"} {n.title}
                         </span>
                         {!n.read && (
-                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "var(--color-emerald)" }} />
+                          <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: "var(--color-emerald)" }} />
                         )}
                       </div>
-                      <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{n.desc}</span>
-                      <span className="text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.6 }}>
+                      <span className="text-xs leading-relaxed" style={{ color: "var(--muted-foreground)", wordBreak: "keep-all", whiteSpace: "normal" }}>{n.desc}</span>
+                      <span className="text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.5 }}>
                         {new Date(n.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </DropdownMenuItem>
