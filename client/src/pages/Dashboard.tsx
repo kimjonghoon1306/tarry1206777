@@ -475,8 +475,8 @@ export default function Dashboard() {
 
               {/* 알림 드롭다운 */}
               {showNotifications && (
-                <div className="absolute right-0 top-11 rounded-2xl shadow-2xl z-50" style={{ width: "min(320px, calc(100vw - 32px))", right: 0 }}
-                  style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <div className="absolute rounded-2xl shadow-2xl z-50"
+                  style={{ top: "44px", right: 0, width: "min(320px, calc(100vw - 32px))", minWidth: "280px", background: "var(--card)", border: "1px solid var(--border)" }}>
                   <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
                     <span className="font-semibold text-sm text-foreground">알림 {unreadCount > 0 && `(${unreadCount})`}</span>
                     <div className="flex gap-2">
