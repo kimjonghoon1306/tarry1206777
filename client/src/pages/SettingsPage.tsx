@@ -312,9 +312,22 @@ function CustomWebhookSection() {
   };
 
   const remove = (idx: number) => {
+    const removed = accounts[idx];
     const updated = accounts.filter((_, i) => i !== idx);
     setAccounts(updated);
     localStorage.setItem("platform_custom_list", JSON.stringify(updated));
+    // blogauto_deploy_platforms에서도 해당 항목 제거
+    try {
+      const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
+      const updatedPlatforms = platforms.filter((p: any) => !(p.type === "custom" && p.name === removed._name));
+      localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(updatedPlatforms));
+    } catch {}
+    // 남은 커스텀 계정이 없으면 도메인 관련 키 정리
+    if (updated.length === 0) {
+      localStorage.removeItem("custom_domain");
+      localStorage.removeItem("admin_custom_domain");
+      localStorage.removeItem("blogauto_custom_domain");
+    }
     toast.success("삭제됐어요");
   };
 
@@ -437,9 +450,16 @@ function PlatformSection({ title, color, logo, type, desc, link, fields }: {
   };
 
   const remove = (idx: number) => {
+    const removed = accounts[idx];
     const updated = accounts.filter((_, i) => i !== idx);
     setAccounts(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    // blogauto_deploy_platforms에서도 해당 항목 제거
+    try {
+      const platforms = JSON.parse(localStorage.getItem("blogauto_deploy_platforms") || "[]");
+      const updatedPlatforms = platforms.filter((p: any) => !(p.type === type && p.name === removed._name));
+      localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(updatedPlatforms));
+    } catch {}
     toast.success("삭제됨");
   };
 
