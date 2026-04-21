@@ -474,9 +474,13 @@ export default function Dashboard() {
               </button>
 
               {/* 알림 드롭다운 */}
+              <style>{`
+                .notif-dropdown { position: fixed; top: 68px; right: 16px; }
+                @media (min-width: 1024px) { .notif-dropdown { right: 80px; } }
+              `}</style>
               {showNotifications && (
-                <div className="rounded-2xl shadow-2xl z-50"
-                  style={{ position: "fixed", top: "68px", right: "16px", width: "min(320px, calc(100vw - 32px))", minWidth: "280px", background: "var(--card)", border: "1px solid var(--border)" }}>
+                <div className="notif-dropdown rounded-2xl shadow-2xl z-50"
+                  style={{ width: "min(320px, calc(100vw - 32px))", minWidth: "280px", background: "var(--card)", border: "1px solid var(--border)" }}>
                   <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
                     <span className="font-semibold text-sm text-foreground">알림 {unreadCount > 0 && `(${unreadCount})`}</span>
                     <div className="flex gap-2">
