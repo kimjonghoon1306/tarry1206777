@@ -276,8 +276,7 @@ const KO_EN_MAP: Record<string, string> = {
   건강식품: "health food supplement natural organic product, no people",
   전통주: "korean traditional liquor makgeolli rice wine bottle, no people",
   지역특산물: "local specialty food product regional traditional, no people",
-
-
+};
 
 // ── 프롬프트에서 영어 검색 키워드 추출 (한국어 지원 강화) ──
 function extractKeyword(prompt: string): string {
