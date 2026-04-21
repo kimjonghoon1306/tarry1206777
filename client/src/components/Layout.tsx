@@ -360,6 +360,64 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
               )}
             </Button>
 
+            {/* 노션 템플릿 버튼 */}
+            <a
+              href="https://notion.blogautopro.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "7px 13px",
+                borderRadius: "10px",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                color: "white",
+                background: "linear-gradient(135deg, #ff3d6e, #ff5c35)",
+                boxShadow: "0 4px 14px rgba(255,61,110,0.45)",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "none",
+                position: "relative",
+                overflow: "hidden",
+                animation: "notionBounce 2.2s ease-in-out infinite",
+                flexShrink: 0,
+                transition: "transform 0.18s cubic-bezier(0.4,0,0.2,1), box-shadow 0.18s ease",
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "scale(1.12) translateY(-3px)";
+                el.style.boxShadow = "0 8px 28px rgba(255,61,110,0.65)";
+                el.style.animation = "none";
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "";
+                el.style.boxShadow = "0 4px 14px rgba(255,61,110,0.45)";
+                el.style.animation = "notionBounce 2.2s ease-in-out infinite";
+              }}
+              onMouseDown={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "scale(0.93)";
+                el.style.boxShadow = "0 2px 8px rgba(255,61,110,0.3)";
+              }}
+              onMouseUp={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "scale(1.12) translateY(-3px)";
+                el.style.boxShadow = "0 8px 28px rgba(255,61,110,0.65)";
+              }}
+            >
+              <style>{`
+                @keyframes notionBounce {
+                  0%, 100% { transform: translateY(0) scale(1); }
+                  30%       { transform: translateY(-5px) scale(1.04); }
+                  60%       { transform: translateY(-2px) scale(1.01); }
+                }
+              `}</style>
+              📋 노션 템플릿
+            </a>
+
             {/* Notifications */}
             <DropdownMenu onOpenChange={(open) => {
               if (open && unreadCount > 0) {
