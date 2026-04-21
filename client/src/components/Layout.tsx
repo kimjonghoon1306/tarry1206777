@@ -444,32 +444,65 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80" style={{ minWidth: "320px", maxWidth: "360px" }}>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                collisionPadding={{ left: 16, right: 16 }}
+                style={{
+                  width: "min(320px, calc(100vw - 32px))",
+                  minWidth: "280px",
+                  maxWidth: "360px",
+                  maxHeight: "480px",
+                  overflowY: "auto",
+                }}
+              >
+                {/* 헤더: 알림 제목 + 개수 + 모두읽음 */}
                 <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
-                  <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>알림</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>{notifications.length}개</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>알림</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                      {unreadCount > 0 ? `(${unreadCount})` : `${notifications.length}개`}
+                    </span>
+                  </div>
+                  {unreadCount === 0 && notifications.length > 0 && (
+                    <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>모두 읽음</span>
+                  )}
                 </div>
                 {notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
                     알림이 없습니다
                   </div>
                 ) : (
-                  notifications.slice(0, 10).map(n => (
-                    <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-3 px-4" style={{ cursor: "default" }}>
-                      <div className="flex items-start gap-2 w-full">
-                        <span className="text-sm font-medium leading-snug flex-1" style={{ color: "var(--foreground)", wordBreak: "keep-all", whiteSpace: "normal" }}>
-                          {n.type === "deploy" ? "🚀" : n.type === "content" ? "✍️" : n.type === "image" ? "🖼️" : "🔍"} {n.title}
-                        </span>
-                        {!n.read && (
-                          <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: "var(--color-emerald)" }} />
-                        )}
-                      </div>
-                      <span className="text-xs leading-relaxed" style={{ color: "var(--muted-foreground)", wordBreak: "keep-all", whiteSpace: "normal" }}>{n.desc}</span>
-                      <span className="text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.5 }}>
-                        {new Date(n.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </DropdownMenuItem>
-                  ))
+                  <>
+                    {notifications.slice(0, 10).map(n => (
+                      <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-3 px-4" style={{ cursor: "default" }}>
+                        <div className="flex items-start gap-2 w-full">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                            style={{ background: !n.read ? "var(--color-emerald)" : "var(--border)" }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium leading-snug" style={{ color: "var(--foreground)", wordBreak: "keep-all", whiteSpace: "normal" }}>
+                              {n.type === "deploy" ? "🚀" : n.type === "content" ? "✍️" : n.type === "image" ? "🖼️" : "🔍"} {n.title}
+                            </p>
+                            <p className="text-xs leading-relaxed mt-0.5" style={{ color: "var(--muted-foreground)", wordBreak: "keep-all", whiteSpace: "normal" }}>{n.desc}</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)", opacity: 0.5 }}>
+                              {new Date(n.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                    <div className="px-4 py-2 border-t text-center" style={{ borderColor: "var(--border)" }}>
+                      <button
+                        className="text-xs hover:underline"
+                        style={{ color: "var(--muted-foreground)" }}
+                        onClick={() => navigate("/settings")}
+                      >
+                        설정에서 알림 관리
+                      </button>
+                    </div>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
