@@ -365,6 +365,14 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
               href="https://notion.blogautopro.com"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => {
+                e.preventDefault();
+                const token = localStorage.getItem("ba_token") || "";
+                const url = token
+                  ? `https://notion.blogautopro.com/app.html?token=${encodeURIComponent(token)}`
+                  : "https://notion.blogautopro.com";
+                window.open(url, "_blank");
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
