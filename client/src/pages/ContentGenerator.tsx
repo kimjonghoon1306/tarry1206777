@@ -783,15 +783,26 @@ export default function ContentGenerator() {
       </div>
     </Layout>
 
-      {/* ── 플로팅 미리보기 버튼 ── */}
+      {/* ── 플로팅 버튼 영역 ── */}
       {generatedContent && (
-        <button
-          className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-40 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
-          style={{ background: "oklch(0.62 0.22 300)", color: "white", boxShadow: "0 8px 32px oklch(0.62 0.22 300 / 35%)" }}
-          onClick={() => setShowFloatingPreview(true)}>
-          <Eye className="w-4 h-4" />
-          구독자 미리보기
-        </button>
+        <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-40 flex flex-col gap-2 items-end">
+          {/* 템플릿 선택 버튼 */}
+          <button
+            className="flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
+            style={{ background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", boxShadow: "0 8px 32px rgba(5,150,105,0.4)" }}
+            onClick={() => navigate("/template")}>
+            <Sparkles className="w-4 h-4" />
+            템플릿 선택
+          </button>
+          {/* 구독자 미리보기 버튼 */}
+          <button
+            className="flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
+            style={{ background: "oklch(0.62 0.22 300)", color: "white", boxShadow: "0 8px 32px oklch(0.62 0.22 300 / 35%)" }}
+            onClick={() => setShowFloatingPreview(true)}>
+            <Eye className="w-4 h-4" />
+            구독자 미리보기
+          </button>
+        </div>
       )}
 
       {/* ── 미리보기 풀스크린 모달 ── */}
