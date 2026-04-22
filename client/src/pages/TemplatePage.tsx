@@ -112,6 +112,12 @@ function buildRelated(related: { title: string; desc: string }[], accentColor: s
   return h;
 }
 
+// 공통 썸네일 HTML
+function buildThumb(thumbnail: string): string {
+  if (!thumbnail) return "";
+  return `<div style="width:100%;aspect-ratio:16/9;overflow:hidden;margin-bottom:0;"><img src="${thumbnail}" alt="썸네일" style="width:100%;height:100%;object-fit:cover;display:block;" /></div>`;
+}
+
 // 공통 목차 생성 함수
 function buildToc(blocks: Block[], accentColor: string, bgColor: string, borderColor: string, textColor: string): string {
   const headings = blocks.filter(b => b.type === "h2");
@@ -127,9 +133,11 @@ function buildToc(blocks: Block[], accentColor: string, bgColor: string, borderC
   return toc;
 }
 
-function buildMinimal(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
+function buildMinimal(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
   const bx: Record<string, string> = { tip: "#f0faf4|#22c55e|💡 팁", warning: "#fff7ed|#f97316|⚠️ 주의", important: "#fef2f2|#ef4444|🚨 중요" };
-  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:32px 24px;background:#fff;color:#1a1a1a;line-height:1.85;">`;
+  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:0;background:#fff;color:#1a1a1a;line-height:1.85;">`;
+  h += buildThumb(thumbnail);
+  h += `<div style="padding:32px 24px;">`;
   h += `<h1 style="font-size:2rem;font-weight:900;border-bottom:2px solid #1a1a1a;padding-bottom:16px;margin-bottom:20px;">${title}</h1>`;
   h += buildToc(blocks, "#1a1a1a", "#f5f5f5", "#d4d4d0", "#333333");
   let secIdx = 0;
@@ -141,11 +149,13 @@ function buildMinimal(title: string, blocks: Block[], faqs: ReturnType<typeof ex
   if (faqs.length) { h += `<div style="margin-top:2.5rem;border-top:2px solid #1a1a1a;padding-top:1.5rem;"><h3 style="font-size:1.1rem;font-weight:800;margin-bottom:1rem;">자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;"><p style="font-weight:700;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#555;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem;"><h4 style="font-size:0.9rem;font-weight:700;color:#888;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:8px;font-size:0.9rem;"><a href="${r.url}" style="color:#2563eb;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
   h += buildRelated(related, "#1a1a1a", "#f5f5f5");
-  return h + `</div>`;
+  return h + `</div></div>`;
 }
 
-function buildCard(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
-  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:740px;margin:0 auto;padding:32px 20px;background:#f0f6ff;color:#1a1a1a;line-height:1.85;">`;
+function buildCard(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
+  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:740px;margin:0 auto;padding:0;background:#f0f6ff;color:#1a1a1a;line-height:1.85;">`;
+  h += buildThumb(thumbnail);
+  h += `<div style="padding:32px 20px;">`;
   h += `<h1 style="font-size:1.9rem;font-weight:900;color:#1e3a8a;text-align:center;margin-bottom:20px;padding:24px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(37,99,235,0.12);">${title}</h1>`;
   h += buildToc(blocks, "#2563eb", "#eff6ff", "#bfdbfe", "#1e3a8a");
   let card = ""; let inCard = false; let secIdx = 0;
@@ -159,11 +169,13 @@ function buildCard(title: string, blocks: Block[], faqs: ReturnType<typeof extra
   if (faqs.length) { h += `<div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(37,99,235,0.1);padding:20px 24px;margin-bottom:20px;"><h3 style="font-size:1.1rem;font-weight:800;color:#2563eb;margin-bottom:16px;">❓ 자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:14px;background:#f0f6ff;border-radius:8px;padding:12px 16px;"><p style="font-weight:700;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#475569;font-size:0.98rem;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="background:#fff;border-radius:14px;padding:16px 24px;margin-bottom:20px;"><h4 style="font-size:0.9rem;font-weight:700;color:#94a3b8;margin-bottom:10px;">📎 참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.9rem;"><a href="${r.url}" style="color:#2563eb;font-weight:600;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
   h += buildRelated(related, "#2563eb", "#eff6ff");
-  return h + `</div>`;
+  return h + `</div></div>`;
 }
 
-function buildMagazine(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
-  let h = `<div style="font-family:'Noto Serif KR','Georgia',serif;max-width:720px;margin:0 auto;padding:40px 24px;background:#faf8f5;color:#1a1a1a;line-height:1.9;">`;
+function buildMagazine(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
+  let h = `<div style="font-family:'Noto Serif KR','Georgia',serif;max-width:720px;margin:0 auto;padding:0;background:#faf8f5;color:#1a1a1a;line-height:1.9;">`;
+  h += buildThumb(thumbnail);
+  h += `<div style="padding:40px 24px;">`;
   h += `<div style="border-top:4px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:4px 0;margin-bottom:24px;"></div>`;
   h += `<h1 style="font-size:2.2rem;font-weight:900;line-height:1.25;margin-bottom:8px;">${title}</h1>`;
   h += `<div style="border-top:1px solid #1a1a1a;border-bottom:1px solid #c8102e;padding:4px 0;margin-bottom:20px;"></div>`;
@@ -177,11 +189,13 @@ function buildMagazine(title: string, blocks: Block[], faqs: ReturnType<typeof e
   if (faqs.length) { h += `<div style="margin-top:2.5rem;"><div style="border-top:3px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:4px 0;margin-bottom:16px;"></div><h3 style="font-size:1rem;font-weight:800;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1rem;">FAQ</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid #e5e0d8;"><p style="font-weight:700;font-family:'Noto Sans KR',sans-serif;margin-bottom:6px;">Q. ${f.q}</p><p style="color:#666;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:1.5rem;border-top:1px solid #ccc;padding-top:1rem;"><h4 style="font-size:0.8rem;font-weight:700;letter-spacing:0.15em;color:#888;font-family:'Noto Sans KR',sans-serif;margin-bottom:0.75rem;">REFERENCES</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" style="color:#c8102e;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
   h += buildRelated(related, "#c8102e", "#fff8f8");
-  return h + `</div>`;
+  return h + `</div></div>`;
 }
 
-function buildDark(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
-  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:36px 24px;background:#0f0f1a;color:#e8e8f0;line-height:1.85;">`;
+function buildDark(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
+  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:0;background:#0f0f1a;color:#e8e8f0;line-height:1.85;">`;
+  h += buildThumb(thumbnail);
+  h += `<div style="padding:36px 24px;">`;
   h += `<h1 style="font-size:1.9rem;font-weight:900;color:#ffffff;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e94560;">${title}</h1>`;
   h += buildToc(blocks, "#e94560", "#1a1a2e", "#333366", "#c8c8d8");
   let secIdx = 0;
@@ -193,11 +207,13 @@ function buildDark(title: string, blocks: Block[], faqs: ReturnType<typeof extra
   if (faqs.length) { h += `<div style="margin-top:2.5rem;border-top:1px solid #333;padding-top:1.5rem;"><h3 style="font-size:1rem;font-weight:700;color:#e94560;margin-bottom:1rem;">자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;background:#1a1a2e;padding:14px 18px;border-radius:8px;"><p style="font-weight:700;color:#fff;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#aaa;font-size:0.97rem;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:1.5rem;border-top:1px solid #333;padding-top:1rem;"><h4 style="font-size:0.85rem;color:#666;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" style="color:#e94560;">${r.name}</a> <span style="color:#666;">— ${r.desc}</span></div>`; h += `</div>`; }
   h += buildRelated(related, "#e94560", "#1a1a2e");
-  return h + `</div>`;
+  return h + `</div></div>`;
 }
 
-function buildWarm(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
-  let h = `<div style="font-family:'Noto Serif KR','Georgia',serif;max-width:720px;margin:0 auto;padding:36px 24px;background:#fdf6ec;color:#3d2b1f;line-height:1.9;">`;
+function buildWarm(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
+  let h = `<div style="font-family:'Noto Serif KR','Georgia',serif;max-width:720px;margin:0 auto;padding:0;background:#fdf6ec;color:#3d2b1f;line-height:1.9;">`;
+  h += buildThumb(thumbnail);
+  h += `<div style="padding:36px 24px;">`;
   h += `<h1 style="font-size:1.9rem;font-weight:900;color:#7c3e0e;margin-bottom:20px;padding-bottom:14px;border-bottom:2px dashed #e5c18e;">${title}</h1>`;
   h += buildToc(blocks, "#d97706", "#fffbeb", "#fde68a", "#7c3e0e");
   let secIdx = 0;
@@ -209,13 +225,15 @@ function buildWarm(title: string, blocks: Block[], faqs: ReturnType<typeof extra
   if (faqs.length) { h += `<div style="margin-top:2.5rem;background:#fff8e8;border-radius:16px;padding:20px 24px;"><h3 style="font-size:1.05rem;font-weight:800;color:#92400e;margin-bottom:1rem;">🙋 자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px dashed #e5c18e;"><p style="font-weight:700;color:#7c3e0e;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#5c3b1e;font-size:0.97rem;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px dashed #e5c18e;"><h4 style="font-size:0.85rem;color:#a16207;margin-bottom:0.75rem;">📚 참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" style="color:#d97706;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
   h += buildRelated(related, "#d97706", "#fffbeb");
-  return h + `</div>`;
+  return h + `</div></div>`;
 }
 
-function buildColorful(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
+function buildColorful(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
   const palette = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#0891b2"];
   let ci = 0;
-  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:32px 20px;background:#f8f9ff;color:#1a1a1a;line-height:1.85;">`;
+  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:0;background:#f8f9ff;color:#1a1a1a;line-height:1.85;">`;
+  h += buildThumb(thumbnail);
+  h += `<div style="padding:32px 20px;">`;
   h += `<h1 style="font-size:1.9rem;font-weight:900;text-align:center;margin-bottom:20px;background:linear-gradient(135deg,#7c3aed,#2563eb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${title}</h1>`;
   h += buildToc(blocks, "#7c3aed", "#f5f3ff", "#ddd6fe", "#3730a3");
   let secIdx = 0;
@@ -227,11 +245,12 @@ function buildColorful(title: string, blocks: Block[], faqs: ReturnType<typeof e
   if (faqs.length) { h += `<div style="margin-top:2.5rem;"><h3 style="font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,#7c3aed,#2563eb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem;">자주 묻는 질문</h3>`; faqs.forEach((f, i) => { const c = palette[i % palette.length]; h += `<div style="margin-bottom:1rem;background:#fff;border-radius:10px;padding:14px 18px;border-left:4px solid ${c};box-shadow:0 2px 8px rgba(0,0,0,0.06);"><p style="font-weight:700;color:${c};margin-bottom:4px;">Q. ${f.q}</p><p style="color:#555;font-size:0.97rem;">A. ${f.a}</p></div>`; }); h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:1.5rem;padding-top:1rem;border-top:2px dashed #e5e7eb;"><h4 style="font-size:0.85rem;font-weight:700;color:#888;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" style="color:#7c3aed;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
   h += buildRelated(related, "#7c3aed", "#f5f3ff");
-  return h + `</div>`;
+  return h + `</div></div>`;
 }
 
-function buildNewsletter(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
+function buildNewsletter(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
   let h = `<div style="font-family:'Noto Sans KR',Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;">`;
+  h += buildThumb(thumbnail);
   h += `<div style="background:#059669;padding:24px 32px;"><h1 style="font-size:1.6rem;font-weight:900;color:#ffffff;margin:0;line-height:1.3;">${title}</h1></div>`;
   h += `<div style="padding:28px 32px;background:#f5f7fa;">`;
   h += buildToc(blocks, "#059669", "#fff", "#d1fae5", "#065f46");
@@ -249,21 +268,21 @@ function buildNewsletter(title: string, blocks: Block[], faqs: ReturnType<typeof
   return h + `</div>`;
 }
 
-export function buildTemplateHtml(templateId: string, title: string, rawContent: string): string {
+export function buildTemplateHtml(templateId: string, title: string, rawContent: string, thumbnail = ""): string {
   const body = getBody(rawContent);
   const faqs = extractFaq(rawContent);
   const refs = extractRefs(rawContent);
   const related = extractRelated(rawContent);
   const blocks = parseBodyBlocks(body);
   switch (templateId) {
-    case "minimal":    return buildMinimal(title, blocks, faqs, refs, related);
-    case "card":       return buildCard(title, blocks, faqs, refs, related);
-    case "magazine":   return buildMagazine(title, blocks, faqs, refs, related);
-    case "dark":       return buildDark(title, blocks, faqs, refs, related);
-    case "warm":       return buildWarm(title, blocks, faqs, refs, related);
-    case "colorful":   return buildColorful(title, blocks, faqs, refs, related);
-    case "newsletter": return buildNewsletter(title, blocks, faqs, refs, related);
-    default:           return buildMinimal(title, blocks, faqs, refs, related);
+    case "minimal":    return buildMinimal(title, blocks, faqs, refs, related, thumbnail);
+    case "card":       return buildCard(title, blocks, faqs, refs, related, thumbnail);
+    case "magazine":   return buildMagazine(title, blocks, faqs, refs, related, thumbnail);
+    case "dark":       return buildDark(title, blocks, faqs, refs, related, thumbnail);
+    case "warm":       return buildWarm(title, blocks, faqs, refs, related, thumbnail);
+    case "colorful":   return buildColorful(title, blocks, faqs, refs, related, thumbnail);
+    case "newsletter": return buildNewsletter(title, blocks, faqs, refs, related, thumbnail);
+    default:           return buildMinimal(title, blocks, faqs, refs, related, thumbnail);
   }
 }
 
@@ -408,7 +427,8 @@ export default function TemplatePage() {
     e?.stopPropagation();
     const content = savedContent || SAMPLE;
     const title = savedTitle || "블로그 포스트 제목 예시";
-    const html = buildTemplateHtml(id, title, content);
+    const previewThumb = localStorage.getItem("blogauto_thumbnail") || "";
+    const html = buildTemplateHtml(id, title, content, previewThumb);
     setPreviewDoc(wrapForIframe(html));
     setPreviewId(id);
   };
