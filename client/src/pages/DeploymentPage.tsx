@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { userGet, addNotification } from "@/lib/user-storage";
+import { buildTemplateHtml } from "@/pages/TemplatePage";
 
 // ─────────────────────────────────────────────────────────
 // 타입 정의
@@ -1018,6 +1019,17 @@ export default function DeploymentPage() {
 
   // ── 콘텐츠 빌드 ──
   function buildHtmlContent(): string {
+    // ── 템플릿 선택 분기 ──────────────────────────────
+    const selectedTemplate = localStorage.getItem("blogauto_template") || "minimal";
+    if (selectedTemplate !== "minimal") {
+      const rawContent = blocks
+        .filter(b => b.type === "text")
+        .map(b => (b as { type: "text"; id: string; content: string }).content)
+        .join("\n\n");
+      return buildTemplateHtml(selectedTemplate, title, rawContent);
+    }
+    // ── 기본(minimal) 은 기존 로직 그대로 ────────────
+
     const tocEntries: { id: string; title: string }[] = [];
     let autoSectionIndex = 0;
 
