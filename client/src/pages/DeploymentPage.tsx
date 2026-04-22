@@ -1022,13 +1022,15 @@ export default function DeploymentPage() {
     // ── 템플릿 선택 분기 ──────────────────────────────
     const selectedTemplate = localStorage.getItem("blogauto_template") || "minimal";
     if (selectedTemplate !== "minimal") {
-      // blocks join시 마커 깨짐 방지: localStorage 원본 content 우선 사용
       const savedRaw = safeParseJSON<Record<string, any>>(CONTENT_KEY, {});
       const rawContent: string = savedRaw?.content || blocks
         .filter(b => b.type === "text")
         .map(b => (b as { type: "text"; id: string; content: string }).content)
         .join("\n\n");
-      return buildTemplateHtml(selectedTemplate, title, rawContent);
+      // rawContent 전체(FAQ/참고자료/관련글 포함)를 템플릿 HTML로 변환
+      // buildTemplateHtml이 모든 섹션을 HTML로 렌더링하므로 그대로 발송
+      const tplThumbnail = thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
+      return buildTemplateHtml(selectedTemplate, title, rawContent, tplThumbnail);
     }
     // ── 기본(minimal) 은 기존 로직 그대로 ────────────
 
@@ -1614,17 +1616,10 @@ export default function DeploymentPage() {
     const tagStr = hashtags.map((t: string) => t.replace("#", "")).join(", ");
     const slugBase = title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").slice(0, 80);
     const _rawHtml = buildHtmlContent();
-    const _cleanHtml = _rawHtml
-      .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, '')
-      .replace(/FAQ시작[\s\S]*?\[FAQ끝\]/g, '')
-      .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, '')
-      .replace(/참고자료시작[\s\S]*?\[참고자료끝\]/g, '')
-      .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, '')
-      .replace(/관련글시작[\s\S]*?\[관련글끝\]/g, '')
-      .trim();
+    // 마커는 테리가이드 webhook이 파싱해서 렌더링하므로 그대로 전달
     const payload = {
       title,
-      content: _cleanHtml,
+      content: _rawHtml.trim(),
       thumbnail: thumbnailUrl,
       tags: tagStr,
       slug: slugBase,
