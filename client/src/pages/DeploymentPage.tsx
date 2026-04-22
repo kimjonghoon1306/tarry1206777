@@ -1616,10 +1616,17 @@ export default function DeploymentPage() {
     const tagStr = hashtags.map((t: string) => t.replace("#", "")).join(", ");
     const slugBase = title.toLowerCase().replace(/[^a-z0-9가-힣]/g, "-").replace(/-+/g, "-").slice(0, 80);
     const _rawHtml = buildHtmlContent();
-    // 마커는 테리가이드 webhook이 파싱해서 렌더링하므로 그대로 전달
+    const _cleanHtml = _rawHtml
+      .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, '')
+      .replace(/FAQ시작[\s\S]*?\[FAQ끝\]/g, '')
+      .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, '')
+      .replace(/참고자료시작[\s\S]*?\[참고자료끝\]/g, '')
+      .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, '')
+      .replace(/관련글시작[\s\S]*?\[관련글끝\]/g, '')
+      .trim();
     const payload = {
       title,
-      content: _rawHtml.trim(),
+      content: _cleanHtml,
       thumbnail: thumbnailUrl,
       tags: tagStr,
       slug: slugBase,
