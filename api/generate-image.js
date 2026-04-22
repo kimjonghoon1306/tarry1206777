@@ -49,6 +49,66 @@ function toAspectRatio(size) {
   return "1:1";                      // 정사각형
 }
 
+// ✅ 주제별 Flux 최적화 프롬프트 자동 변환
+function optimizePrompt(prompt) {
+  const p = prompt.toLowerCase();
+
+  // 스타일 기본값
+  const base = "photorealistic, ultra detailed, 8K resolution, professional photography";
+
+  // 음식/맛집
+  if (p.match(/맛집|음식|요리|식당|레스토랑|먹|카페|디저트|food|restaurant|cafe|cooking|recipe/)) {
+    return `${prompt}, delicious food photography, warm restaurant ambiance, soft lighting, shallow depth of field, appetizing, food styling, ${base}`;
+  }
+  // 여행/관광
+  if (p.match(/여행|관광|명소|여행지|해외|국내|travel|tourism|destination|city|landscape/)) {
+    return `${prompt}, beautiful travel photography, golden hour lighting, stunning scenery, wide angle, vibrant colors, ${base}`;
+  }
+  // 건강/운동/다이어트
+  if (p.match(/건강|운동|다이어트|헬스|피트니스|health|fitness|workout|diet|exercise/)) {
+    return `${prompt}, healthy lifestyle photography, bright clean background, energetic atmosphere, ${base}`;
+  }
+  // 재테크/금융/투자
+  if (p.match(/재테크|투자|주식|부동산|금융|돈|수익|finance|investment|money|stock|real estate/)) {
+    return `${prompt}, professional business photography, modern office, financial charts, clean minimal design, corporate style, ${base}`;
+  }
+  // IT/기술/AI
+  if (p.match(/IT|기술|ai|인공지능|코딩|개발|앱|소프트웨어|tech|software|app|digital|computer/i)) {
+    return `${prompt}, modern technology concept, futuristic digital background, blue neon lights, high tech atmosphere, ${base}`;
+  }
+  // 뷰티/패션
+  if (p.match(/뷰티|화장|패션|스타일|옷|beauty|fashion|makeup|style|cosmetic/)) {
+    return `${prompt}, beauty and fashion photography, studio lighting, elegant composition, high fashion aesthetic, ${base}`;
+  }
+  // 육아/아이/가족
+  if (p.match(/육아|아이|어린이|가족|엄마|아빠|parenting|child|family|baby|kids/)) {
+    return `${prompt}, warm family photography, soft natural lighting, joyful atmosphere, cozy home setting, ${base}`;
+  }
+  // 부동산/인테리어
+  if (p.match(/부동산|인테리어|집|아파트|인테리어|real estate|interior|home|house|apartment/)) {
+    return `${prompt}, luxury interior photography, modern home design, bright spacious room, architectural photography, ${base}`;
+  }
+  // 자동차
+  if (p.match(/자동차|차|드라이브|car|vehicle|auto|driving/)) {
+    return `${prompt}, professional automotive photography, dramatic lighting, sleek design, motion blur background, ${base}`;
+  }
+  // 교육/학습
+  if (p.match(/교육|공부|학습|시험|학교|education|study|learning|school|exam/)) {
+    return `${prompt}, education concept photography, bright study environment, books and stationery, motivating atmosphere, ${base}`;
+  }
+  // 반려동물
+  if (p.match(/반려동물|강아지|고양이|펫|pet|dog|cat|animal/)) {
+    return `${prompt}, adorable pet photography, soft bokeh background, natural lighting, cute and heartwarming, ${base}`;
+  }
+  // 자연/환경
+  if (p.match(/자연|환경|숲|바다|산|꽃|nature|forest|ocean|mountain|flower|environment/)) {
+    return `${prompt}, stunning nature photography, golden hour, dramatic sky, lush scenery, National Geographic style, ${base}`;
+  }
+
+  // 기본 (기타 모든 주제)
+  return `${prompt}, high quality blog thumbnail, clean composition, professional stock photo style, bright and engaging, ${base}`;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -91,6 +151,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "prompt 필수입니다" });
   }
 
+  // ✅ 주제별 자동 프롬프트 최적화
+  const optimizedPrompt = optimizePrompt(prompt);
+
   const numImages = Math.min(parseInt(count) || 1, 10);
 
   // ── Gemini (gemini-2.0-flash-exp 이미지 생성 시도) ──
@@ -111,7 +174,7 @@ export default async function handler(req, res) {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: optimizedPrompt }] }],
                 generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
               }),
             }
@@ -175,7 +238,7 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify({
             model: "dall-e-3",
-            prompt,
+            prompt: optimizedPrompt,
             n: 1,
             size: dallESize,
             quality: "standard",
@@ -225,7 +288,7 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           input: {
-            prompt,
+            prompt: optimizedPrompt,
             width,
             height,
             num_outputs: Math.min(numImages, 4),
