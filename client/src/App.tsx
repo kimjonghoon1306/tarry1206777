@@ -18,7 +18,6 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
-import AdminPage from "./pages/AdminPage";
 import MonetizationPage from "./pages/MonetizationPage";
 import AdminRevenueDashboard from "./pages/AdminRevenueDashboard";
 import CampaignPage from "./pages/CampaignPage";
