@@ -306,14 +306,15 @@ export default function TemplatePage() {
         {/* ── 현재 선택 배지 ── */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
-          background: "linear-gradient(135deg, var(--bg2,#f5f5f0), var(--bg2,#f5f5f0))",
-          border: "1px solid var(--border,#d4d4d0)", borderRadius: 14,
+          background: "#fff",
+          border: "2px solid #e5e7eb", borderRadius: 14,
           padding: "14px 20px", marginBottom: 32,
           animation: "fadeUp 0.4s ease 0.1s both",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <CheckCircle2 size={18} color="#22c55e" />
-            <span style={{ fontSize: "0.95rem" }}>
+            <span style={{ fontSize: "0.95rem", color: "#1a1a1a", fontWeight: 500 }}>
               선택된 템플릿: <strong style={{ color: "var(--brand,#c8102e)" }}>{selectedTpl?.name}</strong>
             </span>
             <span style={{ fontSize: "0.75rem", padding: "2px 8px", borderRadius: 20, background: selectedTpl?.grad, color: selectedTpl?.accent, fontWeight: 700 }}>
@@ -363,7 +364,7 @@ export default function TemplatePage() {
 
               {/* 태그 */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <span style={{ fontWeight: 800, fontSize: "1rem" }}>{t.name}</span>
+                <span style={{ fontWeight: 800, fontSize: "1rem", color: "var(--fg,#1a1a1a)" }}>{t.name}</span>
                 <span style={{ fontSize: "0.7rem", padding: "2px 7px", borderRadius: 20, background: t.grad, color: t.accent, fontWeight: 700 }}>{t.tag}</span>
               </div>
 
@@ -440,7 +441,7 @@ export default function TemplatePage() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: "#1a1a1a", color: "#fff" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: "1.1rem" }}>{TEMPLATES.find(t => t.id === previewId)?.emoji}</span>
-                <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{TEMPLATES.find(t => t.id === previewId)?.name} 미리보기</span>
+                <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "#ffffff" }}>{TEMPLATES.find(t => t.id === previewId)?.name} 미리보기</span>
               </div>
               <button onClick={() => setPreviewId(null)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 4 }}>
                 <X size={18} />
