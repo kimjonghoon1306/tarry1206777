@@ -11,9 +11,10 @@ const KV_URL = process.env.KV_REST_API_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN;
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || process.env.JWT_SECRET || "blogauto-pro-auth-secret-v1";
 
-// ── KV 헬퍼 ──────────────────────────────────────────
+// ── KV 헬퍼 (KV 미설정 시 인메모리 폴백) ──────────────
+const _mem = {};
 async function kvGet(key) {
-  if (!KV_URL || !KV_TOKEN) return null;
+  if (!KV_URL || !KV_TOKEN) return _mem[key] ?? null;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await fetch(`${KV_URL}/get/${encodeURIComponent(key)}`, {
@@ -38,7 +39,8 @@ async function kvGet(key) {
 }
 
 async function kvSet(key, value) {
-  if (!KV_URL || !KV_TOKEN) return false;
+  _mem[key] = value;
+  if (!KV_URL || !KV_TOKEN) return true;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const serialized = JSON.stringify(value);
