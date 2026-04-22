@@ -980,10 +980,17 @@ Create a hyper-realistic blog thumbnail image prompt for this topic.
 RULES:
 - English ONLY
 - Start with: "A hyper-realistic cinematic close-up of"
-- Describe the most visually representative object or scene for the topic
+- Analyze the topic carefully and choose the MOST SPECIFIC visual:
+  * If topic = product/supplement/pill/capsule/cream/device → show the actual product bottle or package on clean background
+  * If topic = food/recipe/restaurant/cafe → show the plated dish or drink
+  * If topic = travel/place/landmark → show the scenic location or architecture  
+  * If topic = finance/investment/stock → show coins, charts, or money objects
+  * If topic = health/exercise/fitness → show exercise equipment or healthy lifestyle objects
+  * If topic = technology/app/software → show a device screen or tech object
+  * Otherwise → show the most iconic physical object related to the topic
 - NO people, NO faces, NO persons, NO hands, NO text, NO letters
-- Include: natural lighting, clean background, vibrant colors
-- Max 20 words total
+- Include: studio lighting, clean background, sharp focus, vibrant colors
+- Max 25 words total
 - Output the prompt only, nothing else
 Topic: "${p}"`;
 
