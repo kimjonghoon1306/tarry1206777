@@ -1022,7 +1022,9 @@ export default function DeploymentPage() {
     // ── 템플릿 선택 분기 ──────────────────────────────
     const selectedTemplate = localStorage.getItem("blogauto_template") || "minimal";
     if (selectedTemplate !== "minimal") {
-      const rawContent = blocks
+      // blocks join시 마커 깨짐 방지: localStorage 원본 content 우선 사용
+      const savedRaw = safeParseJSON<Record<string, any>>(CONTENT_KEY, {});
+      const rawContent: string = savedRaw?.content || blocks
         .filter(b => b.type === "text")
         .map(b => (b as { type: "text"; id: string; content: string }).content)
         .join("\n\n");
