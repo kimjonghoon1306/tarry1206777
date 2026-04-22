@@ -34,9 +34,25 @@ function extractRefs(text: string): { name: string; desc: string; url: string }[
     if (/^LINK\d+:/.test(line)) {
       const parts = line.replace(/^LINK\d+:\s*/, "").split("|");
       if (parts.length >= 3) refs.push({ name: parts[0].trim(), desc: parts[1].trim(), url: parts[2].trim() });
+      else if (parts.length === 2) refs.push({ name: parts[0].trim(), desc: parts[1].trim(), url: "" });
     }
   }
   return refs;
+}
+
+function extractRelated(text: string): { title: string; desc: string }[] {
+  const match = text.match(/\[관련글시작\]([\s\S]*?)\[관련글끝\]/);
+  if (!match) return [];
+  const related: { title: string; desc: string }[] = [];
+  const lines = match[1].split("\n").map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    if (/^POST\d+:/.test(line)) {
+      const parts = line.replace(/^POST\d+:\s*/, "").split("|");
+      if (parts.length >= 2) related.push({ title: parts[0].trim(), desc: parts[1].trim() });
+      else if (parts.length === 1) related.push({ title: parts[0].trim(), desc: "" });
+    }
+  }
+  return related;
 }
 
 function getBody(text: string): string {
@@ -80,6 +96,22 @@ export const TEMPLATES = [
 
 // ── HTML 빌더들 ──────────────────────────────────────────
 
+// 공통 관련글 렌더러
+function buildRelated(related: { title: string; desc: string }[], accentColor: string, bgColor: string): string {
+  if (!related.length) return "";
+  let h = `<div style="margin-top:2.5rem;padding-top:1.5rem;border-top:2px solid ${accentColor}33;">`;
+  h += `<h3 style="font-size:0.95rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${accentColor};margin-bottom:14px;">📌 관련 글</h3>`;
+  h += `<div style="display:flex;flex-direction:column;gap:10px;">`;
+  for (const r of related) {
+    h += `<div style="background:${bgColor};border-left:3px solid ${accentColor};border-radius:0 8px 8px 0;padding:12px 16px;">`;
+    h += `<p style="font-weight:700;font-size:0.93rem;margin-bottom:3px;">${r.title}</p>`;
+    if (r.desc) h += `<p style="font-size:0.82rem;color:#6b7280;margin:0;">${r.desc}</p>`;
+    h += `</div>`;
+  }
+  h += `</div></div>`;
+  return h;
+}
+
 // 공통 목차 생성 함수
 function buildToc(blocks: Block[], accentColor: string, bgColor: string, borderColor: string, textColor: string): string {
   const headings = blocks.filter(b => b.type === "h2");
@@ -95,7 +127,7 @@ function buildToc(blocks: Block[], accentColor: string, bgColor: string, borderC
   return toc;
 }
 
-function buildMinimal(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>): string {
+function buildMinimal(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
   const bx: Record<string, string> = { tip: "#f0faf4|#22c55e|💡 팁", warning: "#fff7ed|#f97316|⚠️ 주의", important: "#fef2f2|#ef4444|🚨 중요" };
   let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:32px 24px;background:#fff;color:#1a1a1a;line-height:1.85;">`;
   h += `<h1 style="font-size:2rem;font-weight:900;border-bottom:2px solid #1a1a1a;padding-bottom:16px;margin-bottom:20px;">${title}</h1>`;
@@ -108,10 +140,11 @@ function buildMinimal(title: string, blocks: Block[], faqs: ReturnType<typeof ex
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;border-top:2px solid #1a1a1a;padding-top:1.5rem;"><h3 style="font-size:1.1rem;font-weight:800;margin-bottom:1rem;">자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;"><p style="font-weight:700;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#555;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem;"><h4 style="font-size:0.9rem;font-weight:700;color:#888;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:8px;font-size:0.9rem;"><a href="${r.url}" style="color:#2563eb;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
+  h += buildRelated(related, "#1a1a1a", "#f5f5f5");
   return h + `</div>`;
 }
 
-function buildCard(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>): string {
+function buildCard(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
   let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:740px;margin:0 auto;padding:32px 20px;background:#f0f6ff;color:#1a1a1a;line-height:1.85;">`;
   h += `<h1 style="font-size:1.9rem;font-weight:900;color:#1e3a8a;text-align:center;margin-bottom:20px;padding:24px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(37,99,235,0.12);">${title}</h1>`;
   h += buildToc(blocks, "#2563eb", "#eff6ff", "#bfdbfe", "#1e3a8a");
@@ -125,10 +158,11 @@ function buildCard(title: string, blocks: Block[], faqs: ReturnType<typeof extra
   flush();
   if (faqs.length) { h += `<div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(37,99,235,0.1);padding:20px 24px;margin-bottom:20px;"><h3 style="font-size:1.1rem;font-weight:800;color:#2563eb;margin-bottom:16px;">❓ 자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:14px;background:#f0f6ff;border-radius:8px;padding:12px 16px;"><p style="font-weight:700;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#475569;font-size:0.98rem;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="background:#fff;border-radius:14px;padding:16px 24px;margin-bottom:20px;"><h4 style="font-size:0.9rem;font-weight:700;color:#94a3b8;margin-bottom:10px;">📎 참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.9rem;"><a href="${r.url}" style="color:#2563eb;font-weight:600;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
+  h += buildRelated(related, "#2563eb", "#eff6ff");
   return h + `</div>`;
 }
 
-function buildMagazine(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>): string {
+function buildMagazine(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
   let h = `<div style="font-family:'Noto Serif KR','Georgia',serif;max-width:720px;margin:0 auto;padding:40px 24px;background:#faf8f5;color:#1a1a1a;line-height:1.9;">`;
   h += `<div style="border-top:4px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:4px 0;margin-bottom:24px;"></div>`;
   h += `<h1 style="font-size:2.2rem;font-weight:900;line-height:1.25;margin-bottom:8px;">${title}</h1>`;
@@ -142,10 +176,11 @@ function buildMagazine(title: string, blocks: Block[], faqs: ReturnType<typeof e
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;"><div style="border-top:3px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:4px 0;margin-bottom:16px;"></div><h3 style="font-size:1rem;font-weight:800;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1rem;">FAQ</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid #e5e0d8;"><p style="font-weight:700;font-family:'Noto Sans KR',sans-serif;margin-bottom:6px;">Q. ${f.q}</p><p style="color:#666;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:1.5rem;border-top:1px solid #ccc;padding-top:1rem;"><h4 style="font-size:0.8rem;font-weight:700;letter-spacing:0.15em;color:#888;font-family:'Noto Sans KR',sans-serif;margin-bottom:0.75rem;">REFERENCES</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" style="color:#c8102e;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
+  h += buildRelated(related, "#c8102e", "#fff8f8");
   return h + `</div>`;
 }
 
-function buildDark(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>): string {
+function buildDark(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
   let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:36px 24px;background:#0f0f1a;color:#e8e8f0;line-height:1.85;">`;
   h += `<h1 style="font-size:1.9rem;font-weight:900;color:#ffffff;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e94560;">${title}</h1>`;
   h += buildToc(blocks, "#e94560", "#1a1a2e", "#333366", "#c8c8d8");
@@ -157,10 +192,11 @@ function buildDark(title: string, blocks: Block[], faqs: ReturnType<typeof extra
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;border-top:1px solid #333;padding-top:1.5rem;"><h3 style="font-size:1rem;font-weight:700;color:#e94560;margin-bottom:1rem;">자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;background:#1a1a2e;padding:14px 18px;border-radius:8px;"><p style="font-weight:700;color:#fff;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#aaa;font-size:0.97rem;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:1.5rem;border-top:1px solid #333;padding-top:1rem;"><h4 style="font-size:0.85rem;color:#666;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" style="color:#e94560;">${r.name}</a> <span style="color:#666;">— ${r.desc}</span></div>`; h += `</div>`; }
+  h += buildRelated(related, "#e94560", "#1a1a2e");
   return h + `</div>`;
 }
 
-function buildWarm(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>): string {
+function buildWarm(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
   let h = `<div style="font-family:'Noto Serif KR','Georgia',serif;max-width:720px;margin:0 auto;padding:36px 24px;background:#fdf6ec;color:#3d2b1f;line-height:1.9;">`;
   h += `<h1 style="font-size:1.9rem;font-weight:900;color:#7c3e0e;margin-bottom:20px;padding-bottom:14px;border-bottom:2px dashed #e5c18e;">${title}</h1>`;
   h += buildToc(blocks, "#d97706", "#fffbeb", "#fde68a", "#7c3e0e");
@@ -172,10 +208,11 @@ function buildWarm(title: string, blocks: Block[], faqs: ReturnType<typeof extra
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;background:#fff8e8;border-radius:16px;padding:20px 24px;"><h3 style="font-size:1.05rem;font-weight:800;color:#92400e;margin-bottom:1rem;">🙋 자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px dashed #e5c18e;"><p style="font-weight:700;color:#7c3e0e;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#5c3b1e;font-size:0.97rem;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px dashed #e5c18e;"><h4 style="font-size:0.85rem;color:#a16207;margin-bottom:0.75rem;">📚 참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" style="color:#d97706;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
+  h += buildRelated(related, "#d97706", "#fffbeb");
   return h + `</div>`;
 }
 
-function buildColorful(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>): string {
+function buildColorful(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
   const palette = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#0891b2"];
   let ci = 0;
   let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:32px 20px;background:#f8f9ff;color:#1a1a1a;line-height:1.85;">`;
@@ -189,10 +226,11 @@ function buildColorful(title: string, blocks: Block[], faqs: ReturnType<typeof e
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;"><h3 style="font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,#7c3aed,#2563eb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem;">자주 묻는 질문</h3>`; faqs.forEach((f, i) => { const c = palette[i % palette.length]; h += `<div style="margin-bottom:1rem;background:#fff;border-radius:10px;padding:14px 18px;border-left:4px solid ${c};box-shadow:0 2px 8px rgba(0,0,0,0.06);"><p style="font-weight:700;color:${c};margin-bottom:4px;">Q. ${f.q}</p><p style="color:#555;font-size:0.97rem;">A. ${f.a}</p></div>`; }); h += `</div>`; }
   if (refs.length) { h += `<div style="margin-top:1.5rem;padding-top:1rem;border-top:2px dashed #e5e7eb;"><h4 style="font-size:0.85rem;font-weight:700;color:#888;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" style="color:#7c3aed;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
+  h += buildRelated(related, "#7c3aed", "#f5f3ff");
   return h + `</div>`;
 }
 
-function buildNewsletter(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>): string {
+function buildNewsletter(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>): string {
   let h = `<div style="font-family:'Noto Sans KR',Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;">`;
   h += `<div style="background:#059669;padding:24px 32px;"><h1 style="font-size:1.6rem;font-weight:900;color:#ffffff;margin:0;line-height:1.3;">${title}</h1></div>`;
   h += `<div style="padding:28px 32px;background:#f5f7fa;">`;
@@ -206,6 +244,7 @@ function buildNewsletter(title: string, blocks: Block[], faqs: ReturnType<typeof
   if (sec) h += `</div>`;
   if (faqs.length) { h += `<div style="background:#fff;border-radius:8px;padding:20px 24px;margin-bottom:16px;border-top:3px solid #059669;"><h3 style="font-size:1rem;font-weight:800;color:#059669;margin:0 0 14px;">FAQ</h3>`; for (const f of faqs) h += `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #e5e7eb;"><p style="font-weight:700;font-size:0.93rem;color:#111;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#6b7280;font-size:0.91rem;">A. ${f.a}</p></div>`; h += `</div>`; }
   if (refs.length) { h += `<div style="background:#fff;border-radius:8px;padding:16px 24px;margin-bottom:16px;"><h4 style="font-size:0.8rem;font-weight:700;color:#9ca3af;margin-bottom:8px;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:5px;font-size:0.85rem;"><a href="${r.url}" style="color:#059669;">${r.name}</a> — ${r.desc}</div>`; h += `</div>`; }
+  if (related.length) { h += `<div style="padding:0 32px 20px;background:#f5f7fa;">${buildRelated(related, "#059669", "#ecfdf5")}</div>`; }
   h += `</div><div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb;font-size:0.78rem;color:#9ca3af;">BlogAuto Pro로 작성된 콘텐츠</div>`;
   return h + `</div>`;
 }
@@ -214,16 +253,17 @@ export function buildTemplateHtml(templateId: string, title: string, rawContent:
   const body = getBody(rawContent);
   const faqs = extractFaq(rawContent);
   const refs = extractRefs(rawContent);
+  const related = extractRelated(rawContent);
   const blocks = parseBodyBlocks(body);
   switch (templateId) {
-    case "minimal":    return buildMinimal(title, blocks, faqs, refs);
-    case "card":       return buildCard(title, blocks, faqs, refs);
-    case "magazine":   return buildMagazine(title, blocks, faqs, refs);
-    case "dark":       return buildDark(title, blocks, faqs, refs);
-    case "warm":       return buildWarm(title, blocks, faqs, refs);
-    case "colorful":   return buildColorful(title, blocks, faqs, refs);
-    case "newsletter": return buildNewsletter(title, blocks, faqs, refs);
-    default:           return buildMinimal(title, blocks, faqs, refs);
+    case "minimal":    return buildMinimal(title, blocks, faqs, refs, related);
+    case "card":       return buildCard(title, blocks, faqs, refs, related);
+    case "magazine":   return buildMagazine(title, blocks, faqs, refs, related);
+    case "dark":       return buildDark(title, blocks, faqs, refs, related);
+    case "warm":       return buildWarm(title, blocks, faqs, refs, related);
+    case "colorful":   return buildColorful(title, blocks, faqs, refs, related);
+    case "newsletter": return buildNewsletter(title, blocks, faqs, refs, related);
+    default:           return buildMinimal(title, blocks, faqs, refs, related);
   }
 }
 
