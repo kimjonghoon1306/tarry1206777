@@ -9,7 +9,7 @@ const KV_URL = process.env.KV_REST_API_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN;
 
 async function kvGet(key) {
-  if (!KV_URL || !KV_TOKEN) return null;
+  if (!KV_URL || !KV_TOKEN) return _mem[key] ?? null;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await fetch(`${KV_URL}/get/${encodeURIComponent(key)}`, {
@@ -55,7 +55,8 @@ async function kvSet(key, value) {
 }
 
 async function kvSetSmall(key, value) {
-  if (!KV_URL || !KV_TOKEN) return false;
+  _mem[key] = value;
+  if (!KV_URL || !KV_TOKEN) return true;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}`, {
@@ -186,13 +187,15 @@ const mkToken = (userId) => signTokenPayload({ uid: userId, iat: Date.now(), exp
 
 // ── 관리자 초기화 ──
 async function initAdmin() {
-  const exists = await kvExists("user:admin");
-  if (exists !== false) return; // null(KV오류) or true(존재) → 건드리지 않음
+  const existing = await getUser("admin");
+  if (existing && existing.password) return;
+  const pwHash = b64("123456");
   await setUser("admin", {
     profile: { name: "관리자", email: "admin@blogauto.pro", role: "admin", createdAt: new Date().toISOString() },
-    password: b64("123456"),
+    password: pwHash,
   });
-  await kvSetSmall("admin:pw", b64("123456"));
+  _mem["admin:pw"] = pwHash;
+  await kvSetSmall("admin:pw", pwHash);
   await setEmailIndex("admin@blogauto.pro", "admin");
 }
 
