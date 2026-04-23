@@ -147,6 +147,15 @@ const API_SECTIONS = [
     ],
   },
   {
+    group: "keyword", title: "구글 서치콘솔", icon: "Search", color: "#4285F4", grad: "linear-gradient(135deg,#4285F4,#34A853)",
+    desc: "내 블로그 유입 키워드 수집",
+    fields: [
+      { label: "사이트 URL", key: "gsc_site_url", placeholder: "sc-domain:blogautopro.com", link: "https://search.google.com/search-console", badge: "", badgeColor: "" },
+      { label: "서비스 계정 이메일", key: "gsc_client_email", placeholder: "xxx@xxx.iam.gserviceaccount.com", link: "", badge: "", badgeColor: "" },
+      { label: "Private Key (JSON)", key: "gsc_private_key", placeholder: "-----BEGIN PRIVATE KEY-----...", link: "", badge: "", badgeColor: "" },
+    ],
+  },
+  {
     group: "platform", title: "블로거 (Blogger)", icon: "FileText", color: "#FF5722", grad: "linear-gradient(135deg,#FF5722,#E64A19)",
     desc: "구글 블로거 자동 발행 · 애드센스 최적화",
     fields: [
