@@ -325,6 +325,7 @@ export default function ContentGenerator() {
       localStorage.removeItem("blogauto_deploy_images");
 
       toast.success(`생성 완료! 총 ${content.length.toLocaleString()}자`, { id: "generate" });
+
     } catch (e: any) {
       clearInterval(interval);
       toast.error(`생성 실패: ${e.message}`, { id: "generate" });
