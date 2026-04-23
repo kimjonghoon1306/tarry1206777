@@ -427,12 +427,13 @@ function buildAdsenseSafePrompt(basePrompt: string): string {
 }
 
 const STATS_KEY = "img_stats";
-function loadStats() {
+type StatsType = { todayCount: number; todayDate: string; monthCount: number; monthKey: string; times: number[] };
+function loadStats(): StatsType {
   try {
     const raw = localStorage.getItem(STATS_KEY);
-    if (!raw) return { todayCount: 0, todayDate: "", monthCount: 0, monthKey: "", times: [] as number[] };
-    return JSON.parse(raw);
-  } catch { return { todayCount: 0, todayDate: "", monthCount: 0, monthKey: "", times: [] as number[] }; }
+    if (!raw) return { todayCount: 0, todayDate: "", monthCount: 0, monthKey: "", times: [] };
+    return JSON.parse(raw) as StatsType;
+  } catch { return { todayCount: 0, todayDate: "", monthCount: 0, monthKey: "", times: [] }; }
 }
 function saveStats(s: ReturnType<typeof loadStats>) { try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch {} }
 function getTodayKey() { return new Date().toISOString().slice(0, 10); }
