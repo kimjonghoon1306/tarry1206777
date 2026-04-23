@@ -87,7 +87,7 @@ function safeParseJSON<T>(key: string, fallback: T): T {
 // renderPreview — 마크다운 → JSX (순수 함수, 컴포넌트 밖)
 // ─────────────────────────────────────────────────────────
 
-function renderPreview(text: string): JSX.Element[] {
+function renderPreview(text: string): React.ReactElement[] {
   return text.split("\n").map((line, i) => {
     if (line.startsWith("# "))
       return <h1 key={i} className="text-xl font-bold mt-3 mb-2 text-foreground leading-tight">{line.slice(2)}</h1>;
@@ -1474,10 +1474,10 @@ export default function DeploymentPage() {
       toast.error("설정에서 쿠팡파트너스 API 키를 먼저 입력해주세요");
       return;
     }
-    if (!keyword && !title) { toast.error("키워드나 제목이 없습니다"); return; }
+    const searchKeyword = (localStorage.getItem("blogauto_content") ? JSON.parse(localStorage.getItem("blogauto_content") || "{}").keyword || "" : "") || title;
+    if (!searchKeyword) { toast.error("키워드나 제목이 없습니다"); return; }
     setCoupangLoading(true);
     try {
-      const searchKeyword = keyword || title;
       const resp = await fetch("/api/coupang", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1748,12 +1748,6 @@ export default function DeploymentPage() {
           body: JSON.stringify({ action: "savePost", post: postData }),
         }).catch(() => {});
 
-        // ✅ notion 워크스페이스에도 저장
-        fetch("/api/notion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ action: "savePost", data: postData }),
-        }).catch(() => {});
 
         // 발행 카운트 증가
         const cnt = parseInt(localStorage.getItem("blogauto_publish_count") || "0");
