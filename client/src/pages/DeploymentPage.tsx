@@ -1748,6 +1748,13 @@ export default function DeploymentPage() {
           body: JSON.stringify({ action: "savePost", post: postData }),
         }).catch(() => {});
 
+        // ✅ notion 워크스페이스에도 저장
+        fetch("/api/notion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ action: "savePost", data: postData }),
+        }).catch(() => {});
+
         // 발행 카운트 증가
         const cnt = parseInt(localStorage.getItem("blogauto_publish_count") || "0");
         localStorage.setItem("blogauto_publish_count", String(cnt + 1));
