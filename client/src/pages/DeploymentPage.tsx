@@ -1025,6 +1025,32 @@ export default function DeploymentPage() {
   }
 
   // ── 콘텐츠 빌드 ──
+  // ── 수익화 설정 적용 (백링크/canonical) ──────────────
+  function applyMonetizationToHtml(html: string): string {
+    try {
+      const raw = localStorage.getItem("blogauto_monetization_v1");
+      const ms = raw ? JSON.parse(raw) : {};
+      const backlinkOn = ms?.backlink?.autoInsert !== false;
+      const domain = ms?.backlink?.primaryDomain || userGet("monetization_backlink_domain") || "";
+      const linkText = ms?.backlink?.linkText || "📌 원문 보기";
+      const position = ms?.backlink?.insertPosition || "bottom";
+      const canonicalOn = ms?.backlink?.canonical !== false;
+      let result = html;
+      if (backlinkOn && domain) {
+        const domainUrl = domain.startsWith("http") ? domain : `https://${domain}`;
+        const backlinkHtml = `<p style="font-size:13px;color:#64748b;margin:24px 0 8px;padding:16px;background:#f8fafc;border-left:3px solid #2563eb;border-radius:4px"><a href="${domainUrl}" target="_blank" rel="noopener" style="color:#2563eb;font-weight:700;text-decoration:none">${linkText}</a></p>`;
+        if (position === "top") result = backlinkHtml + result;
+        else if (position === "both") result = backlinkHtml + result + backlinkHtml;
+        else result = result + backlinkHtml;
+      }
+      if (canonicalOn && domain) {
+        const domainUrl = domain.startsWith("http") ? domain : `https://${domain}`;
+        result = `<link rel="canonical" href="${domainUrl}" />\n` + result;
+      }
+      return result;
+    } catch { return html; }
+  }
+
   function buildHtmlContent(): string {
     // ── 템플릿 선택 분기 ──────────────────────────────
     const selectedTemplate = localStorage.getItem("blogauto_template") || "minimal";
@@ -1037,7 +1063,8 @@ export default function DeploymentPage() {
       // rawContent 전체(FAQ/참고자료/관련글 포함)를 템플릿 HTML로 변환
       // buildTemplateHtml이 모든 섹션을 HTML로 렌더링하므로 그대로 발송
       const tplThumbnail = thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
-      return buildTemplateHtml(selectedTemplate, title, rawContent, tplThumbnail);
+      const tplHtml = buildTemplateHtml(selectedTemplate, title, rawContent, tplThumbnail);
+      return applyMonetizationToHtml(tplHtml);
     }
     // ── 기본(minimal) 은 기존 로직 그대로 ────────────
 
@@ -1409,6 +1436,33 @@ export default function DeploymentPage() {
 
     const tailHtml = faqHtml + refHtml + postHtml;
 
+    // ── 백링크 & Canonical 자동 삽입 ────────────────────
+    function applyMonetization(html: string): string {
+      let result = html;
+      try {
+        const raw = localStorage.getItem("blogauto_monetization_v1");
+        const ms = raw ? JSON.parse(raw) : {};
+        const backlinkOn = ms?.backlink?.autoInsert !== false;
+        const domain = ms?.backlink?.primaryDomain || userGet("monetization_backlink_domain") || "";
+        const linkText = ms?.backlink?.linkText || "📌 원문 보기";
+        const position = ms?.backlink?.insertPosition || "bottom";
+        const canonicalOn = ms?.backlink?.canonical !== false;
+
+        if (backlinkOn && domain) {
+          const domainUrl = domain.startsWith("http") ? domain : `https://${domain}`;
+          const backlinkHtml = `<p style="font-size:13px;color:#64748b;margin:24px 0 8px;padding:16px;background:#f8fafc;border-left:3px solid #2563eb;border-radius:4px"><a href="${domainUrl}" target="_blank" rel="noopener" style="color:#2563eb;font-weight:700;text-decoration:none">${linkText}</a></p>`;
+          if (position === "top") result = backlinkHtml + result;
+          else if (position === "both") result = backlinkHtml + result + backlinkHtml;
+          else result = result + backlinkHtml;
+        }
+        if (canonicalOn && domain) {
+          const domainUrl = domain.startsWith("http") ? domain : `https://${domain}`;
+          result = `<link rel="canonical" href="${domainUrl}" />\n` + result;
+        }
+      } catch {}
+      return result;
+    }
+
     // 목차를 썸네일(본문 첫 이미지) 아래로 이동
     // 첫 블록이 이미지면: 첫 이미지 -> 목차 -> 나머지 본문 순서
     if (tocHtml) {
@@ -1416,11 +1470,11 @@ export default function DeploymentPage() {
       const firstIsImage = firstBlock && (firstBlock.type === "image" || firstBlock.type === "image-pair");
       if (firstIsImage && parts.length > 0) {
         const [firstPart, ...restParts] = parts;
-        return firstPart + tocHtml + restParts.join("\n") + tailHtml;
+        return applyMonetization(firstPart + tocHtml + restParts.join("\n") + tailHtml);
       }
     }
 
-    return tocHtml + bodyHtml + tailHtml;
+    return applyMonetization(tocHtml + bodyHtml + tailHtml);
   }
 
   function buildFinalContent(): string {
@@ -1710,12 +1764,22 @@ export default function DeploymentPage() {
 
     setIsPublishing(true);
     toast.loading("발행 중...", { id: "publish" });
+
+    // ── 수익화 설정 읽기 (핑 발송용) ─────────────────────
+    let monetizationSettings: any = {};
+    try {
+      const raw = localStorage.getItem("blogauto_monetization_v1");
+      if (raw) monetizationSettings = JSON.parse(raw);
+    } catch {}
+    const pingEnabled = monetizationSettings?.ping?.enabled !== false;
+    const backlinkDomain = monetizationSettings?.backlink?.primaryDomain || userGet("monetization_backlink_domain") || "";
+    const activePingServers = (monetizationSettings?.ping?.servers || []).filter((s: any) => s.active).map((s: any) => s.url);
+
     try {
       for (const platformId of selectedPlatforms) {
         const platform = platforms.find((p) => p.id === platformId);
         if (!platform) continue;
         if (platform.type === "naver") {
-          // 네이버는 자동발행 불가 → 복사 방식으로 안내
           copyForNaver();
           toast.success("📋 네이버 블로그용 글이 복사됐어요! 네이버 블로그에서 붙여넣기하세요.", { duration: 5000 });
         } else if (platform.type === "blogger" || platform.type === "medium") {
@@ -1728,6 +1792,7 @@ export default function DeploymentPage() {
           await publishToWebhook(platformId, selectedCategories[platformId] || "");
         }
       }
+
       // 서버에 발행 글 저장 (대시보드 실시간 연동)
       const token = localStorage.getItem("ba_token");
       if (token) {
@@ -1748,10 +1813,24 @@ export default function DeploymentPage() {
           body: JSON.stringify({ action: "savePost", post: postData }),
         }).catch(() => {});
 
-
         // 발행 카운트 증가
         const cnt = parseInt(localStorage.getItem("blogauto_publish_count") || "0");
         localStorage.setItem("blogauto_publish_count", String(cnt + 1));
+      }
+
+      // ── 핑 발송 ─────────────────────────────────────────
+      if (pingEnabled && publishMode === "instant") {
+        const postUrl = backlinkDomain ? `https://${backlinkDomain}` : window.location.origin;
+        fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "sendPings",
+            title,
+            postUrl,
+            pingServers: activePingServers,
+          }),
+        }).catch(() => {});
       }
 
       toast.success(
