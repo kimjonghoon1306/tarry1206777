@@ -635,7 +635,17 @@ export default async function handler(req, res) {
       const payload = { iss: clientEmail, scope: "https://www.googleapis.com/auth/webmasters.readonly", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 };
       const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64url");
       const signingInput = `${b64url(header)}.${b64url(payload)}`;
-      const pem = (typeof privateKey === "string" ? privateKey : "").replace(/\\n/g, "\n");
+      let pem = (typeof privateKey === 'string' ? privateKey : '');
+      pem = pem.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n').replace(/\r/g, '').trim();
+      if (!pem.includes('-----BEGIN PRIVATE KEY-----')) {
+        pem = '-----BEGIN PRIVATE KEY-----\n' + pem + '\n-----END PRIVATE KEY-----';
+      }
+      const pemParts = pem.split('\n');
+      const pemHeader = pemParts[0];
+      const pemFooter = pemParts[pemParts.length - 1];
+      const pemBody = pemParts.slice(1, -1).join('').replace(/\s/g, '');
+      const pemChunked = pemBody.match(/.{1,64}/g)?.join('\n') || pemBody;
+      pem = pemHeader + '\n' + pemChunked + '\n' + pemFooter;
       const crypto = await import("crypto");
       const sign = crypto.createSign("RSA-SHA256");
       sign.update(signingInput);
