@@ -257,6 +257,16 @@ function AdminCustomWebhookSection() {
       localStorage.setItem("blogauto_deploy_platforms", JSON.stringify(updatedDeploy));
     } catch {}
 
+    // ✅ 서버에도 삭제 반영 (안 하면 로드 시 복원됨)
+    const adminTk = sessionStorage.getItem("bap_admin_auth") || "";
+    if (adminTk) {
+      fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminTk}` },
+        body: JSON.stringify({ action: "saveAdminGlobalSettings", settings: { admin_custom_list: JSON.stringify(updated) } }),
+      }).catch(() => {});
+    }
+
     toast.success("삭제됐어요");
   };
 
