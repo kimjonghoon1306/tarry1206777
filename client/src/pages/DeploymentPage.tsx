@@ -558,7 +558,7 @@ function PublishPanel({
           >
             <Zap
               className="w-5 h-5 mx-auto mb-1"
-              style={{ color: publishMode === "instant" ? "var(--color-emerald)" : "var(--muted-foreground)" }}
+              style={{ color: publishMode === "instant" ? "var(--color-emerald)" : "#facc15" }}
             />
             <div className="text-sm font-semibold text-foreground">즉시</div>
             <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
@@ -575,7 +575,7 @@ function PublishPanel({
           >
             <Calendar
               className="w-5 h-5 mx-auto mb-1"
-              style={{ color: publishMode === "scheduled" ? "var(--color-amber-brand)" : "var(--muted-foreground)" }}
+              style={{ color: publishMode === "scheduled" ? "var(--color-amber-brand)" : "#facc15" }}
             />
             <div className="text-sm font-semibold text-foreground">예약</div>
             <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
