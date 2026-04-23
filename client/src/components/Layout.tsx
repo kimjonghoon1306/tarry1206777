@@ -31,6 +31,7 @@ import {
   LogOut,
   Gift,
   Palette,
+  BookOpen,
 } from "lucide-react";
 import { clearUserLocalCache, loadNotificationsFromServer, markNotificationsRead } from "@/lib/user-storage";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ const NAV_ITEMS = [
   { path: "/keywords", icon: Search, label: "키워드 수집", labelEn: "Keywords", pink: false },
   { path: "/content", icon: FileText, label: "콘텐츠 생성", labelEn: "Content", pink: false },
   { path: "/template", icon: Palette, label: "템플릿 선택", labelEn: "Template", pink: false },
+  { path: "/notion",   icon: BookOpen, label: "내 워크스페이스", labelEn: "Workspace", pink: false },
   { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images", pink: false },
   { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy", pink: false },
   { path: "/campaigns", icon: Gift, label: "체험단 허브", labelEn: "Campaigns", pink: true },
