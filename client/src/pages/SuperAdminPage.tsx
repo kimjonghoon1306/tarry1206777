@@ -240,7 +240,7 @@ function AdminCustomWebhookSection() {
       }).catch(() => {});
     }
     setShowAdd(false);
-    setUrl(""); setAuthKey(""); setAuthHeader("Authorization"); setCustomDomain(""); setCategoryInput("");
+    setUrl(""); setAuthKey(""); setAuthHeader("Authorization"); setCustomDomain("");
     toast.success("✅ 웹사이트 등록됐어요!");
   };
 
