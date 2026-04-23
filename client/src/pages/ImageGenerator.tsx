@@ -1031,7 +1031,9 @@ Blog title: "${p}"`;
 
         if (generatedPrompt && generatedPrompt.length > 5 && /[a-zA-Z]/.test(generatedPrompt)) {
           const clean = generatedPrompt.replace(/^["'`→\-:]+\s*/g, "").replace(/["'`]+$/g, "").trim();
-          return `${clean}, ${NP}, natural real-world scene, editorial blog photo, 8K ultra realistic`;
+          const isKorean = /서울|한국|부산|제주|인천|대구|광주|수원|시티|시내|버스|지하철|골목|마을|동네|한옥|광화문|명동|홍대|강남|이태원|종로/.test(p);
+          const koTag = isKorean ? "Seoul Korea, Hangul signs, Korean city, " : "";
+          return `${koTag}${clean}, ${NP}, natural real-world scene, editorial blog photo, 8K ultra realistic`;
         }
       } catch {}
     }
