@@ -308,7 +308,8 @@ export default function ContentGenerator() {
         title.trim() || undefined,
         selectedLang,
         parseInt(minChars),
-        stylePrompt
+        stylePrompt,
+        userGet(SETTINGS_KEYS.AD_PLATFORM) || ""
       );
       clearInterval(interval);
 
