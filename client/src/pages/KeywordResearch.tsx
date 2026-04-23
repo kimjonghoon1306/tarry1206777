@@ -732,7 +732,7 @@ export default function KeywordResearch() {
               style={{background:isCollecting?"var(--muted)":"var(--color-emerald)",color:"white"}}
               onClick={()=>doCollect()} disabled={isCollecting}>
               {isCollecting?<RefreshCw className="w-4 h-4 animate-spin"/>:<Zap className="w-4 h-4"/>}
-              {isCollecting?"수집 중...":"네이버 키워드 수집"}
+              {isCollecting?"수집 중...":"키워드 수집"}
             </Button>
           </div>
         </div>
@@ -890,104 +890,110 @@ export default function KeywordResearch() {
 
         {/* 구글 서치콘솔 유입 키워드 */}
         <style>{`
-          @keyframes gscFloat {
-            0%,100% { transform: translateY(0) scale(1); box-shadow: 0 4px 20px rgba(250,204,21,0.5); }
-            50% { transform: translateY(-6px) scale(1.04); box-shadow: 0 12px 32px rgba(250,204,21,0.7); }
-          }
-          @keyframes gscPulse {
-            0%,100% { opacity: 1; }
-            50% { opacity: 0.7; }
-          }
-          @keyframes gscShimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-          }
-          @keyframes gscSpin {
-            to { transform: rotate(360deg); }
-          }
-          @keyframes gscFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
+          @keyframes gscFloat { 0%,100%{transform:translateY(0) scale(1);box-shadow:0 4px 20px rgba(250,204,21,0.5)} 50%{transform:translateY(-6px) scale(1.04);box-shadow:0 12px 32px rgba(250,204,21,0.7)} }
+          @keyframes gscPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+          @keyframes gscShimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+          @keyframes gscSpin { to{transform:rotate(360deg)} }
+          @keyframes gscFadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         `}</style>
-        <div className="rounded-2xl overflow-hidden"
-          style={{background:"linear-gradient(135deg,rgba(66,133,244,0.08),rgba(52,168,83,0.06))",border:"1.5px solid rgba(66,133,244,0.25)",boxShadow:"0 4px 24px rgba(66,133,244,0.1)"}}>
-          {/* 헤더 */}
-          <div className="flex items-center justify-between px-5 py-4"
-            style={{borderBottom:"1px solid rgba(66,133,244,0.15)",background:"rgba(66,133,244,0.05)"}}>
+        <div className="rounded-2xl overflow-hidden" style={{background:"linear-gradient(135deg,rgba(66,133,244,0.06),rgba(52,168,83,0.04))",border:"1.5px solid rgba(66,133,244,0.2)",boxShadow:"0 4px 24px rgba(66,133,244,0.08)"}}>
+          <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:"1px solid rgba(66,133,244,0.12)",background:"rgba(66,133,244,0.04)"}}>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0"
-                style={{background:"linear-gradient(135deg,#4285F4,#34A853)",boxShadow:"0 4px 14px rgba(66,133,244,0.4)"}}>G</div>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0" style={{background:"linear-gradient(135deg,#4285F4,#34A853)",boxShadow:"0 4px 14px rgba(66,133,244,0.35)"}}>G</div>
               <div>
                 <div className="font-bold text-foreground text-sm">구글 서치콘솔 유입 키워드</div>
                 <div className="text-xs" style={{color:"var(--muted-foreground)"}}>최근 28일 실제 검색 유입 키워드</div>
               </div>
             </div>
-            {/* 불러오기 버튼 */}
-            <button
-              onClick={loadGscKeywords}
-              disabled={isGscLoading}
-              style={{
-                background: isGscLoading ? "rgba(250,204,21,0.3)" : "linear-gradient(135deg,#facc15,#f59e0b)",
-                color: "#000",
-                border: "none",
-                borderRadius: "14px",
-                padding: "10px 20px",
-                fontSize: "0.82rem",
-                fontWeight: 800,
-                cursor: isGscLoading ? "not-allowed" : "pointer",
-                position: "relative",
-                overflow: "hidden",
-                display: "flex",
-                alignItems: "center",
-                gap: "7px",
-                animation: isGscLoading ? "none" : "gscFloat 2.5s ease-in-out infinite",
-                boxShadow: "0 4px 20px rgba(250,204,21,0.5)",
-                letterSpacing: "-0.01em",
-                flexShrink: 0,
-              }}>
-              {!isGscLoading && (
-                <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)",animation:"gscShimmer 2s infinite",pointerEvents:"none"}}/>
-              )}
-              {isGscLoading ? (
-                <>
-                  <span style={{width:14,height:14,border:"2px solid rgba(0,0,0,0.3)",borderTop:"2px solid #000",borderRadius:"50%",display:"inline-block",animation:"gscSpin 0.7s linear infinite",flexShrink:0}}/>
-                  불러오는 중...
-                </>
-              ) : gscLoaded ? "🔄 새로고침" : "✨ 불러오기"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => { const el = document.getElementById("gscGuidePopup"); if(el) el.style.display = el.style.display==="none"?"flex":"none"; }}
+                className="text-xs px-2.5 py-1.5 rounded-lg font-semibold"
+                style={{background:"rgba(66,133,244,0.1)",color:"#4285F4",border:"1px solid rgba(66,133,244,0.2)"}}>
+                ❓ 사용방법
+              </button>
+              <button onClick={loadGscKeywords} disabled={isGscLoading}
+                style={{background:isGscLoading?"rgba(250,204,21,0.3)":"linear-gradient(135deg,#facc15,#f59e0b)",color:"#000",border:"none",borderRadius:"14px",padding:"10px 20px",fontSize:"0.82rem",fontWeight:800,cursor:isGscLoading?"not-allowed":"pointer",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",gap:"7px",animation:isGscLoading?"none":"gscFloat 2.5s ease-in-out infinite",boxShadow:"0 4px 20px rgba(250,204,21,0.45)",letterSpacing:"-0.01em",flexShrink:0}}>
+                {!isGscLoading && <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)",animation:"gscShimmer 2s infinite",pointerEvents:"none"}}/>}
+                {isGscLoading?(<><span style={{width:14,height:14,border:"2px solid rgba(0,0,0,0.3)",borderTop:"2px solid #000",borderRadius:"50%",display:"inline-block",animation:"gscSpin 0.7s linear infinite",flexShrink:0}}/>불러오는 중...</>):gscLoaded?"🔄 새로고침":"✨ 불러오기"}
+              </button>
+            </div>
           </div>
-
+          {/* 사용방법 팝업 */}
+          <div id="gscGuidePopup" style={{display:"none",position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(8px)",alignItems:"center",justifyContent:"center",padding:"16px"}}>
+            <div className="rounded-2xl p-6 w-full max-w-lg" style={{background:"var(--card)",border:"1px solid var(--border)",boxShadow:"0 24px 80px rgba(0,0,0,0.6)",maxHeight:"90vh",overflowY:"auto"}}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="font-bold text-lg" style={{letterSpacing:"-0.03em"}}>📖 GSC 사용방법</div>
+                <button onClick={() => { const el = document.getElementById("gscGuidePopup"); if(el) el.style.display="none"; }} className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background:"var(--card2)",color:"var(--muted-foreground)"}}>✕</button>
+              </div>
+              <div className="space-y-3 text-sm" style={{lineHeight:1.8}}>
+                <div className="p-3 rounded-xl" style={{background:"rgba(66,133,244,0.06)",border:"1px solid rgba(66,133,244,0.15)"}}>
+                  <div className="font-bold mb-1" style={{color:"#4285F4"}}>이 기능이 뭔가요?</div>
+                  <div style={{color:"var(--muted-foreground)"}}>구글 서치콘솔에 등록한 내 블로그에 <strong>구글 검색으로 실제 유입된 키워드</strong>를 보여줘요. 어떤 키워드로 방문자가 오는지 확인하고 그 키워드로 글을 더 써서 트래픽을 늘릴 수 있어요.</div>
+                </div>
+                <div className="font-bold" style={{color:"var(--foreground)"}}>🔧 설정 방법</div>
+                <div className="space-y-2" style={{color:"var(--muted-foreground)"}}>
+                  <div className="flex gap-2"><span className="font-bold flex-shrink-0" style={{color:"#4285F4"}}>1.</span><span>구글 서치콘솔에 내 블로그 등록 및 소유권 인증 완료</span></div>
+                  <div className="flex gap-2"><span className="font-bold flex-shrink-0" style={{color:"#4285F4"}}>2.</span><span>Google Cloud Console에서 Search Console API 활성화</span></div>
+                  <div className="flex gap-2"><span className="font-bold flex-shrink-0" style={{color:"#4285F4"}}>3.</span><span>서비스 계정 생성 → JSON 키 파일 다운로드</span></div>
+                  <div className="flex gap-2"><span className="font-bold flex-shrink-0" style={{color:"#4285F4"}}>4.</span><span>서치콘솔 설정 → 사용자 추가 → 서비스 계정 이메일 입력 → 권한 전체</span></div>
+                  <div className="flex gap-2"><span className="font-bold flex-shrink-0" style={{color:"#4285F4"}}>5.</span><span>BlogAuto Pro 설정 → 구글 서치콘솔 → JSON 파일 업로드 → 저장</span></div>
+                </div>
+                <div className="p-3 rounded-xl" style={{background:"rgba(52,168,83,0.08)",border:"1px solid rgba(52,168,83,0.2)"}}>
+                  <div className="font-bold" style={{color:"#34A853"}}>✅ 설정 완료 후 불러오기 버튼을 누르면 키워드가 나와요!</div>
+                </div>
+              </div>
+            </div>
+          </div>
           {/* 내용 */}
           <div className="px-5 py-4">
             {!gscLoaded && !isGscLoading && (
-              <div className="text-center py-6">
-                <div style={{fontSize:"2rem",marginBottom:8,animation:"gscPulse 2s infinite"}}>🔍</div>
-                <p className="text-sm font-semibold text-foreground mb-1">구글 유입 키워드 확인</p>
-                <p className="text-xs" style={{color:"var(--muted-foreground)"}}>위 버튼을 눌러 실제 검색 유입 키워드를 가져오세요</p>
+              <div className="text-center py-8">
+                <div style={{fontSize:"2.5rem",marginBottom:10,animation:"gscPulse 2s infinite"}}>🔍</div>
+                <p className="text-sm font-bold text-foreground mb-1">구글 유입 키워드 확인</p>
+                <p className="text-xs" style={{color:"var(--muted-foreground)"}}>설정에서 GSC 연동 후 불러오기를 눌러주세요</p>
               </div>
             )}
             {isGscLoading && (
-              <div className="text-center py-6">
-                <div style={{fontSize:"2rem",marginBottom:8,animation:"gscPulse 1s infinite"}}>⏳</div>
-                <p className="text-sm font-semibold text-foreground">서치콘솔 데이터 분석 중...</p>
+              <div className="text-center py-8">
+                <div style={{fontSize:"2.5rem",marginBottom:10,animation:"gscPulse 1s infinite"}}>⏳</div>
+                <p className="text-sm font-bold text-foreground">서치콘솔 분석 중...</p>
               </div>
             )}
             {gscLoaded && gscKeywords.length > 0 && (
               <div style={{animation:"gscFadeIn 0.4s ease"}}>
                 {gscPeriod && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs px-2 py-1 rounded-lg font-semibold"
-                      style={{background:"rgba(66,133,244,0.12)",color:"#4285F4"}}>📅 {gscPeriod}</span>
-                    <span className="text-xs px-2 py-1 rounded-lg font-semibold"
-                      style={{background:"rgba(52,168,83,0.12)",color:"#34A853"}}>총 {gscKeywords.length}개 키워드</span>
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    <span className="text-xs px-2.5 py-1 rounded-lg font-semibold" style={{background:"rgba(66,133,244,0.1)",color:"#4285F4"}}>📅 {gscPeriod}</span>
+                    <span className="text-xs px-2.5 py-1 rounded-lg font-semibold" style={{background:"rgba(52,168,83,0.1)",color:"#34A853"}}>총 {gscKeywords.length}개</span>
+                    <span className="text-xs px-2.5 py-1 rounded-lg font-semibold" style={{background:"rgba(250,204,21,0.15)",color:"#b45309"}}>클릭 {gscKeywords.reduce((s,k)=>s+k.clicks,0).toLocaleString()}</span>
                   </div>
                 )}
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {gscKeywords.map((k, i) => (
-                    <div key={i}
-                      className="flex items-center justify-between rounded-xl px-3 py-2.5"
-                      style={{background:"var(--background)",border:"1px solid var(--border)",animation:`gscFadeIn 0.3s ease ${i*0.04}s both`}}>
+                <div className="rounded-xl p-3 mb-4" style={{background:"var(--card2)",border:"1px solid var(--border)"}}>
+                  <div className="text-xs font-bold mb-3" style={{color:"var(--muted-foreground)"}}>TOP 5 클릭 키워드</div>
+                  <div className="space-y-2">
+                    {gscKeywords.slice(0,5).map((k,i) => {
+                      const maxClicks = gscKeywords[0].clicks||1;
+                      const pct = Math.max((k.clicks/maxClicks)*100,4);
+                      const colors = ["#4285F4","#34A853","#facc15","#ea4335","#9c27b0"];
+                      return (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-xs w-4 font-black flex-shrink-0" style={{color:colors[i]}}>{i+1}</span>
+                          <span className="text-xs truncate flex-shrink-0" style={{width:110,fontWeight:600}}>{k.keyword}</span>
+                          <div className="flex-1 h-5 rounded-lg overflow-hidden" style={{background:"var(--border)"}}>
+                            <div style={{width:`${pct}%`,height:"100%",background:colors[i],borderRadius:"8px",display:"flex",alignItems:"center",paddingLeft:6,transition:"width 1s ease"}}>
+                              <span style={{fontSize:"0.6rem",color:"white",fontWeight:700,whiteSpace:"nowrap"}}>{k.clicks}</span>
+                            </div>
+                          </div>
+                          <span className="text-xs flex-shrink-0" style={{color:"var(--muted-foreground)",width:36,textAlign:"right"}}>{k.ctr}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                  {gscKeywords.map((k,i) => (
+                    <div key={i} className="flex items-center justify-between rounded-xl px-3 py-2"
+                      style={{background:"var(--background)",border:"1px solid var(--border)",animation:`gscFadeIn 0.3s ease ${i*0.03}s both`}}>
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-xs font-black rounded-lg w-6 h-6 flex items-center justify-center flex-shrink-0"
                           style={{background:i<3?"linear-gradient(135deg,#facc15,#f59e0b)":"var(--card2)",color:i<3?"#000":"var(--muted-foreground)"}}>
@@ -996,15 +1002,10 @@ export default function KeywordResearch() {
                         <span className="text-sm font-semibold text-foreground truncate">{k.keyword}</span>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs px-2 py-0.5 rounded-lg"
-                          style={{background:"rgba(66,133,244,0.1)",color:"#4285F4",fontWeight:700}}>
-                          클릭 {k.clicks}
-                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded-lg" style={{background:"rgba(66,133,244,0.1)",color:"#4285F4",fontWeight:700}}>클릭 {k.clicks}</span>
                         <span className="text-xs" style={{color:"var(--muted-foreground)"}}>CTR {k.ctr}</span>
-                        <button
-                          onClick={() => setInputKW(k.keyword)}
-                          className="text-xs px-2.5 py-1 rounded-lg font-bold"
-                          style={{background:"linear-gradient(135deg,#facc15,#f59e0b)",color:"#000",boxShadow:"0 2px 8px rgba(250,204,21,0.4)"}}>
+                        <button onClick={() => setInputKW(k.keyword)} className="text-xs px-2.5 py-1 rounded-lg font-bold"
+                          style={{background:"linear-gradient(135deg,#facc15,#f59e0b)",color:"#000",boxShadow:"0 2px 8px rgba(250,204,21,0.35)"}}>
                           수집
                         </button>
                       </div>
@@ -1014,9 +1015,10 @@ export default function KeywordResearch() {
               </div>
             )}
             {gscLoaded && gscKeywords.length === 0 && (
-              <div className="text-center py-6">
-                <div style={{fontSize:"2rem",marginBottom:8}}>📭</div>
-                <p className="text-sm" style={{color:"var(--muted-foreground)"}}>최근 28일 기준 유입 키워드가 없어요</p>
+              <div className="text-center py-8">
+                <div style={{fontSize:"2.5rem",marginBottom:10}}>📭</div>
+                <p className="text-sm font-bold text-foreground mb-1">유입 키워드 없음</p>
+                <p className="text-xs" style={{color:"var(--muted-foreground)"}}>최근 28일 구글 검색 유입이 없어요. 며칠 후 다시 확인해주세요.</p>
               </div>
             )}
           </div>
