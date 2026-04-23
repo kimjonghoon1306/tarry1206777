@@ -260,6 +260,10 @@ export const SETTINGS_KEYS = {
   WEBHOOK_URL:        "webhook_url",
   WEBHOOK_KEY:        "webhook_auth_key",
   WEBHOOK_HEADER:     "webhook_auth_header",
+  // 구글 서치콘솔
+  GSC_CLIENT_EMAIL:   "gsc_client_email",
+  GSC_PRIVATE_KEY:    "gsc_private_key",
+  GSC_SITE_URL:       "gsc_site_url",
   // 기타
   GREETING:           "blogauto_greeting",
   AD_PLATFORM:        "selected_ad_platform",
