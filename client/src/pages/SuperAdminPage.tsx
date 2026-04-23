@@ -187,6 +187,80 @@ const API_SECTIONS = [
 ];
 
 // ─────────────────────────────────────────────────────
+// 수익 플랫폼 선택 섹션
+// ─────────────────────────────────────────────────────
+function AdminAdPlatformSection() {
+  const [adPlatform, setAdPlatform] = useState(() => userGet("selected_ad_platform") || "both");
+
+  const platforms = [
+    { id: "adsense", label: "Google AdSense", desc: "CPC 최적화 · 클릭 유도형 글", color: "#4285F4", logo: "G", tip: "정보성 키워드 밀도 높게, 광고 친화적 단락" },
+    { id: "adpost",  label: "Naver AdPost",   desc: "CPM 최적화 · 체류시간 늘리기", color: "#03C75A", logo: "N", tip: "감성적 스토리, 이미지 풍부하게, 공감 유도" },
+    { id: "both",    label: "둘 다",           desc: "통합 최적화",                 color: "#a855f7", logo: "★", tip: "균형잡힌 구성으로 양쪽 모두 최적화" },
+  ];
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: "1px solid var(--border)", background: "rgba(245,166,35,0.04)" }}>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "linear-gradient(135deg,#f59e0b,#f97316)" }}>
+          <span className="text-white font-black text-sm">$</span>
+        </div>
+        <div className="flex-1">
+          <div className="font-semibold text-sm text-foreground">수익 플랫폼 최적화</div>
+          <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>선택한 플랫폼에 맞게 글 스타일 자동 최적화</div>
+        </div>
+        <span className="text-xs px-2.5 py-1 rounded-full font-bold"
+          style={{ background: "rgba(245,166,35,0.12)", color: "#f59e0b" }}>
+          현재: {platforms.find(p => p.id === adPlatform)?.label}
+        </span>
+      </div>
+      <div className="p-4">
+        <div className="grid grid-cols-3 gap-2">
+          {platforms.map(p => {
+            const selected = adPlatform === p.id;
+            return (
+              <button key={p.id}
+                className="rounded-xl p-3 text-left"
+                style={{
+                  background: selected ? `${p.color}18` : "var(--background)",
+                  border: `2px solid ${selected ? p.color : "var(--border)"}`,
+                  boxShadow: selected ? `0 0 0 3px ${p.color}20, 0 4px 16px ${p.color}20` : "none",
+                  transform: selected ? "scale(1.02)" : "scale(1)",
+                  transition: "all 0.22s cubic-bezier(0.34,1.56,0.64,1)",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+                onClick={() => {
+                  setAdPlatform(p.id);
+                  userSet("selected_ad_platform", p.id);
+                  saveSettingsToServer({ selected_ad_platform: p.id });
+                  toast.success(`${p.label} 최적화 모드로 설정됐어요!`);
+                }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+                    style={{ background: p.color, boxShadow: selected ? `0 4px 10px ${p.color}50` : "none" }}>{p.logo}</div>
+                  {selected
+                    ? <div style={{fontSize:"0.65rem",fontWeight:800,color:p.color,background:`${p.color}15`,padding:"2px 6px",borderRadius:100,display:"flex",alignItems:"center",gap:3}}>
+                        <CheckCircle2 className="w-2.5 h-2.5" />선택
+                      </div>
+                    : <div style={{width:16,height:16,borderRadius:"50%",border:"2px solid var(--border)"}}/>
+                  }
+                </div>
+                <div className="text-xs font-bold text-foreground">{p.label}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)", fontSize:"0.68rem" }}>{p.desc}</div>
+                <div className="text-xs mt-1.5 px-1.5 py-1 rounded-lg" style={{ background: `${p.color}10`, color: p.color, fontSize:"0.65rem", lineHeight:1.4 }}>
+                  {p.tip}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
 // 구글 서치콘솔 JSON 파일 업로드 섹션
 // ─────────────────────────────────────────────────────
 function AdminGSCSection() {
@@ -839,7 +913,8 @@ function ApiKeyManager() {
         {saving ? "저장 중..." : "관리자 키 저장"}
       </button>
 
-      {/* 섹션별 키 입력 - 그룹별 분리 */}
+      {/* ── 수익 플랫폼 선택 ── */}
+      <AdminAdPlatformSection />
       {[
         { groupKey: "ai",       groupLabel: "🤖 글 · 이미지 AI",  groupColor: "#10b981" },
         { groupKey: "platform", groupLabel: "📡 배포 플랫폼 · 커스텀 사이트", groupColor: "#6366f1" },
