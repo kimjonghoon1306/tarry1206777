@@ -160,113 +160,6 @@ function MediumSection() {
   );
 }
 // ── 쿠팡파트너스 섹션 ────────────────────────────────
-function GSCSection() {
-  const [clientEmail, setClientEmail] = React.useState(() => userGetSettingsValue("gsc_client_email"));
-  const [privateKey, setPrivateKey] = React.useState(() => userGetSettingsValue("gsc_private_key"));
-  const [siteUrl, setSiteUrl] = React.useState(() => userGetSettingsValue("gsc_site_url"));
-  const [showKey, setShowKey] = React.useState(false);
-  const [saved, setSaved] = React.useState(false);
-  const [testing, setTesting] = React.useState(false);
-  const [testResult, setTestResult] = React.useState<string>("");
-
-  const handleSave = () => {
-    if (!clientEmail || !privateKey || !siteUrl) {
-      toast.error("모든 항목을 입력해주세요"); return;
-    }
-    userSet("gsc_client_email", clientEmail);
-    userSet("gsc_private_key", privateKey);
-    userSet("gsc_site_url", siteUrl);
-    saveSettingsToServer({ gsc_client_email: clientEmail, gsc_private_key: privateKey, gsc_site_url: siteUrl });
-    setSaved(true);
-    toast.success("✅ 구글 서치콘솔 설정 저장됨! 키워드 수집에서 유입 키워드를 확인하세요");
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  const handleTest = async () => {
-    if (!clientEmail || !privateKey || !siteUrl) { toast.error("설정을 먼저 저장해주세요"); return; }
-    setTesting(true); setTestResult("");
-    try {
-      const resp = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "gscGetKeywords", clientEmail, privateKey, siteUrl, rowLimit: 1 }),
-      });
-      const data = await resp.json();
-      if (data.ok) {
-        setTestResult(`✅ 연결 성공! ${data.keywords?.length > 0 ? `"${data.keywords[0].keyword}" 키워드 확인됨` : "데이터 없음 (최근 28일 기준)"}`);
-      } else {
-        setTestResult("❌ " + (data.error || "연결 실패"));
-      }
-    } catch (e: any) {
-      setTestResult("❌ " + e.message);
-    } finally { setTesting(false); }
-  };
-
-  return (
-    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
-            style={{ background: "linear-gradient(135deg,#4285F4,#34A853)" }}>G</div>
-          <h3 className="font-semibold text-foreground">구글 서치콘솔 (GSC)</h3>
-        </div>
-        {saved && <span className="text-xs font-semibold" style={{ color: "var(--color-emerald)" }}>✅ 저장됨</span>}
-      </div>
-      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)", lineHeight: 1.6 }}>
-        내 블로그에 유입되는 실제 검색 키워드를 자동으로 수집합니다.
-        <br />
-        <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer"
-          style={{ color: "#4285F4", textDecoration: "underline" }}>Google Cloud Console</a>에서
-        서비스 계정 생성 → JSON 키 다운로드 → GSC에서 서비스 계정 이메일을 소유자로 추가
-      </p>
-      <div className="space-y-3">
-        <div>
-          <label className="text-xs font-semibold block mb-1" style={{ color: "var(--muted-foreground)" }}>사이트 URL</label>
-          <Input value={siteUrl} onChange={e => setSiteUrl(e.target.value)}
-            placeholder="https://yourblog.com 또는 sc-domain:yourblog.com" className="text-sm font-mono" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold block mb-1" style={{ color: "var(--muted-foreground)" }}>서비스 계정 이메일 (client_email)</label>
-          <Input value={clientEmail} onChange={e => setClientEmail(e.target.value)}
-            placeholder="xxx@xxx.iam.gserviceaccount.com" className="text-sm font-mono" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold block mb-1" style={{ color: "var(--muted-foreground)" }}>Private Key (private_key)</label>
-          <div className="relative">
-            <Input
-              type={showKey ? "text" : "password"}
-              value={privateKey} onChange={e => setPrivateKey(e.target.value)}
-              placeholder="-----BEGIN PRIVATE KEY-----..." className="text-sm font-mono pr-16" />
-            <button onClick={() => setShowKey(!showKey)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded"
-              style={{ color: "var(--muted-foreground)", background: "var(--card2)" }}>
-              {showKey ? "숨기기" : "보기"}
-            </button>
-          </div>
-        </div>
-        {testResult && (
-          <p className="text-xs px-3 py-2 rounded-lg" style={{
-            background: testResult.startsWith("✅") ? "oklch(0.696 0.17 162.48/15%)" : "rgba(239,68,68,0.1)",
-            color: testResult.startsWith("✅") ? "var(--color-emerald)" : "#f87171",
-          }}>{testResult}</p>
-        )}
-        <div className="flex gap-2 pt-1">
-          <button onClick={handleSave}
-            className="text-sm px-4 py-2 rounded-lg font-semibold text-white"
-            style={{ background: "linear-gradient(135deg,#4285F4,#34A853)" }}>
-            💾 저장
-          </button>
-          <button onClick={handleTest} disabled={testing}
-            className="text-sm px-4 py-2 rounded-lg font-semibold"
-            style={{ background: "var(--card2)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>
-            {testing ? "테스트 중..." : "🔗 연결 테스트"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function CoupangSection() {
   const [accessKey, setAccessKey] = React.useState(() => userGetSettingsValue("coupang_access_key"));
   const [secretKey, setSecretKey] = React.useState(() => userGetSettingsValue("coupang_secret_key"));
@@ -1203,10 +1096,7 @@ export default function SettingsPage() {
         {/* 미디엄 (Medium) */}
         <MediumSection />
 
-        {/* 구글 서치콘솔 */}
-        <GSCSection />
-
-        {/* 쿠팡파트너스 */}
+{/* 쿠팡파트너스 */}
         <CoupangSection />
 
           </div>
