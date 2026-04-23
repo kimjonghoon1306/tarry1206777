@@ -592,6 +592,13 @@ function PublishPanel({
               border: "1px solid oklch(0.769 0.188 70.08/20%)",
             }}
           >
+            <style>{`
+              input[type="date"]::-webkit-calendar-picker-indicator,
+              input[type="time"]::-webkit-calendar-picker-indicator {
+                filter: invert(85%) sepia(60%) saturate(400%) hue-rotate(5deg) brightness(105%);
+                cursor: pointer;
+              }
+            `}</style>
             <div>
               <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--muted-foreground)" }}>
                 날짜
