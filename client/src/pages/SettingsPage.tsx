@@ -186,10 +186,10 @@ function GSCSection() {
     if (!clientEmail || !privateKey || !siteUrl) { toast.error("설정을 먼저 저장해주세요"); return; }
     setTesting(true); setTestResult("");
     try {
-      const resp = await fetch("/api/gsc", {
+      const resp = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "getKeywords", clientEmail, privateKey, siteUrl, rowLimit: 1 }),
+        body: JSON.stringify({ action: "gscGetKeywords", clientEmail, privateKey, siteUrl, rowLimit: 1 }),
       });
       const data = await resp.json();
       if (data.ok) {
