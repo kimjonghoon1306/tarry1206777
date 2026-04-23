@@ -593,8 +593,8 @@ function PublishPanel({
             }}
           >
             <style>{`
-              input[type="date"]::-webkit-calendar-picker-indicator,
-              input[type="time"]::-webkit-calendar-picker-indicator {
+              .dark input[type="date"]::-webkit-calendar-picker-indicator,
+              .dark input[type="time"]::-webkit-calendar-picker-indicator {
                 filter: invert(85%) sepia(60%) saturate(400%) hue-rotate(5deg) brightness(105%);
                 cursor: pointer;
               }
