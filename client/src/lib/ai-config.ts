@@ -1,7 +1,7 @@
 import { userGet, SETTINGS_KEYS } from "./user-storage";
 
 export type ContentAIProvider = "gemini" | "claude" | "openai" | "groq";
-export type ImageAIProvider = "openai" | "replicate";
+export type ImageAIProvider = "openai" | "replicate" | "pollinations";
 
 // userGet 자체에 admin 폴백이 포함되어 있음 (user-storage.ts 참고)
 export function getContentProvider(): ContentAIProvider {
