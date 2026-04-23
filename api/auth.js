@@ -623,5 +623,62 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
+
+  // ── 구글 서치콘솔 ────────────────────────────────────
+  if (action === "gscGetKeywords" || action === "gscGetPages" || action === "gscListSites") {
+    const { clientEmail, privateKey, siteUrl, startDate, endDate, rowLimit = 20 } = body;
+    if (!clientEmail || !privateKey) return res.json({ ok: false, error: "clientEmail, privateKey 필요" });
+    try {
+      // JWT 생성
+      const header = { alg: "RS256", typ: "JWT" };
+      const now = Math.floor(Date.now() / 1000);
+      const payload = { iss: clientEmail, scope: "https://www.googleapis.com/auth/webmasters.readonly", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 };
+      const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64url");
+      const signingInput = `${b64url(header)}.${b64url(payload)}`;
+      const pem = (typeof privateKey === "string" ? privateKey : "").replace(/\\n/g, "\n");
+      const crypto = await import("crypto");
+      const sign = crypto.createSign("RSA-SHA256");
+      sign.update(signingInput);
+      const sig = sign.sign(pem, "base64url");
+      const jwt = `${signingInput}.${sig}`;
+
+      // 토큰 발급
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+      });
+      const tokenData = await tokenRes.json();
+      if (!tokenData.access_token) return res.json({ ok: false, error: tokenData.error_description || "GSC 토큰 발급 실패" });
+      const at = tokenData.access_token;
+
+      if (action === "gscListSites") {
+        const r = await fetch("https://www.googleapis.com/webmasters/v3/sites", { headers: { Authorization: `Bearer ${at}` } });
+        const d = await r.json();
+        return res.json({ ok: true, sites: d.siteEntry || [] });
+      }
+
+      const end = endDate || new Date().toISOString().slice(0, 10);
+      const start = startDate || new Date(Date.now() - 28 * 86400000).toISOString().slice(0, 10);
+      const dim = action === "gscGetPages" ? "page" : "query";
+      const encoded = encodeURIComponent(siteUrl);
+      const r = await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encoded}/searchAnalytics/query`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${at}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate: start, endDate: end, dimensions: [dim], rowLimit, orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }] }),
+      });
+      const d = await r.json();
+      if (d.error) return res.json({ ok: false, error: d.error.message });
+      const rows = (d.rows || []).map(row => ({
+        [dim === "page" ? "page" : "keyword"]: row.keys[0],
+        clicks: row.clicks, impressions: row.impressions,
+        ctr: (row.ctr * 100).toFixed(1) + "%", position: row.position.toFixed(1),
+      }));
+      return res.json({ ok: true, [dim === "page" ? "pages" : "keywords"]: rows, period: `${start} ~ ${end}` });
+    } catch (e) {
+      return res.json({ ok: false, error: e.message || "GSC 오류" });
+    }
+  }
+
   return res.json({ ok: false, error: "알 수 없는 요청" });
 }
