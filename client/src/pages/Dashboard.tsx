@@ -793,7 +793,7 @@ export default function Dashboard() {
               </div>
             ) : (
               /* 비로그인 - 빈 상태 */
-              [].map(post => {
+              ([] as { status: string; title: string; platform: string; date: string; views: number; clicks: number }[]).map(post => {
                 const cfg = post.status === "published"
                   ? { label: "발행됨", color: "var(--color-emerald)", bg: "oklch(0.696 0.17 162.48 / 15%)" }
                   : { label: "예약됨", color: "var(--color-amber-brand)", bg: "oklch(0.769 0.188 70.08 / 15%)" };
