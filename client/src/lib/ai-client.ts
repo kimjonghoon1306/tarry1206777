@@ -109,7 +109,8 @@ export async function generateContent(
   title: string | undefined,
   language: string,
   minChars: number,
-  stylePrompt: string = ""
+  stylePrompt: string = "",
+  adPlatform: string = ""
 ): Promise<string> {
 
   const langMap: Record<string, string> = {
@@ -122,10 +123,17 @@ export async function generateContent(
     ? `글 제목은 반드시 "${title}" 으로 시작해줘.`
     : `글 제목은 키워드 "${keyword}"를 포함한 클릭률 높은 제목으로 만들어줘.`;
 
+  // 수익 플랫폼 최적화 가이드
+  const adGuide = adPlatform === "adsense"
+    ? "\n[수익 최적화] 구글 애드센스 CPC 최적화: 클릭 유도 문구, 정보성 키워드 밀도 높게, 광고 친화적 단락 구성"
+    : adPlatform === "adpost"
+    ? "\n[수익 최적화] 네이버 애드포스트 CPM 최적화: 체류 시간 늘리는 스토리 구성, 감성적 공감 유도, 이미지 풍부하게"
+    : "";
+
   // 스타일 지침
   const styleInstruction = stylePrompt
-    ? `\n\n[글쓰기 스타일 지침]\n${stylePrompt}`
-    : "";
+    ? `\n\n[글쓰기 스타일 지침]\n${stylePrompt}${adGuide}`
+    : adGuide ? `\n\n${adGuide}` : "";
 
   // ── 사람처럼 쓰는 고품질 프롬프트 ──
   // 카테고리 자동 감지
