@@ -465,20 +465,7 @@ export default function KeywordResearch() {
   const sortColor = sort==="gold"?"oklch(0.769 0.188 70.08)":sort==="volume"?"var(--muted-foreground)":sort==="hard"?"oklch(0.65 0.22 25)":"var(--color-emerald)";
 
   function toggleStar(id: number) {
-    setKeywords(prev => {
-      const updated = prev.map(k => k.id===id ? {...k, starred:!k.starred} : k);
-      // 즐겨찾기 추가 시 notion 워크스페이스에 저장
-      const kw = updated.find(k => k.id === id);
-      if (kw?.starred) {
-        const token = localStorage.getItem("ba_token") || "";
-        fetch("/api/notion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ action: "saveKeyword", data: { keyword: kw.keyword, category: kw.competition || "", memo: "" } }),
-        }).catch(() => {});
-      }
-      return updated;
-    });
+    setKeywords(prev => prev.map(k => k.id===id ? {...k, starred:!k.starred} : k));
   }
   function deleteKW(id: number) {
     setKeywords(prev => prev.filter(k => k.id !== id));
@@ -607,7 +594,7 @@ export default function KeywordResearch() {
           id:Date.now()+i, keyword:item.relKeyword||"알 수 없음",
           volume:total, clicks:Math.round(total*0.03),
           cpc:Math.round((parseFloat(item.avgMonthlyPC||"0")||0)*1000),
-          trend:total>5000?"up":"down",
+          trend:(total>5000?"up":"down") as "up" | "down",
           competition:item.compIdx==="높음"?"높음":item.compIdx==="낮음"?"낮음":"중",
           category:kw||"수집", starred:false,
         };
