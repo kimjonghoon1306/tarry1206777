@@ -146,15 +146,7 @@ const API_SECTIONS = [
       { label: "Client Secret", key: "naver_datalab_client_secret", placeholder: "Client Secret", link: "", badge: "", badgeColor: "" },
     ],
   },
-  {
-    group: "keyword", title: "구글 서치콘솔", icon: "Search", color: "#4285F4", grad: "linear-gradient(135deg,#4285F4,#34A853)",
-    desc: "내 블로그 유입 키워드 수집",
-    fields: [
-      { label: "사이트 URL", key: "gsc_site_url", placeholder: "sc-domain:blogautopro.com", link: "https://search.google.com/search-console", badge: "", badgeColor: "" },
-      { label: "서비스 계정 이메일", key: "gsc_client_email", placeholder: "xxx@xxx.iam.gserviceaccount.com", link: "", badge: "", badgeColor: "" },
-      { label: "Private Key (JSON)", key: "gsc_private_key", placeholder: "-----BEGIN PRIVATE KEY-----...", link: "", badge: "", badgeColor: "" },
-    ],
-  },
+
   {
     group: "platform", title: "블로거 (Blogger)", icon: "FileText", color: "#FF5722", grad: "linear-gradient(135deg,#FF5722,#E64A19)",
     desc: "구글 블로거 자동 발행 · 애드센스 최적화",
@@ -193,6 +185,127 @@ const API_SECTIONS = [
   },
   // Webhook (커스텀) 섹션은 AdminCustomWebhookSection 컴포넌트로 별도 처리
 ];
+
+// ─────────────────────────────────────────────────────
+// 구글 서치콘솔 JSON 파일 업로드 섹션
+// ─────────────────────────────────────────────────────
+function AdminGSCSection() {
+  const [siteUrl, setSiteUrl] = useState(() => userGet("gsc_site_url") || "");
+  const [clientEmail, setClientEmail] = useState(() => userGet("gsc_client_email") || "");
+  const [privateKey, setPrivateKey] = useState(() => userGet("gsc_private_key") || "");
+  const [saved, setSaved] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const json = JSON.parse(evt.target?.result as string);
+        if (json.client_email) setClientEmail(json.client_email);
+        if (json.private_key) setPrivateKey(json.private_key);
+        toast.success("✅ JSON 파일 파싱 완료! 저장 버튼을 눌러주세요.");
+      } catch {
+        toast.error("JSON 파일 형식이 올바르지 않아요");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSave = () => {
+    if (!siteUrl || !clientEmail || !privateKey) {
+      toast.error("사이트 URL과 JSON 파일을 모두 입력해주세요"); return;
+    }
+    userSet("gsc_site_url", siteUrl);
+    userSet("gsc_client_email", clientEmail);
+    userSet("gsc_private_key", privateKey);
+    saveSettingsToServer({ gsc_site_url: siteUrl, gsc_client_email: clientEmail, gsc_private_key: privateKey });
+    setSaved(true);
+    toast.success("✅ 구글 서치콘솔 설정 저장됨!");
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleTest = async () => {
+    if (!clientEmail || !privateKey || !siteUrl) { toast.error("먼저 저장해주세요"); return; }
+    setTesting(true); setTestResult("");
+    try {
+      const resp = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "gscGetKeywords", clientEmail, privateKey, siteUrl, rowLimit: 1 }),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        setTestResult(`✅ 연결 성공! ${data.keywords?.length > 0 ? `"${data.keywords[0].keyword}" 키워드 확인` : "데이터 없음"}`);
+      } else {
+        setTestResult("❌ " + (data.error || "연결 실패"));
+      }
+    } catch (e: any) {
+      setTestResult("❌ " + e.message);
+    } finally { setTesting(false); }
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: "1px solid var(--border)", background: "rgba(66,133,244,0.05)" }}>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "linear-gradient(135deg,#4285F4,#34A853)" }}>
+          <Search className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1">
+          <div className="font-semibold text-sm text-foreground">구글 서치콘솔</div>
+          <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>JSON 파일 업로드로 간편 연동</div>
+        </div>
+        {saved && <span className="text-xs font-bold" style={{ color: "#34A853" }}>✅ 저장됨</span>}
+      </div>
+      <div className="p-4 space-y-3">
+        {/* 사이트 URL */}
+        <div>
+          <label className="text-xs font-bold block mb-1" style={{ color: "var(--muted-foreground)" }}>사이트 URL</label>
+          <Input value={siteUrl} onChange={e => setSiteUrl(e.target.value)}
+            placeholder="sc-domain:blogautopro.com" className="text-sm font-mono" />
+        </div>
+        {/* JSON 파일 업로드 */}
+        <div>
+          <label className="text-xs font-bold block mb-1" style={{ color: "var(--muted-foreground)" }}>서비스 계정 JSON 파일</label>
+          <input ref={fileRef} type="file" accept=".json" onChange={handleFileUpload} style={{ display: "none" }} />
+          <button onClick={() => fileRef.current?.click()}
+            className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+            style={{ background: "linear-gradient(135deg,#4285F4,#34A853)", color: "white", boxShadow: "0 4px 14px rgba(66,133,244,0.3)" }}>
+            <Upload className="w-4 h-4" />
+            JSON 파일 업로드
+          </button>
+          {clientEmail && (
+            <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: "#34A853" }}>
+              <CheckCircle2 className="w-3 h-3" /> {clientEmail}
+            </p>
+          )}
+        </div>
+        {testResult && (
+          <p className="text-xs px-3 py-2 rounded-lg" style={{
+            background: testResult.startsWith("✅") ? "rgba(52,168,83,0.1)" : "rgba(239,68,68,0.1)",
+            color: testResult.startsWith("✅") ? "#34A853" : "#ef4444",
+          }}>{testResult}</p>
+        )}
+        <div className="flex gap-2">
+          <button onClick={handleSave}
+            className="flex-1 h-10 rounded-xl font-semibold text-sm text-white"
+            style={{ background: "linear-gradient(135deg,#34A853,#1a8a3a)" }}>
+            💾 저장
+          </button>
+          <button onClick={handleTest} disabled={testing}
+            className="flex-1 h-10 rounded-xl font-semibold text-sm"
+            style={{ background: "var(--card2)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>
+            {testing ? "테스트 중..." : "🔗 연결 테스트"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────
 // 커스텀 웹사이트 Webhook 섹션 (어드민용)
@@ -726,6 +839,7 @@ function ApiKeyManager() {
         );
           })}
           {groupKey === "platform" && <AdminCustomWebhookSection />}
+          {groupKey === "keyword" && <AdminGSCSection />}
         </div>
       ))}
 
