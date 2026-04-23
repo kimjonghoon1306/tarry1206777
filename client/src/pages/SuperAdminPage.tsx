@@ -196,6 +196,7 @@ function AdminGSCSection() {
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState("");
+  const [guideTab, setGuideTab] = useState<"domain"|"key">("domain");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,105 +268,141 @@ function AdminGSCSection() {
         {saved && <span className="text-xs font-bold" style={{ color: "#34A853" }}>✅ 저장됨</span>}
       </div>
 
-      {/* 가이드 팝업 */}
+      {/* 가이드 팝업 - 탭 방식 */}
       <div id="adminGscGuidePopup" style={{display:"none",position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(10px)",alignItems:"center",justifyContent:"center",padding:"16px"}}>
-        <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"24px",padding:"28px",width:"100%",maxWidth:"560px",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,0.7)"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"20px"}}>
-            <div style={{fontWeight:900,fontSize:"1.1rem",letterSpacing:"-0.03em"}}>📖 GSC 키 발급 & 도메인 등록 가이드</div>
+        <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"24px",width:"100%",maxWidth:"560px",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,0.7)"}}>
+          {/* 팝업 헤더 */}
+          <div style={{padding:"24px 24px 0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontWeight:900,fontSize:"1.05rem",letterSpacing:"-0.03em"}}>📖 구글 서치콘솔 설정 가이드</div>
             <button onClick={() => { const el = document.getElementById("adminGscGuidePopup"); if(el) el.style.display="none"; }}
-              style={{width:32,height:32,borderRadius:9,background:"var(--card2)",border:"none",cursor:"pointer",color:"var(--muted-foreground)",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+              style={{width:32,height:32,borderRadius:9,background:"var(--card2)",border:"none",cursor:"pointer",color:"var(--muted-foreground)",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+          </div>
+          <p style={{padding:"8px 24px 0",fontSize:"0.8rem",color:"var(--muted-foreground)"}}>처음부터 차근차근 따라하시면 누구나 설정할 수 있어요 😊</p>
+
+          {/* 탭 */}
+          <div style={{display:"flex",gap:8,padding:"16px 24px 0"}}>
+            {([["domain","🌐 1단계: 도메인 등록"],["key","🔑 2단계: 키 발급"]] as ["domain"|"key", string][]).map(([tab, label]) => (
+              <button key={tab} onClick={() => setGuideTab(tab)}
+                style={{flex:1,padding:"10px 8px",borderRadius:12,border:"none",cursor:"pointer",fontWeight:700,fontSize:"0.82rem",fontFamily:"inherit",
+                  background: guideTab===tab ? "linear-gradient(135deg,#4285F4,#34A853)" : "var(--card2)",
+                  color: guideTab===tab ? "white" : "var(--muted-foreground)",
+                  boxShadow: guideTab===tab ? "0 4px 14px rgba(66,133,244,0.3)" : "none",
+                }}>
+                {label}
+              </button>
+            ))}
           </div>
 
-          <div style={{display:"flex",flexDirection:"column",gap:16,fontSize:"0.85rem",lineHeight:1.75}}>
+          {/* 탭 내용 */}
+          <div style={{padding:"20px 24px 24px"}}>
 
-            {/* STEP 1 */}
-            <div style={{background:"rgba(66,133,244,0.06)",border:"1px solid rgba(66,133,244,0.2)",borderRadius:14,padding:"16px"}}>
-              <div style={{fontWeight:800,color:"#4285F4",marginBottom:8,fontSize:"0.9rem"}}>
-                STEP 1. 구글 서치콘솔에 블로그 등록
-              </div>
-              <div style={{color:"var(--muted-foreground)"}}>
-                <div>① <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" style={{color:"#4285F4",textDecoration:"underline",fontWeight:600}}>search.google.com/search-console</a> 접속</div>
-                <div>② 왼쪽 상단 속성 추가 클릭</div>
-                <div>③ <strong style={{color:"var(--foreground)"}}>도메인</strong> 선택 → 블로그 주소 입력 (예: blogautopro.com)</div>
-                <div>④ DNS 인증 또는 HTML 파일 업로드로 소유권 인증</div>
-                <div>⑤ 인증 완료 후 사이트 URL 메모해두기</div>
-                <div style={{marginTop:8,background:"rgba(66,133,244,0.08)",borderRadius:8,padding:"8px 12px",fontSize:"0.78rem"}}>
-                  💡 도메인 방식 URL 형식: <strong style={{color:"#4285F4"}}>sc-domain:blogautopro.com</strong><br/>
-                  💡 URL 방식 형식: <strong style={{color:"#4285F4"}}>https://blogautopro.com</strong>
+            {/* 도메인 등록 탭 */}
+            {guideTab === "domain" && (
+              <div style={{display:"flex",flexDirection:"column",gap:14,fontSize:"0.84rem"}}>
+                <div style={{background:"rgba(66,133,244,0.06)",border:"1px solid rgba(66,133,244,0.15)",borderRadius:14,padding:16}}>
+                  <div style={{fontWeight:800,color:"#4285F4",marginBottom:6}}>이게 뭔가요?</div>
+                  <div style={{color:"var(--muted-foreground)",lineHeight:1.75}}>구글 서치콘솔은 내 블로그가 구글 검색에 어떻게 노출되는지 보여주는 구글 공식 무료 서비스예요. 여기에 내 블로그를 등록해야 유입 키워드를 확인할 수 있어요.</div>
+                </div>
+                {([
+                  {num:"1",color:"#4285F4",bg:"rgba(66,133,244,0.06)",border:"rgba(66,133,244,0.15)",
+                   title:"구글 서치콘솔 접속",
+                   steps:["아래 버튼을 클릭해서 구글 서치콘솔에 접속하세요","구글 계정으로 로그인하세요 (블로그 계정과 같은 계정 권장)"],
+                   link:{href:"https://search.google.com/search-console",text:"🔗 구글 서치콘솔 바로가기"},tip:""},
+                  {num:"2",color:"#34A853",bg:"rgba(52,168,83,0.06)",border:"rgba(52,168,83,0.15)",
+                   title:"속성 추가 (블로그 등록)",
+                   steps:["왼쪽 상단의 속성 검색 박스 옆 ▼ 클릭","속성 추가 클릭","도메인 방식 선택 (왼쪽) → 블로그 주소 입력 예) myblog.com","계속 버튼 클릭"],
+                   link:null,tip:""},
+                  {num:"3",color:"#ea4335",bg:"rgba(234,67,53,0.06)",border:"rgba(234,67,53,0.15)",
+                   title:"소유권 인증",
+                   steps:["DNS 레코드 방식이 나오면 → DNS 관리 페이지에서 TXT 레코드 추가","또는 HTML 파일 방식 선택 → 파일을 블로그 루트에 업로드","인증 버튼 클릭 → 소유권 확인됨 메시지 확인"],
+                   link:null,tip:"💡 티스토리/네이버 블로그는 HTML 태그 방식이 더 쉬워요"},
+                  {num:"4",color:"#f59e0b",bg:"rgba(251,188,5,0.06)",border:"rgba(251,188,5,0.2)",
+                   title:"사이트 URL 확인",
+                   steps:["등록 완료 후 상단에 표시되는 URL을 메모해두세요","도메인 방식이면 sc-domain:myblog.com 형태","URL 방식이면 https://myblog.com 형태"],
+                   link:null,tip:"💡 이 URL을 아래 설정에 입력해야 해요"},
+                ] as any[]).map((step: any) => (
+                  <div key={step.num} style={{background:step.bg,border:`1px solid ${step.border}`,borderRadius:14,padding:16}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                      <div style={{width:28,height:28,borderRadius:8,background:step.color,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:"0.85rem",color:"white",flexShrink:0}}>{step.num}</div>
+                      <div style={{fontWeight:800,color:"var(--foreground)"}}>{step.title}</div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                      {step.steps.map((s: string,i: number) => (
+                        <div key={i} style={{display:"flex",gap:8,color:"var(--muted-foreground)",lineHeight:1.6}}>
+                          <span style={{color:step.color,fontWeight:700,flexShrink:0}}>▸</span><span>{s}</span>
+                        </div>
+                      ))}
+                      {step.tip && <div style={{marginTop:6,fontSize:"0.78rem",padding:"6px 10px",borderRadius:8,background:`${step.color}15`,color:step.color,fontWeight:600}}>{step.tip}</div>}
+                      {step.link && <a href={step.link.href} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:8,padding:"8px 14px",borderRadius:10,background:step.color,color:"white",fontWeight:700,fontSize:"0.8rem",textDecoration:"none"}}>{step.link.text}</a>}
+                    </div>
+                  </div>
+                ))}
+                <div style={{background:"rgba(52,168,83,0.08)",border:"1.5px solid rgba(52,168,83,0.3)",borderRadius:14,padding:14,textAlign:"center"}}>
+                  <div style={{fontWeight:800,color:"#34A853",marginBottom:4}}>✅ 도메인 등록 완료!</div>
+                  <div style={{fontSize:"0.8rem",color:"var(--muted-foreground)"}}>이제 2단계 탭을 눌러서 키 발급을 진행하세요 →</div>
+                  <button onClick={() => setGuideTab("key")}
+                    style={{marginTop:10,padding:"8px 20px",borderRadius:10,background:"linear-gradient(135deg,#4285F4,#34A853)",color:"white",fontWeight:700,fontSize:"0.82rem",border:"none",cursor:"pointer"}}>
+                    🔑 2단계: 키 발급하기 →
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* STEP 2 */}
-            <div style={{background:"rgba(52,168,83,0.06)",border:"1px solid rgba(52,168,83,0.2)",borderRadius:14,padding:"16px"}}>
-              <div style={{fontWeight:800,color:"#34A853",marginBottom:8,fontSize:"0.9rem"}}>
-                STEP 2. Google Cloud Console 프로젝트 생성
+            {/* 키 발급 탭 */}
+            {guideTab === "key" && (
+              <div style={{display:"flex",flexDirection:"column",gap:14,fontSize:"0.84rem"}}>
+                {([
+                  {num:"1",color:"#4285F4",bg:"rgba(66,133,244,0.06)",border:"rgba(66,133,244,0.15)",
+                   title:"Google Cloud Console 접속",
+                   steps:["아래 버튼을 클릭해서 구글 클라우드 콘솔에 접속","구글 계정으로 로그인"],
+                   link:{href:"https://console.cloud.google.com",text:"🔗 구글 클라우드 콘솔 바로가기"},tip:""},
+                  {num:"2",color:"#34A853",bg:"rgba(52,168,83,0.06)",border:"rgba(52,168,83,0.15)",
+                   title:"Search Console API 켜기",
+                   steps:["왼쪽 메뉴 → API 및 서비스 → 라이브러리 클릭","검색창에 Search Console API 입력 후 엔터","검색 결과에서 Google Search Console API 클릭","파란색 사용 버튼 클릭"],
+                   link:null,tip:"💡 이미 사용 설정됨이면 넘어가도 돼요"},
+                  {num:"3",color:"#ea4335",bg:"rgba(234,67,53,0.06)",border:"rgba(234,67,53,0.15)",
+                   title:"서비스 계정 만들기",
+                   steps:["왼쪽 메뉴 → API 및 서비스 → 사용자 인증 정보 클릭","상단 + 사용자 인증 정보 만들기 → 서비스 계정 클릭","서비스 계정 이름 입력 (예: blogauto-gsc) → 만들고 계속하기","권한 설정 건너뛰고 → 완료 클릭"],
+                   link:null,tip:""},
+                  {num:"4",color:"#f59e0b",bg:"rgba(251,188,5,0.06)",border:"rgba(251,188,5,0.2)",
+                   title:"JSON 키 파일 다운로드",
+                   steps:["방금 만든 서비스 계정 이메일 클릭","상단 탭에서 키 클릭","키 추가 → 새 키 만들기 클릭","JSON 선택 (기본값) → 만들기 클릭","JSON 파일이 자동으로 다운로드돼요"],
+                   link:null,tip:"⚠️ 이 파일은 절대 다른 사람에게 공유하지 마세요!"},
+                  {num:"5",color:"#9c27b0",bg:"rgba(156,39,176,0.06)",border:"rgba(156,39,176,0.15)",
+                   title:"서치콘솔에 권한 추가",
+                   steps:["구글 서치콘솔로 돌아가기","왼쪽 하단 설정 → 사용자 및 권한 클릭","+ 사용자 추가 클릭","다운받은 JSON 파일을 메모장으로 열어서 client_email 값 복사 후 붙여넣기","권한: 전체 선택 → 추가 클릭"],
+                   link:null,tip:"💡 client_email은 xxx@xxx.iam.gserviceaccount.com 형태예요"},
+                  {num:"6",color:"#34A853",bg:"rgba(52,168,83,0.08)",border:"rgba(52,168,83,0.25)",
+                   title:"BlogAuto Pro 관리자 페이지에 업로드",
+                   steps:["이 팝업을 닫고 사이트 URL 입력 (sc-domain:blogautopro.com)","JSON 파일 업로드 버튼 클릭 → 다운받은 파일 선택","저장 버튼 클릭 → 연결 테스트로 확인","완료!"],
+                   link:null,tip:""},
+                ] as any[]).map((step: any) => (
+                  <div key={step.num} style={{background:step.bg,border:`1px solid ${step.border}`,borderRadius:14,padding:16}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                      <div style={{width:28,height:28,borderRadius:8,background:step.color,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:"0.85rem",color:"white",flexShrink:0}}>{step.num}</div>
+                      <div style={{fontWeight:800,color:"var(--foreground)"}}>{step.title}</div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                      {step.steps.map((s: string,i: number) => (
+                        <div key={i} style={{display:"flex",gap:8,color:"var(--muted-foreground)",lineHeight:1.6}}>
+                          <span style={{color:step.color,fontWeight:700,flexShrink:0}}>▸</span><span>{s}</span>
+                        </div>
+                      ))}
+                      {step.tip && <div style={{marginTop:6,fontSize:"0.78rem",padding:"6px 10px",borderRadius:8,background:`${step.color}15`,color:step.color,fontWeight:600}}>{step.tip}</div>}
+                      {step.link && <a href={step.link.href} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:8,padding:"8px 14px",borderRadius:10,background:step.color,color:"white",fontWeight:700,fontSize:"0.8rem",textDecoration:"none"}}>{step.link.text}</a>}
+                    </div>
+                  </div>
+                ))}
+                <div style={{background:"rgba(52,168,83,0.08)",border:"1.5px solid rgba(52,168,83,0.3)",borderRadius:14,padding:14,textAlign:"center"}}>
+                  <div style={{fontWeight:800,color:"#34A853",fontSize:"1rem",marginBottom:4}}>🎉 모든 설정 완료!</div>
+                  <div style={{fontSize:"0.8rem",color:"var(--muted-foreground)"}}>팝업을 닫고 JSON 파일 업로드 후 저장하면 끝이에요!</div>
+                  <button onClick={() => { const el = document.getElementById("adminGscGuidePopup"); if(el) el.style.display="none"; }}
+                    style={{marginTop:10,padding:"8px 24px",borderRadius:10,background:"linear-gradient(135deg,#34A853,#1a8a3a)",color:"white",fontWeight:700,fontSize:"0.82rem",border:"none",cursor:"pointer"}}>
+                    ✅ 설정하러 가기
+                  </button>
+                </div>
               </div>
-              <div style={{color:"var(--muted-foreground)"}}>
-                <div>① <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" style={{color:"#34A853",textDecoration:"underline",fontWeight:600}}>console.cloud.google.com</a> 접속</div>
-                <div>② 상단 프로젝트 선택 → <strong style={{color:"var(--foreground)"}}>새 프로젝트</strong> 클릭</div>
-                <div>③ 프로젝트 이름 입력 (예: blogauto-gsc) → 만들기</div>
-                <div>④ 생성된 프로젝트 선택 확인</div>
-              </div>
-            </div>
-
-            {/* STEP 3 */}
-            <div style={{background:"rgba(234,67,53,0.06)",border:"1px solid rgba(234,67,53,0.2)",borderRadius:14,padding:"16px"}}>
-              <div style={{fontWeight:800,color:"#ea4335",marginBottom:8,fontSize:"0.9rem"}}>
-                STEP 3. Search Console API 활성화
-              </div>
-              <div style={{color:"var(--muted-foreground)"}}>
-                <div>① 왼쪽 메뉴 → <strong style={{color:"var(--foreground)"}}>API 및 서비스</strong> → <strong style={{color:"var(--foreground)"}}>라이브러리</strong></div>
-                <div>② 검색창에 <strong style={{color:"var(--foreground)"}}>Search Console API</strong> 입력</div>
-                <div>③ 검색 결과 클릭 → <strong style={{color:"var(--foreground)"}}>사용</strong> 버튼 클릭</div>
-                <div>④ 상태가 <strong style={{color:"#34A853"}}>사용 설정됨</strong>으로 바뀌면 완료</div>
-              </div>
-            </div>
-
-            {/* STEP 4 */}
-            <div style={{background:"rgba(251,188,5,0.06)",border:"1px solid rgba(251,188,5,0.25)",borderRadius:14,padding:"16px"}}>
-              <div style={{fontWeight:800,color:"#f59e0b",marginBottom:8,fontSize:"0.9rem"}}>
-                STEP 4. 서비스 계정 생성 & JSON 키 다운로드
-              </div>
-              <div style={{color:"var(--muted-foreground)"}}>
-                <div>① 왼쪽 메뉴 → <strong style={{color:"var(--foreground)"}}>사용자 인증 정보</strong></div>
-                <div>② 상단 <strong style={{color:"var(--foreground)"}}>사용자 인증 정보 만들기</strong> → <strong style={{color:"var(--foreground)"}}>서비스 계정</strong></div>
-                <div>③ 서비스 계정 이름 입력 (예: blogauto-gsc) → <strong style={{color:"var(--foreground)"}}>만들고 계속하기</strong></div>
-                <div>④ 권한 설정 건너뛰고 → <strong style={{color:"var(--foreground)"}}>완료</strong></div>
-                <div>⑤ 생성된 서비스 계정 클릭 → <strong style={{color:"var(--foreground)"}}>키</strong> 탭</div>
-                <div>⑥ <strong style={{color:"var(--foreground)"}}>키 추가</strong> → <strong style={{color:"var(--foreground)"}}>새 키 만들기</strong> → <strong style={{color:"var(--foreground)"}}>JSON</strong> 선택 → <strong style={{color:"var(--foreground)"}}>만들기</strong></div>
-                <div>⑦ JSON 파일 자동 다운로드 → <strong style={{color:"#f59e0b"}}>안전하게 보관!</strong></div>
-              </div>
-            </div>
-
-            {/* STEP 5 */}
-            <div style={{background:"rgba(156,39,176,0.06)",border:"1px solid rgba(156,39,176,0.2)",borderRadius:14,padding:"16px"}}>
-              <div style={{fontWeight:800,color:"#9c27b0",marginBottom:8,fontSize:"0.9rem"}}>
-                STEP 5. 서치콘솔에 서비스 계정 권한 추가
-              </div>
-              <div style={{color:"var(--muted-foreground)"}}>
-                <div>① 서치콘솔로 돌아가기</div>
-                <div>② 왼쪽 하단 <strong style={{color:"var(--foreground)"}}>설정</strong> → <strong style={{color:"var(--foreground)"}}>사용자 및 권한</strong></div>
-                <div>③ <strong style={{color:"var(--foreground)"}}>사용자 추가</strong> 클릭</div>
-                <div>④ JSON 파일 안의 <strong style={{color:"var(--foreground)"}}>client_email</strong> 값 입력</div>
-                <div>⑤ 권한: <strong style={{color:"var(--foreground)"}}>전체</strong> 선택 → <strong style={{color:"var(--foreground)"}}>추가</strong></div>
-              </div>
-            </div>
-
-            {/* STEP 6 */}
-            <div style={{background:"rgba(52,168,83,0.08)",border:"1.5px solid rgba(52,168,83,0.3)",borderRadius:14,padding:"16px"}}>
-              <div style={{fontWeight:800,color:"#34A853",marginBottom:8,fontSize:"0.9rem"}}>
-                ✅ STEP 6. BlogAuto Pro 관리자 페이지에 등록
-              </div>
-              <div style={{color:"var(--muted-foreground)"}}>
-                <div>① 사이트 URL 입력 (sc-domain:blogautopro.com)</div>
-                <div>② <strong style={{color:"var(--foreground)"}}>JSON 파일 업로드</strong> 버튼으로 다운받은 파일 선택</div>
-                <div>③ 이메일 자동 입력 확인 → <strong style={{color:"var(--foreground)"}}>저장</strong></div>
-                <div>④ <strong style={{color:"var(--foreground)"}}>연결 테스트</strong>로 정상 작동 확인</div>
-                <div style={{marginTop:8,fontWeight:700,color:"#34A853"}}>🎉 완료! 키워드 수집 페이지에서 유입 키워드를 확인하세요!</div>
-              </div>
-            </div>
-
+            )}
           </div>
         </div>
       </div>
