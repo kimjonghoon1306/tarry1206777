@@ -857,7 +857,53 @@ export default function KeywordResearch() {
 
         {/* 수익 플랫폼 */}
         <div className="rounded-xl p-4" style={{background:"var(--card)",border:"1px solid var(--border)"}}>
-          <h3 className="font-semibold text-foreground mb-3 text-sm">수익 플랫폼</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-foreground text-sm">수익 플랫폼</h3>
+            <button onClick={() => { const el = document.getElementById("platformGuidePopup"); if(el) el.style.display=el.style.display==="none"?"flex":"none"; }}
+              className="text-xs px-2.5 py-1.5 rounded-lg font-semibold"
+              style={{background:"rgba(99,102,241,0.1)",color:"oklch(0.6 0.2 280)",border:"1px solid rgba(99,102,241,0.2)"}}>
+              ❓ 기능 설명
+            </button>
+          </div>
+          {/* 기능 설명 팝업 */}
+          <div id="platformGuidePopup" style={{display:"none",position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(8px)",alignItems:"center",justifyContent:"center",padding:"16px"}}>
+            <div className="rounded-2xl p-6 w-full max-w-md" style={{background:"var(--card)",border:"1px solid var(--border)",boxShadow:"0 24px 80px rgba(0,0,0,0.6)",maxHeight:"90vh",overflowY:"auto"}}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="font-bold text-lg" style={{letterSpacing:"-0.03em"}}>💡 수익 플랫폼 기능 설명</div>
+                <button onClick={() => { const el = document.getElementById("platformGuidePopup"); if(el) el.style.display="none"; }} className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background:"var(--card2)",color:"var(--muted-foreground)"}}>✕</button>
+              </div>
+              <div className="space-y-4 text-sm">
+                <div className="p-4 rounded-xl" style={{background:"rgba(66,133,244,0.06)",border:"1px solid rgba(66,133,244,0.2)"}}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white" style={{background:"#4285F4"}}>G</div>
+                    <span className="font-bold" style={{color:"#4285F4"}}>Google AdSense</span>
+                  </div>
+                  <div style={{color:"var(--muted-foreground)",lineHeight:1.7}}>
+                    <div>• CPC(클릭당 단가)가 높은 키워드 우선 정렬</div>
+                    <div>• 정보성·클릭 유도형 키워드 중심으로 수집</div>
+                    <div>• 광고 클릭률 높은 글쓰기에 최적화</div>
+                    <div className="mt-1.5 text-xs px-2 py-1 rounded-lg inline-block" style={{background:"rgba(66,133,244,0.1)",color:"#4285F4",fontWeight:700}}>수익 = 클릭 × CPC 단가</div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl" style={{background:"rgba(3,199,90,0.06)",border:"1px solid rgba(3,199,90,0.2)"}}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white" style={{background:"#03C75A"}}>N</div>
+                    <span className="font-bold" style={{color:"#03C75A"}}>Naver AdPost</span>
+                  </div>
+                  <div style={{color:"var(--muted-foreground)",lineHeight:1.7}}>
+                    <div>• CPM(노출당 단가) 최적화 키워드 우선 정렬</div>
+                    <div>• 검색량 높은 키워드 중심으로 수집</div>
+                    <div>• 체류시간 늘리는 감성·스토리형 글에 최적화</div>
+                    <div className="mt-1.5 text-xs px-2 py-1 rounded-lg inline-block" style={{background:"rgba(3,199,90,0.1)",color:"#03C75A",fontWeight:700}}>수익 = 노출 × CPM 단가</div>
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl" style={{background:"rgba(99,102,241,0.06)",border:"1px solid rgba(99,102,241,0.15)"}}>
+                  <div className="font-bold mb-1" style={{color:"oklch(0.6 0.2 280)"}}>🔄 둘 다 켜면?</div>
+                  <div style={{color:"var(--muted-foreground)"}}>균형잡힌 통합 정렬로 애드센스와 애드포스트 모두에 적합한 키워드를 추천해요.</div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {[
               {label:"Google AdSense",logo:"G",color:"#4285F4",state:adsenseOn,set:setAdsenseOn,
@@ -947,10 +993,37 @@ export default function KeywordResearch() {
           {/* 내용 */}
           <div className="px-5 py-4">
             {!gscLoaded && !isGscLoading && (
-              <div className="text-center py-8">
-                <div style={{fontSize:"2.5rem",marginBottom:10,animation:"gscPulse 2s infinite"}}>🔍</div>
-                <p className="text-sm font-bold text-foreground mb-1">구글 유입 키워드 확인</p>
-                <p className="text-xs" style={{color:"var(--muted-foreground)"}}>설정에서 GSC 연동 후 불러오기를 눌러주세요</p>
+              <div>
+                {/* 기본 보드판 - 데이터 없을 때도 이쁘게 */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {[
+                    {label:"총 클릭수",value:"—",icon:"👆",color:"#4285F4",bg:"rgba(66,133,244,0.08)"},
+                    {label:"총 노출수",value:"—",icon:"👁",color:"#34A853",bg:"rgba(52,168,83,0.08)"},
+                    {label:"평균 CTR",value:"—",icon:"📊",color:"#facc15",bg:"rgba(250,204,21,0.1)"},
+                  ].map(s=>(
+                    <div key={s.label} className="rounded-xl p-3 text-center" style={{background:s.bg,border:`1px solid ${s.color}30`}}>
+                      <div style={{fontSize:"1.3rem",marginBottom:4}}>{s.icon}</div>
+                      <div className="text-lg font-black" style={{color:s.color,letterSpacing:"-0.04em"}}>{s.value}</div>
+                      <div className="text-xs" style={{color:"var(--muted-foreground)"}}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-xl p-3 mb-4" style={{background:"var(--card2)",border:"1px solid var(--border)"}}>
+                  <div className="text-xs font-bold mb-3" style={{color:"var(--muted-foreground)"}}>TOP 5 키워드</div>
+                  <div className="space-y-2">
+                    {[1,2,3,4,5].map(i=>(
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-xs font-black rounded-lg w-6 h-6 flex items-center justify-center flex-shrink-0"
+                          style={{background:i<=3?"linear-gradient(135deg,#facc15,#f59e0b)":"var(--border)",color:i<=3?"#000":"var(--muted-foreground)"}}>{i}</span>
+                        <div className="flex-1 h-5 rounded-lg" style={{background:"var(--border)",opacity:0.4+i*0.04}}></div>
+                        <span className="text-xs" style={{color:"var(--border)",width:36}}>—</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-center py-2">
+                  <p className="text-xs" style={{color:"var(--muted-foreground)"}}>설정에서 GSC 연동 후 불러오기를 눌러주세요</p>
+                </div>
               </div>
             )}
             {isGscLoading && (
