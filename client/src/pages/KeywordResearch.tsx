@@ -387,6 +387,12 @@ export default function KeywordResearch() {
   const [inputKW, setInputKW] = useState("");
   const [isCollecting, setIsCollecting] = useState(false);
 
+  // GSC 유입 키워드
+  const [gscKeywords, setGscKeywords] = useState<{keyword:string;clicks:number;impressions:number;ctr:string;position:string}[]>([]);
+  const [isGscLoading, setIsGscLoading] = useState(false);
+  const [gscPeriod, setGscPeriod] = useState("");
+  const [gscLoaded, setGscLoaded] = useState(false);
+
   // 1. localStorage에서 키워드 불러오기 (페이지 이탈해도 유지)
   const [keywords, setKeywords] = useState<KW[]>(() => {
     try {
@@ -463,6 +469,38 @@ export default function KeywordResearch() {
 
   const sortLabel = sort==="gold"?"🏆 황금키워드":sort==="volume"?"검색량순":sort==="hard"?"어려운순":"가능성순";
   const sortColor = sort==="gold"?"oklch(0.769 0.188 70.08)":sort==="volume"?"var(--muted-foreground)":sort==="hard"?"oklch(0.65 0.22 25)":"var(--color-emerald)";
+
+  // ── GSC 유입 키워드 불러오기 ──────────────────────────
+  async function loadGscKeywords() {
+    const clientEmail = userGet(SETTINGS_KEYS.GSC_CLIENT_EMAIL);
+    const privateKey  = userGet(SETTINGS_KEYS.GSC_PRIVATE_KEY);
+    const siteUrl     = userGet(SETTINGS_KEYS.GSC_SITE_URL);
+    if (!clientEmail || !privateKey || !siteUrl) {
+      toast.error("설정 페이지에서 구글 서치콘솔 연동을 먼저 해주세요");
+      return;
+    }
+    setIsGscLoading(true);
+    try {
+      const resp = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "gscGetKeywords", clientEmail, privateKey, siteUrl, rowLimit: 30 }),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        setGscKeywords(data.keywords || []);
+        setGscPeriod(data.period || "");
+        setGscLoaded(true);
+        toast.success(`✅ ${data.keywords?.length}개 유입 키워드 불러옴`);
+      } else {
+        toast.error("GSC 오류: " + (data.error || "알 수 없는 오류"));
+      }
+    } catch (e: any) {
+      toast.error("GSC 연결 실패: " + e.message);
+    } finally {
+      setIsGscLoading(false);
+    }
+  }
 
   function toggleStar(id: number) {
     setKeywords(prev => prev.map(k => k.id===id ? {...k, starred:!k.starred} : k));
@@ -836,6 +874,67 @@ export default function KeywordResearch() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* 구글 서치콘솔 유입 키워드 */}
+        <div className="rounded-xl p-4" style={{background:"var(--card)",border:"1px solid var(--border)"}}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+                style={{background:"linear-gradient(135deg,#4285F4,#34A853)"}}>G</div>
+              <h3 className="font-semibold text-foreground text-sm">구글 서치콘솔 유입 키워드</h3>
+            </div>
+            <button
+              onClick={loadGscKeywords}
+              disabled={isGscLoading}
+              className="text-xs px-3 py-1.5 rounded-lg font-semibold"
+              style={{background:"linear-gradient(135deg,#4285F4,#34A853)",color:"white",opacity:isGscLoading?0.6:1}}>
+              {isGscLoading ? "불러오는 중..." : gscLoaded ? "🔄 새로고침" : "📥 불러오기"}
+            </button>
+          </div>
+          {!gscLoaded && !isGscLoading && (
+            <p className="text-xs" style={{color:"var(--muted-foreground)"}}>
+              설정에서 구글 서치콘솔 연동 후 불러오기를 눌러주세요
+            </p>
+          )}
+          {isGscLoading && (
+            <div className="text-xs text-center py-4" style={{color:"var(--muted-foreground)"}}>
+              🔍 서치콘솔 데이터 불러오는 중...
+            </div>
+          )}
+          {gscLoaded && gscKeywords.length > 0 && (
+            <div>
+              {gscPeriod && <p className="text-xs mb-2" style={{color:"var(--muted-foreground)"}}>기간: {gscPeriod}</p>}
+              <div className="space-y-1 max-h-60 overflow-y-auto">
+                {gscKeywords.map((k, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2"
+                    style={{background:"var(--background)",border:"1px solid var(--border)"}}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs font-bold" style={{color:"var(--muted-foreground)",width:18,flexShrink:0}}>{i+1}</span>
+                      <span className="text-sm font-semibold text-foreground truncate">{k.keyword}</span>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0 text-xs" style={{color:"var(--muted-foreground)"}}>
+                      <span title="클릭수">👆 {k.clicks}</span>
+                      <span title="노출수">👁 {k.impressions.toLocaleString()}</span>
+                      <span title="CTR">📊 {k.ctr}</span>
+                      <span title="평균순위">📍 {k.position}위</span>
+                      <button
+                        onClick={() => setInputKW(k.keyword)}
+                        className="text-xs px-2 py-0.5 rounded font-semibold"
+                        style={{background:"var(--color-emerald)",color:"white"}}>
+                        수집
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {gscLoaded && gscKeywords.length === 0 && (
+            <p className="text-xs text-center py-4" style={{color:"var(--muted-foreground)"}}>
+              최근 28일 기준 유입 키워드가 없어요
+            </p>
+          )}
         </div>
 
         {/* 카테고리 필터 */}
