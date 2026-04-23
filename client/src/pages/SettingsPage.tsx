@@ -1239,10 +1239,113 @@ export default function SettingsPage() {
 
         {/* ── 수익 플랫폼 선택 (글/이미지 최적화) ── */}
         <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "2px solid oklch(0.769 0.188 70.08/30%)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5" style={{ color: "var(--color-amber-brand)" }} />
-            <h3 className="font-semibold text-foreground">수익 플랫폼 최적화</h3>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5" style={{ color: "var(--color-amber-brand)" }} />
+              <h3 className="font-semibold text-foreground">수익 플랫폼 최적화</h3>
+            </div>
+            <button onClick={() => { const el = document.getElementById("adPlatformGuidePopup"); if(el) el.style.display=el.style.display==="none"?"flex":"none"; }}
+              className="text-xs px-3 py-1.5 rounded-lg font-semibold"
+              style={{ background: "rgba(245,166,35,0.1)", color: "var(--color-amber-brand)", border: "1px solid rgba(245,166,35,0.25)" }}>
+              ❓ 사용방법
+            </button>
           </div>
+
+          {/* 팝업 */}
+          <div id="adPlatformGuidePopup" style={{display:"none",position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(10px)",alignItems:"center",justifyContent:"center",padding:"16px"}}>
+            <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"24px",width:"100%",maxWidth:"540px",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,0.7)"}}>
+              <div style={{padding:"24px 24px 0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontWeight:900,fontSize:"1.05rem",letterSpacing:"-0.03em"}}>💰 수익 플랫폼 최적화 가이드</div>
+                <button onClick={() => { const el = document.getElementById("adPlatformGuidePopup"); if(el) el.style.display="none"; }}
+                  style={{width:32,height:32,borderRadius:9,background:"var(--card2)",border:"none",cursor:"pointer",color:"var(--muted-foreground)",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+              </div>
+              <p style={{padding:"8px 24px 0",fontSize:"0.8rem",color:"var(--muted-foreground)"}}>글을 쓸 때 어떤 광고 수익 방식에 맞게 최적화할지 선택하는 기능이에요</p>
+
+              <div style={{padding:"20px 24px 24px",display:"flex",flexDirection:"column",gap:14,fontSize:"0.84rem"}}>
+
+                {/* 이게 뭔가요 */}
+                <div style={{background:"rgba(245,166,35,0.06)",border:"1px solid rgba(245,166,35,0.2)",borderRadius:14,padding:16}}>
+                  <div style={{fontWeight:800,color:"var(--color-amber-brand)",marginBottom:8}}>📌 이 기능이 뭔가요?</div>
+                  <div style={{color:"var(--muted-foreground)",lineHeight:1.75}}>
+                    블로그 글을 자동으로 쓸 때 <strong style={{color:"var(--foreground)"}}>어떤 방식으로 수익을 낼 건지</strong>에 따라 글쓰기 스타일이 달라져요.<br/>
+                    예를 들어 애드센스는 클릭을 유도하는 글이, 애드포스트는 오래 읽게 만드는 글이 유리해요.
+                  </div>
+                </div>
+
+                {/* 애드센스 */}
+                <div style={{background:"rgba(66,133,244,0.06)",border:"1px solid rgba(66,133,244,0.2)",borderRadius:14,padding:16}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:"#4285F4",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"white",fontSize:"0.9rem",flexShrink:0}}>G</div>
+                    <div>
+                      <div style={{fontWeight:800,color:"#4285F4"}}>Google AdSense 선택 시</div>
+                      <div style={{fontSize:"0.75rem",color:"var(--muted-foreground)"}}>수익 = 광고 클릭 × CPC 단가</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6,color:"var(--muted-foreground)",lineHeight:1.65}}>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#4285F4",fontWeight:700,flexShrink:0}}>▸</span><span><strong style={{color:"var(--foreground)"}}>정보성 키워드 밀도</strong>를 높게 → 광고 관련 키워드가 글에 자연스럽게 많이 포함</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#4285F4",fontWeight:700,flexShrink:0}}>▸</span><span><strong style={{color:"var(--foreground)"}}>클릭 유도 문구</strong> 삽입 → "자세히 알아보기", "확인해보세요" 등</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#4285F4",fontWeight:700,flexShrink:0}}>▸</span><span><strong style={{color:"var(--foreground)"}}>단락을 짧게</strong> → 광고가 자주 노출될 수 있도록 문단 구성</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#4285F4",fontWeight:700,flexShrink:0}}>▸</span><span>IT·재테크·리뷰 등 <strong style={{color:"var(--foreground)"}}>CPC 단가 높은 주제</strong> 강조</span></div>
+                  </div>
+                  <div style={{marginTop:10,padding:"8px 12px",borderRadius:10,background:"rgba(66,133,244,0.08)",fontSize:"0.78rem",color:"#4285F4",fontWeight:600}}>
+                    💡 추천 블로그: IT 리뷰, 금융·보험, 제품 비교, 건강 정보
+                  </div>
+                </div>
+
+                {/* 애드포스트 */}
+                <div style={{background:"rgba(3,199,90,0.06)",border:"1px solid rgba(3,199,90,0.2)",borderRadius:14,padding:16}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:"#03C75A",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"white",fontSize:"0.9rem",flexShrink:0}}>N</div>
+                    <div>
+                      <div style={{fontWeight:800,color:"#03C75A"}}>Naver AdPost 선택 시</div>
+                      <div style={{fontSize:"0.75rem",color:"var(--muted-foreground)"}}>수익 = 광고 노출 × CPM 단가</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6,color:"var(--muted-foreground)",lineHeight:1.65}}>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#03C75A",fontWeight:700,flexShrink:0}}>▸</span><span><strong style={{color:"var(--foreground)"}}>감성적 스토리텔링</strong> 방식 → 공감을 유도해 오래 읽게 만들기</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#03C75A",fontWeight:700,flexShrink:0}}>▸</span><span><strong style={{color:"var(--foreground)"}}>이미지 삽입 위치</strong>를 많이 → 스크롤을 유도해 체류시간 증가</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#03C75A",fontWeight:700,flexShrink:0}}>▸</span><span><strong style={{color:"var(--foreground)"}}>문단을 길게</strong> → 읽는 데 시간이 걸리도록 구성</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#03C75A",fontWeight:700,flexShrink:0}}>▸</span><span>맛집·여행·일상 등 <strong style={{color:"var(--foreground)"}}>공감형 주제</strong> 강조</span></div>
+                  </div>
+                  <div style={{marginTop:10,padding:"8px 12px",borderRadius:10,background:"rgba(3,199,90,0.08)",fontSize:"0.78rem",color:"#03C75A",fontWeight:600}}>
+                    💡 추천 블로그: 맛집, 여행, 육아, 일상 다이어리, 뷰티
+                  </div>
+                </div>
+
+                {/* 둘 다 */}
+                <div style={{background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.2)",borderRadius:14,padding:16}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:"#a855f7",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"white",fontSize:"0.9rem",flexShrink:0}}>★</div>
+                    <div>
+                      <div style={{fontWeight:800,color:"#a855f7"}}>둘 다 선택 시 (기본값)</div>
+                      <div style={{fontSize:"0.75rem",color:"var(--muted-foreground)"}}>애드센스 + 애드포스트 통합 최적화</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6,color:"var(--muted-foreground)",lineHeight:1.65}}>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#a855f7",fontWeight:700,flexShrink:0}}>▸</span><span>두 플랫폼의 장점을 <strong style={{color:"var(--foreground)"}}>균형있게</strong> 적용</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#a855f7",fontWeight:700,flexShrink:0}}>▸</span><span>처음 시작하거나 <strong style={{color:"var(--foreground)"}}>어떤 걸 선택할지 모를 때</strong> 추천</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"#a855f7",fontWeight:700,flexShrink:0}}>▸</span><span>두 플랫폼 <strong style={{color:"var(--foreground)"}}>동시 운영</strong>할 때 유리</span></div>
+                  </div>
+                </div>
+
+                {/* 어디에 적용되나요 */}
+                <div style={{background:"rgba(16,185,129,0.06)",border:"1px solid rgba(16,185,129,0.2)",borderRadius:14,padding:16}}>
+                  <div style={{fontWeight:800,color:"var(--color-emerald)",marginBottom:8}}>🔧 어디에 적용되나요?</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6,color:"var(--muted-foreground)",lineHeight:1.65}}>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"var(--color-emerald)",fontWeight:700,flexShrink:0}}>✓</span><span><strong style={{color:"var(--foreground)"}}>콘텐츠 생성</strong> → 글쓰기 스타일, 문단 구성, 문체 변경</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"var(--color-emerald)",fontWeight:700,flexShrink:0}}>✓</span><span><strong style={{color:"var(--foreground)"}}>키워드 수집</strong> → 플랫폼에 맞는 키워드 정렬 방식 변경</span></div>
+                    <div style={{display:"flex",gap:8}}><span style={{color:"var(--color-emerald)",fontWeight:700,flexShrink:0}}>✓</span><span><strong style={{color:"var(--foreground)"}}>이미지 생성</strong> → 광고 친화적 or 감성적 이미지 스타일 변경</span></div>
+                  </div>
+                </div>
+
+                <button onClick={() => { const el = document.getElementById("adPlatformGuidePopup"); if(el) el.style.display="none"; }}
+                  style={{width:"100%",padding:"12px",borderRadius:14,background:"linear-gradient(135deg,#4285F4,#a855f7)",color:"white",fontWeight:800,fontSize:"0.9rem",border:"none",cursor:"pointer"}}>
+                  ✅ 이해했어요! 설정하러 가기
+                </button>
+              </div>
+            </div>
+          </div>
+
           <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
             선택한 플랫폼에 맞게 글 스타일과 이미지가 자동 최적화됩니다
           </p>
@@ -1252,7 +1355,7 @@ export default function SettingsPage() {
                 tip: "정보성 키워드 밀도 높게, 광고 친화적 단락" },
               { id: "adpost", label: "Naver AdPost", desc: "CPM 최적화 · 체류시간 늘리기", color: "#03C75A", logo: "N",
                 tip: "감성적 스토리, 이미지 풍부하게, 공감 유도" },
-              { id: "both", label: "둘 다", desc: "통합 최적화", color: "oklch(0.75 0.12 300)", logo: "★",
+              { id: "both", label: "둘 다", desc: "통합 최적화", color: "#a855f7", logo: "★",
                 tip: "균형잡힌 구성으로 양쪽 모두 최적화" },
             ].map(platform => {
               const selected = adPlatform === platform.id;
@@ -1260,19 +1363,29 @@ export default function SettingsPage() {
                 <button key={platform.id}
                   className="rounded-xl p-4 text-left transition-all"
                   style={{
-                    background: selected ? `${platform.color}15` : "var(--background)",
-                    border: `2px solid ${selected ? platform.color + "80" : "var(--border)"}`,
+                    background: selected ? `${platform.color}18` : "var(--background)",
+                    border: `2px solid ${selected ? platform.color : "var(--border)"}`,
+                    boxShadow: selected ? `0 0 0 3px ${platform.color}22, 0 4px 20px ${platform.color}25` : "none",
+                    transform: selected ? "scale(1.02)" : "scale(1)",
+                    transition: "all 0.22s cubic-bezier(0.34,1.56,0.64,1)",
                   }}
                   onClick={() => {
                     userSet("selected_ad_platform", platform.id);
                     setAdPlatform(platform.id);
                     saveSettingsToServer({ selected_ad_platform: platform.id });
                     toast.success(`${platform.label} 최적화 모드로 설정됐어요!`);
-                  }}>
+                  }}
+                  onMouseEnter={e => { if(!selected) (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-3px)"; }}
+                  onMouseLeave={e => { if(!selected) (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black text-white"
-                      style={{ background: platform.color }}>{platform.logo}</div>
-                    {selected && <CheckCircle2 className="w-4 h-4" style={{ color: platform.color }} />}
+                      style={{ background: platform.color, boxShadow: selected ? `0 4px 12px ${platform.color}50` : "none" }}>{platform.logo}</div>
+                    {selected
+                      ? <div style={{display:"flex",alignItems:"center",gap:4,fontSize:"0.7rem",fontWeight:800,color:platform.color,background:`${platform.color}15`,padding:"3px 8px",borderRadius:100}}>
+                          <CheckCircle2 className="w-3 h-3" /> 선택됨
+                        </div>
+                      : <div style={{width:20,height:20,borderRadius:"50%",border:`2px solid var(--border)`}}/>
+                    }
                   </div>
                   <div className="text-sm font-semibold text-foreground">{platform.label}</div>
                   <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{platform.desc}</div>
