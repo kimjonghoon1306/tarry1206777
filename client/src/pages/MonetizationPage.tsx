@@ -1,4 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { userGet, userSet, saveSettingsToServer, SETTINGS_KEYS } from "@/lib/user-storage";
+import { toast } from "sonner";
 
 // ─── 타입 ─────────────────────────────────────────────────
 interface AdSenseSettings {
@@ -50,11 +52,73 @@ const DEFAULT_STATE: MonetizationState = {
 };
 
 const STORAGE_KEY = "blogauto_monetization_v1";
-function loadState(): MonetizationState {
-  try { const r = localStorage.getItem(STORAGE_KEY); if (r) return { ...DEFAULT_STATE, ...JSON.parse(r) }; } catch {}
-  return DEFAULT_STATE;
+
+// 서버 + 로컬 동시 저장
+async function saveStateToServer(s: MonetizationState) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  // 주요 값들을 userStorage 키로도 저장 (다른 페이지와 공유)
+  userSet("adsense_client_id", s.adsense.clientId);
+  userSet("adsense_slot_id", s.adsense.slotId);
+  userSet("monetization_backlink_domain", s.backlink.primaryDomain);
+  userSet("monetization_backlink_insert", s.backlink.autoInsert ? "true" : "false");
+  userSet("monetization_canonical", s.backlink.canonical ? "true" : "false");
+  userSet("monetization_random_delay", s.backlink.randomDelay ? "true" : "false");
+  userSet("monetization_insert_position", s.backlink.insertPosition);
+  userSet("monetization_link_text", s.backlink.linkText);
+  userSet("monetization_ping_enabled", s.ping.enabled ? "true" : "false");
+  try {
+    await saveSettingsToServer({
+      adsense_client_id: s.adsense.clientId,
+      adsense_slot_id: s.adsense.slotId,
+      monetization_backlink_domain: s.backlink.primaryDomain,
+      monetization_backlink_insert: s.backlink.autoInsert ? "true" : "false",
+      monetization_canonical: s.backlink.canonical ? "true" : "false",
+      monetization_random_delay: s.backlink.randomDelay ? "true" : "false",
+      monetization_insert_position: s.backlink.insertPosition,
+      monetization_link_text: s.backlink.linkText,
+      monetization_ping_enabled: s.ping.enabled ? "true" : "false",
+    });
+  } catch (e) {
+    console.warn("서버 저장 실패 (로컬 저장됨):", e);
+  }
 }
-function saveState(s: MonetizationState) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+
+function loadState(): MonetizationState {
+  // 서버 동기화 값 우선 반영
+  const serverMerge: Partial<MonetizationState> = {};
+  const clientId = userGet("adsense_client_id");
+  const slotId = userGet("adsense_slot_id");
+  if (clientId || slotId) {
+    serverMerge.adsense = {
+      ...DEFAULT_STATE.adsense,
+      clientId: clientId || "",
+      slotId: slotId || "",
+      status: clientId ? "connected" : "disconnected",
+    };
+  }
+  const backlinkDomain = userGet("monetization_backlink_domain");
+  if (backlinkDomain) {
+    serverMerge.backlink = {
+      ...DEFAULT_STATE.backlink,
+      primaryDomain: backlinkDomain,
+      domains: [backlinkDomain],
+      autoInsert: userGet("monetization_backlink_insert") !== "false",
+      canonical: userGet("monetization_canonical") !== "false",
+      randomDelay: userGet("monetization_random_delay") !== "false",
+      insertPosition: (userGet("monetization_insert_position") as any) || "bottom",
+      linkText: userGet("monetization_link_text") || "📌 원문 보기",
+    };
+  }
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    if (r) return { ...DEFAULT_STATE, ...JSON.parse(r), ...serverMerge };
+  } catch {}
+  return { ...DEFAULT_STATE, ...serverMerge };
+}
+
+function saveState(s: MonetizationState) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+}
 
 // ─── Toggle ───────────────────────────────────────────────
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -255,7 +319,57 @@ export default function MonetizationPage() {
     setDirty(true); setSaved(false);
   }, []);
 
-  const handleSave = () => { saveState(state); setDirty(false); setSaved(true); setTimeout(() => setSaved(false), 2500); };
+  const handleSave = async () => {
+    saveState(state);
+    setDirty(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+    await saveStateToServer(state);
+    toast.success("✅ 수익화 설정이 저장됐어요!");
+  };
+
+  // 실제 GSC 키워드 불러오기
+  const [gscKeywords, setGscKeywords] = useState<{keyword:string;clicks:number;position:string}[]>([]);
+  const [gscLoading, setGscLoading] = useState(false);
+
+  useEffect(() => {
+    const clientEmail = userGet(SETTINGS_KEYS.GSC_CLIENT_EMAIL);
+    const privateKey = userGet(SETTINGS_KEYS.GSC_PRIVATE_KEY);
+    const siteUrl = userGet(SETTINGS_KEYS.GSC_SITE_URL);
+    if (!clientEmail || !privateKey || !siteUrl) return;
+    setGscLoading(true);
+    fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "gscGetKeywords", clientEmail, privateKey, siteUrl, rowLimit: 5 }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d.ok) setGscKeywords(d.keywords || []); })
+      .catch(() => {})
+      .finally(() => setGscLoading(false));
+  }, []);
+
+  // 실제 발행 로그 (최근 발행글)
+  const [pingLogs, setPingLogs] = useState<{title:string;time:string;pings:number}[]>([]);
+  useEffect(() => {
+    const token = localStorage.getItem("ba_token");
+    if (!token) return;
+    fetch("https://www.blogautopro.com/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ action: "getPosts", limit: 3 }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok && d.posts?.length) {
+          setPingLogs(d.posts.slice(0, 3).map((p: any) => ({
+            title: p.title || "발행된 글",
+            time: p.createdAt ? new Date(p.createdAt).toLocaleDateString("ko-KR") : "최근",
+            pings: state.ping.servers.filter(s => s.active).length,
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const progress = [
     state.adsense.status === "connected",
@@ -406,7 +520,7 @@ export default function MonetizationPage() {
             <StatCard icon="💰" label="ADSENSE REVENUE" value="$0.00" sub={`오늘 예상 수익 · ${state.adsense.status === "connected" ? "활성" : "미연동"}`} color="#f59e0b" connected={state.adsense.status === "connected"} />
             <StatCard icon="🌐" label="DOMAINS" value={`${state.backlink.domains.length}`} sub={`대표: ${state.backlink.primaryDomain}`} color="#3b82f6" connected />
             <StatCard icon="📡" label="PING SERVERS" value={`${activePings}/${state.ping.servers.length}`} sub="색인 자동화 활성" color="#00e5a0" connected={state.ping.enabled} />
-            <StatCard icon="🔍" label="GSC TOP KW" value="#4" sub="핫이슈 모음 ↑234클릭" color="#a855f7" connected={state.gsc.connected} />
+            <StatCard icon="🔍" label="GSC TOP KW" value={gscKeywords.length > 0 ? `#${gscKeywords[0].position}` : "—"} sub={gscKeywords.length > 0 ? `${gscKeywords[0].keyword} ↑${gscKeywords[0].clicks}클릭` : "GSC 미연동"} color="#a855f7" connected={gscKeywords.length > 0} />
           </div>
 
           {/* ── 스텝 네비게이터 ── */}
@@ -447,7 +561,17 @@ export default function MonetizationPage() {
                     </select>
                   </div>
                   <ToggleRow label="자동 광고" sub="Google이 최적 위치에 자동 배치" checked={state.adsense.autoAds} onChange={v => update("adsense", { autoAds: v })} />
-                  <button onClick={() => { if (state.adsense.clientId && state.adsense.slotId) update("adsense", { status: "connected" }); else alert("Publisher ID와 슬롯 ID를 입력해주세요."); }}
+                  <button onClick={() => {
+                    if (state.adsense.clientId && state.adsense.slotId) {
+                      update("adsense", { status: "connected" });
+                      userSet("adsense_client_id", state.adsense.clientId);
+                      userSet("adsense_slot_id", state.adsense.slotId);
+                      saveSettingsToServer({ adsense_client_id: state.adsense.clientId, adsense_slot_id: state.adsense.slotId });
+                      toast.success("✅ 애드센스 연동됐어요!");
+                    } else {
+                      toast.error("Publisher ID와 슬롯 ID를 입력해주세요");
+                    }
+                  }}
                     style={{ marginTop: 16, width: "100%", padding: "12px", borderRadius: 12, background: state.adsense.status === "connected" ? "rgba(0,229,160,0.12)" : "linear-gradient(135deg,#f59e0b,#f97316)", border: state.adsense.status === "connected" ? "1px solid rgba(0,229,160,0.3)" : "none", color: state.adsense.status === "connected" ? "#00e5a0" : "#000", fontWeight: 900, fontSize: 13, cursor: "pointer", fontFamily: "inherit", letterSpacing: 0.5 }}>
                     {state.adsense.status === "connected" ? "✓ 연동 완료" : "🔗 연동하기"}
                   </button>
@@ -508,6 +632,29 @@ export default function MonetizationPage() {
                   ))}
                   <Field label="Blogger Gmail" placeholder="your@gmail.com" value={state.platforms.blogger.account} onChange={v => setState(p => ({ ...p, platforms: { ...p.platforms, blogger: { ...p.platforms.blogger, account: v } } }))} />
                   <Field label="Medium Token" placeholder="Integration Token" type="password" value={state.platforms.medium.token} onChange={v => setState(p => ({ ...p, platforms: { ...p.platforms, medium: { ...p.platforms.medium, token: v } } }))} />
+                  <button
+                    onClick={() => {
+                      const bloggerAccount = state.platforms.blogger.account;
+                      const mediumToken = state.platforms.medium.token;
+                      if (!bloggerAccount && !mediumToken) { toast.error("Blogger Gmail 또는 Medium Token을 입력해주세요"); return; }
+                      if (bloggerAccount) {
+                        userSet("blogger_account", bloggerAccount);
+                        setState(p => ({ ...p, platforms: { ...p.platforms, blogger: { ...p.platforms.blogger, connected: true } } }));
+                      }
+                      if (mediumToken) {
+                        userSet("medium_token", mediumToken);
+                        setState(p => ({ ...p, platforms: { ...p.platforms, medium: { ...p.platforms.medium, connected: true } } }));
+                      }
+                      saveSettingsToServer({
+                        ...(bloggerAccount ? { blogger_account: bloggerAccount } : {}),
+                        ...(mediumToken ? { medium_token: mediumToken } : {}),
+                      });
+                      toast.success("✅ 플랫폼 연동 저장됐어요!");
+                      setDirty(true);
+                    }}
+                    style={{ marginTop: 14, width: "100%", padding: "12px", borderRadius: 12, background: "linear-gradient(135deg,#06b6d4,#3b82f6)", border: "none", color: "#fff", fontWeight: 900, fontSize: 13, cursor: "pointer", fontFamily: "inherit", letterSpacing: 0.5 }}>
+                    🔗 플랫폼 연동하기
+                  </button>
                 </GlowCard>
               )}
 
@@ -535,7 +682,25 @@ export default function MonetizationPage() {
                   <Field label="Customer ID" placeholder="XXX-XXX-XXXX" value={state.gsc.customerId} onChange={v => update("gsc", { customerId: v })} />
                   <ToggleRow label="틈새 키워드 자동 추천" sub="경쟁도 낮은 키워드 우선" checked={state.gsc.nicheKeywords} onChange={v => update("gsc", { nicheKeywords: v })} />
                   <ToggleRow label="CPC 높은 키워드 우선" sub="애드센스 수익 최적화" checked={state.gsc.highCpcFirst} onChange={v => update("gsc", { highCpcFirst: v })} />
-                  <button style={{ marginTop: 14, width: "100%", padding: "12px", borderRadius: 12, background: "linear-gradient(135deg,#a855f7,#6366f1)", border: "none", color: "#fff", fontWeight: 900, fontSize: 13, cursor: "pointer", fontFamily: "inherit", letterSpacing: 0.5 }}>🔗 API 연동하기</button>
+                  <button
+                    onClick={() => {
+                      if (!state.gsc.googleAdsApiKey) { toast.error("Google Ads API Key를 입력해주세요"); return; }
+                      userSet("google_ads_api_key", state.gsc.googleAdsApiKey);
+                      userSet("google_ads_customer_id", state.gsc.customerId);
+                      userSet("gsc_niche_keywords", state.gsc.nicheKeywords ? "true" : "false");
+                      userSet("gsc_high_cpc_first", state.gsc.highCpcFirst ? "true" : "false");
+                      saveSettingsToServer({
+                        google_ads_api_key: state.gsc.googleAdsApiKey,
+                        google_ads_customer_id: state.gsc.customerId,
+                        gsc_niche_keywords: state.gsc.nicheKeywords ? "true" : "false",
+                        gsc_high_cpc_first: state.gsc.highCpcFirst ? "true" : "false",
+                      });
+                      update("gsc", { connected: true });
+                      toast.success("✅ GSC 설정 저장됐어요!");
+                    }}
+                    style={{ marginTop: 14, width: "100%", padding: "12px", borderRadius: 12, background: "linear-gradient(135deg,#a855f7,#6366f1)", border: "none", color: "#fff", fontWeight: 900, fontSize: 13, cursor: "pointer", fontFamily: "inherit", letterSpacing: 0.5 }}>
+                    🔗 API 연동하기
+                  </button>
                 </GlowCard>
               )}
             </div>
@@ -597,14 +762,18 @@ export default function MonetizationPage() {
               {/* 핑 로그 */}
               <GlowCard color="#06b6d4" style={cardStyle}>
                 <SectionHeader step="LOG" title="핑 발송 로그" color="#06b6d4" />
-                {[["트렌드 핫이슈 글 발행", "방금 전", 3], ["생활꿀팁 10가지", "2시간 전", 3], ["돈되는 정보 모음", "5시간 전", 2]].map(([t, time, n], i) => (
+                {pingLogs.length > 0 ? pingLogs.map((log, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${lc.border}` }}>
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00e5a0", boxShadow: "0 0 6px #00e5a0", flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: lc.text }}>{t}</span>
-                    <span style={{ fontSize: 10, color: "#00e5a0", fontFamily: "'DM Mono',monospace", fontWeight: 800, flexShrink: 0 }}>×{n}</span>
-                    <span style={{ fontSize: 10, color: lc.muted, flexShrink: 0 }}>{time}</span>
+                    <span style={{ flex: 1, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: lc.text }}>{log.title}</span>
+                    <span style={{ fontSize: 10, color: "#00e5a0", fontFamily: "'DM Mono',monospace", fontWeight: 800, flexShrink: 0 }}>×{log.pings}</span>
+                    <span style={{ fontSize: 10, color: lc.muted, flexShrink: 0 }}>{log.time}</span>
                   </div>
-                ))}
+                )) : (
+                  <div style={{ padding: "16px 0", textAlign: "center", color: lc.muted, fontSize: 12 }}>
+                    발행된 글이 없거나 로그인이 필요해요
+                  </div>
+                )}
                 <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(0,229,160,0.05)", border: "1px solid rgba(0,229,160,0.15)", borderRadius: 10, fontSize: 11, color: lc.muted, lineHeight: 1.7 }}>
                   💡 발행 즉시 {activePings}개 검색엔진 자동 핑 → 색인 속도 향상
                 </div>
@@ -619,18 +788,25 @@ export default function MonetizationPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 10, fontWeight: 800, color: "#6b7a99", textTransform: "uppercase", letterSpacing: 1 }}>GSC 키워드</div>
-                    <div style={{ fontSize: 15, fontWeight: 900, color: lc.text, marginTop: 2 }}>실시간 순위</div>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: lc.text, marginTop: 2 }}>유입 키워드 순위</div>
                   </div>
-                  <div style={{ fontSize: 9, fontWeight: 900, color: "#00e5a0", background: "rgba(0,229,160,0.1)", padding: "3px 8px", borderRadius: 10, border: "1px solid rgba(0,229,160,0.2)", letterSpacing: 0.5 }}>✓ LIVE</div>
+                  <div style={{ fontSize: 9, fontWeight: 900, color: gscKeywords.length > 0 ? "#00e5a0" : "#6b7a99", background: gscKeywords.length > 0 ? "rgba(0,229,160,0.1)" : "rgba(255,255,255,0.05)", padding: "3px 8px", borderRadius: 10, border: `1px solid ${gscKeywords.length > 0 ? "rgba(0,229,160,0.2)" : "rgba(255,255,255,0.08)"}`, letterSpacing: 0.5 }}>
+                    {gscLoading ? "로딩중..." : gscKeywords.length > 0 ? "✓ LIVE" : "미연동"}
+                  </div>
                 </div>
-                {[{ rank: 1, kw: "핫이슈 모음", clicks: 234, pos: 4 }, { rank: 2, kw: "생활꿀팁 2026", clicks: 187, pos: 7 }, { rank: 3, kw: "돈버는 방법", clicks: 156, pos: 11 }, { rank: 4, kw: "오늘 핫이슈", clicks: 98, pos: 15 }, { rank: 5, kw: "재테크 블로그", clicks: 72, pos: 18 }].map(kw => (
-                  <div key={kw.rank} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: `1px solid ${lc.border}` }}>
-                    <span style={{ fontSize: 10, fontWeight: 900, color: kw.rank === 1 ? "#f59e0b" : lc.muted, width: 14, textAlign: "center", flexShrink: 0, fontFamily: "'DM Mono',monospace" }}>{kw.rank}</span>
-                    <span style={{ flex: 1, fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: lc.text }}>{kw.kw}</span>
+                {gscKeywords.length > 0 ? gscKeywords.map((kw, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: `1px solid ${lc.border}` }}>
+                    <span style={{ fontSize: 10, fontWeight: 900, color: i === 0 ? "#f59e0b" : lc.muted, width: 14, textAlign: "center", flexShrink: 0, fontFamily: "'DM Mono',monospace" }}>{i + 1}</span>
+                    <span style={{ flex: 1, fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: lc.text }}>{kw.keyword}</span>
                     <span style={{ fontSize: 11, color: "#00e5a0", fontWeight: 900, fontFamily: "'DM Mono',monospace", flexShrink: 0 }}>↑{kw.clicks}</span>
-                    <span style={{ fontSize: 10, background: "rgba(168,85,247,0.12)", color: "#a855f7", padding: "2px 6px", borderRadius: 6, fontFamily: "'DM Mono',monospace", flexShrink: 0, fontWeight: 700 }}>#{kw.pos}</span>
+                    <span style={{ fontSize: 10, background: "rgba(168,85,247,0.12)", color: "#a855f7", padding: "2px 6px", borderRadius: 6, fontFamily: "'DM Mono',monospace", flexShrink: 0, fontWeight: 700 }}>#{kw.position}</span>
                   </div>
-                ))}
+                )) : (
+                  <div style={{ padding: "20px 0", textAlign: "center" }}>
+                    <div style={{ fontSize: 24, marginBottom: 8, opacity: 0.4 }}>🔍</div>
+                    <div style={{ fontSize: 12, color: lc.muted }}>설정에서 GSC 연동 후 확인하세요</div>
+                  </div>
+                )}
               </GlowCard>
 
               {/* 수익 현황 */}
