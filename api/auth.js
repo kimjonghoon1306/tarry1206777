@@ -624,6 +624,49 @@ export default async function handler(req, res) {
   }
 
 
+  // ── 핑 발송 ──────────────────────────────────────────
+  if (action === "sendPings") {
+    const { title: pingTitle, postUrl, pingServers } = body;
+    if (!postUrl) return res.json({ ok: false, error: "postUrl 필요" });
+
+    const DEFAULT_PING_SERVERS = [
+      { url: "http://rpc.pingomatic.com/", type: "rpc" },
+      { url: "https://www.google.com/ping?sitemap=", type: "get" },
+      { url: "https://www.bing.com/indexnow?url=", type: "get" },
+    ];
+
+    const servers = (pingServers && pingServers.length > 0)
+      ? pingServers.map((url) => ({
+          url,
+          type: url.startsWith("http://rpc") || url.includes("rpc.") ? "rpc" : "get",
+        }))
+      : DEFAULT_PING_SERVERS;
+
+    const encoded = encodeURIComponent(postUrl);
+    const results = [];
+
+    await Promise.allSettled(servers.map(async (server) => {
+      try {
+        if (server.type === "rpc") {
+          const xml = `<?xml version="1.0"?><methodCall><methodName>weblogUpdates.ping</methodName><params><param><value>${pingTitle || "새 글"}</value></param><param><value>${postUrl}</value></param></params></methodCall>`;
+          await fetch(server.url, {
+            method: "POST",
+            headers: { "Content-Type": "text/xml" },
+            body: xml,
+            signal: AbortSignal.timeout(5000),
+          });
+        } else {
+          await fetch(`${server.url}${encoded}`, { signal: AbortSignal.timeout(5000) });
+        }
+        results.push({ url: server.url, ok: true });
+      } catch (e) {
+        results.push({ url: server.url, ok: false, error: e.message });
+      }
+    }));
+
+    return res.json({ ok: true, results, sent: results.filter(r => r.ok).length });
+  }
+
   // ── 구글 서치콘솔 ────────────────────────────────────
   if (action === "gscGetKeywords" || action === "gscGetPages" || action === "gscListSites") {
     const { clientEmail, privateKey, siteUrl, startDate, endDate, rowLimit = 20 } = body;
