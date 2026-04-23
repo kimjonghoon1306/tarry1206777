@@ -23,6 +23,7 @@ import AdminRevenueDashboard from "./pages/AdminRevenueDashboard";
 import CampaignPage from "./pages/CampaignPage";
 import AdminCampaignPage from "./pages/AdminCampaignPage";
 import TemplatePage from "./pages/TemplatePage";
+import NotionPage from "./pages/NotionPage";
 
 function PrivateRoute({ component: Component }: { component: React.ComponentType }) {
   const [, navigate] = useLocation();
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/content" component={() => <PrivateRoute component={ContentGenerator} />} />
       <Route path="/images" component={() => <PrivateRoute component={ImageGenerator} />} />
       <Route path="/template" component={() => <PrivateRoute component={TemplatePage} />} />
+      <Route path="/notion" component={() => <PrivateRoute component={NotionPage} />} />
       <Route path="/deploy" component={() => <PrivateRoute component={DeploymentPage} />} />
       <Route path="/settings" component={() => <PrivateRoute component={SettingsPage} />} />
       <Route path="/admin" component={() => <PrivateRoute component={MyPage} />} />
