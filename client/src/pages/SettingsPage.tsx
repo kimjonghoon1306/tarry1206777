@@ -160,6 +160,150 @@ function MediumSection() {
   );
 }
 // ── 쿠팡파트너스 섹션 ────────────────────────────────
+function UserGSCSection() {
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const [siteUrl, setSiteUrl] = React.useState(() => userGetSettingsValue("gsc_site_url"));
+  const [clientEmail, setClientEmail] = React.useState(() => userGetSettingsValue("gsc_client_email"));
+  const [privateKey, setPrivateKey] = React.useState(() => userGetSettingsValue("gsc_private_key"));
+  const [saved, setSaved] = React.useState(false);
+  const [showGuide, setShowGuide] = React.useState(false);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const json = JSON.parse(evt.target?.result as string);
+        if (json.client_email) setClientEmail(json.client_email);
+        if (json.private_key) setPrivateKey(json.private_key);
+        toast.success("✅ JSON 파일 파싱 완료! 저장을 눌러주세요.");
+      } catch { toast.error("JSON 파일 형식이 올바르지 않아요"); }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSave = () => {
+    if (!siteUrl || !clientEmail || !privateKey) { toast.error("모든 항목을 입력해주세요"); return; }
+    userSet("gsc_site_url", siteUrl);
+    userSet("gsc_client_email", clientEmail);
+    userSet("gsc_private_key", privateKey);
+    saveSettingsToServer({ gsc_site_url: siteUrl, gsc_client_email: clientEmail, gsc_private_key: privateKey });
+    setSaved(true);
+    toast.success("✅ 구글 서치콘솔 설정 저장됨!");
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  return (
+    <div className="rounded-xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      {/* 헤더 */}
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white"
+            style={{ background: "linear-gradient(135deg,#4285F4,#34A853)" }}>G</div>
+          <h3 className="font-semibold text-foreground">구글 서치콘솔 (GSC)</h3>
+        </div>
+        {saved && <span className="text-xs font-semibold" style={{ color: "#34A853" }}>✅ 저장됨</span>}
+      </div>
+      <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)", lineHeight: 1.6 }}>
+        내 블로그에 구글 검색으로 유입된 키워드를 확인합니다.
+      </p>
+
+      {/* 발급 가이드 토글 */}
+      <button onClick={() => setShowGuide(!showGuide)}
+        className="w-full text-left text-xs px-3 py-2.5 rounded-lg mb-4 font-semibold flex items-center justify-between"
+        style={{ background: "rgba(66,133,244,0.08)", color: "#4285F4", border: "1px solid rgba(66,133,244,0.2)" }}>
+        <span>📖 키 발급 방법 보기 (처음이시면 꼭 읽어주세요)</span>
+        <span>{showGuide ? "▲" : "▼"}</span>
+      </button>
+
+      {showGuide && (
+        <div className="rounded-xl p-4 mb-4 space-y-3 text-xs" style={{ background: "rgba(66,133,244,0.04)", border: "1px solid rgba(66,133,244,0.15)", lineHeight: 1.8 }}>
+          <div className="font-bold text-sm" style={{ color: "#4285F4" }}>📋 구글 서치콘솔 키 발급 방법</div>
+
+          <div><span className="font-bold" style={{ color: "var(--foreground)" }}>1단계. 구글 서치콘솔에 내 블로그 등록</span>
+            <div style={{ color: "var(--muted-foreground)" }}>
+              → <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" style={{ color: "#4285F4", textDecoration: "underline" }}>search.google.com/search-console</a> 접속<br/>
+              → 속성 추가 → 내 블로그 주소 입력 → 소유권 인증 완료
+            </div>
+          </div>
+
+          <div><span className="font-bold" style={{ color: "var(--foreground)" }}>2단계. Google Cloud Console에서 프로젝트 생성</span>
+            <div style={{ color: "var(--muted-foreground)" }}>
+              → <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" style={{ color: "#4285F4", textDecoration: "underline" }}>console.cloud.google.com</a> 접속<br/>
+              → 상단 프로젝트 선택 → 새 프로젝트 → 이름 입력 후 만들기
+            </div>
+          </div>
+
+          <div><span className="font-bold" style={{ color: "var(--foreground)" }}>3단계. Search Console API 활성화</span>
+            <div style={{ color: "var(--muted-foreground)" }}>
+              → 왼쪽 메뉴 API 및 서비스 → 라이브러리<br/>
+              → 검색창에 "Search Console API" 입력 → 클릭 → 사용 버튼 클릭
+            </div>
+          </div>
+
+          <div><span className="font-bold" style={{ color: "var(--foreground)" }}>4단계. 서비스 계정 만들기</span>
+            <div style={{ color: "var(--muted-foreground)" }}>
+              → 왼쪽 메뉴 사용자 인증 정보 → 상단 사용자 인증 정보 만들기 → 서비스 계정<br/>
+              → 이름 입력 (예: my-gsc) → 만들고 계속하기 → 계속 → 완료
+            </div>
+          </div>
+
+          <div><span className="font-bold" style={{ color: "var(--foreground)" }}>5단계. JSON 키 파일 다운로드</span>
+            <div style={{ color: "var(--muted-foreground)" }}>
+              → 방금 만든 서비스 계정 클릭 → 키 탭 → 키 추가 → 새 키 만들기<br/>
+              → JSON 선택 → 만들기 → JSON 파일 자동 다운로드
+            </div>
+          </div>
+
+          <div><span className="font-bold" style={{ color: "var(--foreground)" }}>6단계. 서치콘솔에 서비스 계정 권한 추가</span>
+            <div style={{ color: "var(--muted-foreground)" }}>
+              → 서치콘솔로 돌아가서 설정 → 사용자 및 권한 → 사용자 추가<br/>
+              → JSON 파일 안의 client_email 값 입력 → 권한: 전체 → 추가
+            </div>
+          </div>
+
+          <div className="pt-2 font-bold" style={{ color: "#34A853" }}>
+            ✅ 완료! 아래에서 JSON 파일 업로드하고 저장하면 끝!
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {/* 사이트 URL */}
+        <div>
+          <label className="text-xs font-semibold block mb-1" style={{ color: "var(--muted-foreground)" }}>내 블로그 URL</label>
+          <Input value={siteUrl} onChange={e => setSiteUrl(e.target.value)}
+            placeholder="https://myblog.com 또는 sc-domain:myblog.com" className="text-sm font-mono" />
+          <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>서치콘솔에 등록한 URL과 동일하게 입력</p>
+        </div>
+
+        {/* JSON 파일 업로드 */}
+        <div>
+          <label className="text-xs font-semibold block mb-1" style={{ color: "var(--muted-foreground)" }}>서비스 계정 JSON 파일 업로드</label>
+          <input ref={fileRef} type="file" accept=".json" onChange={handleFileUpload} style={{ display: "none" }} />
+          <button onClick={() => fileRef.current?.click()}
+            className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+            style={{ background: "linear-gradient(135deg,#4285F4,#34A853)", color: "white", boxShadow: "0 4px 14px rgba(66,133,244,0.25)" }}>
+            📁 JSON 파일 선택
+          </button>
+          {clientEmail && (
+            <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: "#34A853" }}>
+              ✅ {clientEmail}
+            </p>
+          )}
+        </div>
+
+        <button onClick={handleSave}
+          className="w-full h-10 rounded-xl font-semibold text-sm text-white"
+          style={{ background: "linear-gradient(135deg,#34A853,#1a8a3a)" }}>
+          💾 저장
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CoupangSection() {
   const [accessKey, setAccessKey] = React.useState(() => userGetSettingsValue("coupang_access_key"));
   const [secretKey, setSecretKey] = React.useState(() => userGetSettingsValue("coupang_secret_key"));
@@ -1098,6 +1242,9 @@ export default function SettingsPage() {
 
 {/* 쿠팡파트너스 */}
         <CoupangSection />
+
+        {/* 구글 서치콘솔 */}
+        <UserGSCSection />
 
           </div>
         )}
