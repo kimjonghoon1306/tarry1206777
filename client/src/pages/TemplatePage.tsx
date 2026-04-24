@@ -129,6 +129,22 @@ export const TEMPLATES = [
 
 // ── HTML 빌더들 ──────────────────────────────────────────
 
+// 공통 참고자료 항목 렌더러 (desc 안의 URL도 링크로 변환 + 줄바꿈 방지)
+function buildRefItem(r: { name: string; desc: string; url: string }, linkColor: string, extraStyle = ""): string {
+  const descHtml = r.desc
+    ? r.desc.split(",").map(part => {
+        const p = part.trim();
+        return p.startsWith("http")
+          ? `<a href="${p}" target="_blank" rel="noopener noreferrer" style="color:${linkColor};word-break:break-all;">${p}</a>`
+          : p;
+      }).join(", ")
+    : "";
+  const nameHtml = r.url
+    ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:${linkColor};${extraStyle}">${r.name}</a>`
+    : `<span>${r.name}</span>`;
+  return `<div style="margin-bottom:8px;font-size:0.88rem;line-height:1.6;word-break:break-word;">${nameHtml}${descHtml ? " — " + descHtml : ""}</div>`;
+}
+
 // 공통 관련글 렌더러
 function buildRelated(related: { title: string; desc: string }[], accentColor: string, bgColor: string): string {
   if (!related.length) return "";
@@ -180,7 +196,7 @@ function buildMinimal(title: string, blocks: Block[], faqs: ReturnType<typeof ex
     else if (b.type === "box") { const [bg,br,lb] = bx[b.boxType!].split("|"); h += `<div style="background:${bg};border-left:4px solid ${br};padding:14px 18px;margin:1.25rem 0;border-radius:4px;"><strong style="display:block;margin-bottom:6px;font-size:0.875rem;">${lb}</strong>${b.content}</div>`; }
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;border-top:2px solid #1a1a1a;padding-top:1.5rem;"><h3 style="font-size:1.1rem;font-weight:800;margin-bottom:1rem;">자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;"><p style="font-weight:700;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#555;">A. ${f.a}</p></div>`; h += `</div>`; }
-  if (refs.length) { h += `<div style="margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem;"><h4 style="font-size:0.9rem;font-weight:700;color:#888;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:8px;font-size:0.9rem;"><a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;">${r.name}</a>${r.desc ? " — " + r.desc : ""}</div>`; h += `</div>`; }
+  if (refs.length) { h += `<div style="margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem;"><h4 style="font-size:0.9rem;font-weight:700;color:#888;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += buildRefItem(r, "#2563eb"); h += `</div>`; }
   h += buildRelated(related, "#1a1a1a", "#f5f5f5");
   return h + `</div></div>`;
 }
@@ -200,7 +216,7 @@ function buildCard(title: string, blocks: Block[], faqs: ReturnType<typeof extra
   }
   flush();
   if (faqs.length) { h += `<div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(37,99,235,0.1);padding:20px 24px;margin-bottom:20px;"><h3 style="font-size:1.1rem;font-weight:800;color:#2563eb;margin-bottom:16px;">❓ 자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:14px;background:#f0f6ff;border-radius:8px;padding:12px 16px;"><p style="font-weight:700;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#475569;font-size:0.98rem;">A. ${f.a}</p></div>`; h += `</div>`; }
-  if (refs.length) { h += `<div style="background:#fff;border-radius:14px;padding:16px 24px;margin-bottom:20px;"><h4 style="font-size:0.9rem;font-weight:700;color:#94a3b8;margin-bottom:10px;">📎 참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.9rem;"><a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;font-weight:600;">${r.name}</a>${r.desc ? " — " + r.desc : ""}</div>`; h += `</div>`; }
+  if (refs.length) { h += `<div style="background:#fff;border-radius:14px;padding:16px 24px;margin-bottom:20px;"><h4 style="font-size:0.9rem;font-weight:700;color:#94a3b8;margin-bottom:10px;">📎 참고자료</h4>`; for (const r of refs) h += buildRefItem(r, "#2563eb", "font-weight:600;"); h += `</div>`; }
   h += buildRelated(related, "#2563eb", "#eff6ff");
   return h + `</div></div>`;
 }
@@ -220,7 +236,7 @@ function buildMagazine(title: string, blocks: Block[], faqs: ReturnType<typeof e
     else if (b.type === "box") { const l: Record<string,string> = { tip:"💡 팁", warning:"⚠️ 주의", important:"🚨 중요" }; h += `<blockquote style="border-left:4px solid #c8102e;background:#fff;padding:14px 20px;margin:1.5rem 0;font-style:italic;color:#555;"><strong style="font-style:normal;color:#c8102e;">${l[b.boxType!]}</strong> ${b.content}</blockquote>`; }
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;"><div style="border-top:3px solid #1a1a1a;border-bottom:1px solid #1a1a1a;padding:4px 0;margin-bottom:16px;"></div><h3 style="font-size:1rem;font-weight:800;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1rem;">FAQ</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid #e5e0d8;"><p style="font-weight:700;font-family:'Noto Sans KR',sans-serif;margin-bottom:6px;">Q. ${f.q}</p><p style="color:#666;">A. ${f.a}</p></div>`; h += `</div>`; }
-  if (refs.length) { h += `<div style="margin-top:1.5rem;border-top:1px solid #ccc;padding-top:1rem;"><h4 style="font-size:0.8rem;font-weight:700;letter-spacing:0.15em;color:#888;font-family:'Noto Sans KR',sans-serif;margin-bottom:0.75rem;">REFERENCES</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:#c8102e;">${r.name}</a>${r.desc ? " — " + r.desc : ""}</div>`; h += `</div>`; }
+  if (refs.length) { h += `<div style="margin-top:1.5rem;border-top:1px solid #ccc;padding-top:1rem;"><h4 style="font-size:0.8rem;font-weight:700;letter-spacing:0.15em;color:#888;font-family:'Noto Sans KR',sans-serif;margin-bottom:0.75rem;">REFERENCES</h4>`; for (const r of refs) h += buildRefItem(r, "#c8102e"); h += `</div>`; }
   h += buildRelated(related, "#c8102e", "#fff8f8");
   return h + `</div></div>`;
 }
@@ -238,7 +254,7 @@ function buildDark(title: string, blocks: Block[], faqs: ReturnType<typeof extra
     else if (b.type === "box") { const c: Record<string,string> = { tip:"#0d2e1a|#22c55e|💡", warning:"#2e1a0d|#f97316|⚠️", important:"#2e0d0d|#ef4444|🚨" }; const [bg,br,ic] = c[b.boxType!].split("|"); h += `<div style="background:${bg};border:1px solid ${br};border-left:4px solid ${br};padding:14px 18px;margin:1.25rem 0;border-radius:6px;">${ic} ${b.content}</div>`; }
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;border-top:1px solid #333;padding-top:1.5rem;"><h3 style="font-size:1rem;font-weight:700;color:#e94560;margin-bottom:1rem;">자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;background:#1a1a2e;padding:14px 18px;border-radius:8px;"><p style="font-weight:700;color:#fff;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#aaa;font-size:0.97rem;">A. ${f.a}</p></div>`; h += `</div>`; }
-  if (refs.length) { h += `<div style="margin-top:1.5rem;border-top:1px solid #333;padding-top:1rem;"><h4 style="font-size:0.85rem;color:#666;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:#e94560;">${r.name}</a>${r.desc ? " — " + r.desc : ""}</div>`; h += `</div>`; }
+  if (refs.length) { h += `<div style="margin-top:1.5rem;border-top:1px solid #333;padding-top:1rem;"><h4 style="font-size:0.85rem;color:#666;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += buildRefItem(r, "#e94560"); h += `</div>`; }
   h += buildRelated(related, "#e94560", "#1a1a2e");
   return h + `</div></div>`;
 }
@@ -256,7 +272,7 @@ function buildWarm(title: string, blocks: Block[], faqs: ReturnType<typeof extra
     else if (b.type === "box") { const l: Record<string,string> = { tip:"🌿 팁", warning:"🍂 주의", important:"🌟 중요" }; h += `<div style="background:#fff8e8;border:1px solid #e5c18e;border-radius:12px;padding:14px 18px;margin:1.25rem 0;font-size:0.97rem;"><strong>${l[b.boxType!]}</strong> ${b.content}</div>`; }
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;background:#fff8e8;border-radius:16px;padding:20px 24px;"><h3 style="font-size:1.05rem;font-weight:800;color:#92400e;margin-bottom:1rem;">🙋 자주 묻는 질문</h3>`; for (const f of faqs) h += `<div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px dashed #e5c18e;"><p style="font-weight:700;color:#7c3e0e;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#5c3b1e;font-size:0.97rem;">A. ${f.a}</p></div>`; h += `</div>`; }
-  if (refs.length) { h += `<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px dashed #e5c18e;"><h4 style="font-size:0.85rem;color:#a16207;margin-bottom:0.75rem;">📚 참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:#d97706;">${r.name}</a>${r.desc ? " — " + r.desc : ""}</div>`; h += `</div>`; }
+  if (refs.length) { h += `<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px dashed #e5c18e;"><h4 style="font-size:0.85rem;color:#a16207;margin-bottom:0.75rem;">📚 참고자료</h4>`; for (const r of refs) h += buildRefItem(r, "#d97706"); h += `</div>`; }
   h += buildRelated(related, "#d97706", "#fffbeb");
   return h + `</div></div>`;
 }
@@ -276,7 +292,7 @@ function buildColorful(title: string, blocks: Block[], faqs: ReturnType<typeof e
     else if (b.type === "box") { const c: Record<string,string> = { tip:"#f0fdf4|#16a34a|💡", warning:"#fff7ed|#ea580c|⚠️", important:"#fef2f2|#dc2626|🚨" }; const [bg,fg,ic] = c[b.boxType!].split("|"); h += `<div style="background:${bg};border-radius:10px;padding:14px 18px;margin:1.25rem 0;border-left:4px solid ${fg};"><span style="color:${fg};font-weight:700;">${ic}</span> ${b.content}</div>`; }
   }
   if (faqs.length) { h += `<div style="margin-top:2.5rem;"><h3 style="font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,#7c3aed,#2563eb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem;">자주 묻는 질문</h3>`; faqs.forEach((f, i) => { const c = palette[i % palette.length]; h += `<div style="margin-bottom:1rem;background:#fff;border-radius:10px;padding:14px 18px;border-left:4px solid ${c};box-shadow:0 2px 8px rgba(0,0,0,0.06);"><p style="font-weight:700;color:${c};margin-bottom:4px;">Q. ${f.q}</p><p style="color:#555;font-size:0.97rem;">A. ${f.a}</p></div>`; }); h += `</div>`; }
-  if (refs.length) { h += `<div style="margin-top:1.5rem;padding-top:1rem;border-top:2px dashed #e5e7eb;"><h4 style="font-size:0.85rem;font-weight:700;color:#888;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:6px;font-size:0.88rem;"><a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:#7c3aed;">${r.name}</a>${r.desc ? " — " + r.desc : ""}</div>`; h += `</div>`; }
+  if (refs.length) { h += `<div style="margin-top:1.5rem;padding-top:1rem;border-top:2px dashed #e5e7eb;"><h4 style="font-size:0.85rem;font-weight:700;color:#888;margin-bottom:0.75rem;">참고자료</h4>`; for (const r of refs) h += buildRefItem(r, "#7c3aed"); h += `</div>`; }
   h += buildRelated(related, "#7c3aed", "#f5f3ff");
   return h + `</div></div>`;
 }
@@ -295,7 +311,7 @@ function buildNewsletter(title: string, blocks: Block[], faqs: ReturnType<typeof
   }
   if (sec) h += `</div>`;
   if (faqs.length) { h += `<div style="background:#fff;border-radius:8px;padding:20px 24px;margin-bottom:16px;border-top:3px solid #059669;"><h3 style="font-size:1rem;font-weight:800;color:#059669;margin:0 0 14px;">FAQ</h3>`; for (const f of faqs) h += `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #e5e7eb;"><p style="font-weight:700;font-size:0.93rem;color:#111;margin-bottom:4px;">Q. ${f.q}</p><p style="color:#6b7280;font-size:0.91rem;">A. ${f.a}</p></div>`; h += `</div>`; }
-  if (refs.length) { h += `<div style="background:#fff;border-radius:8px;padding:16px 24px;margin-bottom:16px;"><h4 style="font-size:0.8rem;font-weight:700;color:#9ca3af;margin-bottom:8px;">참고자료</h4>`; for (const r of refs) h += `<div style="margin-bottom:5px;font-size:0.85rem;"><a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:#059669;">${r.name}</a>${r.desc ? " — " + r.desc : ""}</div>`; h += `</div>`; }
+  if (refs.length) { h += `<div style="background:#fff;border-radius:8px;padding:16px 24px;margin-bottom:16px;"><h4 style="font-size:0.8rem;font-weight:700;color:#9ca3af;margin-bottom:8px;">참고자료</h4>`; for (const r of refs) h += buildRefItem(r, "#059669"); h += `</div>`; }
   if (related.length) { h += `<div style="padding:0 32px 20px;background:#f5f7fa;">${buildRelated(related, "#059669", "#ecfdf5")}</div>`; }
   h += `</div><div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb;font-size:0.78rem;color:#9ca3af;">BlogAuto Pro로 작성된 콘텐츠</div>`;
   return h + `</div>`;
@@ -753,7 +769,7 @@ export default function TemplatePage() {
                 background: "#fff",
                 display: "block",
               }}
-              sandbox="allow-same-origin allow-scripts"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-top-navigation"
               title="템플릿 미리보기"
             />
 
