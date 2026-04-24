@@ -124,7 +124,9 @@ export const TEMPLATES = [
   { id: "dark",       name: "다크 프리미엄", desc: "어두운 배경\n세련된 프리미엄",                emoji: "🌙", grad: "linear-gradient(135deg,#1e1b4b,#4c1d95)", accent: "#e94560",  tag: "프리미엄" },
   { id: "warm",       name: "따뜻한 감성",   desc: "베이지/크림톤\n포근한 느낌",                  emoji: "🍞", grad: "linear-gradient(135deg,#fef3c7,#fde68a)", accent: "#d97706",  tag: "감성" },
   { id: "colorful",   name: "컬러 포인트",   desc: "소제목마다\n색상이 달라지는 스타일",           emoji: "🎨", grad: "linear-gradient(135deg,#ede9fe,#c4b5fd)", accent: "#7c3aed",  tag: "활기" },
-  { id: "newsletter", name: "뉴스레터형",    desc: "이메일 뉴스레터\n정돈된 레이아웃",             emoji: "📬", grad: "linear-gradient(135deg,#d1fae5,#6ee7b7)", accent: "#059669",  tag: "뉴스" },
+  { id: "newsletter",  name: "뉴스레터형",    desc: "이메일 뉴스레터\n정돈된 레이아웃",             emoji: "📬", grad: "linear-gradient(135deg,#d1fae5,#6ee7b7)", accent: "#059669",  tag: "뉴스" },
+  { id: "infocard",   name: "정보카드형",    desc: "카드+설명 전문 레이아웃\n참고링크 박스 강조",    emoji: "📋", grad: "linear-gradient(135deg,#e0f2fe,#bae6fd)", accent: "#0369a1",  tag: "전문" },
+  { id: "highlighter",name: "하이라이터형",  desc: "형광펜 마커 스타일\n핵심어 강조 노트 느낌",     emoji: "🖊️", grad: "linear-gradient(135deg,#fefce8,#fef08a)", accent: "#854d0e",  tag: "강조" },
 ];
 
 // ── HTML 빌더들 ──────────────────────────────────────────
@@ -317,6 +319,133 @@ function buildNewsletter(title: string, blocks: Block[], faqs: ReturnType<typeof
   return h + `</div>`;
 }
 
+// ── 정보카드형 (스크린샷 스타일: 카드+설명링크 전문형) ──────
+function buildInfocard(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
+  const ac = "#0369a1";
+  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:740px;margin:0 auto;padding:0;background:#f8fafc;color:#1e293b;line-height:1.85;">`;
+  h += buildThumb(thumbnail);
+  h += `<div style="padding:36px 24px;">`;
+  // 타이틀
+  h += `<h1 style="font-size:2rem;font-weight:900;color:#0f172a;margin-bottom:6px;line-height:1.3;">${title}</h1>`;
+  h += `<div style="width:48px;height:4px;background:${ac};border-radius:4px;margin-bottom:24px;"></div>`;
+  // 목차
+  h += buildToc(blocks, ac, "#f0f9ff", "#bae6fd", "#0c4a6e");
+  // 본문
+  let secIdx = 0;
+  for (const b of blocks) {
+    if (b.type === "h2") {
+      h += `<h2 id="section-${secIdx++}" style="font-size:1.15rem;font-weight:800;color:#0f172a;margin:2.2rem 0 1rem;padding:10px 16px;background:#fff;border-left:4px solid ${ac};border-radius:0 8px 8px 0;box-shadow:0 1px 4px rgba(3,105,161,0.08);">${b.content}</h2>`;
+    } else if (b.type === "p") {
+      h += `<p style="margin:1rem 0;font-size:1.02rem;color:#334155;line-height:1.9;">${b.content}</p>`;
+    } else if (b.type === "box") {
+      const c: Record<string,string> = { tip:"#f0f9ff|#0369a1|💡 팁", warning:"#fff7ed|#ea580c|⚠️ 주의", important:"#fef2f2|#dc2626|🚨 중요" };
+      const [bg,fg,lb] = c[b.boxType!].split("|");
+      h += `<div style="background:${bg};border:1.5px solid ${fg}33;border-radius:10px;padding:14px 18px;margin:1.25rem 0;"><strong style="color:${fg};font-size:0.85rem;display:block;margin-bottom:5px;">${lb}</strong><span style="font-size:0.98rem;color:#334155;">${b.content}</span></div>`;
+    }
+  }
+  // FAQ - 아코디언 카드 스타일
+  if (faqs.length) {
+    h += `<div style="margin-top:2.5rem;">`;
+    h += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><div style="width:4px;height:20px;background:${ac};border-radius:4px;"></div><h3 style="font-size:1.05rem;font-weight:800;color:#0f172a;margin:0;">자주 묻는 질문</h3></div>`;
+    for (const f of faqs) {
+      h += `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">`;
+      h += `<p style="font-weight:700;color:#0369a1;margin-bottom:8px;font-size:0.97rem;">Q. ${f.q}</p>`;
+      h += `<p style="color:#475569;font-size:0.95rem;line-height:1.75;margin:0;">A. ${f.a}</p>`;
+      h += `</div>`;
+    }
+    h += `</div>`;
+  }
+  // 참고자료 - 스크린샷 스타일 (카드+설명)
+  if (refs.length) {
+    h += `<div style="margin-top:2.5rem;">`;
+    h += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><div style="width:4px;height:20px;background:${ac};border-radius:4px;"></div><h3 style="font-size:1.05rem;font-weight:800;color:#0f172a;margin:0;">참고자료 및 링크</h3></div>`;
+    for (const r of refs) {
+      h += `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">`;
+      if (r.url) {
+        h += `<a href="${r.url}" target="_blank" rel="noopener noreferrer" style="font-size:1rem;font-weight:700;color:${ac};text-decoration:none;display:block;margin-bottom:5px;">${r.name}</a>`;
+      } else {
+        h += `<p style="font-size:1rem;font-weight:700;color:#0f172a;margin-bottom:5px;">${r.name}</p>`;
+      }
+      if (r.desc) {
+        const descHtml = r.desc.split(",").map(p => {
+          const t = p.trim();
+          return t.startsWith("http") ? `<a href="${t}" target="_blank" rel="noopener noreferrer" style="color:${ac};word-break:break-all;">${t}</a>` : t;
+        }).join(", ");
+        h += `<p style="font-size:0.88rem;color:#64748b;margin:0;line-height:1.6;">${descHtml}</p>`;
+      }
+      h += `</div>`;
+    }
+    h += `</div>`;
+  }
+  h += buildRelated(related, ac, "#f0f9ff");
+  return h + `</div></div>`;
+}
+
+// ── 하이라이터형 (형광펜 마커 강조 스타일) ──────────────────
+function buildHighlighter(title: string, blocks: Block[], faqs: ReturnType<typeof extractFaq>, refs: ReturnType<typeof extractRefs>, related: ReturnType<typeof extractRelated>, thumbnail = ""): string {
+  const colors = ["#fef08a","#bbf7d0","#bfdbfe","#fecaca","#e9d5ff"];
+  let ci = 0;
+  let h = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:720px;margin:0 auto;padding:0;background:#fffdf7;color:#1c1917;line-height:1.9;">`;
+  h += buildThumb(thumbnail);
+  h += `<div style="padding:36px 24px;">`;
+  // 타이틀 - 노트 느낌
+  h += `<div style="border-bottom:2.5px solid #1c1917;padding-bottom:16px;margin-bottom:24px;">`;
+  h += `<h1 style="font-size:1.95rem;font-weight:900;color:#1c1917;line-height:1.3;display:inline;background:linear-gradient(transparent 55%, #fef08a 55%);padding:0 4px;">${title}</h1>`;
+  h += `</div>`;
+  // 목차
+  h += buildToc(blocks, "#854d0e", "#fefce8", "#fde68a", "#431407");
+  // 본문
+  let secIdx = 0;
+  for (const b of blocks) {
+    if (b.type === "h2") {
+      const hl = colors[ci++ % colors.length];
+      h += `<h2 id="section-${secIdx++}" style="font-size:1.15rem;font-weight:800;color:#1c1917;margin:2.2rem 0 1rem;display:inline-block;background:linear-gradient(transparent 40%, ${hl} 40%);padding:0 6px 2px;">${b.content}</h2><br>`;
+    } else if (b.type === "p") {
+      h += `<p style="margin:1rem 0;font-size:1.02rem;color:#292524;">${b.content}</p>`;
+    } else if (b.type === "box") {
+      const styles: Record<string,string> = {
+        tip: `background:#fefce8;border:2px solid #facc15;border-radius:3px 12px 12px 3px;`,
+        warning: `background:#fff7ed;border:2px solid #fb923c;border-radius:3px 12px 12px 3px;`,
+        important: `background:#fef2f2;border:2px solid #f87171;border-radius:3px 12px 12px 3px;`
+      };
+      const icons: Record<string,string> = { tip:"✏️ 핵심 포인트", warning:"⚠️ 주의", important:"🔴 중요" };
+      h += `<div style="${styles[b.boxType!]}padding:14px 18px;margin:1.25rem 0;position:relative;">`;
+      h += `<strong style="font-size:0.82rem;display:block;margin-bottom:6px;color:#78350f;">${icons[b.boxType!]}</strong>`;
+      h += `<span style="font-size:0.98rem;">${b.content}</span></div>`;
+    }
+  }
+  // FAQ - 노트 스타일
+  if (faqs.length) {
+    h += `<div style="margin-top:2.5rem;background:#fff;border:2px solid #fde68a;border-radius:14px;padding:20px 24px;">`;
+    h += `<h3 style="font-size:1rem;font-weight:800;color:#854d0e;margin-bottom:16px;display:inline-block;background:linear-gradient(transparent 40%,#fef08a 40%);padding:0 4px;">자주 묻는 질문</h3>`;
+    for (const f of faqs) {
+      h += `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1.5px dashed #fde68a;">`;
+      h += `<p style="font-weight:800;color:#1c1917;margin-bottom:5px;font-size:0.97rem;">Q. ${f.q}</p>`;
+      h += `<p style="color:#57534e;font-size:0.95rem;line-height:1.75;margin:0;">A. ${f.a}</p>`;
+      h += `</div>`;
+    }
+    h += `</div>`;
+  }
+  // 참고자료 - 마커 태그 스타일
+  if (refs.length) {
+    h += `<div style="margin-top:2rem;padding-top:1.5rem;border-top:2px dashed #fde68a;">`;
+    h += `<h4 style="font-size:0.9rem;font-weight:800;color:#854d0e;margin-bottom:12px;">📎 참고자료</h4>`;
+    for (const r of refs) {
+      const bg = colors[ci++ % colors.length];
+      h += `<div style="display:inline-block;margin:0 6px 8px 0;">`;
+      if (r.url) {
+        h += `<a href="${r.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:5px 14px;background:${bg};border-radius:20px;font-size:0.88rem;font-weight:700;color:#1c1917;text-decoration:none;">${r.name}</a>`;
+      } else {
+        h += `<span style="display:inline-block;padding:5px 14px;background:${bg};border-radius:20px;font-size:0.88rem;font-weight:700;color:#1c1917;">${r.name}</span>`;
+      }
+      h += `</div>`;
+    }
+    h += `</div>`;
+  }
+  h += buildRelated(related, "#854d0e", "#fefce8");
+  return h + `</div></div>`;
+}
+
 export function buildTemplateHtml(templateId: string, title: string, rawContent: string, thumbnail = ""): string {
   const body = getBody(rawContent);
   const faqs = extractFaq(rawContent);
@@ -331,6 +460,8 @@ export function buildTemplateHtml(templateId: string, title: string, rawContent:
     case "warm":       return buildWarm(title, blocks, faqs, refs, related, thumbnail);
     case "colorful":   return buildColorful(title, blocks, faqs, refs, related, thumbnail);
     case "newsletter": return buildNewsletter(title, blocks, faqs, refs, related, thumbnail);
+    case "infocard":   return buildInfocard(title, blocks, faqs, refs, related, thumbnail);
+    case "highlighter":return buildHighlighter(title, blocks, faqs, refs, related, thumbnail);
     default:           return buildMinimal(title, blocks, faqs, refs, related, thumbnail);
   }
 }
