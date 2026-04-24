@@ -1055,13 +1055,25 @@ export default function DeploymentPage() {
     // ── 템플릿 선택 분기 ──────────────────────────────
     const selectedTemplate = localStorage.getItem("blogauto_template") || "minimal";
     if (selectedTemplate !== "minimal") {
-      const savedRaw = safeParseJSON<Record<string, any>>(CONTENT_KEY, {});
-      const rawContent: string = savedRaw?.content || blocks
+      // blocks 우선 (사용자 편집 반영) → CONTENT_KEY fallback (원본 전체 포함)
+      const blocksText = blocks
         .filter(b => b.type === "text")
         .map(b => (b as { type: "text"; id: string; content: string }).content)
         .join("\n\n");
-      // rawContent 전체(FAQ/참고자료/관련글 포함)를 템플릿 HTML로 변환
-      // buildTemplateHtml이 모든 섹션을 HTML로 렌더링하므로 그대로 발송
+      const savedRaw = safeParseJSON<Record<string, any>>(CONTENT_KEY, {});
+      const savedContent: string = savedRaw?.content || "";
+      // blocks에 FAQ/참고자료/관련글 마커가 있으면 blocks 사용, 없으면 CONTENT_KEY로 보완
+      const hasMarkers = blocksText.includes("[FAQ시작]") || blocksText.includes("[참고자료시작]") || blocksText.includes("[관련글시작]");
+      let rawContent: string;
+      if (hasMarkers) {
+        rawContent = blocksText;
+      } else if (savedContent && (savedContent.includes("[FAQ시작]") || savedContent.includes("[참고자료시작]"))) {
+        // blocks에 마커 없으면 CONTENT_KEY의 마커 섹션을 뒤에 붙임
+        const markerMatch = savedContent.match(/\[FAQ시작\][\s\S]*/);
+        rawContent = blocksText + (markerMatch ? "\n\n" + markerMatch[0] : "");
+      } else {
+        rawContent = blocksText || savedContent;
+      }
       const tplThumbnail = thumbnail || localStorage.getItem("blogauto_thumbnail") || "";
       const tplHtml = buildTemplateHtml(selectedTemplate, title, rawContent, tplThumbnail);
       return applyMonetizationToHtml(tplHtml);
