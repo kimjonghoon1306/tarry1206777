@@ -31,10 +31,33 @@ function extractRefs(text: string): { name: string; desc: string; url: string }[
   const refs: { name: string; desc: string; url: string }[] = [];
   const lines = match[1].split("\n").map(l => l.trim()).filter(Boolean);
   for (const line of lines) {
+    // ⚠️ URL 규칙 같은 주석 라인 무시
+    if (line.startsWith("⚠️") || line.startsWith("//") || line.startsWith("#")) continue;
+    // LINK1: 형식
     if (/^LINK\d+:/.test(line)) {
       const parts = line.replace(/^LINK\d+:\s*/, "").split("|");
       if (parts.length >= 3) refs.push({ name: parts[0].trim(), desc: parts[1].trim(), url: parts[2].trim() });
       else if (parts.length === 2) refs.push({ name: parts[0].trim(), desc: parts[1].trim(), url: "" });
+      continue;
+    }
+    // 이름|설명|URL 형식 (LINK 접두어 없음)
+    if (line.includes("|")) {
+      const parts = line.split("|");
+      if (parts.length >= 3 && parts[2].trim().startsWith("http")) {
+        refs.push({ name: parts[0].trim(), desc: parts[1].trim(), url: parts[2].trim() });
+        continue;
+      } else if (parts.length === 2) {
+        refs.push({ name: parts[0].trim(), desc: parts[1].trim(), url: "" });
+        continue;
+      }
+    }
+    // 카테고리: URL, URL, ... 형식 (정부/공공: https://... 등)
+    const colonIdx = line.indexOf(":");
+    if (colonIdx > 0 && colonIdx < 20) {
+      const label = line.slice(0, colonIdx).trim();
+      const urlPart = line.slice(colonIdx + 1).trim();
+      const urls = urlPart.split(",").map(u => u.trim()).filter(u => u.startsWith("http"));
+      urls.forEach(url => refs.push({ name: label, desc: "", url }));
     }
   }
   return refs;
@@ -46,10 +69,17 @@ function extractRelated(text: string): { title: string; desc: string }[] {
   const related: { title: string; desc: string }[] = [];
   const lines = match[1].split("\n").map(l => l.trim()).filter(Boolean);
   for (const line of lines) {
+    // POST1: 형식
     if (/^POST\d+:/.test(line)) {
       const parts = line.replace(/^POST\d+:\s*/, "").split("|");
       if (parts.length >= 2) related.push({ title: parts[0].trim(), desc: parts[1].trim() });
       else if (parts.length === 1) related.push({ title: parts[0].trim(), desc: "" });
+      continue;
+    }
+    // 제목|설명 형식 (POST 접두어 없음)
+    if (line.includes("|")) {
+      const parts = line.split("|");
+      related.push({ title: parts[0].trim(), desc: parts[1]?.trim() || "" });
     }
   }
   return related;
