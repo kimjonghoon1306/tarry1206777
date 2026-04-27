@@ -150,6 +150,7 @@ export default function CampaignPage() {
   const urgentCount = filtered.filter(c => c.deadline <= 3).length;
 
   return (
+    <>
     <Layout>
       <style>{CSS}</style>
       <div style={{ padding:"28px 24px 80px", opacity:ready?1:0, transition:"opacity 0.5s", fontFamily:"Pretendard, sans-serif" }}>
@@ -340,6 +341,7 @@ export default function CampaignPage() {
       </div>
     </Layout>
     <FloatingAutoPublishBtn />
+    </>
   );
 }
 function FloatingAutoPublishBtn() {
