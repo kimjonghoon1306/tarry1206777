@@ -11,6 +11,7 @@ import KeywordResearch from "./pages/KeywordResearch";
 import ContentGenerator from "./pages/ContentGenerator";
 import ImageGenerator from "./pages/ImageGenerator";
 import DeploymentPage from "./pages/DeploymentPage";
+import NaverPublishPage from "./pages/NaverPublishPage";
 import SettingsPage from "./pages/SettingsPage";
 import HeroPage from "./pages/HeroPage";
 import LandingPage from "./pages/LandingPage";
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/images" component={() => <PrivateRoute component={ImageGenerator} />} />
       <Route path="/template" component={() => <PrivateRoute component={TemplatePage} />} />
       <Route path="/deploy" component={() => <PrivateRoute component={DeploymentPage} />} />
+      <Route path="/naver" component={() => <PrivateRoute component={NaverPublishPage} />} />
       <Route path="/settings" component={() => <PrivateRoute component={SettingsPage} />} />
       <Route path="/admin" component={() => <PrivateRoute component={MyPage} />} />
       <Route path="/mypage" component={() => <PrivateRoute component={MyPage} />} />
