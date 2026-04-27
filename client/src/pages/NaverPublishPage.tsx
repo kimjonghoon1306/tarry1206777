@@ -100,6 +100,11 @@ const CSS = `
   font-family: 'Noto Sans KR', sans-serif !important; font-size: 13px !important;
   outline: none;
 }
+.hub-input option {
+  background: #1a2235 !important;
+  color: white !important;
+}
+select.hub-input { color-scheme: dark; }
 .hub-input:focus  { border-color: #03C75A !important; box-shadow: 0 0 0 2px rgba(3,199,90,.15) !important; }
 .hub-input::placeholder { color: rgba(255,255,255,0.3) !important; }
 
@@ -168,7 +173,7 @@ function PIcon({ p, s=20 }:{ p:Platform; s?:number }) {
 
 // ── 메인 ─────────────────────────────────────────────────
 export default function NaverPublishPage() {
-  const [activeTab, setActiveTab]       = useState<"publish"|"accounts"|"history"|"logs">("publish");
+  const [activeTab, setActiveTab]       = useState<"publish"|"write"|"accounts"|"history"|"logs">("publish");
   const [activePlatform, setActivePlatform] = useState<Platform>("naver");
   const [botOnline, setBotOnline]       = useState(false);
   const [checking, setChecking]         = useState(false);
@@ -186,6 +191,14 @@ export default function NaverPublishPage() {
   const [pubAccount, setPubAccount] = useState("");
   const [pubImgPrompt, setPubImgPrompt] = useState("");
   const [publishing, setPublishing] = useState(false);
+
+  // 글 생성
+  const [writeKeyword,  setWriteKeyword]  = useState("");
+  const [writePlatform, setWritePlatform] = useState<Platform>("naver");
+  const [writeResult,   setWriteResult]   = useState("");
+  const [writeTitle,    setWriteTitle]    = useState("");
+  const [writeTags,     setWriteTags]     = useState("");
+  const [writeLoading,  setWriteLoading]  = useState(false);
 
   // 히스토리 / 로그
   const [history, setHistory] = useState<PublishHistory[]>(() => safeJson<PublishHistory[]>(HISTORY_KEY, []));
@@ -216,6 +229,77 @@ export default function NaverPublishPage() {
   }, [addLog]);
 
   useEffect(() => { checkBot(); }, [checkBot]);
+
+  // ── 글 생성 ─────────────────────────────────────────────
+  async function handleWriteContent() {
+    if (!writeKeyword.trim()) { toast.error("키워드를 입력하세요"); return; }
+    setWriteLoading(true);
+    setWriteResult("");
+    addLog("info", \`✍️ 글 생성 시작: "\${writeKeyword}" [\${writePlatform}]\`);
+    try {
+      // 기존 AI 키 사용
+      const aiProvider = localStorage.getItem("ai_provider") || "gemini";
+      const geminiKey  = localStorage.getItem("u:admin:gemini_api_key") || localStorage.getItem("gemini_api_key") || "";
+      const claudeKey  = localStorage.getItem("u:admin:anthropic_api_key") || localStorage.getItem("anthropic_api_key") || "";
+
+      const platformStyle = writePlatform === "naver"
+        ? "네이버 블로그 스타일로 친근하고 자연스럽게, 소제목(##)과 본문 단락 위주로"
+        : "티스토리 블로그 스타일로 정보성 위주, 목차와 소제목 포함하여";
+
+      const prompt = \`"\${writeKeyword}" 키워드로 \${platformStyle} 블로그 글을 한국어로 1500자 이상 작성해줘.
+형식:
+- 제목: (제목만)
+- 태그: (태그1, 태그2, 태그3 형식으로 5개)
+- 본문: (본문 내용)\`;
+
+      let resultText = "";
+
+      if (geminiKey) {
+        const r = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\${geminiKey}\`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        });
+        const d = await r.json();
+        resultText = d.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } else if (claudeKey) {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": claudeKey, "anthropic-version": "2023-06-01" },
+          body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2000, messages: [{ role: "user", content: prompt }] }),
+        });
+        const d = await r.json();
+        resultText = d.content?.[0]?.text || "";
+      } else {
+        throw new Error("AI API 키가 없습니다. 설정에서 Gemini 또는 Claude 키를 등록해주세요.");
+      }
+
+      // 제목/태그/본문 파싱
+      const titleMatch = resultText.match(/제목[:\s]*([^\n]+)/);
+      const tagsMatch  = resultText.match(/태그[:\s]*([^\n]+)/);
+      const bodyMatch  = resultText.match(/본문[:\s]*([\s\S]+)/);
+
+      if (titleMatch) setWriteTitle(titleMatch[1].trim());
+      if (tagsMatch)  setWriteTags(tagsMatch[1].trim());
+      setWriteResult(bodyMatch ? bodyMatch[1].trim() : resultText);
+
+      addLog("success", \`✅ 글 생성 완료 (\${resultText.length}자)\`);
+      toast.success("글 생성 완료!");
+    } catch(e:any) {
+      addLog("error", \`❌ 글 생성 실패: \${e.message}\`);
+      toast.error(e.message);
+    } finally { setWriteLoading(false); }
+  }
+
+  function sendToPublish() {
+    if (!writeResult) { toast.error("먼저 글을 생성하세요"); return; }
+    setPubTitle(writeTitle);
+    setPubContent(writeResult);
+    setPubTags(writeTags);
+    setActivePlatform(writePlatform);
+    setActiveTab("publish");
+    toast.success("발행하기 탭으로 이동했습니다!");
+  }
 
   // ── 계정 연결 ────────────────────────────────────────────
   async function handleConnect(acc: Account) {
@@ -309,6 +393,7 @@ export default function NaverPublishPage() {
 
   const TABS = [
     { key:"publish",  icon:Send,      label:"발행하기" },
+    { key:"write",    icon:FileText,  label:"글 생성" },
     { key:"accounts", icon:Settings2, label:"계정 관리" },
     { key:"history",  icon:History,   label:"히스토리" },
     { key:"logs",     icon:Terminal,  label:"실시간 로그" },
@@ -320,7 +405,7 @@ export default function NaverPublishPage() {
       <style>{CSS}</style>
       <div style={{
         minHeight:"100vh",
-        background:"linear-gradient(135deg,#050d18 0%,#080f1e 50%,#050c17 100%)",
+        background:"var(--background)",
         position:"relative", overflow:"hidden",
         fontFamily:"'Noto Sans KR',sans-serif",
       }}>
@@ -330,7 +415,8 @@ export default function NaverPublishPage() {
         <div style={{
           borderBottom:"1px solid rgba(255,255,255,0.07)",
           padding:"18px 24px 14px",
-          background:"rgba(5,13,24,0.85)",
+          background:"var(--card)",
+          borderBottom:"1px solid var(--border)",
           backdropFilter:"blur(20px)",
           position:"sticky", top:0, zIndex:20,
           animation:"hub-fade-up .4s ease both",
@@ -348,7 +434,7 @@ export default function NaverPublishPage() {
                 <Zap style={{width:20,height:20,color:"#000"}}/>
               </div>
               <div>
-                <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(16px,3vw,22px)",color:"white",margin:0,letterSpacing:"-.02em"}}>
+                <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(16px,3vw,22px)",color:"var(--foreground)",margin:0,letterSpacing:"-.02em"}}>
                   자동 발행 허브
                 </h1>
                 <p style={{fontSize:11,color:"rgba(255,255,255,.4)",margin:0,marginTop:1}}>
@@ -666,6 +752,68 @@ export default function NaverPublishPage() {
                   </div>
                 ))
               }
+            </div>
+          )}
+
+          {/* ════ 글 생성 ════ */}
+          {activeTab==="write" && (
+            <div style={{maxWidth:780,animation:"hub-fade-up .35s ease both"}}>
+              <div className="hub-card" style={{padding:"22px",marginBottom:16}}>
+                <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 14px"}}>네이버/티스토리 전용 글 생성</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 130px",gap:10,marginBottom:12}}>
+                  <div>
+                    <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>키워드</label>
+                    <input className="hub-input" style={{width:"100%",padding:"10px 13px"}}
+                      placeholder="예: 강남 맛집 추천"
+                      value={writeKeyword} onChange={e=>setWriteKeyword(e.target.value)}
+                      onKeyDown={e=>e.key==="Enter"&&handleWriteContent()}/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>플랫폼</label>
+                    <select className="hub-input" style={{width:"100%",padding:"10px 11px"}}
+                      value={writePlatform} onChange={e=>setWritePlatform(e.target.value as Platform)}>
+                      <option value="naver">네이버</option>
+                      <option value="tistory">티스토리</option>
+                    </select>
+                  </div>
+                </div>
+                <button className="hub-btn-n" style={{padding:"11px 22px",fontSize:13}}
+                  onClick={handleWriteContent} disabled={writeLoading}>
+                  {writeLoading
+                    ? <><RefreshCw style={{width:13,height:13,animation:"hub-spin 1s linear infinite"}}/>생성 중...</>
+                    : <><FileText style={{width:13,height:13}}/>글 생성</>
+                  }
+                </button>
+              </div>
+
+              {writeResult && (
+                <>
+                  <div className="hub-card" style={{padding:"22px",marginBottom:12}}>
+                    <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>생성 결과</p>
+                    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                      <div>
+                        <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>제목</label>
+                        <input className="hub-input" style={{width:"100%",padding:"9px 13px"}}
+                          value={writeTitle} onChange={e=>setWriteTitle(e.target.value)}/>
+                      </div>
+                      <div>
+                        <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>태그</label>
+                        <input className="hub-input" style={{width:"100%",padding:"9px 13px"}}
+                          value={writeTags} onChange={e=>setWriteTags(e.target.value)}/>
+                      </div>
+                      <div>
+                        <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>본문</label>
+                        <textarea className="hub-input" rows={12} style={{width:"100%",padding:"9px 13px",resize:"vertical"}}
+                          value={writeResult} onChange={e=>setWriteResult(e.target.value)}/>
+                      </div>
+                    </div>
+                  </div>
+                  <button className="hub-btn-n" style={{padding:"13px 22px",fontSize:14,justifyContent:"center",width:"100%"}}
+                    onClick={sendToPublish}>
+                    <Send style={{width:15,height:15}}/> 발행하기로 넘기기
+                  </button>
+                </>
+              )}
             </div>
           )}
 
