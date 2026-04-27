@@ -339,5 +339,66 @@ export default function CampaignPage() {
         </div>
       </div>
     </Layout>
+    <FloatingAutoPublishBtn />
   );
 }
+function FloatingAutoPublishBtn() {
+  const FLOAT_CSS = `
+    @keyframes f-float {
+      0%,100% { transform:translateY(0) scale(1); }
+      33%     { transform:translateY(-8px) scale(1.03); }
+      66%     { transform:translateY(-3px) scale(1.01); }
+    }
+    @keyframes f-glow {
+      0%,100% { box-shadow:0 8px 28px rgba(234,179,8,.45),0 0 0 0 rgba(234,179,8,.3); }
+      50%     { box-shadow:0 16px 44px rgba(234,179,8,.75),0 0 0 10px rgba(234,179,8,0); }
+    }
+    @keyframes f-shine {
+      0%   { transform:translateX(-100%) skewX(-15deg); }
+      100% { transform:translateX(260%) skewX(-15deg); }
+    }
+    @keyframes f-badge {
+      0%,100% { transform:scale(1); }
+      50%     { transform:scale(1.15); }
+    }
+  `;
+  return (
+    <>
+      <style>{FLOAT_CSS}</style>
+      <button
+        onClick={() => { window.location.href = "/naver"; }}
+        style={{
+          position:"fixed", bottom:28, right:28, zIndex:9999,
+          display:"flex", alignItems:"center", gap:10,
+          padding:"14px 22px", borderRadius:99,
+          background:"linear-gradient(135deg,#eab308,#f59e0b,#d97706)",
+          color:"#000", fontWeight:800, fontSize:14,
+          border:"none", cursor:"pointer",
+          fontFamily:"'Noto Sans KR',sans-serif",
+          animation:"f-float 3s ease-in-out infinite, f-glow 3s ease-in-out infinite",
+          overflow:"hidden",
+        }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLButtonElement;
+          el.style.animation = "none";
+          el.style.transform = "translateY(-4px) scale(1.07)";
+          el.style.boxShadow = "0 20px 56px rgba(234,179,8,.8)";
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLButtonElement;
+          el.style.animation = "f-float 3s ease-in-out infinite, f-glow 3s ease-in-out infinite";
+          el.style.transform = "";
+          el.style.boxShadow = "";
+        }}
+      >
+        <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)",animation:"f-shine 2.5s ease-in-out infinite",pointerEvents:"none"}}/>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{position:"relative",flexShrink:0}}>
+          <path d="M13 2L4.5 13.5H11L10 22L20.5 10H14L13 2Z" fill="#000" stroke="#000" strokeWidth="1.5" strokeLinejoin="round"/>
+        </svg>
+        <span style={{position:"relative"}}>자동 발행</span>
+        <span style={{position:"absolute",top:-7,right:-5,background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,padding:"2px 5px",borderRadius:99,border:"2px solid #fff",animation:"f-badge 1.8s ease-in-out infinite"}}>NEW</span>
+      </button>
+    </>
+  );
+}
+

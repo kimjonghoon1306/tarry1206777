@@ -1940,6 +1940,7 @@ const TABS = [
   { id: "category",label: "카테고리", icon: FileText, color: "#06b6d4", grad: "linear-gradient(135deg,#06b6d4,#0284c7)" },
   { id: "og",      label: "OG",    icon: Image, color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)" },
   { id: "popup",   label: "공지",  icon: Bell, color: "#ec4899", grad: "linear-gradient(135deg,#ec4899,#db2777)" },
+  { id: "autopublish", label: "자동발행", icon: Send, color: "#03C75A", grad: "linear-gradient(135deg,#03C75A,#059669)" },
 ] as const;
 type TabId = typeof TABS[number]["id"];
 
@@ -1990,6 +1991,7 @@ function AdminDashboard() {
           {tab === "category" && <CategoryManager />}
           {tab === "og"       && <OGManager />}
           {tab === "popup"    && <PopupManager />}
+          {tab === "autopublish" && <AutoPublishManager />}
         </div>
       </div>
 
@@ -2226,3 +2228,115 @@ export default function SuperAdminPage() {
   return <AdminDashboard />;
 }
 //fix
+
+
+// ── 자동발행 관리 (관리자 전용) ──────────────────────────
+function AutoPublishManager() {
+  const [botStatus, setBotStatus] = React.useState<"online"|"offline"|"checking">("checking");
+  const [flowEmail, setFlowEmail] = React.useState(() => localStorage.getItem("admin_flow_email") || "");
+  const [flowPw,    setFlowPw]    = React.useState(() => localStorage.getItem("admin_flow_pw")    || "");
+  const [showFlowPw, setShowFlowPw] = React.useState(false);
+  const [allHistory, setAllHistory] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetch("http://localhost:3333/health", { signal: AbortSignal.timeout(3000) })
+      .then(r => setBotStatus(r.ok ? "online" : "offline"))
+      .catch(() => setBotStatus("offline"));
+    try {
+      const h = JSON.parse(localStorage.getItem("blogauto_autopublish_history") || "[]");
+      setAllHistory(Array.isArray(h) ? h : []);
+    } catch { setAllHistory([]); }
+  }, []);
+
+  function saveFlowAccount() {
+    localStorage.setItem("admin_flow_email", flowEmail);
+    localStorage.setItem("admin_flow_pw", flowPw);
+    toast.success("Google Flow 계정 저장됨");
+  }
+
+  const dotColor = botStatus === "online" ? "#03C75A" : botStatus === "offline" ? "#ef4444" : "#f59e0b";
+  const dotLabel = botStatus === "online" ? "온라인" : botStatus === "offline" ? "오프라인" : "확인 중";
+
+  return (
+    <div className="space-y-5 mt-2">
+      <div className="rounded-2xl p-5" style={{ background:"var(--card)", border:"1px solid var(--border)" }}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-2 h-2 rounded-full" style={{ background: dotColor }}/>
+          <h3 className="text-sm font-bold text-foreground">봇 서버 상태</h3>
+          <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+            style={{ background:`${dotColor}20`, color:dotColor }}>{dotLabel}</span>
+        </div>
+        <p className="text-xs" style={{ color:"var(--muted-foreground)" }}>
+          각 유저 PC에서 <code style={{background:"var(--muted)",padding:"1px 4px",borderRadius:4,fontSize:10}}>naver-bot/</code> 폴더의{" "}
+          <code style={{background:"var(--muted)",padding:"1px 4px",borderRadius:4,fontSize:10}}>npm run dev</code> 실행 필요
+        </p>
+      </div>
+
+      <div className="rounded-2xl p-5" style={{ background:"var(--card)", border:"1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black text-white"
+            style={{ background:"linear-gradient(135deg,#4285F4,#34A853)" }}>G</div>
+          <h3 className="text-sm font-bold text-foreground">Google Flow 공용 계정</h3>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block" style={{ color:"var(--muted-foreground)" }}>구글 이메일</label>
+            <Input value={flowEmail} onChange={e => setFlowEmail(e.target.value)} placeholder="admin@gmail.com" className="text-sm h-9"/>
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block" style={{ color:"var(--muted-foreground)" }}>구글 비밀번호</label>
+            <div className="relative">
+              <Input type={showFlowPw ? "text" : "password"} value={flowPw}
+                onChange={e => setFlowPw(e.target.value)} placeholder="••••••••" className="text-sm h-9 pr-9"/>
+              <button onClick={() => setShowFlowPw(v => !v)}
+                className="absolute right-2.5 top-2" style={{ color:"var(--muted-foreground)", background:"none", border:"none", cursor:"pointer" }}>
+                {showFlowPw ? <EyeOff className="w-3.5 h-3.5"/> : <Eye className="w-3.5 h-3.5"/>}
+              </button>
+            </div>
+          </div>
+        </div>
+        <Button size="sm" style={{ background:"#4285F4", color:"white" }} onClick={saveFlowAccount}>
+          <Save className="w-3.5 h-3.5 mr-1.5"/> 저장
+        </Button>
+      </div>
+
+      <div className="rounded-2xl p-5" style={{ background:"var(--card)", border:"1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Activity className="w-4 h-4" style={{ color:"var(--color-emerald)" }}/>
+            발행 히스토리 ({allHistory.length}건)
+          </h3>
+          {allHistory.length > 0 && (
+            <button className="text-xs px-2.5 py-1.5 rounded-lg font-medium"
+              style={{ background:"rgba(239,68,68,.1)", color:"#ef4444", border:"1px solid rgba(239,68,68,.2)", cursor:"pointer" }}
+              onClick={() => { if (!confirm("히스토리를 초기화할까요?")) return; localStorage.removeItem("blogauto_autopublish_history"); setAllHistory([]); toast.success("초기화됨"); }}>
+              <Trash2 className="w-3 h-3 inline mr-1"/>초기화
+            </button>
+          )}
+        </div>
+        {allHistory.length === 0 ? (
+          <p className="text-sm text-center py-8" style={{ color:"var(--muted-foreground)" }}>발행 기록 없음</p>
+        ) : (
+          <div className="space-y-2">
+            {allHistory.slice(0, 30).map((h: any, i: number) => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl"
+                style={{ background:"var(--background)", border:"1px solid var(--border)" }}>
+                <span>{h.platform === "naver" ? "🟢" : "🟠"}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{h.title}</p>
+                  <p className="text-xs" style={{ color:"var(--muted-foreground)" }}>
+                    {h.account} · {new Date(h.publishedAt).toLocaleString("ko-KR")}
+                  </p>
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                  style={{ background: h.status==="success"?"rgba(3,199,90,.12)":"rgba(239,68,68,.12)", color: h.status==="success"?"#03C75A":"#ef4444" }}>
+                  {h.status==="success"?"✅ 완료":"❌ 실패"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
