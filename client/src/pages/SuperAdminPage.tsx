@@ -1970,6 +1970,12 @@ function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button className="ap-guide-btn" onClick={()=>setShowGuide(v=>!v)}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{position:"relative",zIndex:1}}>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#000"/>
+                </svg>
+                <span style={{position:"relative",zIndex:1}}>사용 설명서</span>
+              </button>
               <button className="text-xs px-3 py-2 rounded-xl font-bold transition-all active:scale-95"
                 style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", boxShadow: "0 0 12px rgba(239,68,68,0.4)" }}
                 onClick={() => window.location.href = "/monetization"}>
@@ -2318,22 +2324,20 @@ function AutoPublishManager() {
     .ap-primary-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(3,199,90,.4); }
 
     .ap-guide-btn {
-      position:fixed; bottom:28px; left:28px; z-index:9999;
-      padding:12px 20px; border-radius:99px; border:none; cursor:pointer;
+      padding:7px 14px; border-radius:11px; border:none; cursor:pointer;
       background:linear-gradient(135deg,#f59e0b,#d97706);
-      color:#000; font-weight:800; font-size:13px;
+      color:#000; font-weight:800; font-size:12px;
       font-family:'Noto Sans KR',sans-serif;
-      display:flex; align-items:center; gap:8px;
-      animation:ap-float 3s ease-in-out infinite;
-      box-shadow:0 8px 24px rgba(245,158,11,.45);
-      overflow:hidden;
+      display:flex; align-items:center; gap:6px;
+      box-shadow:0 4px 12px rgba(245,158,11,.35);
+      overflow:hidden; position:relative; transition:all .2s;
     }
     .ap-guide-btn::after {
       content:''; position:absolute; inset:0;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);
       animation:ap-shine 2s ease-in-out infinite;
     }
-    .ap-guide-btn:hover { transform:translateY(-3px) scale(1.05); box-shadow:0 14px 36px rgba(245,158,11,.6); }
+    .ap-guide-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(245,158,11,.5); }
 
     .ap-guide-panel {
       position:fixed; top:0; right:0; bottom:0; width:min(420px,100vw);
@@ -2461,13 +2465,7 @@ function AutoPublishManager() {
         </div>
       )}
 
-      {/* 사용설명서 버튼 */}
-      <button className="ap-guide-btn" onClick={()=>setShowGuide(v=>!v)} style={{position:"relative"}}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{position:"relative",zIndex:1}}>
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#000"/>
-        </svg>
-        <span style={{position:"relative",zIndex:1}}>사용 설명서</span>
-      </button>
+
 
       {/* 메인 콘텐츠 */}
       <div style={{paddingBottom:120,animation:"ap-fade .35s ease both"}}>
