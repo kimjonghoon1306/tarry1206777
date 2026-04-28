@@ -954,5 +954,189 @@ export default function NaverPublishPage() {
         </div>
       </div>
     </Layout>
+    <NaverGuideBtn />
+  );
+}
+
+// ── 일반회원 사용설명서 플로팅 버튼 ──────────────────────
+function NaverGuideBtn() {
+  const [show, setShow] = useState(false);
+
+  const GUIDE_CSS = `
+    @keyframes ng-float {
+      0%   { transform:translateY(0) scale(1) rotate(0deg); }
+      25%  { transform:translateY(-10px) scale(1.04) rotate(-1deg); }
+      50%  { transform:translateY(-6px) scale(1.02) rotate(1deg); }
+      75%  { transform:translateY(-12px) scale(1.05) rotate(-0.5deg); }
+      100% { transform:translateY(0) scale(1) rotate(0deg); }
+    }
+    @keyframes ng-glow {
+      0%,100% { box-shadow:0 8px 32px rgba(234,179,8,.5),0 0 0 0 rgba(234,179,8,.4); }
+      50%     { box-shadow:0 20px 60px rgba(234,179,8,.9),0 0 0 12px rgba(234,179,8,0); }
+    }
+    @keyframes ng-shine {
+      0%   { transform:translateX(-150%) skewX(-20deg); }
+      100% { transform:translateX(300%) skewX(-20deg); }
+    }
+    @keyframes ng-ring {
+      0%   { transform:scale(1); opacity:.6; }
+      100% { transform:scale(2.4); opacity:0; }
+    }
+    @keyframes ng-badge {
+      0%,100% { transform:scale(1) rotate(0deg); }
+      33%     { transform:scale(1.2) rotate(-5deg); }
+      66%     { transform:scale(1.1) rotate(5deg); }
+    }
+    @keyframes ng-orbit {
+      from { transform:rotate(0deg) translateX(30px) rotate(0deg); }
+      to   { transform:rotate(360deg) translateX(30px) rotate(-360deg); }
+    }
+    @keyframes ng-slide-in {
+      from { opacity:0; transform:translateX(100%); }
+      to   { opacity:1; transform:translateX(0); }
+    }
+    .ng-guide-panel {
+      position:fixed; top:0; right:0; bottom:0; width:min(400px,100vw);
+      background:var(--background); border-left:1px solid var(--border);
+      z-index:10000; overflow-y:auto; padding:24px;
+      animation:ng-slide-in .3s ease both;
+      box-shadow:-8px 0 40px rgba(0,0,0,.15);
+    }
+    @media(max-width:768px) { .ng-guide-panel { width:100vw; } }
+  `;
+
+  const GUIDE_STEPS = [
+    {
+      step:"STEP 1", title:"봇 서버 실행", color:"#03C75A",
+      items:[
+        "PC에서 naver-bot 폴더 열기",
+        "npm run dev 실행",
+        "봇 서버 온라인 확인 (우측 상단)",
+      ]
+    },
+    {
+      step:"STEP 2", title:"계정 연결", color:"#4285F4",
+      items:[
+        "계정 관리 탭 클릭",
+        "플랫폼 선택 (네이버/티스토리)",
+        "아이디, 비밀번호 입력 후 계정 추가",
+        "연결 버튼 클릭 → 브라우저 자동 로그인",
+        "2단계 인증 있으면 수동 처리",
+      ]
+    },
+    {
+      step:"STEP 3", title:"글 생성", color:"#f59e0b",
+      items:[
+        "글 생성 탭 클릭",
+        "키워드 입력 (예: 강남 맛집)",
+        "네이버/티스토리 선택",
+        "글 생성 버튼 클릭",
+        "제목/태그/본문 자동 생성됨",
+        "발행하기로 넘기기 클릭",
+      ]
+    },
+    {
+      step:"STEP 4", title:"자동 발행", color:"#a78bfa",
+      items:[
+        "발행하기 탭에서 계정 선택",
+        "이미지 프롬프트 입력 (선택사항)",
+        "자동 발행 버튼 클릭",
+        "브라우저가 자동으로 로그인 후 발행",
+        "히스토리 탭에서 결과 확인",
+      ]
+    },
+  ];
+
+  return (
+    <>
+      <style>{GUIDE_CSS}</style>
+
+      {/* 파동 링 */}
+      <div style={{position:"fixed",bottom:40,right:40,zIndex:9998,width:56,height:56,borderRadius:"50%",border:"2px solid rgba(234,179,8,.6)",animation:"ng-ring 2s ease-out infinite",pointerEvents:"none"}}/>
+      <div style={{position:"fixed",bottom:40,right:40,zIndex:9998,width:56,height:56,borderRadius:"50%",border:"2px solid rgba(234,179,8,.4)",animation:"ng-ring 2s ease-out infinite .7s",pointerEvents:"none"}}/>
+
+      {/* 궤도 별 */}
+      <div style={{position:"fixed",bottom:54,right:54,zIndex:9999,width:0,height:0,pointerEvents:"none"}}>
+        <div style={{animation:"ng-orbit 3s linear infinite"}}>
+          <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="#fbbf24"/></svg>
+        </div>
+      </div>
+
+      {/* 플로팅 버튼 */}
+      <button
+        onClick={()=>setShow(v=>!v)}
+        style={{
+          position:"fixed",bottom:28,right:28,zIndex:9999,
+          display:"flex",alignItems:"center",gap:10,
+          padding:"14px 22px",borderRadius:99,
+          background:"linear-gradient(135deg,#fbbf24,#f59e0b,#d97706,#b45309)",
+          color:"#000",fontWeight:900,fontSize:14,
+          border:"2px solid rgba(255,255,255,.3)",
+          cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",
+          animation:"ng-float 4s ease-in-out infinite, ng-glow 2.5s ease-in-out infinite",
+          overflow:"hidden",position:"fixed",
+        }}
+        onMouseEnter={e=>{
+          const el = e.currentTarget as HTMLButtonElement;
+          el.style.animation="none";
+          el.style.transform="translateY(-6px) scale(1.1)";
+          el.style.boxShadow="0 24px 60px rgba(234,179,8,.9)";
+        }}
+        onMouseLeave={e=>{
+          const el = e.currentTarget as HTMLButtonElement;
+          el.style.animation="ng-float 4s ease-in-out infinite, ng-glow 2.5s ease-in-out infinite";
+          el.style.transform="";
+          el.style.boxShadow="";
+        }}
+      >
+        {/* 반짝임 */}
+        <span style={{position:"absolute",inset:0,background:"linear-gradient(105deg,transparent 30%,rgba(255,255,255,.5) 50%,transparent 70%)",animation:"ng-shine 2s ease-in-out infinite",pointerEvents:"none"}}/>
+        {/* 번개 SVG */}
+        <span style={{position:"relative",display:"flex",animation:"ng-float 2s ease-in-out infinite"}}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <defs><linearGradient id="ng-bolt" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#78350f"/><stop offset="100%" stopColor="#000"/></linearGradient></defs>
+            <path d="M13 2L4.5 13.5H11L10 22L20.5 10H14L13 2Z" fill="url(#ng-bolt)" stroke="#000" strokeWidth="1.2" strokeLinejoin="round"/>
+          </svg>
+        </span>
+        <span style={{position:"relative"}}>사용 설명서</span>
+        {/* NEW 배지 */}
+        <span style={{position:"absolute",top:-8,right:-4,background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:9,fontWeight:900,padding:"2px 6px",borderRadius:99,border:"2px solid #fff",boxShadow:"0 2px 8px rgba(239,68,68,.5)",animation:"ng-badge 2s ease-in-out infinite"}}>TIP</span>
+      </button>
+
+      {/* 설명서 패널 */}
+      {show && (
+        <div className="ng-guide-panel">
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#f59e0b,#d97706)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
+                </svg>
+              </div>
+              <div>
+                <h2 style={{fontSize:15,fontWeight:800,color:"var(--foreground)",margin:0}}>사용 설명서</h2>
+                <p style={{fontSize:11,color:"rgba(255,255,255,.4)",margin:0}}>자동 발행 허브 이용 가이드</p>
+              </div>
+            </div>
+            <button onClick={()=>setShow(false)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--muted-foreground)",padding:4,fontSize:20}}>✕</button>
+          </div>
+
+          {GUIDE_STEPS.map((s,i)=>(
+            <div key={i} style={{marginBottom:12,padding:"14px 16px",borderRadius:14,background:"var(--card)",border:"1px solid var(--border)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <span style={{fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:99,background:`${s.color}20`,color:s.color,letterSpacing:".05em"}}>{s.step}</span>
+                <span style={{fontSize:13,fontWeight:700,color:"var(--foreground)"}}>{s.title}</span>
+              </div>
+              {s.items.map((item,j)=>(
+                <div key={j} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:5}}>
+                  <div style={{width:15,height:15,borderRadius:"50%",flexShrink:0,marginTop:2,background:`${s.color}20`,border:`1px solid ${s.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:s.color}}>{j+1}</div>
+                  <span style={{fontSize:12,color:"var(--muted-foreground)",lineHeight:1.5}}>{item}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
