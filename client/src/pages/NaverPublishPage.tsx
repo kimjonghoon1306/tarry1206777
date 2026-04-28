@@ -74,18 +74,17 @@ const CSS = `
 @keyframes pulse-naver  { 0%,100%{box-shadow:0 0 0 0 rgba(3,199,90,0.35)} 50%{box-shadow:0 0 0 8px transparent} }
 @keyframes pulse-tistory{ 0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,0.35)} 50%{box-shadow:0 0 0 8px transparent} }
 
+/* ── 라이트/다크 공통 변수 ── */
+:root { --hub-text: #ffffff; --hub-text-muted: rgba(255,255,255,0.45); --hub-bg-card: rgba(255,255,255,0.04); --hub-border: rgba(255,255,255,0.08); --hub-input-bg: rgba(255,255,255,0.05); --hub-input-border: rgba(255,255,255,0.1); --hub-btn-g-bg: rgba(255,255,255,0.06); --hub-btn-g-color: rgba(255,255,255,0.6); }
+:root:not(.dark) { --hub-text: #09090b; --hub-text-muted: rgba(0,0,0,0.5); --hub-bg-card: #ffffff; --hub-border: #e4e4e7; --hub-input-bg: #f4f4f5; --hub-input-border: #d4d4d8; --hub-btn-g-bg: rgba(0,0,0,0.06); --hub-btn-g-color: rgba(0,0,0,0.6); }
+
 .hub-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--hub-bg-card);
+  border: 1px solid var(--hub-border);
   border-radius: 16px;
   transition: border-color .2s;
 }
-.hub-card:hover { border-color: rgba(255,255,255,0.14); }
-:root:not(.dark) .hub-card {
-  background: #ffffff !important;
-  border-color: #e4e4e7 !important;
-}
-:root:not(.dark) .hub-card:hover { border-color: #a1a1aa !important; }
+.hub-card:hover { border-color: var(--hub-input-border); }
 
 .hub-tab {
   padding: 8px 16px; border-radius: 10px; font-size: 13px;
@@ -95,22 +94,17 @@ const CSS = `
   display: flex; align-items: center; gap: 6px;
 }
 .hub-tab-active  { background:rgba(3,199,90,.12); border-color:#03C75A; color:#03C75A; }
-.hub-tab-inactive{ color:rgba(255,255,255,.45); background:rgba(255,255,255,.04); }
-.hub-tab-inactive:hover { color:rgba(255,255,255,.75); background:rgba(255,255,255,.07); }
-:root:not(.dark) .hub-tab-inactive { color:rgba(0,0,0,0.55) !important; background:rgba(0,0,0,0.05) !important; }
-:root:not(.dark) .hub-tab-inactive:hover { color:rgba(0,0,0,0.85) !important; background:rgba(0,0,0,0.09) !important; }
+.hub-tab-inactive{ color:var(--hub-text-muted); background:var(--hub-bg-card); }
+.hub-tab-inactive:hover { color:var(--hub-text); background:var(--hub-input-bg); }
 
 .hub-input {
-  background: rgba(255,255,255,0.05) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
-  color: var(--foreground) !important; border-radius: 10px !important;
-  font-family: 'Noto Sans KR', sans-serif !important; font-size: 13px !important;
+  background: var(--hub-input-bg) !important;
+  border: 1px solid var(--hub-input-border) !important;
+  color: var(--hub-text) !important;
+  border-radius: 10px !important;
+  font-family: 'Noto Sans KR', sans-serif !important;
+  font-size: 13px !important;
   outline: none;
-}
-:root:not(.dark) .hub-input {
-  background: #f4f4f5 !important;
-  border: 1px solid #d4d4d8 !important;
-  color: #09090b !important;
 }
 .hub-input option {
   background: #1a2235 !important;
@@ -135,43 +129,9 @@ select.hub-input {
   font-weight: 600;
 }
 .hub-input:focus  { border-color: #03C75A !important; box-shadow: 0 0 0 2px rgba(3,199,90,.15) !important; }
-.hub-input::placeholder { color: rgba(255,255,255,0.3) !important; }
-:root:not(.dark) .hub-input::placeholder { color: rgba(0,0,0,0.4) !important; }
+.hub-input::placeholder { color: var(--hub-text-muted) !important; }
 
-/* ── 라이트 테마 전체 대응 ── */
-.light .hub-card, :root:not(.dark) .hub-card {
-  background: rgba(0,0,0,0.03) !important;
-  border-color: rgba(0,0,0,0.08) !important;
-}
-.light .hub-input, :root:not(.dark) .hub-input {
-  background: rgba(0,0,0,0.05) !important;
-  border-color: rgba(0,0,0,0.12) !important;
-  color: #111 !important;
-}
-.light .hub-input::placeholder, :root:not(.dark) .hub-input::placeholder {
-  color: rgba(0,0,0,0.35) !important;
-}
-.light .hub-tab-inactive, :root:not(.dark) .hub-tab-inactive {
-  color: rgba(0,0,0,0.55) !important;
-  background: rgba(0,0,0,0.05) !important;
-}
-.light .hub-tab-inactive:hover, :root:not(.dark) .hub-tab-inactive:hover {
-  color: rgba(0,0,0,0.85) !important;
-  background: rgba(0,0,0,0.09) !important;
-}
-.light .hub-btn-g, :root:not(.dark) .hub-btn-g {
-  background: rgba(0,0,0,0.07) !important;
-  color: rgba(0,0,0,0.6) !important;
-  border-color: rgba(0,0,0,0.12) !important;
-}
-.light .hub-btn-g:hover, :root:not(.dark) .hub-btn-g:hover {
-  background: rgba(0,0,0,0.12) !important;
-  color: #000 !important;
-}
-.light .sdot-off, :root:not(.dark) .sdot-off { background: #bbb !important; }
-.light .log-info,    :root:not(.dark) .log-info    { color: rgba(0,0,0,0.55) !important; }
-.light .log-line,    :root:not(.dark) .log-line    { color: rgba(0,0,0,0.7) !important; }
-.light .scanwrap::after, :root:not(.dark) .scanwrap::after { opacity: 0.03; }
+
 
 .hub-btn-n {
   background:#03C75A; color:#000; font-weight:700; border:none; border-radius:10px;
@@ -190,27 +150,22 @@ select.hub-input {
 .hub-btn-t:disabled { opacity:.4; cursor:not-allowed; }
 
 .hub-btn-g {
-  background:rgba(255,255,255,.06); color:rgba(255,255,255,.6);
-  font-weight:600; border:1px solid rgba(255,255,255,.1); border-radius:10px;
+  background:var(--hub-btn-g-bg); color:var(--hub-btn-g-color);
+  font-weight:600; border:1px solid var(--hub-border); border-radius:10px;
   cursor:pointer; transition:all .18s; font-family:'Noto Sans KR',sans-serif;
   display:flex; align-items:center; gap:6px;
 }
-.hub-btn-g:hover { background:rgba(255,255,255,.1); color:white; }
-:root:not(.dark) .hub-btn-g { background:rgba(0,0,0,.06) !important; color:rgba(0,0,0,.6) !important; border-color:rgba(0,0,0,.12) !important; }
-:root:not(.dark) .hub-btn-g:hover { background:rgba(0,0,0,.1) !important; color:#000 !important; }
+.hub-btn-g:hover { background:var(--hub-input-bg); color:var(--hub-text); }
 
 .log-line { font-family:'Courier New',monospace; font-size:11px; line-height:1.7; }
-.log-info    { color:rgba(255,255,255,.5); }
-:root:not(.dark) .log-info { color:rgba(0,0,0,.55) !important; }
-:root:not(.dark) .log-line { color:rgba(0,0,0,.7) !important; }
+.log-info { color:var(--hub-text-muted); }
 .log-success { color:#03C75A; }
 .log-error   { color:#ff4444; }
 .log-warn    { color:#f59e0b; }
 
 .sdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .sdot-on  { background:#03C75A; animation:hub-blink 2s infinite; }
-.sdot-off { background:#555; }
-:root:not(.dark) .sdot-off { background:#bbb !important; }
+:root .sdot-off { background:#555; } :root:not(.dark) .sdot-off { background:#bbb; }
 
 .scanwrap { position:relative; overflow:hidden; }
 .scanwrap::after {
@@ -522,7 +477,7 @@ export default function NaverPublishPage() {
                 <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(16px,3vw,22px)",color:"var(--foreground)",margin:0,letterSpacing:"-.02em"}}>
                   자동 발행 허브
                 </h1>
-                <p style={{fontSize:11,color:"rgba(255,255,255,.4)",margin:0,marginTop:1}}>
+                <p style={{fontSize:11,color:"var(--hub-text-muted)",margin:0,marginTop:1}}>
                   네이버 블로그 · 티스토리 매크로 자동발행
                 </p>
               </div>
@@ -577,7 +532,7 @@ export default function NaverPublishPage() {
 
                 {/* 플랫폼 선택 */}
                 <div className="hub-card" style={{padding:"18px 20px"}}>
-                  <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 10px"}}>발행 플랫폼</p>
+                  <p style={{fontSize:10,fontWeight:700,color:"var(--hub-text-muted)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 10px"}}>발행 플랫폼</p>
                   <div style={{display:"flex",gap:10}}>
                     {(["naver","tistory"] as Platform[]).map(p=>{
                       const active = activePlatform===p;
@@ -585,8 +540,8 @@ export default function NaverPublishPage() {
                       return (
                         <button key={p} onClick={()=>setActivePlatform(p)} style={{
                           flex:1,padding:"13px 14px",borderRadius:12,cursor:"pointer",transition:"all .2s",
-                          background:active?`${c}18`:"rgba(255,255,255,.04)",
-                          border:`2px solid ${active?c:"rgba(255,255,255,.08)"}`,
+                          background:active?`${c}18`:"var(--hub-bg-card)",
+                          border:`2px solid ${active?c:"var(--hub-input-bg)"}`,
                           display:"flex",alignItems:"center",gap:10,
                           animation:active?(p==="naver"?"pulse-naver":"pulse-tistory")+" 2s infinite":"none",
                         }}>
@@ -595,7 +550,7 @@ export default function NaverPublishPage() {
                             <div style={{fontSize:13,fontWeight:700,color:active?c:"rgba(255,255,255,.55)"}}>
                               {p==="naver"?"네이버 블로그":"티스토리"}
                             </div>
-                            <div style={{fontSize:10,color:"rgba(255,255,255,.3)",marginTop:1}}>
+                            <div style={{fontSize:10,color:"var(--hub-text-muted)",marginTop:1}}>
                               {p==="naver"?"Playwright 매크로":"Playwright 매크로"}
                             </div>
                           </div>
@@ -608,11 +563,11 @@ export default function NaverPublishPage() {
 
                 {/* 계정 선택 */}
                 <div className="hub-card" style={{padding:"18px 20px"}}>
-                  <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 10px"}}>발행 계정</p>
+                  <p style={{fontSize:10,fontWeight:700,color:"var(--hub-text-muted)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 10px"}}>발행 계정</p>
                   {publishableAccs.length===0 ? (
-                    <div style={{padding:"18px",textAlign:"center",borderRadius:10,background:"rgba(255,255,255,.03)",border:"1px dashed rgba(255,255,255,.1)"}}>
-                      <AlertCircle style={{width:18,height:18,color:"rgba(255,255,255,.3)",margin:"0 auto 6px"}}/>
-                      <p style={{fontSize:12,color:"rgba(255,255,255,.4)",margin:"0 0 8px"}}>연결된 계정 없음</p>
+                    <div style={{padding:"18px",textAlign:"center",borderRadius:10,background:"var(--hub-bg-card)",border:"1px dashed rgba(255,255,255,.1)"}}>
+                      <AlertCircle style={{width:18,height:18,color:"var(--hub-text-muted)",margin:"0 auto 6px"}}/>
+                      <p style={{fontSize:12,color:"var(--hub-text-muted)",margin:"0 0 8px"}}>연결된 계정 없음</p>
                       <button className="hub-btn-g" style={{padding:"5px 12px",fontSize:11,margin:"0 auto"}}
                         onClick={()=>setActiveTab("accounts")}>계정 추가 →</button>
                     </div>
@@ -622,7 +577,7 @@ export default function NaverPublishPage() {
                         <label key={a.id} style={{
                           display:"flex",alignItems:"center",gap:10,padding:"10px 13px",
                           borderRadius:10,cursor:"pointer",transition:"all .15s",
-                          background:pubAccount===a.id?"rgba(3,199,90,.08)":"rgba(255,255,255,.03)",
+                          background:pubAccount===a.id?"rgba(3,199,90,.08)":"var(--hub-bg-card)",
                           border:`1px solid ${pubAccount===a.id?"#03C75A":"rgba(255,255,255,.07)"}`,
                         }}>
                           <input type="radio" name="pacc" value={a.id}
@@ -643,7 +598,7 @@ export default function NaverPublishPage() {
 
                 {/* 발행 폼 */}
                 <div className="hub-card scanwrap" style={{padding:"18px 20px"}}>
-                  <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 14px"}}>발행 내용</p>
+                  <p style={{fontSize:10,fontWeight:700,color:"var(--hub-text-muted)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 14px"}}>발행 내용</p>
                   <div style={{display:"flex",flexDirection:"column",gap:10}}>
                     {[
                       {label:"제목", icon:FileText, val:pubTitle,    set:setPubTitle,    type:"text",  rows:undefined, ph:"블로그 글 제목..."},
@@ -652,7 +607,7 @@ export default function NaverPublishPage() {
                       {label:"태그 (쉼표 구분)", icon:Tag, val:pubTags, set:setPubTags, type:"text", rows:undefined, ph:"맛집, 서울, 블로그"},
                     ].map(f=>(
                       <div key={f.label}>
-                        <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"flex",alignItems:"center",gap:4,marginBottom:5}}>
+                        <label style={{fontSize:10,color:"var(--hub-text-muted)",fontWeight:600,display:"flex",alignItems:"center",gap:4,marginBottom:5}}>
                           <f.icon style={{width:10,height:10}}/>{f.label}
                         </label>
                         {f.type==="area"
@@ -691,14 +646,14 @@ export default function NaverPublishPage() {
               <div style={{display:"flex",flexDirection:"column",gap:14}}>
                 {/* 서버 상태 */}
                 <div className="hub-card" style={{padding:"18px"}}>
-                  <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>서버 상태</p>
+                  <p style={{fontSize:10,fontWeight:700,color:"var(--hub-text-muted)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>서버 상태</p>
                   {[
                     {label:"봇 서버", ok:botOnline},
                     {label:"네이버 세션", ok:accounts.some(a=>a.connected&&a.platform==="naver")},
                     {label:"티스토리", ok:accounts.some(a=>a.connected&&a.platform==="tistory")},
                   ].map(row=>(
-                    <div key={row.label} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 11px",borderRadius:8,background:"rgba(255,255,255,.03)",marginBottom:6}}>
-                      <span style={{fontSize:12,color:"rgba(255,255,255,.55)"}}>{row.label}</span>
+                    <div key={row.label} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 11px",borderRadius:8,background:"var(--hub-bg-card)",marginBottom:6}}>
+                      <span style={{fontSize:12,color:"var(--hub-text-muted)"}}>{row.label}</span>
                       <div style={{display:"flex",alignItems:"center",gap:5}}>
                         <span className={`sdot ${row.ok?"sdot-on":"sdot-off"}`}/>
                         <span style={{fontSize:11,fontWeight:600,color:row.ok?"#03C75A":"rgba(255,255,255,.3)"}}>{row.ok?"정상":"대기"}</span>
@@ -709,11 +664,11 @@ export default function NaverPublishPage() {
 
                 {/* 최근 발행 */}
                 <div className="hub-card" style={{padding:"18px",flex:1}}>
-                  <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>최근 발행</p>
+                  <p style={{fontSize:10,fontWeight:700,color:"var(--hub-text-muted)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>최근 발행</p>
                   {history.length===0
-                    ? <p style={{color:"rgba(255,255,255,.25)",fontSize:12,textAlign:"center",padding:"20px 0"}}>기록 없음</p>
+                    ? <p style={{color:"var(--hub-text-muted)",fontSize:12,textAlign:"center",padding:"20px 0"}}>기록 없음</p>
                     : history.slice(0,6).map(h=>(
-                      <div key={h.id} style={{padding:"9px 11px",borderRadius:8,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.05)",marginBottom:6}}>
+                      <div key={h.id} style={{padding:"9px 11px",borderRadius:8,background:"var(--hub-bg-card)",border:"1px solid rgba(255,255,255,.05)",marginBottom:6}}>
                         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
                           <PIcon p={h.platform} s={12}/>
                           <span style={{fontSize:9,color:"rgba(255,255,255,.4)"}}>{h.account}</span>
@@ -721,7 +676,7 @@ export default function NaverPublishPage() {
                             {h.status==="success"?"✅":h.status==="fail"?"❌":"⏳"}
                           </span>
                         </div>
-                        <p style={{fontSize:11,color:"rgba(255,255,255,.65)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.title}</p>
+                        <p style={{fontSize:11,color:"var(--hub-text)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.title}</p>
                         {h.url && <a href={h.url} target="_blank" rel="noopener noreferrer"
                           style={{fontSize:9,color:"#03C75A",textDecoration:"none",display:"flex",alignItems:"center",gap:3,marginTop:3}}>
                           <Globe style={{width:8,height:8}}/>글 보기</a>}
@@ -732,11 +687,11 @@ export default function NaverPublishPage() {
 
                 {/* 가이드 */}
                 <div className="hub-card" style={{padding:"18px",background:"linear-gradient(135deg,rgba(3,199,90,.05),rgba(255,107,53,.04))"}}>
-                  <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>시작 순서</p>
+                  <p style={{fontSize:10,fontWeight:700,color:"var(--hub-text-muted)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>시작 순서</p>
                   {["PC에서 naver-bot 실행","계정 관리에서 계정 추가","연결 버튼 클릭","발행하기"].map((s,i)=>(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}>
                       <div style={{width:18,height:18,borderRadius:"50%",flexShrink:0,background:"rgba(3,199,90,.15)",border:"1px solid rgba(3,199,90,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#03C75A"}}>{i+1}</div>
-                      <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>{s}</span>
+                      <span style={{fontSize:11,color:"var(--hub-text-muted)"}}>{s}</span>
                     </div>
                   ))}
                 </div>
@@ -813,7 +768,7 @@ export default function NaverPublishPage() {
                     {label:"블로그명(선택)", key:"blogName", ph:"블로그명",  inputType:"text"},
                   ].map((f,i)=>(
                     <div key={i}>
-                      <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>{f.label}</label>
+                      <label style={{fontSize:10,color:"var(--hub-text-muted)",fontWeight:600,display:"block",marginBottom:5}}>{f.label}</label>
                       {f.type==="select"
                         ? <select className="hub-input" style={{width:"100%",padding:"8px 11px"}}
                             value={newAcc.platform} onChange={e=>setNewAcc(p=>({...p,platform:e.target.value as Platform}))}>
@@ -836,13 +791,13 @@ export default function NaverPublishPage() {
               {/* 계정 목록 */}
               {accounts.length===0
                 ? <div className="hub-card" style={{padding:"48px",textAlign:"center"}}>
-                    <p style={{color:"rgba(255,255,255,.3)",fontSize:14}}>등록된 계정이 없습니다</p>
+                    <p style={{color:"var(--hub-text-muted)",fontSize:14}}>등록된 계정이 없습니다</p>
                   </div>
                 : accounts.map((a,i)=>(
                   <div key={a.id} className="hub-card" style={{
                     padding:"16px 18px",marginBottom:10,
                     animation:`hub-fade-up .3s ease ${i*.06}s both`,
-                    borderColor:a.connected?(a.platform==="naver"?"rgba(3,199,90,.3)":"rgba(255,107,53,.3)"):"rgba(255,255,255,.08)",
+                    borderColor:a.connected?(a.platform==="naver"?"rgba(3,199,90,.3)":"rgba(255,107,53,.3)"):"var(--hub-input-bg)",
                   }}>
                     <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                       <PIcon p={a.platform} s={30}/>
@@ -851,20 +806,20 @@ export default function NaverPublishPage() {
                           <span style={{fontSize:14,fontWeight:700,color:"white"}}>{a.username}</span>
                           {a.blogName && <span style={{fontSize:10,color:"rgba(255,255,255,.4)"}}>({a.blogName})</span>}
                           <span style={{fontSize:9,padding:"2px 7px",borderRadius:99,fontWeight:700,
-                            background:a.connected?(a.platform==="naver"?"rgba(3,199,90,.15)":"rgba(255,107,53,.15)"):"rgba(255,255,255,.08)",
+                            background:a.connected?(a.platform==="naver"?"rgba(3,199,90,.15)":"rgba(255,107,53,.15)"):"var(--hub-input-bg)",
                             color:a.connected?(a.platform==="naver"?"#03C75A":"#FF6B35"):"rgba(255,255,255,.4)"}}>
                             {a.connected?"✅ 연결됨":"미연결"}
                           </span>
                         </div>
-                        <div style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>
+                        <div style={{fontSize:10,color:"var(--hub-text-muted)"}}>
                           {a.platform==="naver"?"네이버 블로그":"티스토리"}
                           {a.connectedAt && ` · ${new Date(a.connectedAt).toLocaleDateString("ko-KR")} 연결`}
                         </div>
                       </div>
 
                       {/* 비밀번호 표시 */}
-                      <div style={{display:"flex",alignItems:"center",gap:5,background:"rgba(255,255,255,.04)",padding:"5px 10px",borderRadius:8,border:"1px solid rgba(255,255,255,.07)"}}>
-                        <span style={{fontSize:11,color:"rgba(255,255,255,.5)",fontFamily:"monospace"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:5,background:"var(--hub-bg-card)",padding:"5px 10px",borderRadius:8,border:"1px solid rgba(255,255,255,.07)"}}>
+                        <span style={{fontSize:11,color:"var(--hub-text-muted)",fontFamily:"monospace"}}>
                           {showPw[a.id] ? a.password : "•".repeat(Math.min(a.password.length,10))}
                         </span>
                         <button style={{background:"none",border:"none",cursor:"pointer",padding:2,color:"rgba(255,255,255,.4)"}}
@@ -896,17 +851,17 @@ export default function NaverPublishPage() {
           {activeTab==="write" && (
             <div style={{maxWidth:780,animation:"hub-fade-up .35s ease both"}}>
               <div className="hub-card" style={{padding:"22px",marginBottom:16}}>
-                <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 14px"}}>네이버/티스토리 전용 글 생성</p>
+                <p style={{fontSize:10,fontWeight:700,color:"var(--hub-text-muted)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 14px"}}>네이버/티스토리 전용 글 생성</p>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 130px",gap:10,marginBottom:12}}>
                   <div>
-                    <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>키워드</label>
+                    <label style={{fontSize:10,color:"var(--hub-text-muted)",fontWeight:600,display:"block",marginBottom:5}}>키워드</label>
                     <input className="hub-input" style={{width:"100%",padding:"10px 13px"}}
                       placeholder="예: 강남 맛집 추천"
                       value={writeKeyword} onChange={e=>setWriteKeyword(e.target.value)}
                       onKeyDown={e=>e.key==="Enter"&&handleWriteContent()}/>
                   </div>
                   <div>
-                    <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>플랫폼</label>
+                    <label style={{fontSize:10,color:"var(--hub-text-muted)",fontWeight:600,display:"block",marginBottom:5}}>플랫폼</label>
                     <select className="hub-input" style={{width:"100%",padding:"10px 11px"}}
                       value={writePlatform} onChange={e=>setWritePlatform(e.target.value as Platform)}>
                       <option value="naver">네이버</option>
@@ -926,20 +881,20 @@ export default function NaverPublishPage() {
               {writeResult && (
                 <>
                   <div className="hub-card" style={{padding:"22px",marginBottom:12}}>
-                    <p style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>생성 결과</p>
+                    <p style={{fontSize:10,fontWeight:700,color:"var(--hub-text-muted)",letterSpacing:".1em",textTransform:"uppercase",margin:"0 0 12px"}}>생성 결과</p>
                     <div style={{display:"flex",flexDirection:"column",gap:10}}>
                       <div>
-                        <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>제목</label>
+                        <label style={{fontSize:10,color:"var(--hub-text-muted)",fontWeight:600,display:"block",marginBottom:5}}>제목</label>
                         <input className="hub-input" style={{width:"100%",padding:"9px 13px"}}
                           value={writeTitle} onChange={e=>setWriteTitle(e.target.value)}/>
                       </div>
                       <div>
-                        <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>태그</label>
+                        <label style={{fontSize:10,color:"var(--hub-text-muted)",fontWeight:600,display:"block",marginBottom:5}}>태그</label>
                         <input className="hub-input" style={{width:"100%",padding:"9px 13px"}}
                           value={writeTags} onChange={e=>setWriteTags(e.target.value)}/>
                       </div>
                       <div>
-                        <label style={{fontSize:10,color:"rgba(255,255,255,.45)",fontWeight:600,display:"block",marginBottom:5}}>본문</label>
+                        <label style={{fontSize:10,color:"var(--hub-text-muted)",fontWeight:600,display:"block",marginBottom:5}}>본문</label>
                         <textarea className="hub-input" rows={12} style={{width:"100%",padding:"9px 13px",resize:"vertical"}}
                           value={writeResult} onChange={e=>setWriteResult(e.target.value)}/>
                       </div>
@@ -958,7 +913,7 @@ export default function NaverPublishPage() {
           {activeTab==="history" && (
             <div style={{animation:"hub-fade-up .35s ease both"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                <span style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>총 {history.length}건</span>
+                <span style={{fontSize:12,color:"var(--hub-text-muted)"}}>총 {history.length}건</span>
                 <button className="hub-btn-g" style={{padding:"6px 12px",fontSize:11,color:"rgba(255,80,80,.7)"}}
                   onClick={()=>{if(confirm("전체 히스토리를 삭제할까요?"))setHistory([])}}>
                   <Trash2 style={{width:11,height:11}}/>전체 삭제
@@ -967,13 +922,13 @@ export default function NaverPublishPage() {
               {history.length===0
                 ? <div className="hub-card" style={{padding:"60px",textAlign:"center"}}>
                     <History style={{width:28,height:28,color:"rgba(255,255,255,.15)",margin:"0 auto 10px"}}/>
-                    <p style={{color:"rgba(255,255,255,.3)",fontSize:13}}>발행 기록이 없습니다</p>
+                    <p style={{color:"var(--hub-text-muted)",fontSize:13}}>발행 기록이 없습니다</p>
                   </div>
                 : history.map((h,i)=>(
                   <div key={h.id} className="hub-card" style={{
                     padding:"14px 18px",marginBottom:9,
                     animation:`hub-fade-up .3s ease ${i*.04}s both`,
-                    borderColor:h.status==="success"?(h.platform==="naver"?"rgba(3,199,90,.2)":"rgba(255,107,53,.2)"):h.status==="fail"?"rgba(255,68,68,.2)":"rgba(255,255,255,.08)",
+                    borderColor:h.status==="success"?(h.platform==="naver"?"rgba(3,199,90,.2)":"rgba(255,107,53,.2)"):h.status==="fail"?"rgba(255,68,68,.2)":"var(--hub-input-bg)",
                   }}>
                     <div style={{display:"flex",alignItems:"center",gap:11,flexWrap:"wrap"}}>
                       <PIcon p={h.platform} s={18}/>
@@ -994,7 +949,7 @@ export default function NaverPublishPage() {
                         </span>
                         {h.url && (
                           <a href={h.url} target="_blank" rel="noopener noreferrer"
-                            style={{fontSize:10,color:"rgba(255,255,255,.5)",textDecoration:"none",display:"flex",alignItems:"center",gap:3,padding:"3px 9px",borderRadius:99,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)"}}>
+                            style={{fontSize:10,color:"var(--hub-text-muted)",textDecoration:"none",display:"flex",alignItems:"center",gap:3,padding:"3px 9px",borderRadius:99,background:"var(--hub-input-bg)",border:"1px solid rgba(255,255,255,.08)"}}>
                             <Globe style={{width:9,height:9}}/>보기
                           </a>
                         )}
@@ -1012,7 +967,7 @@ export default function NaverPublishPage() {
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                 <div style={{display:"flex",alignItems:"center",gap:7}}>
                   <span className="sdot sdot-on"/>
-                  <span style={{fontSize:11,color:"rgba(255,255,255,.45)"}}>실시간 로그 ({logs.length}줄)</span>
+                  <span style={{fontSize:11,color:"var(--hub-text-muted)"}}>실시간 로그 ({logs.length}줄)</span>
                 </div>
                 <button className="hub-btn-g" style={{padding:"5px 11px",fontSize:11}} onClick={()=>setLogs([])}>
                   <Trash2 style={{width:10,height:10}}/>지우기
@@ -1023,12 +978,12 @@ export default function NaverPublishPage() {
                 borderRadius:12,padding:"14px 18px",height:480,overflowY:"auto",
               }}>
                 {logs.length===0
-                  ? <div style={{color:"rgba(255,255,255,.25)",fontSize:11,padding:"16px 0",fontFamily:"monospace"}}>
+                  ? <div style={{color:"var(--hub-text-muted)",fontSize:11,padding:"16px 0",fontFamily:"monospace"}}>
                       {">"} 로그가 여기에 표시됩니다...<span style={{animation:"hub-blink 1s infinite",display:"inline-block"}}>█</span>
                     </div>
                   : logs.map(l=>(
                     <div key={l.id} className={`log-line log-${l.level}`}>
-                      <span style={{color:"rgba(255,255,255,.25)",marginRight:8}}>[{l.time}]</span>{l.msg}
+                      <span style={{color:"var(--hub-text-muted)",marginRight:8}}>[{l.time}]</span>{l.msg}
                     </div>
                   ))
                 }
@@ -1093,42 +1048,69 @@ function NaverGuideBtn() {
 
   const GUIDE_STEPS = [
     {
-      step:"STEP 1", title:"봇 서버 실행", color:"#03C75A",
+      step:"준비 1", title:"네이버 블로그 계정", color:"#03C75A",
+      link:"https://nid.naver.com/nidregister.form",
+      linkLabel:"네이버 회원가입",
       items:[
-        "PC에서 naver-bot 폴더 열기",
-        "npm run dev 실행",
-        "봇 서버 온라인 확인 (우측 상단)",
+        { text:"네이버 계정이 없으면 먼저 가입하세요", highlight:true },
+        { text:"네이버 블로그가 개설되어 있어야 합니다", highlight:true },
+        { text:"블로그 주소: blog.naver.com/내아이디", highlight:false },
       ]
     },
     {
-      step:"STEP 2", title:"계정 연결", color:"#4285F4",
+      step:"준비 2", title:"티스토리 계정 (티스토리 발행 시)", color:"#FF6B35",
+      link:"https://www.tistory.com",
+      linkLabel:"티스토리 가입",
       items:[
-        "계정 관리 탭 클릭",
-        "플랫폼 선택 (네이버/티스토리)",
-        "아이디, 비밀번호 입력 후 계정 추가",
-        "연결 버튼 클릭 → 브라우저 자동 로그인",
-        "2단계 인증 있으면 수동 처리",
+        { text:"카카오 계정으로 티스토리 가입", highlight:false },
+        { text:"티스토리 블로그 개설 필수", highlight:true },
+        { text:"블로그명을 정확히 기억해 두세요", highlight:false },
+      ]
+    },
+    {
+      step:"준비 3", title:"Google 계정 (이미지 생성용)", color:"#4285F4",
+      link:"https://accounts.google.com/signup",
+      linkLabel:"구글 계정 만들기",
+      items:[
+        { text:"구글 계정으로 Google Flow 이미지 자동 생성", highlight:false },
+        { text:"계정 관리 탭 → Google Flow 계정에 입력", highlight:true },
+        { text:"이미지 없이 글만 발행하면 구글 계정 불필요", highlight:false },
+      ]
+    },
+    {
+      step:"STEP 1", title:"봇 서버 실행", color:"#8b5cf6",
+      link:null, linkLabel:null,
+      items:[
+        { text:"PC에서 naver-bot 폴더의 npm run dev 실행", highlight:true },
+        { text:"이 페이지 우측 상단 봇 서버 온라인 확인", highlight:true },
+        { text:"컴퓨터가 켜져 있는 동안만 작동합니다", highlight:false },
+      ]
+    },
+    {
+      step:"STEP 2", title:"계정 연결", color:"#06b6d4",
+      link:null, linkLabel:null,
+      items:[
+        { text:"계정 관리 탭 → 플랫폼 선택 → 아이디/비번 입력", highlight:true },
+        { text:"연결 버튼 클릭 → 브라우저가 자동으로 로그인", highlight:true },
+        { text:"2단계 인증이 있으면 직접 처리 후 자동 진행", highlight:false },
       ]
     },
     {
       step:"STEP 3", title:"글 생성", color:"#f59e0b",
+      link:null, linkLabel:null,
       items:[
-        "글 생성 탭 클릭",
-        "키워드 입력 (예: 강남 맛집)",
-        "네이버/티스토리 선택",
-        "글 생성 버튼 클릭",
-        "제목/태그/본문 자동 생성됨",
-        "발행하기로 넘기기 클릭",
+        { text:"글 생성 탭 → 키워드 입력 → 글 생성 클릭", highlight:true },
+        { text:"AI가 제목, 태그, 본문을 자동으로 만들어줍니다", highlight:false },
+        { text:"내용 수정 후 발행하기로 넘기기 클릭", highlight:false },
       ]
     },
     {
-      step:"STEP 4", title:"자동 발행", color:"#a78bfa",
+      step:"STEP 4", title:"자동 발행", color:"#03C75A",
+      link:null, linkLabel:null,
       items:[
-        "발행하기 탭에서 계정 선택",
-        "이미지 프롬프트 입력 (선택사항)",
-        "자동 발행 버튼 클릭",
-        "브라우저가 자동으로 로그인 후 발행",
-        "히스토리 탭에서 결과 확인",
+        { text:"발행하기 탭 → 계정 선택 → 자동 발행 클릭", highlight:true },
+        { text:"브라우저가 자동으로 열려서 글을 발행합니다", highlight:false },
+        { text:"히스토리 탭에서 발행 결과를 확인하세요", highlight:false },
       ]
     },
   ];
@@ -1186,7 +1168,7 @@ function NaverGuideBtn() {
         </span>
         <span style={{position:"relative"}}>사용 설명서</span>
         {/* NEW 배지 */}
-        <span style={{position:"absolute",top:-8,right:-4,background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:9,fontWeight:900,padding:"2px 6px",borderRadius:99,border:"2px solid #fff",boxShadow:"0 2px 8px rgba(239,68,68,.5)",animation:"ng-badge 2s ease-in-out infinite"}}>TIP</span>
+        <span style={{position:"absolute",top:-8,right:-4,background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:9,fontWeight:900,padding:"2px 6px",borderRadius:99,border:"2px solid #fff",boxShadow:"0 2px 8px rgba(239,68,68,.5)",animation:"ng-badge 2s ease-in-out infinite"}}>❓</span>
       </button>
 
       {/* 설명서 패널 */}
@@ -1201,22 +1183,34 @@ function NaverGuideBtn() {
               </div>
               <div>
                 <h2 style={{fontSize:15,fontWeight:800,color:"var(--foreground)",margin:0}}>사용 설명서</h2>
-                <p style={{fontSize:11,color:"rgba(255,255,255,.4)",margin:0}}>자동 발행 허브 이용 가이드</p>
+                <p style={{fontSize:11,color:"var(--hub-text-muted)",margin:0}}>자동 발행 허브 이용 가이드</p>
               </div>
             </div>
             <button onClick={()=>setShow(false)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--muted-foreground)",padding:4,fontSize:20}}>✕</button>
           </div>
 
           {GUIDE_STEPS.map((s,i)=>(
-            <div key={i} style={{marginBottom:12,padding:"14px 16px",borderRadius:14,background:"var(--card)",border:"1px solid var(--border)"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                <span style={{fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:99,background:`${s.color}20`,color:s.color,letterSpacing:".05em"}}>{s.step}</span>
-                <span style={{fontSize:13,fontWeight:700,color:"var(--foreground)"}}>{s.title}</span>
+            <div key={i} style={{marginBottom:12,padding:"14px 16px",borderRadius:14,background:"var(--card)",border:`1px solid ${s.color}30`}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:99,background:`${s.color}20`,color:s.color,letterSpacing:".05em"}}>{s.step}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:"var(--foreground)"}}>{s.title}</span>
+                </div>
+                {s.link && (
+                  <a href={s.link} target="_blank" rel="noopener noreferrer"
+                    style={{fontSize:10,fontWeight:700,color:"#fff",background:s.color,padding:"4px 10px",borderRadius:99,textDecoration:"none",display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                    🔗 {s.linkLabel}
+                  </a>
+                )}
               </div>
               {s.items.map((item,j)=>(
-                <div key={j} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:5}}>
+                <div key={j} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,
+                  padding:item.highlight?"7px 10px":"4px 0",
+                  borderRadius:item.highlight?8:0,
+                  background:item.highlight?`${s.color}12`:"transparent",
+                }}>
                   <div style={{width:15,height:15,borderRadius:"50%",flexShrink:0,marginTop:2,background:`${s.color}20`,border:`1px solid ${s.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:s.color}}>{j+1}</div>
-                  <span style={{fontSize:12,color:"var(--muted-foreground)",lineHeight:1.5}}>{item}</span>
+                  <span style={{fontSize:12,color:item.highlight?"var(--foreground)":"var(--muted-foreground)",fontWeight:item.highlight?600:400,lineHeight:1.5}}>{item.text}</span>
                 </div>
               ))}
             </div>
