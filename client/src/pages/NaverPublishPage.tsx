@@ -235,7 +235,7 @@ export default function NaverPublishPage() {
     if (!writeKeyword.trim()) { toast.error("키워드를 입력하세요"); return; }
     setWriteLoading(true);
     setWriteResult("");
-    addLog("info", \`✍️ 글 생성 시작: "\${writeKeyword}" [\${writePlatform}]\`);
+    addLog("info", `✍️ 글 생성 시작: "${writeKeyword}" [${writePlatform}]`);
     try {
       // 기존 AI 키 사용
       const aiProvider = localStorage.getItem("ai_provider") || "gemini";
@@ -246,16 +246,16 @@ export default function NaverPublishPage() {
         ? "네이버 블로그 스타일로 친근하고 자연스럽게, 소제목(##)과 본문 단락 위주로"
         : "티스토리 블로그 스타일로 정보성 위주, 목차와 소제목 포함하여";
 
-      const prompt = \`"\${writeKeyword}" 키워드로 \${platformStyle} 블로그 글을 한국어로 1500자 이상 작성해줘.
+      const prompt = `"${writeKeyword}" 키워드로 ${platformStyle} 블로그 글을 한국어로 1500자 이상 작성해줘.
 형식:
 - 제목: (제목만)
 - 태그: (태그1, 태그2, 태그3 형식으로 5개)
-- 본문: (본문 내용)\`;
+- 본문: (본문 내용)`;
 
       let resultText = "";
 
       if (geminiKey) {
-        const r = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\${geminiKey}\`, {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
@@ -283,10 +283,10 @@ export default function NaverPublishPage() {
       if (tagsMatch)  setWriteTags(tagsMatch[1].trim());
       setWriteResult(bodyMatch ? bodyMatch[1].trim() : resultText);
 
-      addLog("success", \`✅ 글 생성 완료 (\${resultText.length}자)\`);
+      addLog("success", `✅ 글 생성 완료 (${resultText.length}자)`);
       toast.success("글 생성 완료!");
     } catch(e:any) {
-      addLog("error", \`❌ 글 생성 실패: \${e.message}\`);
+      addLog("error", `❌ 글 생성 실패: ${e.message}`);
       toast.error(e.message);
     } finally { setWriteLoading(false); }
   }
