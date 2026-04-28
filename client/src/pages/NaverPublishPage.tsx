@@ -125,6 +125,41 @@ select.hub-input {
 .hub-input:focus  { border-color: #03C75A !important; box-shadow: 0 0 0 2px rgba(3,199,90,.15) !important; }
 .hub-input::placeholder { color: rgba(255,255,255,0.3) !important; }
 
+/* ── 라이트 테마 전체 대응 ── */
+.light .hub-card, :root:not(.dark) .hub-card {
+  background: rgba(0,0,0,0.03) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+.light .hub-input, :root:not(.dark) .hub-input {
+  background: rgba(0,0,0,0.05) !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: #111 !important;
+}
+.light .hub-input::placeholder, :root:not(.dark) .hub-input::placeholder {
+  color: rgba(0,0,0,0.35) !important;
+}
+.light .hub-tab-inactive, :root:not(.dark) .hub-tab-inactive {
+  color: rgba(0,0,0,0.55) !important;
+  background: rgba(0,0,0,0.05) !important;
+}
+.light .hub-tab-inactive:hover, :root:not(.dark) .hub-tab-inactive:hover {
+  color: rgba(0,0,0,0.85) !important;
+  background: rgba(0,0,0,0.09) !important;
+}
+.light .hub-btn-g, :root:not(.dark) .hub-btn-g {
+  background: rgba(0,0,0,0.07) !important;
+  color: rgba(0,0,0,0.6) !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+.light .hub-btn-g:hover, :root:not(.dark) .hub-btn-g:hover {
+  background: rgba(0,0,0,0.12) !important;
+  color: #000 !important;
+}
+.light .sdot-off, :root:not(.dark) .sdot-off { background: #bbb !important; }
+.light .log-info,    :root:not(.dark) .log-info    { color: rgba(0,0,0,0.55) !important; }
+.light .log-line,    :root:not(.dark) .log-line    { color: rgba(0,0,0,0.7) !important; }
+.light .scanwrap::after, :root:not(.dark) .scanwrap::after { opacity: 0.03; }
+
 .hub-btn-n {
   background:#03C75A; color:#000; font-weight:700; border:none; border-radius:10px;
   cursor:pointer; transition:all .18s; font-family:'Noto Sans KR',sans-serif;
@@ -858,7 +893,7 @@ export default function NaverPublishPage() {
                     <div style={{display:"flex",alignItems:"center",gap:11,flexWrap:"wrap"}}>
                       <PIcon p={h.platform} s={18}/>
                       <div style={{flex:1,minWidth:140}}>
-                        <div style={{fontSize:13,fontWeight:600,color:"white",marginBottom:2}}>{h.title}</div>
+                        <div style={{fontSize:13,fontWeight:600,color:"var(--foreground)",marginBottom:2}}>{h.title}</div>
                         <div style={{fontSize:10,color:"rgba(255,255,255,.4)",display:"flex",alignItems:"center",gap:6}}>
                           <span>{h.account}</span><span>·</span>
                           <Clock style={{width:9,height:9}}/>
@@ -899,7 +934,7 @@ export default function NaverPublishPage() {
                 </button>
               </div>
               <div ref={logRef} style={{
-                background:"rgba(0,0,0,.55)",border:"1px solid rgba(255,255,255,.07)",
+                background:"var(--muted)",border:"1px solid var(--border)",
                 borderRadius:12,padding:"14px 18px",height:480,overflowY:"auto",
               }}>
                 {logs.length===0
