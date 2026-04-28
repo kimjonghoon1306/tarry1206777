@@ -60,7 +60,7 @@ const NAV_ITEMS = [
   { path: "/template", icon: Palette, label: "템플릿 선택", labelEn: "Template", pink: false },
   { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images", pink: false },
   { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy", pink: false },
-  { path: "/naver", icon: Rss, label: "자동 발행", labelEn: "Auto Publish", pink: false },
+  { path: "/naver", icon: Rss, label: "자동 발행", labelEn: "Auto Publish", pink: false, yellow: true },
   { path: "/campaigns", icon: Gift, label: "체험단 허브", labelEn: "Campaigns", pink: true },
   { path: "/mypage", icon: User, label: "마이페이지", labelEn: "My Page", pink: false },
   { path: "/settings", icon: Settings, label: "설정", labelEn: "Settings", pink: false },
@@ -73,6 +73,14 @@ interface LayoutProps {
 }
 
 const PINK_KEYFRAME = `
+@keyframes yellowPulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(234,179,8,.4); transform:translateY(0); }
+  50%     { box-shadow:0 0 0 6px rgba(234,179,8,0); transform:translateY(-1px); }
+}
+@keyframes yellowFloat {
+  0%,100% { transform:translateY(0); }
+  50%     { transform:translateY(-2px); }
+}
 @keyframes pinkPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(236,72,153,0); }
   50% { box-shadow: 0 0 8px 2px rgba(236,72,153,0.35); }
@@ -217,7 +225,16 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                   <div
                     className={`nav-item ${isActive ? "active" : ""}`}
                     onClick={() => !isGuestMode && setSidebarOpen(false)}
-                    style={item.pink ? {
+                    style={(item as any).yellow ? {
+                      color: isActive ? "#000" : "#d97706",
+                      background: isActive ? "linear-gradient(90deg,#d97706,#f59e0b)" : "rgba(234,179,8,0.1)",
+                      border: "1px solid rgba(234,179,8,0.35)",
+                      borderRadius: "8px",
+                      marginTop: "4px",
+                      animation: "yellowPulse 2.5s ease-in-out infinite",
+                      position: "relative",
+                      overflow: "hidden",
+                    } : item.pink ? {
                       color: isActive ? "#fff" : "#f472b6",
                       background: isActive ? "linear-gradient(90deg,#be185d,#ec4899)" : "rgba(236,72,153,0.08)",
                       border: "1px solid rgba(236,72,153,0.25)",
@@ -230,6 +247,12 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                     <span>{item.label}</span>
                     {item.path === "/keywords" && !isGuestMode && (
                       <span className="ml-auto text-xs px-1.5 py-0.5 rounded badge-active">NEW</span>
+                    )}
+                    {(item as any).yellow && !isGuestMode && (
+                      <span className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{
+                        background:"rgba(234,179,8,0.2)",color:"#d97706",fontWeight:700,
+                        animation:"yellowFloat 1.5s ease-in-out infinite",
+                      }}>NEW</span>
                     )}
                     {item.pink && !isGuestMode && (
                       <span className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{background:"rgba(236,72,153,0.2)",color:"#f472b6"}}>HOT</span>
