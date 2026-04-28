@@ -103,8 +103,25 @@ const CSS = `
 .hub-input option {
   background: #1a2235 !important;
   color: white !important;
+  font-weight: 600;
 }
-select.hub-input { color-scheme: dark; }
+select.hub-input {
+  color-scheme: dark;
+  appearance: auto !important;
+  -webkit-appearance: auto !important;
+  cursor: pointer;
+}
+/* 라이트 테마 드롭다운 */
+.light select.hub-input, :root:not(.dark) select.hub-input {
+  color-scheme: light;
+  background: rgba(0,0,0,0.06) !important;
+  color: #111 !important;
+}
+.light .hub-input option, :root:not(.dark) .hub-input option {
+  background: #ffffff !important;
+  color: #111 !important;
+  font-weight: 600;
+}
 .hub-input:focus  { border-color: #03C75A !important; box-shadow: 0 0 0 2px rgba(3,199,90,.15) !important; }
 .hub-input::placeholder { color: rgba(255,255,255,0.3) !important; }
 
