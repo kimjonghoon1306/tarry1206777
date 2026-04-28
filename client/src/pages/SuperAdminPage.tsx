@@ -2376,49 +2376,44 @@ function AutoPublishManager() {
 
           {[
             {
-              step:"STEP 1", title:"naver-bot 서버 실행",
-              color:"#03C75A",
+              step:"STEP 1", title:"naver-bot 서버 실행", color:"#03C75A",
               items:[
-                "프로젝트 루트에서 cd naver-bot 이동",
-                "npm install 실행 (최초 1회)",
-                "npx playwright install chromium (최초 1회)",
-                ".env.example → .env 복사 후 구글 계정 입력",
-                "npm run dev 실행",
-                "봇 서버 온라인 상태 확인",
+                "터미널에서 프로젝트 루트 → cd naver-bot",
+                "최초 1회: npm install",
+                "최초 1회: npx playwright install chromium",
+                ".env.example 복사 → .env 생성 후 구글 계정 입력",
+                "npm run dev 실행 → 서버 유지",
+                "이 페이지 상단 봇 서버 온라인 확인",
               ]
             },
             {
-              step:"STEP 2", title:"Google Flow 계정 설정",
-              color:"#4285F4",
+              step:"STEP 2", title:"Google Flow 공용 계정 설정", color:"#4285F4",
               items:[
-                "Flow 계정 탭에서 구글 이메일 입력",
-                "구글 비밀번호 입력",
-                "저장 버튼 클릭",
-                "이미지 자동 생성에 사용되는 공용 계정",
-                "최초 로그인 시 브라우저가 열림",
+                "Flow 계정 탭 클릭",
+                "관리자 구글 이메일 입력",
+                "구글 비밀번호 입력 후 저장",
+                "전체 회원 이미지 생성에 공용으로 사용됨",
+                "최초 로그인 시 브라우저 자동 열림",
                 "2단계 인증 있으면 수동 처리 후 자동 진행",
               ]
             },
             {
-              step:"STEP 3", title:"일반 회원 자동발행 안내",
-              color:"#f59e0b",
+              step:"STEP 3", title:"회원 발행 현황 모니터링", color:"#f59e0b",
               items:[
-                "회원들은 체험단 허브 → 자동 발행 버튼 클릭",
-                "자동 발행 허브 페이지 진입",
-                "계정 관리 탭에서 네이버/티스토리 계정 추가",
-                "연결 버튼으로 세션 저장",
-                "글 생성 탭에서 키워드로 AI 글 생성",
-                "발행하기 탭에서 자동 발행",
+                "히스토리 탭에서 전체 회원 발행 내역 확인",
+                "네이버/티스토리 별 발행 상태 확인",
+                "실패 건은 빨간색으로 표시됨",
+                "필요시 히스토리 초기화 가능",
+                "발행된 글 URL 직접 확인 가능",
               ]
             },
             {
-              step:"STEP 4", title:"발행 히스토리 확인",
-              color:"#a78bfa",
+              step:"STEP 4", title:"서버 상태 점검", color:"#a78bfa",
               items:[
-                "히스토리 탭에서 전체 발행 내역 확인",
-                "성공/실패 여부 및 발행 URL 확인",
-                "필요시 히스토리 초기화 가능",
-                "각 유저별 발행 내역 확인 가능",
+                "서버 상태 탭에서 전체 연결 현황 확인",
+                "봇 서버 오프라인 시 npm run dev 재실행",
+                "Flow 계정 미설정 시 이미지 생성 불가",
+                "세션 만료 시 회원에게 재연결 안내",
               ]
             },
           ].map((section, i) => (
