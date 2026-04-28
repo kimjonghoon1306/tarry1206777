@@ -1,155 +1,564 @@
 /**
- * GOOGLE MAPS FRONTEND INTEGRATION - ESSENTIAL GUIDE
- *
- * USAGE FROM PARENT COMPONENT:
- * ======
- *
- * const mapRef = useRef<google.maps.Map | null>(null);
- *
- * <MapView
- *   initialCenter={{ lat: 40.7128, lng: -74.0060 }}
- *   initialZoom={15}
- *   onMapReady={(map) => {
- *     mapRef.current = map; // Store to control map from parent anytime, google map itself is in charge of the re-rendering, not react state.
- * </MapView>
- *
- * ======
- * Available Libraries and Core Features:
- * -------------------------------
- * 📍 MARKER (from `marker` library)
- * - Attaches to map using { map, position }
- * new google.maps.marker.AdvancedMarkerElement({
- *   map,
- *   position: { lat: 37.7749, lng: -122.4194 },
- *   title: "San Francisco",
- * });
- *
- * -------------------------------
- * 🏢 PLACES (from `places` library)
- * - Does not attach directly to map; use data with your map manually.
- * const place = new google.maps.places.Place({ id: PLACE_ID });
- * await place.fetchFields({ fields: ["displayName", "location"] });
- * map.setCenter(place.location);
- * new google.maps.marker.AdvancedMarkerElement({ map, position: place.location });
- *
- * -------------------------------
- * 🧭 GEOCODER (from `geocoding` library)
- * - Standalone service; manually apply results to map.
- * const geocoder = new google.maps.Geocoder();
- * geocoder.geocode({ address: "New York" }, (results, status) => {
- *   if (status === "OK" && results[0]) {
- *     map.setCenter(results[0].geometry.location);
- *     new google.maps.marker.AdvancedMarkerElement({
- *       map,
- *       position: results[0].geometry.location,
- *     });
- *   }
- * });
- *
- * -------------------------------
- * 📐 GEOMETRY (from `geometry` library)
- * - Pure utility functions; not attached to map.
- * const dist = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
- *
- * -------------------------------
- * 🛣️ ROUTES (from `routes` library)
- * - Combines DirectionsService (standalone) + DirectionsRenderer (map-attached)
- * const directionsService = new google.maps.DirectionsService();
- * const directionsRenderer = new google.maps.DirectionsRenderer({ map });
- * directionsService.route(
- *   { origin, destination, travelMode: "DRIVING" },
- *   (res, status) => status === "OK" && directionsRenderer.setDirections(res)
- * );
- *
- * -------------------------------
- * 🌦️ MAP LAYERS (attach directly to map)
- * - new google.maps.TrafficLayer().setMap(map);
- * - new google.maps.TransitLayer().setMap(map);
- * - new google.maps.BicyclingLayer().setMap(map);
- *
- * -------------------------------
- * ✅ SUMMARY
- * - “map-attached” → AdvancedMarkerElement, DirectionsRenderer, Layers.
- * - “standalone” → Geocoder, DirectionsService, DistanceMatrixService, ElevationService.
- * - “data-only” → Place, Geometry utilities.
+ * BlogAuto Pro - Layout Component
+ * Design: Modern Professional Dark SaaS
+ * Fixed sidebar (240px) + top header + main content area
  */
 
-/// <reference types="@types/google.maps" />
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
+import { useTheme } from "@/contexts/ThemeContext";
+import { toast } from "sonner";
+import {
+  LayoutDashboard,
+  Search,
+  FileText,
+  Image,
+  Send,
+  Rss,
+  Rss,
+  Settings,
+  Shield,
+  Sun,
+  Moon,
+  Globe,
+  ChevronDown,
+  Bell,
+  Download,
+  Menu,
+  X,
+  Zap,
+  TrendingUp,
+  Bot,
+  User,
+  LogOut,
+  Gift,
+  Palette,
+} from "lucide-react";
+import { clearUserLocalCache, loadNotificationsFromServer, markNotificationsRead } from "@/lib/user-storage";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-import { useEffect, useRef } from "react";
-import { usePersistFn } from "@/hooks/usePersistFn";
-import { cn } from "@/lib/utils";
+const LANGUAGES = [
+  { code: "ko", label: "한국어", flag: "🇰🇷" },
+  { code: "en", label: "English", flag: "🇺🇸" },
+  { code: "ja", label: "日本語", flag: "🇯🇵" },
+  { code: "zh", label: "中文", flag: "🇨🇳" },
+  { code: "es", label: "Español", flag: "🇪🇸" },
+  { code: "fr", label: "Français", flag: "🇫🇷" },
+  { code: "de", label: "Deutsch", flag: "🇩🇪" },
+  { code: "pt", label: "Português", flag: "🇧🇷" },
+];
 
-declare global {
-  interface Window {
-    google?: typeof google;
-  }
+const NAV_ITEMS = [
+  { path: "/dashboard", icon: LayoutDashboard, label: "대시보드", labelEn: "Dashboard", pink: false },
+  { path: "/keywords", icon: Search, label: "키워드 수집", labelEn: "Keywords", pink: false },
+  { path: "/content", icon: FileText, label: "콘텐츠 생성", labelEn: "Content", pink: false },
+  { path: "/template", icon: Palette, label: "템플릿 선택", labelEn: "Template", pink: false },
+  { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images", pink: false },
+  { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy", pink: false },
+  { path: "/naver", icon: Rss, label: "자동 발행", labelEn: "Auto Publish", pink: false },
+  { path: "/campaigns", icon: Gift, label: "체험단 허브", labelEn: "Campaigns", pink: true },
+  { path: "/mypage", icon: User, label: "마이페이지", labelEn: "My Page", pink: false },
+  { path: "/settings", icon: Settings, label: "설정", labelEn: "Settings", pink: false },
+];
+
+interface LayoutProps {
+  children: React.ReactNode;
+  currentLang?: string;
+  onLangChange?: (lang: string) => void;
 }
 
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
-const FORGE_BASE_URL =
-  import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
-  "https://forge.butterfly-effect.dev";
-const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
-
-function loadMapScript() {
-  return new Promise(resolve => {
-    const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
-    script.async = true;
-    script.crossOrigin = "anonymous";
-    script.onload = () => {
-      resolve(null);
-      script.remove(); // Clean up immediately
-    };
-    script.onerror = () => {
-      console.error("Failed to load Google Maps script");
-    };
-    document.head.appendChild(script);
-  });
+const PINK_KEYFRAME = `
+@keyframes pinkPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(236,72,153,0); }
+  50% { box-shadow: 0 0 8px 2px rgba(236,72,153,0.35); }
 }
+`;
 
-interface MapViewProps {
-  className?: string;
-  initialCenter?: google.maps.LatLngLiteral;
-  initialZoom?: number;
-  onMapReady?: (map: google.maps.Map) => void;
-}
-
-export function MapView({
-  className,
-  initialCenter = { lat: 37.7749, lng: -122.4194 },
-  initialZoom = 12,
-  onMapReady,
-}: MapViewProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<google.maps.Map | null>(null);
-
-  const init = usePersistFn(async () => {
-    await loadMapScript();
-    if (!mapContainer.current) {
-      console.error("Map container not found");
-      return;
-    }
-    map.current = new window.google.maps.Map(mapContainer.current, {
-      zoom: initialZoom,
-      center: initialCenter,
-      mapTypeControl: true,
-      fullscreenControl: true,
-      zoomControl: true,
-      streetViewControl: true,
-      mapId: "DEMO_MAP_ID",
-    });
-    if (onMapReady) {
-      onMapReady(map.current);
-    }
-  });
+export default function Layout({ children, currentLang = "ko", onLangChange }: LayoutProps) {
+  const [location, navigate] = useLocation();
+  const { theme, toggleTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedLang, setSelectedLang] = useState(currentLang);
+  const [totalPosts, setTotalPosts] = useState<number>(0);
+  const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; desc: string; createdAt: string; read: boolean }[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const isGuestMode = localStorage.getItem("guest_mode") === "true" && !localStorage.getItem("ba_token");
 
   useEffect(() => {
-    init();
-  }, [init]);
+    // 대시보드에서 저장한 발행 글 수 읽기
+    const count = parseInt(localStorage.getItem("blogauto_post_count") || "0");
+    if (count > 0) setTotalPosts(count);
+  }, []);
+
+  useEffect(() => {
+    // 알림 불러오기 (로그인 상태일 때만)
+    if (!isGuestMode && localStorage.getItem("ba_token")) {
+      loadNotificationsFromServer().then(list => {
+        setNotifications(list);
+        setUnreadCount(list.filter(n => !n.read).length);
+      });
+    }
+  }, []);
+
+  const handleGuestBlock = (e: React.MouseEvent) => {
+    e.preventDefault();
+    toast.error("🔒 가입 후 이용 가능한 기능이에요!", {
+      action: { label: "회원가입", onClick: () => { localStorage.removeItem("guest_mode"); navigate("/signup"); } },
+      duration: 4000,
+    });
+  };
+
+  const handleLangChange = (code: string) => {
+    setSelectedLang(code);
+    onLangChange?.(code);
+    const lang = LANGUAGES.find(l => l.code === code);
+    toast.success(`언어가 ${lang?.label}(으)로 변경되었습니다`);
+  };
+
+  const handleDownload = () => {
+    toast.loading("ZIP 파일 준비 중...", { id: "zip-dl" });
+    setTimeout(() => {
+      try {
+        const content = `BlogAuto Pro - 블로그 자동화 플랫폼\n====================================\n\n내보내기 날짜: ${new Date().toLocaleString("ko-KR")}\n\n== 포함된 기능 ==\n1. 키워드 수집 (애드센스/애드포스트 연동)\n2. AI 콘텐츠 자동 생성 (1,500자 이상)\n3. 실사 이미지 자동 생성\n4. 예약 배포 및 수동 배포\n5. 다국어 지원 (8개국)\n6. 다크/라이트 모드\n7. 관리자 페이지\n\n== 페이지 목록 ==\n- 랜딩 페이지 (/)\n- 대시보드 (/dashboard)\n- 키워드 수집 (/keywords)\n- 콘텐츠 생성 (/content)\n- 이미지 생성 (/images)\n- 배포 관리 (/deploy)\n- 관리자 페이지 (/admin)\n- 설정 (/settings)\n\n== 설치 방법 ==\n1. 압축 파일을 해제합니다\n2. pnpm install 실행\n3. pnpm run dev 로 개발 서버 시작\n4. http://localhost:3000 에서 확인\n\n© 2026 BlogAuto Pro. All rights reserved.\n`;
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "BlogAuto-Pro-Export.txt";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success("다운로드가 시작되었습니다!", { id: "zip-dl" });
+      } catch {
+        toast.error("다운로드 중 오류가 발생했습니다", { id: "zip-dl" });
+      }
+    }, 1000);
+  };
+
+  const currentLangInfo = LANGUAGES.find(l => l.code === selectedLang) || LANGUAGES[0];
 
   return (
-    <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />
+    <div className="min-h-screen bg-background flex" style={{ overflowX:"hidden", maxWidth:"100vw" }}>
+      <style>{PINK_KEYFRAME}</style>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed left-0 top-0 h-full z-50 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{
+          width: "240px",
+          background: "var(--sidebar)",
+          borderRight: "1px solid var(--sidebar-border)",
+        }}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-sidebar-border">
+          <Link href="/">
+            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center glow-emerald"
+                style={{ background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))" }}
+              >
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="font-bold text-sm text-sidebar-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  BlogAuto Pro
+                </div>
+                <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  🏠 홈으로
+                </div>
+              </div>
+            </div>
+          </Link>
+          <button
+            className="ml-auto lg:hidden text-muted-foreground hover:text-foreground"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Status indicator */}
+        <div className="px-4 py-3 mx-3 mt-3 rounded-lg" style={{ background: "oklch(0.696 0.17 162.48 / 10%)", border: "1px solid oklch(0.696 0.17 162.48 / 20%)" }}>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary pulse-dot" />
+            <span className="text-xs font-medium" style={{ color: "var(--color-emerald)" }}>시스템 정상 운영 중</span>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <div className="text-xs font-semibold uppercase tracking-wider mb-3 px-3" style={{ color: "var(--muted-foreground)" }}>
+            메인 메뉴
+          </div>
+          {NAV_ITEMS.map((item) => {
+            const isActive = location === item.path;
+            const isDashboard = item.path === "/dashboard";
+            return (
+              <div key={item.path}
+                onClick={isGuestMode && !isDashboard ? handleGuestBlock : undefined}
+                style={isGuestMode && !isDashboard ? { cursor: "not-allowed", opacity: 0.5 } : {}}>
+                <Link href={isGuestMode && !isDashboard ? "#" : item.path}>
+                  <div
+                    className={`nav-item ${isActive ? "active" : ""}`}
+                    onClick={() => !isGuestMode && setSidebarOpen(false)}
+                    style={item.pink ? {
+                      color: isActive ? "#fff" : "#f472b6",
+                      background: isActive ? "linear-gradient(90deg,#be185d,#ec4899)" : "rgba(236,72,153,0.08)",
+                      border: "1px solid rgba(236,72,153,0.25)",
+                      borderRadius: "8px",
+                      marginTop: "4px",
+                      animation: "pinkPulse 2.5s ease-in-out infinite",
+                    } : {}}
+                  >
+                    <item.icon className="w-4 h-4 flex-shrink-0" />
+                    <span>{item.label}</span>
+                    {item.path === "/keywords" && !isGuestMode && (
+                      <span className="ml-auto text-xs px-1.5 py-0.5 rounded badge-active">NEW</span>
+                    )}
+                    {item.pink && !isGuestMode && (
+                      <span className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{background:"rgba(236,72,153,0.2)",color:"#f472b6"}}>HOT</span>
+                    )}
+                    {isGuestMode && !isDashboard && (
+                      <span className="ml-auto text-xs">🔒</span>
+                    )}
+                  </div>
+                </Link>
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Bottom section */}
+        <div className="p-3 border-t border-sidebar-border space-y-2">
+          {/* Quick stats */}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="rounded-lg p-2 text-center" style={{ background: "oklch(1 0 0 / 4%)" }}>
+              <div className="text-sm font-bold" style={{ color: "var(--color-emerald)" }}>{totalPosts}</div>
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>발행 글</div>
+            </div>
+            <div className="rounded-lg p-2 text-center" style={{ background: "oklch(1 0 0 / 4%)" }}>
+              <div className="text-sm font-bold" style={{ color: "var(--color-amber-brand)" }}>—</div>
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>이번달 수익</div>
+            </div>
+          </div>
+
+          {/* Download button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 text-xs"
+            onClick={handleDownload}
+          >
+            <Download className="w-3.5 h-3.5" />
+            ZIP 다운로드
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0" style={{ marginLeft: "0", paddingLeft: "0" }}>
+        {/* Top header */}
+        <header
+          className="sticky top-0 z-30 flex items-center gap-4 px-4 lg:px-6"
+          style={{
+            height: "60px",
+            background: "var(--background)",
+            borderBottom: "1px solid var(--border)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          {/* Mobile menu button */}
+          <button
+            className="lg:hidden text-muted-foreground hover:text-foreground"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Desktop spacer */}
+          <div className="hidden lg:block" style={{ width: "240px", flexShrink: 0 }} />
+
+
+
+          <div className="ml-auto flex items-center gap-2">
+            {/* Language selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+                  <Globe className="w-4 h-4" />
+                  <span className="hidden sm:inline">{currentLangInfo.flag} {currentLangInfo.label}</span>
+                  <ChevronDown className="w-3 h-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {LANGUAGES.map((lang) => (
+                  <DropdownMenuItem
+                    key={lang.code}
+                    onClick={() => handleLangChange(lang.code)}
+                    className={selectedLang === lang.code ? "bg-accent" : ""}
+                  >
+                    <span className="mr-2">{lang.flag}</span>
+                    {lang.label}
+                    {selectedLang === lang.code && (
+                      <span className="ml-auto text-primary">✓</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Theme toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-9 h-9"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+            >
+              {theme === "dark" ? (
+                <Sun className="w-4 h-4" />
+              ) : (
+                <Moon className="w-4 h-4" />
+              )}
+            </Button>
+
+            {/* 노션 템플릿 버튼 */}
+            <a
+              href="https://notion.blogautopro.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.preventDefault();
+                const token = localStorage.getItem("ba_token") || "";
+                const url = token
+                  ? `https://notion.blogautopro.com/app.html?token=${encodeURIComponent(token)}`
+                  : "https://notion.blogautopro.com";
+                window.open(url, "_blank");
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "7px 13px",
+                borderRadius: "10px",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                color: "white",
+                background: "linear-gradient(135deg, #ff3d6e, #ff5c35)",
+                boxShadow: "0 4px 14px rgba(255,61,110,0.45)",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "none",
+                position: "relative",
+                overflow: "hidden",
+                animation: "notionBounce 2.2s ease-in-out infinite",
+                flexShrink: 0,
+                transition: "transform 0.18s cubic-bezier(0.4,0,0.2,1), box-shadow 0.18s ease",
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "scale(1.12) translateY(-3px)";
+                el.style.boxShadow = "0 8px 28px rgba(255,61,110,0.65)";
+                el.style.animation = "none";
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "";
+                el.style.boxShadow = "0 4px 14px rgba(255,61,110,0.45)";
+                el.style.animation = "notionBounce 2.2s ease-in-out infinite";
+              }}
+              onMouseDown={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "scale(0.93)";
+                el.style.boxShadow = "0 2px 8px rgba(255,61,110,0.3)";
+              }}
+              onMouseUp={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "scale(1.12) translateY(-3px)";
+                el.style.boxShadow = "0 8px 28px rgba(255,61,110,0.65)";
+              }}
+            >
+              <style>{`
+                @keyframes notionBounce {
+                  0%, 100% { transform: translateY(0) scale(1); }
+                  30%       { transform: translateY(-5px) scale(1.04); }
+                  60%       { transform: translateY(-2px) scale(1.01); }
+                }
+              `}</style>
+              📋 노션 템플릿
+            </a>
+
+            {/* Notifications */}
+            <DropdownMenu onOpenChange={(open) => {
+              if (open && unreadCount > 0) {
+                markNotificationsRead();
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                setUnreadCount(0);
+              }
+            }}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="w-9 h-9 relative">
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 ? (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 min-w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
+                      style={{ background: "#ef4444", color: "white", padding: "0 3px" }}
+                    >
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  ) : (
+                    <span
+                      className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                      style={{ background: "var(--color-emerald)" }}
+                    />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                collisionPadding={{ left: 16, right: 16 }}
+                style={{
+                  width: "min(320px, calc(100vw - 32px))",
+                  minWidth: "280px",
+                  maxWidth: "360px",
+                  maxHeight: "480px",
+                  overflowY: "auto",
+                }}
+              >
+                {/* 헤더: 알림 제목 + 개수 + 모두읽음 */}
+                <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>알림</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                      {unreadCount > 0 ? `(${unreadCount})` : `${notifications.length}개`}
+                    </span>
+                  </div>
+                  {unreadCount === 0 && notifications.length > 0 && (
+                    <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>모두 읽음</span>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+                    알림이 없습니다
+                  </div>
+                ) : (
+                  <>
+                    {notifications.slice(0, 10).map(n => (
+                      <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-3 px-4" style={{ cursor: "default" }}>
+                        <div className="flex items-start gap-2 w-full">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                            style={{ background: !n.read ? "var(--color-emerald)" : "var(--border)" }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium leading-snug" style={{ color: "var(--foreground)", wordBreak: "keep-all", whiteSpace: "normal" }}>
+                              {n.type === "deploy" ? "🚀" : n.type === "content" ? "✍️" : n.type === "image" ? "🖼️" : "🔍"} {n.title}
+                            </p>
+                            <p className="text-xs leading-relaxed mt-0.5" style={{ color: "var(--muted-foreground)", wordBreak: "keep-all", whiteSpace: "normal" }}>{n.desc}</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)", opacity: 0.5 }}>
+                              {new Date(n.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                    <div className="px-4 py-2 border-t text-center" style={{ borderColor: "var(--border)" }}>
+                      <button
+                        className="text-xs hover:underline"
+                        style={{ color: "var(--muted-foreground)" }}
+                        onClick={() => navigate("/settings")}
+                      >
+                        설정에서 알림 관리
+                      </button>
+                    </div>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* User avatar */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full cursor-pointer hover:bg-accent/20 transition-colors" style={{ border: "1px solid var(--border)" }}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    style={{ background: "linear-gradient(135deg, var(--color-emerald), oklch(0.769 0.188 70.08))", color: "white" }}>
+                    {(() => { try { const u = JSON.parse(localStorage.getItem("ba_user") || "{}"); return (u.name || u.id || "A").charAt(0).toUpperCase(); } catch { return "A"; } })()}
+                  </div>
+                  <span className="text-xs font-medium hidden sm:inline" style={{ color: "var(--foreground)", maxWidth: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {(() => { try { const u = JSON.parse(localStorage.getItem("ba_user") || "{}"); return u.name || u.id || "내 계정"; } catch { return "내 계정"; } })()}
+                  </span>
+                  <ChevronDown className="w-3 h-3 opacity-60" style={{ color: "var(--muted-foreground)" }} />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => navigate("/mypage")}>
+                  <User className="w-4 h-4 mr-2" /> 마이페이지
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { clearUserLocalCache(); toast.success("로그아웃되었습니다"); setTimeout(() => window.location.href = "/", 1000); }} style={{ color: "#ef4444" }}>
+                  <LogOut className="w-4 h-4 mr-2" /> 로그아웃
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* 관리자 톱니바퀴 */}
+            <button
+              title="관리자"
+              onClick={() => navigate("/superadmin")}
+              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-accent/20"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+
+            {/* 체험단 허브 관리자 버튼 */}
+            <button
+              title="체험단 허브 관리자"
+              onClick={() => navigate("/admin-campaigns")}
+              className="flex items-center justify-center rounded-full transition-all hover:bg-accent/20"
+              style={{
+                width: 32, height: 32,
+                color: "var(--muted-foreground)",
+                position: "relative",
+                animation: "campGlow 3s ease-in-out infinite",
+              }}
+            >
+              <span style={{ fontSize: 15 }}>⚙️</span>
+              <style>{`
+                @keyframes campGlow {
+                  0%,100% { filter: drop-shadow(0 0 0px rgba(236,72,153,0)); }
+                  50%     { filter: drop-shadow(0 0 5px rgba(236,72,153,0.7)); }
+                }
+              `}</style>
+            </button>
+          </div>
+        </header>
+
+        {/* Page content with left padding for sidebar on desktop */}
+        <main className="flex-1 overflow-auto" style={{ paddingLeft: "0", overflowX:"hidden" }}>
+          <div className="lg:pl-60" style={{ minWidth:0, width:"100%" }}>
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
+
