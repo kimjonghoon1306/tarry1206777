@@ -81,6 +81,11 @@ const CSS = `
   transition: border-color .2s;
 }
 .hub-card:hover { border-color: rgba(255,255,255,0.14); }
+:root:not(.dark) .hub-card {
+  background: #ffffff !important;
+  border-color: #e4e4e7 !important;
+}
+:root:not(.dark) .hub-card:hover { border-color: #a1a1aa !important; }
 
 .hub-tab {
   padding: 8px 16px; border-radius: 10px; font-size: 13px;
@@ -92,13 +97,20 @@ const CSS = `
 .hub-tab-active  { background:rgba(3,199,90,.12); border-color:#03C75A; color:#03C75A; }
 .hub-tab-inactive{ color:rgba(255,255,255,.45); background:rgba(255,255,255,.04); }
 .hub-tab-inactive:hover { color:rgba(255,255,255,.75); background:rgba(255,255,255,.07); }
+:root:not(.dark) .hub-tab-inactive { color:rgba(0,0,0,0.55) !important; background:rgba(0,0,0,0.05) !important; }
+:root:not(.dark) .hub-tab-inactive:hover { color:rgba(0,0,0,0.85) !important; background:rgba(0,0,0,0.09) !important; }
 
 .hub-input {
   background: rgba(255,255,255,0.05) !important;
   border: 1px solid rgba(255,255,255,0.1) !important;
-  color: white !important; border-radius: 10px !important;
+  color: var(--foreground) !important; border-radius: 10px !important;
   font-family: 'Noto Sans KR', sans-serif !important; font-size: 13px !important;
   outline: none;
+}
+:root:not(.dark) .hub-input {
+  background: #f4f4f5 !important;
+  border: 1px solid #d4d4d8 !important;
+  color: #09090b !important;
 }
 .hub-input option {
   background: #1a2235 !important;
@@ -124,6 +136,7 @@ select.hub-input {
 }
 .hub-input:focus  { border-color: #03C75A !important; box-shadow: 0 0 0 2px rgba(3,199,90,.15) !important; }
 .hub-input::placeholder { color: rgba(255,255,255,0.3) !important; }
+:root:not(.dark) .hub-input::placeholder { color: rgba(0,0,0,0.4) !important; }
 
 /* ── 라이트 테마 전체 대응 ── */
 .light .hub-card, :root:not(.dark) .hub-card {
@@ -183,9 +196,13 @@ select.hub-input {
   display:flex; align-items:center; gap:6px;
 }
 .hub-btn-g:hover { background:rgba(255,255,255,.1); color:white; }
+:root:not(.dark) .hub-btn-g { background:rgba(0,0,0,.06) !important; color:rgba(0,0,0,.6) !important; border-color:rgba(0,0,0,.12) !important; }
+:root:not(.dark) .hub-btn-g:hover { background:rgba(0,0,0,.1) !important; color:#000 !important; }
 
 .log-line { font-family:'Courier New',monospace; font-size:11px; line-height:1.7; }
 .log-info    { color:rgba(255,255,255,.5); }
+:root:not(.dark) .log-info { color:rgba(0,0,0,.55) !important; }
+:root:not(.dark) .log-line { color:rgba(0,0,0,.7) !important; }
 .log-success { color:#03C75A; }
 .log-error   { color:#ff4444; }
 .log-warn    { color:#f59e0b; }
@@ -193,6 +210,7 @@ select.hub-input {
 .sdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .sdot-on  { background:#03C75A; animation:hub-blink 2s infinite; }
 .sdot-off { background:#555; }
+:root:not(.dark) .sdot-off { background:#bbb !important; }
 
 .scanwrap { position:relative; overflow:hidden; }
 .scanwrap::after {
@@ -235,6 +253,11 @@ export default function NaverPublishPage() {
   const [showPw,   setShowPw]   = useState<Record<string,boolean>>({});
   const [newAcc,   setNewAcc]   = useState({ platform:"naver" as Platform, username:"", password:"", blogName:"" });
   const [connecting, setConnecting] = useState<string|null>(null);
+
+  // Flow 계정 (회원 개인)
+  const [flowEmail, setFlowEmail] = useState(() => localStorage.getItem("my_flow_email") || "");
+  const [flowPw,    setFlowPw]    = useState(() => localStorage.getItem("my_flow_pw") || "");
+  const [showFlowPw, setShowFlowPw] = useState(false);
 
   // 발행 폼
   const [pubTitle,   setPubTitle]   = useState("");
@@ -375,6 +398,15 @@ export default function NaverPublishPage() {
     } finally { setConnecting(null); }
   }
 
+  // ── Flow 계정 저장 ──────────────────────────────────────────
+  function saveFlowAccount() {
+    if (!flowEmail || !flowPw) { toast.error("구글 계정을 입력하세요"); return; }
+    localStorage.setItem("my_flow_email", flowEmail);
+    localStorage.setItem("my_flow_pw", flowPw);
+    addLog("success", `✅ Google Flow 계정 저장: ${flowEmail}`);
+    toast.success("Flow 계정 저장됨");
+  }
+
   // ── 계정 추가 ────────────────────────────────────────────
   function addAccount() {
     if (!newAcc.username || !newAcc.password) { toast.error("아이디와 비밀번호를 입력하세요"); return; }
@@ -453,6 +485,7 @@ export default function NaverPublishPage() {
 
   // ────────────────────────────────────────────────────────
   return (
+    <>
     <Layout>
       <style>{CSS}</style>
       <div style={{
@@ -715,6 +748,58 @@ export default function NaverPublishPage() {
           {activeTab==="accounts" && (
             <div style={{maxWidth:780,animation:"hub-fade-up .35s ease both"}}>
 
+              {/* Google Flow 계정 */}
+              <div className="hub-card" style={{padding:"22px",marginBottom:18,
+                background:"linear-gradient(135deg,rgba(66,133,244,.06),rgba(52,168,83,.04))",
+                borderColor:"rgba(66,133,244,.2)"}}>
+                <p style={{fontSize:13,fontWeight:700,color:"var(--foreground)",margin:"0 0 14px",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{
+                    width:28,height:28,borderRadius:8,
+                    background:"linear-gradient(135deg,#4285F4,#34A853)",
+                    display:"inline-flex",alignItems:"center",justifyContent:"center",
+                    fontSize:14,fontWeight:900,color:"white",flexShrink:0,
+                  }}>G</span>
+                  Google Flow 계정 (이미지 자동 생성)
+                </p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                  <div>
+                    <label style={{fontSize:10,color:"var(--muted-foreground)",fontWeight:600,display:"block",marginBottom:5}}>구글 이메일</label>
+                    <input className="hub-input" type="text" style={{width:"100%",padding:"9px 12px"}}
+                      placeholder="my@gmail.com"
+                      value={flowEmail} onChange={e=>setFlowEmail(e.target.value)}/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:10,color:"var(--muted-foreground)",fontWeight:600,display:"block",marginBottom:5}}>구글 비밀번호</label>
+                    <div style={{position:"relative"}}>
+                      <input className="hub-input" type={showFlowPw?"text":"password"} style={{width:"100%",padding:"9px 38px 9px 12px"}}
+                        placeholder="••••••••"
+                        value={flowPw} onChange={e=>setFlowPw(e.target.value)}/>
+                      <button onClick={()=>setShowFlowPw(v=>!v)}
+                        style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
+                          background:"none",border:"none",cursor:"pointer",color:"var(--muted-foreground)",padding:2}}>
+                        {showFlowPw
+                          ? <EyeOff style={{width:14,height:14}}/>
+                          : <Eye style={{width:14,height:14}}/>
+                        }
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+                  <button className="hub-btn-n" style={{padding:"9px 18px",fontSize:13}} onClick={saveFlowAccount}>
+                    <CheckCircle2 style={{width:13,height:13}}/> 저장
+                  </button>
+                  {flowEmail && (
+                    <span style={{fontSize:11,color:"#03C75A",display:"flex",alignItems:"center",gap:4}}>
+                      <CheckCircle2 style={{width:12,height:12}}/> {flowEmail} 저장됨
+                    </span>
+                  )}
+                </div>
+                <p style={{fontSize:10,color:"var(--muted-foreground)",marginTop:10,lineHeight:1.6}}>
+                  ⚠️ 발행 시 이미지 프롬프트 입력하면 본인 구글 계정으로 Flow에서 자동 생성됩니다.
+                </p>
+              </div>
+
               {/* 계정 추가 폼 */}
               <div className="hub-card" style={{padding:"22px",marginBottom:18}}>
                 <p style={{fontSize:13,fontWeight:700,color:"white",margin:"0 0 14px",display:"flex",alignItems:"center",gap:7}}>
@@ -955,6 +1040,7 @@ export default function NaverPublishPage() {
       </div>
     </Layout>
     <NaverGuideBtn />
+    </>
   );
 }
 
