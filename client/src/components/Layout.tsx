@@ -411,7 +411,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                 flexShrink: 0,
                 transition: "transform 0.18s cubic-bezier(0.4,0,0.2,1), box-shadow 0.18s ease",
               }}
-              className="px-2 py-2 sm:px-[13px] sm:py-[7px] text-[0.78rem]"
+              className="px-2.5 py-1.5 sm:px-[13px] sm:py-[7px] text-[0.78rem]"
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLAnchorElement;
                 el.style.transform = "scale(1.12) translateY(-3px)";
@@ -443,7 +443,10 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                 }
               `}</style>
               <span className="hidden sm:inline">📋 노션 템플릿</span>
-              <span className="sm:hidden" style={{ fontSize: 16 }}>📋</span>
+              <span className="sm:hidden" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                <span style={{ fontSize: 15, lineHeight: 1 }}>📋</span>
+                <span style={{ fontSize: "0.55rem", fontWeight: 800, letterSpacing: "0.02em", color: "rgba(255,255,255,0.92)", lineHeight: 1 }}>노션</span>
+              </span>
             </a>
 
             {/* Notifications */}
