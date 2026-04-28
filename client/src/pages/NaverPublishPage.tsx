@@ -168,6 +168,33 @@ select.hub-input {
 :root .sdot-off { background:#555; } :root:not(.dark) .sdot-off { background:#bbb; }
 
 .scanwrap { position:relative; overflow:hidden; }
+/* ── 모바일 최적화 ── */
+@media(max-width:768px) {
+  .hub-panel-grid { grid-template-columns:1fr !important; }
+  .hub-right-panel { display:none !important; }
+
+  /* 헤더 */
+  .hub-header-wrap { flex-direction:column !important; align-items:flex-start !important; gap:10px !important; }
+  .hub-status-wrap { width:100% !important; justify-content:space-between !important; }
+
+  /* 탭 스크롤 */
+  .hub-tabs-wrap { flex-wrap:nowrap !important; overflow-x:auto !important; -webkit-overflow-scrolling:touch !important; padding-bottom:4px !important; }
+  .hub-tabs-wrap::-webkit-scrollbar { display:none; }
+
+  /* 계정 추가 폼 */
+  .hub-account-grid { grid-template-columns:1fr 1fr !important; }
+
+  /* 플랫폼 버튼 */
+  .hub-platform-grid { flex-direction:column !important; }
+
+  /* 패딩 줄이기 */
+  .hub-card { border-radius:12px !important; }
+}
+
+@media(max-width:480px) {
+  .hub-account-grid { grid-template-columns:1fr !important; }
+}
+
 .scanwrap::after {
   content:''; position:absolute; left:0; right:0; height:40px;
   background:linear-gradient(transparent,rgba(3,199,90,.06),transparent);
@@ -502,7 +529,7 @@ export default function NaverPublishPage() {
           </div>
 
           {/* 탭 */}
-          <div style={{display:"flex",gap:6,marginTop:14,overflowX:"auto",paddingBottom:2}}>
+          <div className="hub-tabs-wrap" style={{display:"flex",gap:6,marginTop:14,overflowX:"auto",paddingBottom:2}}>
             {TABS.map(t=>(
               <button key={t.key}
                 className={`hub-tab ${activeTab===t.key?"hub-tab-active":"hub-tab-inactive"}`}
@@ -760,7 +787,7 @@ export default function NaverPublishPage() {
                 <p style={{fontSize:13,fontWeight:700,color:"white",margin:"0 0 14px",display:"flex",alignItems:"center",gap:7}}>
                   <Plus style={{width:14,height:14,color:accentColor}}/> 계정 추가
                 </p>
-                <div style={{display:"grid",gridTemplateColumns:"110px 1fr 1fr 1fr",gap:10,alignItems:"end"}}>
+                <div className="hub-account-grid" style={{display:"grid",gridTemplateColumns:"110px 1fr 1fr 1fr",gap:10,alignItems:"end"}}>
                   {[
                     {label:"플랫폼",     type:"select"},
                     {label:"아이디",     key:"username", ph:"아이디 입력",   inputType:"text"},
