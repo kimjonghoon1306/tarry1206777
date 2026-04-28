@@ -289,12 +289,14 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
       <div className="flex-1 flex flex-col min-w-0" style={{ marginLeft: "0", paddingLeft: "0" }}>
         {/* Top header */}
         <header
-          className="sticky top-0 z-30 flex items-center gap-4 px-4 lg:px-6"
+          className="sticky top-0 z-30 flex items-center gap-2 sm:gap-4 px-3 sm:px-4 lg:px-6"
           style={{
             height: "60px",
             background: "var(--background)",
             borderBottom: "1px solid var(--border)",
             backdropFilter: "blur(12px)",
+            minWidth: 0,
+            overflow: "hidden",
           }}
         >
           {/* Mobile menu button */}
@@ -336,14 +338,14 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             <span className="ml-auto text-xs opacity-60" style={{ color: "var(--muted-foreground)" }}>Enter</span>
           </form>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
             {/* Language selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-                  <Globe className="w-4 h-4" />
+                <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-auto sm:h-auto sm:px-3 sm:py-2 gap-1.5 text-xs">
+                  <Globe className="w-4 h-4 flex-shrink-0" />
                   <span className="hidden sm:inline">{currentLangInfo.flag} {currentLangInfo.label}</span>
-                  <ChevronDown className="w-3 h-3 opacity-60" />
+                  <ChevronDown className="w-3 h-3 opacity-60 hidden sm:block" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
@@ -395,9 +397,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                 display: "flex",
                 alignItems: "center",
                 gap: "5px",
-                padding: "7px 13px",
                 borderRadius: "10px",
-                fontSize: "0.78rem",
                 fontWeight: 700,
                 color: "white",
                 background: "linear-gradient(135deg, #ff3d6e, #ff5c35)",
@@ -411,6 +411,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                 flexShrink: 0,
                 transition: "transform 0.18s cubic-bezier(0.4,0,0.2,1), box-shadow 0.18s ease",
               }}
+              className="px-2 py-2 sm:px-[13px] sm:py-[7px] text-[0.78rem]"
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLAnchorElement;
                 el.style.transform = "scale(1.12) translateY(-3px)";
@@ -441,7 +442,8 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                   60%       { transform: translateY(-2px) scale(1.01); }
                 }
               `}</style>
-              📋 노션 템플릿
+              <span className="hidden sm:inline">📋 노션 템플릿</span>
+              <span className="sm:hidden" style={{ fontSize: 16 }}>📋</span>
             </a>
 
             {/* Notifications */}
@@ -561,25 +563,25 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             <button
               title="관리자"
               onClick={() => navigate("/superadmin")}
-              className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:bg-accent/20"
-              style={{ color: "var(--muted-foreground)" }}
+              className="flex items-center justify-center rounded-full transition-colors hover:bg-accent/20 flex-shrink-0"
+              style={{ width: 36, height: 36, minWidth: 36, color: "var(--muted-foreground)" }}
             >
-              <Settings className="w-5 h-5" />
+              <Settings style={{ width: 20, height: 20 }} />
             </button>
 
             {/* 체험단 허브 관리자 버튼 */}
             <button
               title="체험단 허브 관리자"
               onClick={() => navigate("/admin-campaigns")}
-              className="flex items-center justify-center rounded-full transition-all hover:bg-accent/20"
+              className="flex items-center justify-center rounded-full transition-all hover:bg-accent/20 flex-shrink-0"
               style={{
-                width: 32, height: 32,
+                width: 36, height: 36, minWidth: 36,
                 color: "var(--muted-foreground)",
                 position: "relative",
                 animation: "campGlow 3s ease-in-out infinite",
               }}
             >
-              <span style={{ fontSize: 15 }}>⚙️</span>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>⚙️</span>
               <style>{`
                 @keyframes campGlow {
                   0%,100% { filter: drop-shadow(0 0 0px rgba(236,72,153,0)); }
