@@ -16,7 +16,7 @@ import {
   Trash2, ExternalLink, Home, Save,
   Users, Crown, UserX, RefreshCw, ChevronDown,
   Activity, Cpu, Database, HardDrive, Wifi,
-  Send, ShoppingCart, FileText, Search, BarChart3, Bot, Plus,
+  Send, ShoppingCart, FileText, Search, BarChart3, Bot, Plus, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2148,6 +2148,7 @@ function AdminDashboard() {
           {tab === "og"       && <OGManager />}
           {tab === "popup"    && <PopupManager />}
           {tab === "autopublish" && <AutoPublishManager />}
+          {tab === "publy"       && <PublyWidget />}
         </div>
       </div>
 
