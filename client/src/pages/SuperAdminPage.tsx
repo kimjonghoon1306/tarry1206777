@@ -1941,8 +1941,158 @@ const TABS = [
   { id: "og",      label: "OG",    icon: Image, color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)" },
   { id: "popup",   label: "공지",  icon: Bell, color: "#ec4899", grad: "linear-gradient(135deg,#ec4899,#db2777)" },
   { id: "autopublish", label: "자동발행", icon: Send, color: "#03C75A", grad: "linear-gradient(135deg,#03C75A,#059669)" },
+  { id: "publy", label: "Publy", icon: Smartphone, color: "#00ff88", grad: "linear-gradient(135deg,#00ff88,#00cc66)" },
 ] as const;
 type TabId = typeof TABS[number]["id"];
+
+// ── Publy 회원 현황 위젯 ──────────────────────────────────────
+const PUBLY_URL = "https://qhhoyxexxlimbjrbwrgq.supabase.co";
+const PUBLY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoaG95eGV4eGxpbWJqcmJ3cmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MzA5NzcsImV4cCI6MjA2MTQwNjk3N30.bHtF5g_cJjlcLLFH5JaTzqOeD03j6fNXQYhYkVvTKM";
+
+function PublyWidget() {
+  const [stats, setStats] = React.useState<any>(null);
+  const [users, setUsers] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const PUBLY_DOMAIN = "https://publy-bap.vercel.app";
+
+  React.useEffect(() => {
+    async function load() {
+      try {
+        const headers = {
+          "apikey": PUBLY_KEY,
+          "Authorization": `Bearer ${PUBLY_KEY}`,
+          "Content-Type": "application/json",
+        };
+        const [uRes, qRes, hRes] = await Promise.all([
+          fetch(`${PUBLY_URL}/rest/v1/publy_users?select=*&order=created_at.desc`, { headers }),
+          fetch(`${PUBLY_URL}/rest/v1/publy_quotas?select=*`, { headers }),
+          fetch(`${PUBLY_URL}/rest/v1/publy_history?select=*`, { headers }),
+        ]);
+        const [uData, qData, hData] = await Promise.all([uRes.json(), qRes.json(), hRes.json()]);
+        const usersWithQuota = (uData || []).map((u: any) => ({
+          ...u,
+          quota: (qData || []).find((q: any) => q.user_id === u.id),
+          pub_count: (hData || []).filter((h: any) => h.user_id === u.id).length,
+        }));
+        setUsers(usersWithQuota);
+        setStats({
+          total: usersWithQuota.length,
+          active: usersWithQuota.filter((u: any) => u.is_active).length,
+          pro: usersWithQuota.filter((u: any) => u.plan === "pro").length,
+          basic: usersWithQuota.filter((u: any) => u.plan === "basic").length,
+          free: usersWithQuota.filter((u: any) => u.plan === "free").length,
+          totalPub: (hData || []).length,
+          today: (hData || []).filter((h: any) => new Date(h.published_at).toDateString() === new Date().toDateString()).length,
+        });
+      } catch(e) { console.error(e); }
+      finally { setLoading(false); }
+    }
+    load();
+  }, []);
+
+  if (loading) return (
+    <div style={{textAlign:"center",padding:"64px",color:"var(--muted-foreground)"}}>
+      <div style={{width:32,height:32,borderRadius:"50%",border:"3px solid rgba(0,255,136,.2)",borderTopColor:"#00ff88",animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/>
+      Publy 데이터 로딩 중...
+    </div>
+  );
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      {/* 헤더 */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg,#00ff88,#00cc66)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:900,color:"#000",boxShadow:"0 4px 16px rgba(0,255,136,.3)"}}>P</div>
+          <div>
+            <div style={{fontSize:"1.1rem",fontWeight:800,color:"var(--foreground)"}}>Publy 회원 현황</div>
+            <div style={{fontSize:"0.75rem",color:"var(--muted-foreground)"}}>자동발행 앱 실시간 데이터</div>
+          </div>
+        </div>
+        <a href={PUBLY_DOMAIN} target="_blank" rel="noopener noreferrer"
+          style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:10,background:"linear-gradient(135deg,#00ff88,#00cc66)",color:"#000",fontWeight:700,fontSize:"0.8rem",textDecoration:"none"}}>
+          🚀 Publy 관리자 열기
+        </a>
+      </div>
+
+      {/* 통계 카드 */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
+        {[
+          {label:"전체 회원",value:stats?.total||0,color:"#00ff88",icon:"👥"},
+          {label:"활성 회원",value:stats?.active||0,color:"#00c875",icon:"✅"},
+          {label:"PRO",value:stats?.pro||0,color:"#4285F4",icon:"⭐"},
+          {label:"BASIC",value:stats?.basic||0,color:"#f59e0b",icon:"🔵"},
+          {label:"오늘 발행",value:stats?.today||0,color:"#00ff88",icon:"🚀"},
+          {label:"총 발행",value:stats?.totalPub||0,color:"#a78bfa",icon:"📊"},
+        ].map((s,i)=>(
+          <div key={i} style={{padding:"16px",borderRadius:14,border:`1px solid ${s.color}25`,background:`${s.color}08`,textAlign:"center"}}>
+            <div style={{fontSize:22,marginBottom:6}}>{s.icon}</div>
+            <div style={{fontSize:"1.6rem",fontWeight:900,color:s.color,fontFamily:"'Space Grotesk',sans-serif"}}>{s.value}</div>
+            <div style={{fontSize:"0.72rem",color:"var(--muted-foreground)",fontWeight:600,marginTop:2}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 플랜 분포 바 */}
+      <div style={{padding:"18px 20px",borderRadius:16,background:"var(--card)",border:"1px solid var(--border)"}}>
+        <div style={{fontSize:"0.8rem",fontWeight:700,color:"var(--muted-foreground)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:14}}>플랜 분포</div>
+        {[
+          {label:"PRO",count:stats?.pro||0,color:"#00c875"},
+          {label:"BASIC",count:stats?.basic||0,color:"#4285F4"},
+          {label:"FREE",count:stats?.free||0,color:"#888"},
+        ].map(p=>{
+          const pct = stats?.total ? Math.round(p.count/stats.total*100) : 0;
+          return (
+            <div key={p.label} style={{marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                <span style={{fontSize:"0.8rem",fontWeight:700,color:p.color}}>{p.label}</span>
+                <span style={{fontSize:"0.8rem",color:"var(--muted-foreground)",fontFamily:"'JetBrains Mono',monospace"}}>{p.count}명 ({pct}%)</span>
+              </div>
+              <div style={{height:8,borderRadius:99,background:"var(--border)",overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:99,background:p.color,width:`${pct}%`,transition:"width .6s ease"}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 최근 가입 회원 */}
+      <div style={{padding:"18px 20px",borderRadius:16,background:"var(--card)",border:"1px solid var(--border)"}}>
+        <div style={{fontSize:"0.8rem",fontWeight:700,color:"var(--muted-foreground)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:14}}>최근 가입 회원</div>
+        {users.slice(0,8).map((u,i)=>(
+          <div key={u.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid var(--border)"}}>
+            <div style={{width:32,height:32,borderRadius:9,background:"linear-gradient(135deg,rgba(0,255,136,.2),rgba(0,255,136,.1))",border:"1px solid rgba(0,255,136,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#00ff88",flexShrink:0}}>
+              {(u.name||u.email)[0].toUpperCase()}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:"0.82rem",fontWeight:600,color:"var(--foreground)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.name||"이름없음"}</div>
+              <div style={{fontSize:"0.72rem",color:"var(--muted-foreground)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.email}</div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+              <span style={{fontSize:"0.7rem",fontWeight:800,padding:"2px 8px",borderRadius:99,background:u.plan==="pro"?"rgba(0,200,117,.15)":u.plan==="basic"?"rgba(66,133,244,.15)":"rgba(120,120,120,.15)",color:u.plan==="pro"?"#00c875":u.plan==="basic"?"#4285F4":"#999"}}>
+                {u.plan?.toUpperCase()}
+              </span>
+              <span style={{fontSize:"0.72rem",color:"var(--muted-foreground)",fontFamily:"'JetBrains Mono',monospace"}}>{u.pub_count}건</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Publy 앱 다운로드 배너 */}
+      <div style={{padding:"20px 22px",borderRadius:16,background:"linear-gradient(135deg,rgba(0,255,136,.08),rgba(0,200,117,.04))",border:"1px solid rgba(0,255,136,.2)",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+        <div style={{fontSize:40}}>📱</div>
+        <div style={{flex:1,minWidth:160}}>
+          <div style={{fontSize:"0.95rem",fontWeight:800,color:"var(--foreground)",marginBottom:4}}>Publy 앱 설치</div>
+          <div style={{fontSize:"0.78rem",color:"var(--muted-foreground)",lineHeight:1.6}}>PC/모바일 브라우저에서 접속 후 설치 버튼을 누르면 앱처럼 사용 가능합니다.</div>
+        </div>
+        <a href={PUBLY_DOMAIN} target="_blank" rel="noopener noreferrer"
+          style={{padding:"10px 20px",borderRadius:12,background:"linear-gradient(135deg,#00ff88,#00cc66)",color:"#000",fontWeight:800,fontSize:"0.82rem",textDecoration:"none",boxShadow:"0 4px 16px rgba(0,255,136,.3)"}}>
+          ⬇️ Publy 열기
+        </a>
+      </div>
+    </div>
+  );
+}
+
 
 function AdminDashboard() {
   const [tab, setTab] = useState<TabId>("apikeys");
@@ -2715,6 +2865,12 @@ function AutoPublishManager() {
             )}
           </div>
         )}
+      {/* Publy 탭 */}
+      {tab === "publy" && (
+        <div style={{padding:"6px 0"}}>
+          <PublyWidget />
+        </div>
+      )}
       </div>
     </>
   );
