@@ -31,7 +31,6 @@ import {
   LogOut,
   Gift,
   Palette,
-  Rss,
 } from "lucide-react";
 import { clearUserLocalCache, loadNotificationsFromServer, markNotificationsRead } from "@/lib/user-storage";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,6 @@ const NAV_ITEMS = [
   { path: "/template", icon: Palette, label: "템플릿 선택", labelEn: "Template", pink: false },
   { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images", pink: false },
   { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy", pink: false },
-  { path: "/naver", icon: Rss, label: "자동 발행", labelEn: "Auto Publish", pink: false },
   { path: "/campaigns", icon: Gift, label: "체험단 허브", labelEn: "Campaigns", pink: true },
   { path: "/mypage", icon: User, label: "마이페이지", labelEn: "My Page", pink: false },
   { path: "/settings", icon: Settings, label: "설정", labelEn: "Settings", pink: false },
@@ -294,33 +292,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
           {/* Desktop spacer */}
           <div className="hidden lg:block" style={{ width: "240px", flexShrink: 0 }} />
 
-          {/* Search bar - keywords 페이지로 이동 */}
-          <form
-            className="flex-1 max-w-md hidden sm:flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
-            style={{ background: "var(--muted)", cursor: "text" }}
-            onSubmit={(e) => {
-              e.preventDefault();
-              const input = e.currentTarget.querySelector("input") as HTMLInputElement;
-              const val = input?.value?.trim();
-              if (val) {
-                // 이미 keywords 페이지면 이벤트로 전달
-                window.dispatchEvent(new CustomEvent("layout-search", { detail: val }));
-                // keywords 페이지가 아니면 이동
-                if (!window.location.pathname.includes("/keywords")) {
-                  window.location.href = `/keywords?q=${encodeURIComponent(val)}`;
-                }
-                input.value = "";
-              }
-            }}
-          >
-            <Search className="w-4 h-4 flex-shrink-0" style={{ color: "var(--muted-foreground)" }} />
-            <input
-              className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: "var(--foreground)" }}
-              placeholder="키워드 입력 후 Enter → 수집..."
-            />
-            <span className="ml-auto text-xs opacity-60" style={{ color: "var(--muted-foreground)" }}>Enter</span>
-          </form>
+
 
           <div className="ml-auto flex items-center gap-2">
             {/* Language selector */}
