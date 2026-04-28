@@ -282,6 +282,23 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             <Download className="w-3.5 h-3.5" />
             ZIP 다운로드
           </Button>
+
+          {/* Publy 앱 바로가기 */}
+          <a href="https://publy-bap.vercel.app" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-all"
+            style={{
+              background: "linear-gradient(135deg,rgba(0,255,136,.1),rgba(0,200,117,.06))",
+              border: "1px solid rgba(0,255,136,.25)",
+              textDecoration: "none",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)"; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 6px 16px rgba(0,255,136,.2)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = ""; (e.currentTarget as HTMLAnchorElement).style.boxShadow = ""; }}>
+            <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#00ff88,#00cc66)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:"#000",flexShrink:0}}>P</div>
+            <div>
+              <div style={{fontSize:"0.72rem",fontWeight:800,color:"#00ff88",lineHeight:1.2}}>Publy 자동발행</div>
+              <div style={{fontSize:"0.62rem",color:"var(--muted-foreground)"}}>네이버 · 티스토리 앱 →</div>
+            </div>
+          </a>
         </div>
       </aside>
 
