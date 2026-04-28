@@ -347,58 +347,148 @@ export default function CampaignPage() {
 function FloatingAutoPublishBtn() {
   const FLOAT_CSS = `
     @keyframes f-float {
-      0%,100% { transform:translateY(0) scale(1); }
-      33%     { transform:translateY(-8px) scale(1.03); }
-      66%     { transform:translateY(-3px) scale(1.01); }
+      0%   { transform: translateY(0px) rotate(0deg) scale(1); }
+      25%  { transform: translateY(-10px) rotate(-1deg) scale(1.04); }
+      50%  { transform: translateY(-6px) rotate(1deg) scale(1.02); }
+      75%  { transform: translateY(-12px) rotate(-0.5deg) scale(1.05); }
+      100% { transform: translateY(0px) rotate(0deg) scale(1); }
     }
     @keyframes f-glow {
-      0%,100% { box-shadow:0 8px 28px rgba(234,179,8,.45),0 0 0 0 rgba(234,179,8,.3); }
-      50%     { box-shadow:0 16px 44px rgba(234,179,8,.75),0 0 0 10px rgba(234,179,8,0); }
+      0%,100% { box-shadow: 0 8px 32px rgba(234,179,8,.5), 0 0 0 0 rgba(234,179,8,.4), 0 0 60px rgba(234,179,8,.1); }
+      50%     { box-shadow: 0 20px 60px rgba(234,179,8,.9), 0 0 0 12px rgba(234,179,8,0), 0 0 100px rgba(234,179,8,.2); }
     }
     @keyframes f-shine {
-      0%   { transform:translateX(-100%) skewX(-15deg); }
-      100% { transform:translateX(260%) skewX(-15deg); }
+      0%   { transform: translateX(-150%) skewX(-20deg); opacity:0.8; }
+      100% { transform: translateX(300%) skewX(-20deg); opacity:0; }
     }
     @keyframes f-badge {
-      0%,100% { transform:scale(1); }
-      50%     { transform:scale(1.15); }
+      0%,100% { transform: scale(1) rotate(0deg); }
+      33%     { transform: scale(1.2) rotate(-5deg); }
+      66%     { transform: scale(1.1) rotate(5deg); }
+    }
+    @keyframes f-ring {
+      0%   { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    @keyframes f-orbit {
+      from { transform: rotate(0deg) translateX(28px) rotate(0deg); }
+      to   { transform: rotate(360deg) translateX(28px) rotate(-360deg); }
+    }
+    @keyframes f-svg-spin {
+      0%,100% { transform: rotate(-8deg) scale(1); }
+      50%     { transform: rotate(8deg) scale(1.1); }
     }
   `;
+
   return (
     <>
       <style>{FLOAT_CSS}</style>
+
+      {/* 링 파동 효과 */}
+      <div style={{
+        position:"fixed", bottom:40, right:40, zIndex:9998,
+        width:56, height:56, borderRadius:"50%",
+        border:"2px solid rgba(234,179,8,.6)",
+        animation:"f-ring 2s ease-out infinite",
+        pointerEvents:"none",
+      }}/>
+      <div style={{
+        position:"fixed", bottom:40, right:40, zIndex:9998,
+        width:56, height:56, borderRadius:"50%",
+        border:"2px solid rgba(234,179,8,.4)",
+        animation:"f-ring 2s ease-out infinite .6s",
+        pointerEvents:"none",
+      }}/>
+
+      {/* 궤도 도는 별 SVG */}
+      <div style={{
+        position:"fixed", bottom:54, right:54, zIndex:9999,
+        width:0, height:0, pointerEvents:"none",
+      }}>
+        <div style={{animation:"f-orbit 3s linear infinite"}}>
+          <svg width="8" height="8" viewBox="0 0 8 8">
+            <circle cx="4" cy="4" r="3" fill="#fbbf24"/>
+          </svg>
+        </div>
+      </div>
+
       <button
         onClick={() => { window.location.href = "/naver"; }}
         style={{
           position:"fixed", bottom:28, right:28, zIndex:9999,
           display:"flex", alignItems:"center", gap:10,
-          padding:"14px 22px", borderRadius:99,
-          background:"linear-gradient(135deg,#eab308,#f59e0b,#d97706)",
-          color:"#000", fontWeight:800, fontSize:14,
-          border:"none", cursor:"pointer",
+          padding:"14px 24px", borderRadius:99,
+          background:"linear-gradient(135deg,#fbbf24,#f59e0b,#d97706,#b45309)",
+          color:"#000", fontWeight:900, fontSize:14,
+          border:"2px solid rgba(255,255,255,.3)",
+          cursor:"pointer",
           fontFamily:"'Noto Sans KR',sans-serif",
-          animation:"f-float 3s ease-in-out infinite, f-glow 3s ease-in-out infinite",
+          letterSpacing:"-.01em",
+          animation:"f-float 4s ease-in-out infinite, f-glow 2.5s ease-in-out infinite",
           overflow:"hidden",
         }}
         onMouseEnter={e => {
           const el = e.currentTarget as HTMLButtonElement;
           el.style.animation = "none";
-          el.style.transform = "translateY(-4px) scale(1.07)";
-          el.style.boxShadow = "0 20px 56px rgba(234,179,8,.8)";
+          el.style.transform = "translateY(-6px) scale(1.1)";
+          el.style.boxShadow = "0 24px 60px rgba(234,179,8,.9), 0 0 0 4px rgba(234,179,8,.3)";
         }}
         onMouseLeave={e => {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.animation = "f-float 3s ease-in-out infinite, f-glow 3s ease-in-out infinite";
+          el.style.animation = "f-float 4s ease-in-out infinite, f-glow 2.5s ease-in-out infinite";
           el.style.transform = "";
           el.style.boxShadow = "";
         }}
       >
-        <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)",animation:"f-shine 2.5s ease-in-out infinite",pointerEvents:"none"}}/>
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{position:"relative",flexShrink:0}}>
-          <path d="M13 2L4.5 13.5H11L10 22L20.5 10H14L13 2Z" fill="#000" stroke="#000" strokeWidth="1.5" strokeLinejoin="round"/>
-        </svg>
-        <span style={{position:"relative"}}>자동 발행</span>
-        <span style={{position:"absolute",top:-7,right:-5,background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,padding:"2px 5px",borderRadius:99,border:"2px solid #fff",animation:"f-badge 1.8s ease-in-out infinite"}}>NEW</span>
+        {/* 반짝임 레이어 */}
+        <span style={{
+          position:"absolute", inset:0,
+          background:"linear-gradient(105deg,transparent 30%,rgba(255,255,255,.5) 50%,transparent 70%)",
+          animation:"f-shine 2s ease-in-out infinite",
+          pointerEvents:"none",
+        }}/>
+
+        {/* 배경 그라디언트 오버레이 */}
+        <span style={{
+          position:"absolute", inset:0,
+          background:"radial-gradient(circle at 30% 50%,rgba(255,255,255,.15),transparent 60%)",
+          pointerEvents:"none",
+        }}/>
+
+        {/* 번개 SVG - 애니메이션 */}
+        <span style={{position:"relative", animation:"f-svg-spin 2s ease-in-out infinite", display:"flex"}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <linearGradient id="bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#78350f"/>
+                <stop offset="100%" stopColor="#000"/>
+              </linearGradient>
+            </defs>
+            <path d="M13 2L4.5 13.5H11L10 22L20.5 10H14L13 2Z"
+              fill="url(#bolt-grad)" stroke="#000" strokeWidth="1.2" strokeLinejoin="round"/>
+          </svg>
+        </span>
+
+        <span style={{position:"relative", textShadow:"0 1px 2px rgba(0,0,0,.15)"}}>자동 발행</span>
+
+        {/* 오른쪽 화살표 SVG */}
+        <span style={{position:"relative", opacity:.7}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+
+        {/* NEW 배지 */}
+        <span style={{
+          position:"absolute", top:-8, right:-4,
+          background:"linear-gradient(135deg,#ef4444,#dc2626)",
+          color:"#fff", fontSize:9, fontWeight:900,
+          padding:"2px 6px", borderRadius:99,
+          border:"2px solid #fff",
+          boxShadow:"0 2px 8px rgba(239,68,68,.5)",
+          animation:"f-badge 2s ease-in-out infinite",
+          letterSpacing:".05em",
+        }}>NEW</span>
       </button>
     </>
   );
