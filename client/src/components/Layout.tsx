@@ -561,10 +561,10 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             <button
               title="관리자"
               onClick={() => navigate("/superadmin")}
-              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-accent/20"
+              className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:bg-accent/20"
               style={{ color: "var(--muted-foreground)" }}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-5 h-5" />
             </button>
 
             {/* 체험단 허브 관리자 버튼 */}
