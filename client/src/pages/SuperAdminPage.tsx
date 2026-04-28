@@ -2227,16 +2227,18 @@ export default function SuperAdminPage() {
   if (!authed) return <AdminGate onAuth={() => setAuthed(true)} />;
   return <AdminDashboard />;
 }
-//fix
 
-
-// ── 자동발행 관리 (관리자 전용) ──────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 자동발행 관리 — 관리자 전용
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function AutoPublishManager() {
   const [botStatus, setBotStatus] = React.useState<"online"|"offline"|"checking">("checking");
   const [flowEmail, setFlowEmail] = React.useState(() => localStorage.getItem("admin_flow_email") || "");
-  const [flowPw,    setFlowPw]    = React.useState(() => localStorage.getItem("admin_flow_pw")    || "");
+  const [flowPw,    setFlowPw]    = React.useState(() => localStorage.getItem("admin_flow_pw") || "");
   const [showFlowPw, setShowFlowPw] = React.useState(false);
-  const [allHistory, setAllHistory] = React.useState<any[]>([]);
+  const [history,   setHistory]   = React.useState<any[]>([]);
+  const [showGuide, setShowGuide] = React.useState(false);
+  const [activeSection, setActiveSection] = React.useState<"status"|"flow"|"history">("status");
 
   React.useEffect(() => {
     fetch("http://localhost:3333/health", { signal: AbortSignal.timeout(3000) })
@@ -2244,99 +2246,467 @@ function AutoPublishManager() {
       .catch(() => setBotStatus("offline"));
     try {
       const h = JSON.parse(localStorage.getItem("blogauto_autopublish_history") || "[]");
-      setAllHistory(Array.isArray(h) ? h : []);
-    } catch { setAllHistory([]); }
+      setHistory(Array.isArray(h) ? h : []);
+    } catch { setHistory([]); }
   }, []);
 
-  function saveFlowAccount() {
+  function saveFlow() {
     localStorage.setItem("admin_flow_email", flowEmail);
     localStorage.setItem("admin_flow_pw", flowPw);
     toast.success("Google Flow 계정 저장됨");
   }
 
-  const dotColor = botStatus === "online" ? "#03C75A" : botStatus === "offline" ? "#ef4444" : "#f59e0b";
-  const dotLabel = botStatus === "online" ? "온라인" : botStatus === "offline" ? "오프라인" : "확인 중";
+  const dotC = botStatus==="online" ? "#03C75A" : botStatus==="offline" ? "#ef4444" : "#f59e0b";
+  const dotL = botStatus==="online" ? "온라인" : botStatus==="offline" ? "오프라인" : "확인 중";
+
+  const SECTIONS = [
+    { key:"status",  label:"서버 상태",    emoji:"🖥️" },
+    { key:"flow",    label:"Flow 계정",    emoji:"🎨" },
+    { key:"history", label:"발행 히스토리", emoji:"📋" },
+  ] as const;
+
+  const CSS = `
+    @keyframes ap-fade  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes ap-spin  { to{transform:rotate(360deg)} }
+    @keyframes ap-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(3,199,90,.4)} 50%{box-shadow:0 0 0 6px transparent} }
+    @keyframes ap-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+    @keyframes ap-shine { 0%{transform:translateX(-100%) skewX(-15deg)} 100%{transform:translateX(260%) skewX(-15deg)} }
+    @keyframes ap-ring  { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2);opacity:0} }
+    @keyframes guide-in { from{opacity:0;transform:translateX(100%)} to{opacity:1;transform:translateX(0)} }
+
+    .ap-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      transition: all .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .ap-card::before {
+      content:'';
+      position:absolute;top:0;left:0;right:0;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(3,199,90,.5),transparent);
+    }
+    .ap-card:hover { border-color:rgba(3,199,90,.25); box-shadow:0 4px 20px rgba(3,199,90,.07); }
+
+    .ap-section-btn {
+      flex:1; padding:10px 8px; border-radius:12px; border:none;
+      cursor:pointer; transition:all .18s; font-family:'Noto Sans KR',sans-serif;
+      font-size:12px; font-weight:600; display:flex; flex-direction:column;
+      align-items:center; gap:4px;
+    }
+    .ap-section-btn.active {
+      background:linear-gradient(135deg,rgba(3,199,90,.15),rgba(5,150,105,.1));
+      border:1px solid rgba(3,199,90,.4); color:#03C75A;
+    }
+    .ap-section-btn.inactive {
+      background:var(--muted); color:var(--muted-foreground); border:1px solid transparent;
+    }
+    .ap-section-btn.inactive:hover { background:var(--accent); }
+
+    .ap-primary-btn {
+      background:linear-gradient(135deg,#03C75A,#059669);
+      color:#000; font-weight:800; border:none; border-radius:12px;
+      cursor:pointer; transition:all .18s; position:relative; overflow:hidden;
+      display:flex; align-items:center; gap:7px; font-family:'Noto Sans KR',sans-serif;
+    }
+    .ap-primary-btn::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+      animation:ap-shine 2.5s ease-in-out infinite;
+    }
+    .ap-primary-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(3,199,90,.4); }
+
+    .ap-guide-btn {
+      position:fixed; bottom:28px; left:28px; z-index:9999;
+      padding:12px 20px; border-radius:99px; border:none; cursor:pointer;
+      background:linear-gradient(135deg,#f59e0b,#d97706);
+      color:#000; font-weight:800; font-size:13px;
+      font-family:'Noto Sans KR',sans-serif;
+      display:flex; align-items:center; gap:8px;
+      animation:ap-float 3s ease-in-out infinite;
+      box-shadow:0 8px 24px rgba(245,158,11,.45);
+      overflow:hidden;
+    }
+    .ap-guide-btn::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+      animation:ap-shine 2s ease-in-out infinite;
+    }
+    .ap-guide-btn:hover { transform:translateY(-3px) scale(1.05); box-shadow:0 14px 36px rgba(245,158,11,.6); }
+
+    .ap-guide-panel {
+      position:fixed; top:0; right:0; bottom:0; width:min(420px,100vw);
+      background:var(--background); border-left:1px solid var(--border);
+      z-index:10000; overflow-y:auto; padding:24px;
+      animation:guide-in .3s ease both;
+      box-shadow:-8px 0 40px rgba(0,0,0,.15);
+    }
+
+    @media(max-width:768px) {
+      .ap-grid { grid-template-columns:1fr !important; }
+      .ap-guide-panel { width:100vw; }
+    }
+  `;
 
   return (
-    <div className="space-y-5 mt-2">
-      <div className="rounded-2xl p-5" style={{ background:"var(--card)", border:"1px solid var(--border)" }}>
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-2 h-2 rounded-full" style={{ background: dotColor }}/>
-          <h3 className="text-sm font-bold text-foreground">봇 서버 상태</h3>
-          <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-            style={{ background:`${dotColor}20`, color:dotColor }}>{dotLabel}</span>
-        </div>
-        <p className="text-xs" style={{ color:"var(--muted-foreground)" }}>
-          각 유저 PC에서 <code style={{background:"var(--muted)",padding:"1px 4px",borderRadius:4,fontSize:10}}>naver-bot/</code> 폴더의{" "}
-          <code style={{background:"var(--muted)",padding:"1px 4px",borderRadius:4,fontSize:10}}>npm run dev</code> 실행 필요
-        </p>
-      </div>
+    <>
+      <style>{CSS}</style>
 
-      <div className="rounded-2xl p-5" style={{ background:"var(--card)", border:"1px solid var(--border)" }}>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black text-white"
-            style={{ background:"linear-gradient(135deg,#4285F4,#34A853)" }}>G</div>
-          <h3 className="text-sm font-bold text-foreground">Google Flow 공용 계정</h3>
-        </div>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block" style={{ color:"var(--muted-foreground)" }}>구글 이메일</label>
-            <Input value={flowEmail} onChange={e => setFlowEmail(e.target.value)} placeholder="admin@gmail.com" className="text-sm h-9"/>
-          </div>
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block" style={{ color:"var(--muted-foreground)" }}>구글 비밀번호</label>
-            <div className="relative">
-              <Input type={showFlowPw ? "text" : "password"} value={flowPw}
-                onChange={e => setFlowPw(e.target.value)} placeholder="••••••••" className="text-sm h-9 pr-9"/>
-              <button onClick={() => setShowFlowPw(v => !v)}
-                className="absolute right-2.5 top-2" style={{ color:"var(--muted-foreground)", background:"none", border:"none", cursor:"pointer" }}>
-                {showFlowPw ? <EyeOff className="w-3.5 h-3.5"/> : <Eye className="w-3.5 h-3.5"/>}
-              </button>
+      {/* 사용설명서 패널 */}
+      {showGuide && (
+        <div className="ap-guide-panel">
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{
+                width:36,height:36,borderRadius:10,
+                background:"linear-gradient(135deg,#f59e0b,#d97706)",
+                display:"flex",alignItems:"center",justifyContent:"center",
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
+                </svg>
+              </div>
+              <h2 style={{fontSize:16,fontWeight:800,color:"var(--foreground)",margin:0}}>사용 설명서</h2>
             </div>
+            <button onClick={()=>setShowGuide(false)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--muted-foreground)",padding:4}}>
+              <X className="w-5 h-5"/>
+            </button>
+          </div>
+
+          {[
+            {
+              step:"STEP 1", title:"naver-bot 서버 실행",
+              color:"#03C75A",
+              items:[
+                "프로젝트 루트에서 cd naver-bot 이동",
+                "npm install 실행 (최초 1회)",
+                "npx playwright install chromium (최초 1회)",
+                ".env.example → .env 복사 후 구글 계정 입력",
+                "npm run dev 실행",
+                "봇 서버 온라인 상태 확인",
+              ]
+            },
+            {
+              step:"STEP 2", title:"Google Flow 계정 설정",
+              color:"#4285F4",
+              items:[
+                "Flow 계정 탭에서 구글 이메일 입력",
+                "구글 비밀번호 입력",
+                "저장 버튼 클릭",
+                "이미지 자동 생성에 사용되는 공용 계정",
+                "최초 로그인 시 브라우저가 열림",
+                "2단계 인증 있으면 수동 처리 후 자동 진행",
+              ]
+            },
+            {
+              step:"STEP 3", title:"일반 회원 자동발행 안내",
+              color:"#f59e0b",
+              items:[
+                "회원들은 체험단 허브 → 자동 발행 버튼 클릭",
+                "자동 발행 허브 페이지 진입",
+                "계정 관리 탭에서 네이버/티스토리 계정 추가",
+                "연결 버튼으로 세션 저장",
+                "글 생성 탭에서 키워드로 AI 글 생성",
+                "발행하기 탭에서 자동 발행",
+              ]
+            },
+            {
+              step:"STEP 4", title:"발행 히스토리 확인",
+              color:"#a78bfa",
+              items:[
+                "히스토리 탭에서 전체 발행 내역 확인",
+                "성공/실패 여부 및 발행 URL 확인",
+                "필요시 히스토리 초기화 가능",
+                "각 유저별 발행 내역 확인 가능",
+              ]
+            },
+          ].map((section, i) => (
+            <div key={i} style={{
+              marginBottom:16, padding:"16px 18px", borderRadius:14,
+              background:"var(--card)", border:"1px solid var(--border)",
+              animation:`ap-fade .3s ease ${i*.08}s both`,
+            }}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                <span style={{
+                  fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:99,
+                  background:`${section.color}20`,color:section.color,letterSpacing:".05em",
+                }}>{section.step}</span>
+                <span style={{fontSize:13,fontWeight:700,color:"var(--foreground)"}}>{section.title}</span>
+              </div>
+              {section.items.map((item, j) => (
+                <div key={j} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6}}>
+                  <div style={{
+                    width:16,height:16,borderRadius:"50%",flexShrink:0,marginTop:1,
+                    background:`${section.color}20`,border:`1px solid ${section.color}40`,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:8,fontWeight:800,color:section.color,
+                  }}>{j+1}</div>
+                  <span style={{fontSize:12,color:"var(--muted-foreground)",lineHeight:1.5}}>{item}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 사용설명서 버튼 */}
+      <button className="ap-guide-btn" onClick={()=>setShowGuide(v=>!v)} style={{position:"relative"}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{position:"relative",zIndex:1}}>
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#000"/>
+        </svg>
+        <span style={{position:"relative",zIndex:1}}>사용 설명서</span>
+      </button>
+
+      {/* 메인 콘텐츠 */}
+      <div style={{paddingBottom:120,animation:"ap-fade .35s ease both"}}>
+
+        {/* 상단 타이틀 */}
+        <div style={{
+          display:"flex",alignItems:"center",gap:14,
+          marginBottom:20,
+          padding:"18px 20px",borderRadius:20,
+          background:"linear-gradient(135deg,rgba(3,199,90,.08),rgba(5,150,105,.04))",
+          border:"1px solid rgba(3,199,90,.2)",
+          position:"relative",overflow:"hidden",
+        }}>
+          {/* 배경 SVG 데코 */}
+          <svg style={{position:"absolute",right:-20,top:-20,opacity:.06,pointerEvents:"none"}} width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#03C75A" strokeWidth="2"/>
+            <circle cx="60" cy="60" r="35" fill="none" stroke="#03C75A" strokeWidth="1.5"/>
+            <circle cx="60" cy="60" r="20" fill="none" stroke="#03C75A" strokeWidth="1"/>
+            <line x1="10" y1="60" x2="110" y2="60" stroke="#03C75A" strokeWidth="1"/>
+            <line x1="60" y1="10" x2="60" y2="110" stroke="#03C75A" strokeWidth="1"/>
+          </svg>
+
+          <div style={{
+            width:46,height:46,borderRadius:14,flexShrink:0,
+            background:"linear-gradient(135deg,#03C75A,#059669)",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            boxShadow:"0 0 20px rgba(3,199,90,.4)",
+            animation:"ap-float 3s ease-in-out infinite",
+          }}>
+            <Zap className="w-5 h-5" style={{color:"#000"}}/>
+          </div>
+          <div>
+            <h2 style={{
+              fontSize:18,fontWeight:800,margin:0,
+              color:"var(--foreground)",
+              fontFamily:"'Space Grotesk',sans-serif",
+            }}>자동 발행 관리</h2>
+            <p style={{fontSize:11,color:"var(--muted-foreground)",margin:"3px 0 0"}}>
+              네이버 블로그 · 티스토리 매크로 자동발행 관리자 패널
+            </p>
+          </div>
+
+          {/* 봇 상태 표시 */}
+          <div style={{
+            marginLeft:"auto",display:"flex",alignItems:"center",gap:7,
+            padding:"8px 14px",borderRadius:12,
+            background:botStatus==="online"?"rgba(3,199,90,.1)":"rgba(255,255,255,.05)",
+            border:`1px solid ${dotC}40`,
+          }}>
+            <div style={{
+              width:8,height:8,borderRadius:"50%",background:dotC,
+              animation:botStatus==="online"?"ap-pulse 2s infinite":"none",
+            }}/>
+            <span style={{fontSize:12,fontWeight:700,color:dotC}}>{dotL}</span>
           </div>
         </div>
-        <Button size="sm" style={{ background:"#4285F4", color:"white" }} onClick={saveFlowAccount}>
-          <Save className="w-3.5 h-3.5 mr-1.5"/> 저장
-        </Button>
-      </div>
 
-      <div className="rounded-2xl p-5" style={{ background:"var(--card)", border:"1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <Activity className="w-4 h-4" style={{ color:"var(--color-emerald)" }}/>
-            발행 히스토리 ({allHistory.length}건)
-          </h3>
-          {allHistory.length > 0 && (
-            <button className="text-xs px-2.5 py-1.5 rounded-lg font-medium"
-              style={{ background:"rgba(239,68,68,.1)", color:"#ef4444", border:"1px solid rgba(239,68,68,.2)", cursor:"pointer" }}
-              onClick={() => { if (!confirm("히스토리를 초기화할까요?")) return; localStorage.removeItem("blogauto_autopublish_history"); setAllHistory([]); toast.success("초기화됨"); }}>
-              <Trash2 className="w-3 h-3 inline mr-1"/>초기화
+        {/* 섹션 탭 */}
+        <div style={{display:"flex",gap:8,marginBottom:18}}>
+          {SECTIONS.map(s=>(
+            <button key={s.key}
+              className={`ap-section-btn ${activeSection===s.key?"active":"inactive"}`}
+              onClick={()=>setActiveSection(s.key as any)}>
+              <span style={{fontSize:18}}>{s.emoji}</span>
+              <span>{s.label}</span>
             </button>
-          )}
+          ))}
         </div>
-        {allHistory.length === 0 ? (
-          <p className="text-sm text-center py-8" style={{ color:"var(--muted-foreground)" }}>발행 기록 없음</p>
-        ) : (
-          <div className="space-y-2">
-            {allHistory.slice(0, 30).map((h: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl"
-                style={{ background:"var(--background)", border:"1px solid var(--border)" }}>
-                <span>{h.platform === "naver" ? "🟢" : "🟠"}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{h.title}</p>
-                  <p className="text-xs" style={{ color:"var(--muted-foreground)" }}>
-                    {h.account} · {new Date(h.publishedAt).toLocaleString("ko-KR")}
-                  </p>
+
+        {/* ── 서버 상태 ── */}
+        {activeSection==="status" && (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,animation:"ap-fade .3s ease both"}}
+            className="ap-grid">
+            {[
+              {label:"봇 서버",       ok:botStatus==="online", sub:"localhost:3333", icon:"🖥️"},
+              {label:"네이버 세션",   ok:!!localStorage.getItem("blogauto_autopublish_accounts"), sub:"계정 연결 상태", icon:"🟢"},
+              {label:"티스토리",      ok:!!localStorage.getItem("blogauto_autopublish_accounts"), sub:"계정 연결 상태", icon:"🟠"},
+              {label:"Google Flow",  ok:!!localStorage.getItem("admin_flow_email"), sub:"이미지 생성", icon:"🎨"},
+            ].map((item,i)=>(
+              <div key={i} className="ap-card" style={{padding:"18px 20px",animation:`ap-fade .3s ease ${i*.07}s both`}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <span style={{fontSize:22}}>{item.icon}</span>
+                  <div style={{
+                    display:"flex",alignItems:"center",gap:5,
+                    padding:"4px 10px",borderRadius:99,
+                    background:item.ok?"rgba(3,199,90,.12)":"rgba(239,68,68,.12)",
+                  }}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:item.ok?"#03C75A":"#ef4444",
+                      animation:item.ok?"ap-pulse 2s infinite":"none"}}/>
+                    <span style={{fontSize:10,fontWeight:700,color:item.ok?"#03C75A":"#ef4444"}}>
+                      {item.ok?"정상":"미연결"}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                  style={{ background: h.status==="success"?"rgba(3,199,90,.12)":"rgba(239,68,68,.12)", color: h.status==="success"?"#03C75A":"#ef4444" }}>
-                  {h.status==="success"?"✅ 완료":"❌ 실패"}
-                </span>
+                <p style={{fontSize:14,fontWeight:700,color:"var(--foreground)",margin:"0 0 3px"}}>{item.label}</p>
+                <p style={{fontSize:11,color:"var(--muted-foreground)",margin:0}}>{item.sub}</p>
               </div>
             ))}
+
+            {/* 전체 상태 요약 */}
+            <div className="ap-card" style={{
+              padding:"18px 20px",gridColumn:"1/-1",
+              background:"linear-gradient(135deg,rgba(3,199,90,.06),rgba(5,150,105,.03))",
+              animation:"ap-fade .3s ease .28s both",
+            }}>
+              <p style={{fontSize:13,fontWeight:700,color:"var(--foreground)",margin:"0 0 10px",display:"flex",alignItems:"center",gap:6}}>
+                <Activity className="w-4 h-4" style={{color:"#03C75A"}}/> 봇 서버 실행 방법
+              </p>
+              <div style={{
+                background:"rgba(0,0,0,.4)",borderRadius:10,padding:"12px 14px",
+                fontFamily:"monospace",fontSize:12,color:"#03C75A",lineHeight:2,
+              }}>
+                <div><span style={{color:"rgba(255,255,255,.4)"}}>$</span> cd naver-bot</div>
+                <div><span style={{color:"rgba(255,255,255,.4)"}}>$</span> npm install</div>
+                <div><span style={{color:"rgba(255,255,255,.4)"}}>$</span> npx playwright install chromium</div>
+                <div><span style={{color:"rgba(255,255,255,.4)"}}>$</span> npm run dev</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Flow 계정 ── */}
+        {activeSection==="flow" && (
+          <div style={{animation:"ap-fade .3s ease both"}}>
+            <div className="ap-card" style={{padding:"22px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+                <div style={{
+                  width:36,height:36,borderRadius:10,
+                  background:"linear-gradient(135deg,#4285F4,#34A853)",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:16,fontWeight:900,color:"white",
+                }}>G</div>
+                <div>
+                  <p style={{fontSize:14,fontWeight:700,color:"var(--foreground)",margin:0}}>Google Flow 공용 계정</p>
+                  <p style={{fontSize:11,color:"var(--muted-foreground)",margin:0}}>이미지 자동 생성에 사용되는 관리자 계정</p>
+                </div>
+              </div>
+
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}} className="ap-grid">
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"var(--muted-foreground)",display:"block",marginBottom:6}}>구글 이메일</label>
+                  <Input value={flowEmail} onChange={e=>setFlowEmail(e.target.value)}
+                    placeholder="admin@gmail.com" className="text-sm h-10"/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"var(--muted-foreground)",display:"block",marginBottom:6}}>구글 비밀번호</label>
+                  <div style={{position:"relative"}}>
+                    <Input type={showFlowPw?"text":"password"} value={flowPw}
+                      onChange={e=>setFlowPw(e.target.value)}
+                      placeholder="••••••••" className="text-sm h-10 pr-10"/>
+                    <button onClick={()=>setShowFlowPw(v=>!v)}
+                      style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
+                        background:"none",border:"none",cursor:"pointer",color:"var(--muted-foreground)"}}>
+                      {showFlowPw?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button className="ap-primary-btn" style={{padding:"11px 22px",fontSize:13}} onClick={saveFlow}>
+                <Save className="w-4 h-4" style={{position:"relative",zIndex:1}}/>
+                <span style={{position:"relative",zIndex:1}}>저장</span>
+              </button>
+
+              <div style={{
+                marginTop:14,padding:"12px 14px",borderRadius:12,
+                background:"rgba(245,158,11,.08)",border:"1px solid rgba(245,158,11,.2)",
+                fontSize:11,color:"var(--muted-foreground)",lineHeight:1.7,
+              }}>
+                ⚠️ naver-bot/.env 파일의 GOOGLE_FLOW_EMAIL / GOOGLE_FLOW_PASSWORD 와 동일하게 설정하세요.<br/>
+                최초 로그인 시 브라우저가 열리며 2단계 인증이 있으면 수동으로 처리해주세요.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── 발행 히스토리 ── */}
+        {activeSection==="history" && (
+          <div style={{animation:"ap-fade .3s ease both"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <span style={{fontSize:13,color:"var(--muted-foreground)"}}>총 {history.length}건</span>
+              {history.length>0 && (
+                <button
+                  style={{
+                    fontSize:11,padding:"6px 12px",borderRadius:10,cursor:"pointer",fontWeight:600,
+                    background:"rgba(239,68,68,.1)",color:"#ef4444",
+                    border:"1px solid rgba(239,68,68,.2)",display:"flex",alignItems:"center",gap:5,
+                  }}
+                  onClick={()=>{
+                    if(!confirm("히스토리를 초기화할까요?"))return;
+                    localStorage.removeItem("blogauto_autopublish_history");
+                    setHistory([]);
+                    toast.success("초기화됨");
+                  }}>
+                  <Trash2 className="w-3 h-3"/>초기화
+                </button>
+              )}
+            </div>
+
+            {history.length===0 ? (
+              <div className="ap-card" style={{padding:"60px",textAlign:"center"}}>
+                <Activity className="w-8 h-8" style={{color:"var(--muted-foreground)",margin:"0 auto 10px"}}/>
+                <p style={{fontSize:13,color:"var(--muted-foreground)"}}>발행 기록 없음</p>
+              </div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {history.slice(0,50).map((h:any,i:number)=>(
+                  <div key={i} className="ap-card" style={{
+                    padding:"14px 18px",
+                    animation:`ap-fade .3s ease ${i*.04}s both`,
+                    borderColor:h.status==="success"?"rgba(3,199,90,.2)":h.status==="fail"?"rgba(239,68,68,.2)":"var(--border)",
+                  }}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                      <span style={{fontSize:18}}>{h.platform==="naver"?"🟢":"🟠"}</span>
+                      <div style={{flex:1,minWidth:120}}>
+                        <p style={{fontSize:13,fontWeight:600,color:"var(--foreground)",margin:"0 0 3px",
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.title}</p>
+                        <p style={{fontSize:11,color:"var(--muted-foreground)",margin:0,display:"flex",alignItems:"center",gap:6}}>
+                          <span>{h.account}</span>
+                          <span>·</span>
+                          <span>{new Date(h.publishedAt).toLocaleString("ko-KR")}</span>
+                        </p>
+                        {h.error && <p style={{fontSize:11,color:"#ef4444",margin:"3px 0 0"}}>❌ {h.error}</p>}
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <span style={{
+                          fontSize:10,padding:"3px 9px",borderRadius:99,fontWeight:700,
+                          background:h.status==="success"?"rgba(3,199,90,.12)":h.status==="fail"?"rgba(239,68,68,.12)":"rgba(245,158,11,.12)",
+                          color:h.status==="success"?"#03C75A":h.status==="fail"?"#ef4444":"#f59e0b",
+                        }}>
+                          {h.status==="success"?"✅ 완료":h.status==="fail"?"❌ 실패":"⏳ 진행"}
+                        </span>
+                        {h.url && (
+                          <a href={h.url} target="_blank" rel="noopener noreferrer"
+                            style={{fontSize:10,color:"var(--muted-foreground)",textDecoration:"none",
+                              display:"flex",alignItems:"center",gap:3,
+                              padding:"3px 9px",borderRadius:99,
+                              background:"var(--muted)",border:"1px solid var(--border)"}}>
+                            <Globe className="w-3 h-3"/>보기
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
