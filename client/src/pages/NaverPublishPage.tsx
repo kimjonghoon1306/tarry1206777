@@ -6,7 +6,7 @@
  * 위치: client/src/pages/NaverPublishPage.tsx
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
