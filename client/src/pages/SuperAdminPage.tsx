@@ -2376,50 +2376,58 @@ function AutoPublishManager() {
 
           {[
             {
-              step:"STEP 1", title:"naver-bot 서버 실행", color:"#03C75A",
+              step:"STEP 1", title:"봇 서버 실행 (관리자 PC)", color:"#03C75A",
               items:[
-                "터미널에서 프로젝트 루트 → cd naver-bot",
-                "최초 1회: npm install",
-                "최초 1회: npx playwright install chromium",
-                ".env.example 복사 → .env 생성 후 구글 계정 입력",
-                "npm run dev 실행 → 서버 유지",
-                "이 페이지 상단 봇 서버 온라인 확인",
+                { text:"터미널 열기 → 프로젝트 루트에서 cd naver-bot 입력", highlight:true },
+                { text:"최초 1회: npm install 실행", highlight:false },
+                { text:"최초 1회: npx playwright install chromium 실행", highlight:false },
+                { text:".env 파일에 구글 계정 입력 후 저장", highlight:true },
+                { text:"npm run dev 실행 → 서버 종료하면 안됨", highlight:true },
+                { text:"이 페이지 상단 봇 서버 온라인 상태 확인", highlight:false },
               ]
             },
             {
-              step:"STEP 2", title:"Google Flow 공용 계정 설정", color:"#4285F4",
+              step:"STEP 2", title:"네이버/티스토리 계정 연결", color:"#03C75A",
               items:[
-                "Flow 계정 탭 클릭",
-                "관리자 구글 이메일 입력",
-                "구글 비밀번호 입력 후 저장",
-                "전체 회원 이미지 생성에 공용으로 사용됨",
-                "최초 로그인 시 브라우저 자동 열림",
-                "2단계 인증 있으면 수동 처리 후 자동 진행",
+                { text:"일반 자동발행 페이지(/naver) → 계정 관리 탭 이동", highlight:true },
+                { text:"관리자 본인 네이버 아이디/비번 입력 후 계정 추가", highlight:false },
+                { text:"연결 버튼 클릭 → 브라우저 자동 로그인 진행", highlight:true },
+                { text:"2단계 인증 있으면 직접 처리 후 자동 진행", highlight:false },
+                { text:"티스토리도 동일하게 진행", highlight:false },
               ]
             },
             {
-              step:"STEP 3", title:"회원 발행 현황 모니터링", color:"#f59e0b",
+              step:"STEP 3", title:"Google Flow 계정 설정 (이미지 생성)", color:"#4285F4",
               items:[
-                "히스토리 탭에서 전체 회원 발행 내역 확인",
-                "네이버/티스토리 별 발행 상태 확인",
-                "실패 건은 빨간색으로 표시됨",
-                "필요시 히스토리 초기화 가능",
-                "발행된 글 URL 직접 확인 가능",
+                { text:"이 페이지 자동발행 탭 → Flow 계정 탭 클릭", highlight:true },
+                { text:"관리자 구글 이메일/비밀번호 입력 후 저장", highlight:true },
+                { text:"최초 발행 시 브라우저가 열리며 구글 로그인 진행", highlight:false },
+                { text:"2단계 인증 있으면 직접 처리 후 자동 저장", highlight:false },
               ]
             },
             {
-              step:"STEP 4", title:"서버 상태 점검", color:"#a78bfa",
+              step:"STEP 4", title:"글 작성 및 자동 발행", color:"#f59e0b",
               items:[
-                "서버 상태 탭에서 전체 연결 현황 확인",
-                "봇 서버 오프라인 시 npm run dev 재실행",
-                "Flow 계정 미설정 시 이미지 생성 불가",
-                "세션 만료 시 회원에게 재연결 안내",
+                { text:"일반 자동발행 페이지(/naver) → 글 생성 탭 이동", highlight:true },
+                { text:"키워드 입력 → 플랫폼 선택 → 글 생성 클릭", highlight:true },
+                { text:"생성된 글 확인/수정 후 발행하기로 넘기기 클릭", highlight:false },
+                { text:"발행하기 탭 → 계정 선택 → 자동 발행 클릭", highlight:true },
+                { text:"브라우저가 자동으로 열려서 글 발행 완료", highlight:false },
+              ]
+            },
+            {
+              step:"STEP 5", title:"발행 현황 모니터링", color:"#a78bfa",
+              items:[
+                { text:"히스토리 탭에서 전체 발행 내역 확인", highlight:false },
+                { text:"실패 건은 빨간색 표시 → 원인 확인 후 재발행", highlight:true },
+                { text:"봇 서버 오프라인 시 npm run dev 재실행", highlight:true },
+                { text:"발행된 글 URL 클릭해서 직접 확인 가능", highlight:false },
               ]
             },
           ].map((section, i) => (
             <div key={i} style={{
               marginBottom:16, padding:"16px 18px", borderRadius:14,
-              background:"var(--card)", border:"1px solid var(--border)",
+              background:"var(--card)", border:`1px solid ${section.color}30`,
               animation:`ap-fade .3s ease ${i*.08}s both`,
             }}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
@@ -2429,15 +2437,23 @@ function AutoPublishManager() {
                 }}>{section.step}</span>
                 <span style={{fontSize:13,fontWeight:700,color:"var(--foreground)"}}>{section.title}</span>
               </div>
-              {section.items.map((item, j) => (
-                <div key={j} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6}}>
+              {section.items.map((item: any, j: number) => (
+                <div key={j} style={{
+                  display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,
+                  padding:item.highlight?"7px 10px":"3px 0",
+                  borderRadius:item.highlight?8:0,
+                  background:item.highlight?`${section.color}12`:"transparent",
+                }}>
                   <div style={{
-                    width:16,height:16,borderRadius:"50%",flexShrink:0,marginTop:1,
+                    width:16,height:16,borderRadius:"50%",flexShrink:0,marginTop:2,
                     background:`${section.color}20`,border:`1px solid ${section.color}40`,
                     display:"flex",alignItems:"center",justifyContent:"center",
                     fontSize:8,fontWeight:800,color:section.color,
                   }}>{j+1}</div>
-                  <span style={{fontSize:12,color:"var(--muted-foreground)",lineHeight:1.5}}>{item}</span>
+                  <span style={{fontSize:12,lineHeight:1.5,
+                    color:item.highlight?"var(--foreground)":"var(--muted-foreground)",
+                    fontWeight:item.highlight?600:400,
+                  }}>{item.text}</span>
                 </div>
               ))}
             </div>
