@@ -2232,15 +2232,15 @@ export default function SuperAdminPage() {
 // 자동발행 관리 — 관리자 전용
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function AutoPublishManager() {
-  const [botStatus, setBotStatus] = React.useState<"online"|"offline"|"checking">("checking");
-  const [flowEmail, setFlowEmail] = React.useState(() => localStorage.getItem("admin_flow_email") || "");
-  const [flowPw,    setFlowPw]    = React.useState(() => localStorage.getItem("admin_flow_pw") || "");
-  const [showFlowPw, setShowFlowPw] = React.useState(false);
-  const [history,   setHistory]   = React.useState<any[]>([]);
-  const [showGuide, setShowGuide] = React.useState(false);
-  const [activeSection, setActiveSection] = React.useState<"status"|"flow"|"history">("status");
+  const [botStatus, setBotStatus] = useState<"online"|"offline"|"checking">("checking");
+  const [flowEmail, setFlowEmail] = useState(() => localStorage.getItem("admin_flow_email") || "");
+  const [flowPw,    setFlowPw]    = useState(() => localStorage.getItem("admin_flow_pw") || "");
+  const [showFlowPw, setShowFlowPw] = useState(false);
+  const [history,   setHistory]   = useState<any[]>([]);
+  const [showGuide, setShowGuide] = useState(false);
+  const [activeSection, setActiveSection] = useState<"status"|"flow"|"history">("status");
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetch("http://localhost:3333/health", { signal: AbortSignal.timeout(3000) })
       .then(r => setBotStatus(r.ok ? "online" : "offline"))
       .catch(() => setBotStatus("offline"));
