@@ -25,14 +25,15 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
 
   try {
     // 로그인 유지 확인
-    await page.goto("https://www.naver.com", { waitUntil: "networkidle" });
+    await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForTimeout(2000);
     const loginBtn = await page.$(".MyView-module__btn_login___RaOUE, .btn_login");
     if (loginBtn) throw new Error("네이버 세션 만료. 재연결 필요");
 
     // 글쓰기 진입
     console.log("[naver] 글쓰기 진입...");
     await page.goto(`https://blog.naver.com/posting/start.naver?blogId=${session.username}`, {
-      waitUntil: "networkidle", timeout: 30000,
+      waitUntil: "domcontentloaded", timeout: 60000,
     });
     await page.waitForTimeout(2500);
 
