@@ -1,4 +1,4 @@
-import { chromium, Page } from "playwright";
+import { chromium } from "playwright";
 import { Session, updateCookies } from "./session-manager";
 
 interface PublishOptions {
@@ -24,19 +24,20 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
   const page = await context.newPage();
 
   try {
-    // 로그인 유지 확인
-    // 세션 쿠키로 바로 글쓰기 진입
-    console.log("[naver] 세션 쿠키로 글쓰기 진입...");
-
-    // 글쓰기 진입
+    // 글쓰기 바로 진입
     console.log("[naver] 글쓰기 진입...");
     await page.goto(`https://blog.naver.com/posting/start.naver?blogId=${session.username}`, {
       waitUntil: "domcontentloaded", timeout: 60000,
     });
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(3000);
+
+    // 로그인 여부 확인
+    if (page.url().includes("nidlogin") || page.url().includes("login")) {
+      throw new Error("네이버 세션 만료. 재연결 필요");
+    }
 
     // 에디터 로드 대기
-    await page.waitForSelector("iframe, .se-placeholder", { timeout: 15000 });
+    await page.waitForSelector("iframe, .se-placeholder", { timeout: 20000 });
     await page.waitForTimeout(2000);
 
     // 제목 입력
@@ -53,7 +54,7 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
     }
     await page.waitForTimeout(500);
 
-    // 본문 입력 (클립보드 방식)
+    // 본문 입력
     console.log("[naver] 본문 입력...");
     try {
       const editorFrame = page.frameLocator(".se-main-section iframe, .se-editor iframe").first();
@@ -91,7 +92,7 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
     await publishBtn.click();
     await page.waitForTimeout(2000);
 
-    // 팝업에서 전체 공개 + 확인
+    // 팝업 처리
     try {
       const publicBtn = await page.$("label:has-text('전체공개'), input[value='0']");
       if (publicBtn) await publicBtn.click();
@@ -102,7 +103,6 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
     await page.waitForTimeout(3000);
     const postUrl = page.url();
 
-    // 쿠키 갱신
     const cookies = await context.cookies();
     await updateCookies(session.userId, cookies);
     await browser.close();
