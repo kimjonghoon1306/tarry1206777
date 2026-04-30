@@ -31,10 +31,10 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
 
     // 글쓰기 진입
     console.log("[naver] 글쓰기 진입...");
-    await page.goto(`https://blog.naver.com/${session.username}?Redirect=Write`, {
+    await page.goto(`https://blog.naver.com/${session.username}`, {
       waitUntil: "domcontentloaded", timeout: 60000,
     });
-    await page.waitForTimeout(4000);
+    await page.waitForTimeout(3000);
 
     // 로그인 여부 확인
     const currentUrl = page.url();
@@ -42,6 +42,18 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
     if (currentUrl.includes("nidlogin") || currentUrl.includes("login.naver")) {
       throw new Error("네이버 세션 만료. 재연결 필요");
     }
+
+    // 글쓰기 버튼 클릭
+    console.log("[naver] 글쓰기 버튼 클릭...");
+    const writeBtn = await page.$(".btn_write, a[href*='Redirect=Write'], button:has-text('글쓰기'), .write_btn");
+    if (writeBtn) {
+      await writeBtn.click();
+    } else {
+      await page.goto(`https://blog.naver.com/posting/start.naver?blogId=${session.username}`, {
+        waitUntil: "domcontentloaded", timeout: 60000,
+      });
+    }
+    await page.waitForTimeout(5000);
 
     // 에디터 로드 대기
     await page.waitForSelector(".se-placeholder, .se-title-input, .se-document, [contenteditable]", { timeout: 30000 });
