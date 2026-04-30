@@ -31,7 +31,7 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
 
     // 글쓰기 진입
     console.log("[naver] 글쓰기 진입...");
-    await page.goto(`https://blog.naver.com/posting/start.naver?blogId=${session.username}`, {
+    await page.goto(`https://blog.naver.com/${session.username}?Redirect=Write`, {
       waitUntil: "domcontentloaded", timeout: 60000,
     });
     await page.waitForTimeout(4000);
