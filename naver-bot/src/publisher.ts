@@ -24,15 +24,22 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
   const page = await context.newPage();
 
   try {
-    // 글쓰기 바로 진입
+    // 네이버 메인 먼저 방문해서 쿠키 적용
+    console.log("[naver] 쿠키 적용 중...");
+    await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(2000);
+
+    // 글쓰기 진입
     console.log("[naver] 글쓰기 진입...");
     await page.goto(`https://blog.naver.com/posting/start.naver?blogId=${session.username}`, {
       waitUntil: "domcontentloaded", timeout: 60000,
     });
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(4000);
 
     // 로그인 여부 확인
-    if (page.url().includes("nidlogin") || page.url().includes("login")) {
+    const currentUrl = page.url();
+    console.log("[naver] 현재 URL:", currentUrl);
+    if (currentUrl.includes("nidlogin") || currentUrl.includes("login.naver")) {
       throw new Error("네이버 세션 만료. 재연결 필요");
     }
 
