@@ -46,15 +46,14 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
 
     // 글쓰기 버튼 클릭
     console.log("[naver] 글쓰기 버튼 클릭...");
-    const writeBtn = await page.$(".btn_write, a[href*='Redirect=Write'], button:has-text('글쓰기'), .write_btn");
-    if (writeBtn) {
-      await writeBtn.click();
-    } else {
-      await page.goto(`https://blog.naver.com/posting/start.naver?blogId=${session.username}`, {
-        waitUntil: "domcontentloaded", timeout: 60000,
-      });
+    try {
+      await page.click("a.btn_write, a[href*='Redirect=Write'], .link_write");
+    } catch {
+      // 버튼 못 찾으면 텍스트로 찾기
+      await page.getByText("글쓰기").first().click().catch(() => {});
     }
     await page.waitForTimeout(5000);
+    console.log("[naver] 글쓰기 후 URL:", page.url());
 
     // 에디터 로드 대기
     await page.waitForSelector(".se-placeholder, .se-title-input, .se-document, [contenteditable]", { timeout: 30000 });
