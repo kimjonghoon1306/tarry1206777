@@ -15,7 +15,6 @@ export interface Session {
 
 const sessionPath = (userId: string) => path.join(SESSIONS_DIR, `${userId}.json`);
 
-// ── 로그인 & 세션 저장 ────────────────────────────────────
 export async function saveSession(
   userId: string,
   platform: "naver" | "tistory",
@@ -31,12 +30,13 @@ export async function saveSession(
   });
   const context = await browser.newContext({
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    viewport: { width: 1366, height: 768 },
   });
   const page = await context.newPage();
 
   try {
     if (platform === "naver") {
-      await page.goto("https://nid.naver.com/nidlogin.login", { waitUntil: "networkidle" });
+      await page.goto("https://nid.naver.com/nidlogin.login", { waitUntil: "domcontentloaded" });
       await page.evaluate((id) => {
         const el = document.querySelector("#id") as HTMLInputElement;
         if (el) { el.value = id; el.dispatchEvent(new Event("input", { bubbles: true })); }
@@ -51,25 +51,27 @@ export async function saveSession(
       await page.waitForTimeout(3000);
 
       // 추가 인증 대기 (최대 60초)
-      const url = page.url();
-      if (url.includes("nid.naver.com")) {
+      if (page.url().includes("nid.naver.com")) {
         console.log("[session] 추가 인증 대기 중 (최대 60초)...");
-        await page.waitForURL("**naver.com/index.nhn**", { timeout: 60000 }).catch(() => {});
+        await page.waitForURL("**/naver.com**", { timeout: 60000 }).catch(() => {});
       }
+
+      // 네이버 메인까지 이동해서 모든 쿠키 수집
+      await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.waitForTimeout(2000);
+      await page.goto("https://blog.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.waitForTimeout(2000);
+
     } else {
-      // 티스토리 로그인
       await page.goto("https://www.tistory.com/auth/login", { waitUntil: "networkidle" });
       await page.click(".btn_login.btn_kakao");
       await page.waitForTimeout(2000);
-      // 카카오 로그인 처리
       await page.fill("#loginId--1", username).catch(() => {});
       await page.fill("#password--2", password).catch(() => {});
       await page.click(".btn_confirm.btn_login").catch(() => {});
       await page.waitForTimeout(5000);
 
-      // 수동 처리 대기
-      const url = page.url();
-      if (url.includes("accounts.kakao.com") || url.includes("tistory.com/auth")) {
+      if (page.url().includes("accounts.kakao.com") || page.url().includes("tistory.com/auth")) {
         console.log("[session] 티스토리 추가 인증 대기 (최대 60초)...");
         await page.waitForURL("**tistory.com**", { timeout: 60000 }).catch(() => {});
       }
