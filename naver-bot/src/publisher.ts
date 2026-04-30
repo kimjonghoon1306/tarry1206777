@@ -37,8 +37,8 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
     }
 
     // 에디터 로드 대기
-    await page.waitForSelector("iframe, .se-placeholder", { timeout: 20000 });
-    await page.waitForTimeout(2000);
+    await page.waitForSelector(".se-placeholder, .se-title-input, .se-document, [contenteditable]", { timeout: 30000 });
+    await page.waitForTimeout(3000);
 
     // 제목 입력
     console.log("[naver] 제목 입력...");
