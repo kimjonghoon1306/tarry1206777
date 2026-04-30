@@ -25,10 +25,10 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
 
   try {
     // 로그인 유지 확인
-    await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForTimeout(2000);
-    const loginBtn = await page.$(".MyView-module__btn_login___RaOUE, .btn_login");
-    if (loginBtn) throw new Error("네이버 세션 만료. 재연결 필요");
+    await page.goto("https://nid.naver.com/nidlogin.login", { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForTimeout(1500);
+    const isLoginPage = page.url().includes("nidlogin.login");
+    if (isLoginPage) throw new Error("네이버 세션 만료. 재연결 필요");
 
     // 글쓰기 진입
     console.log("[naver] 글쓰기 진입...");
