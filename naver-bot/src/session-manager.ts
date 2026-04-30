@@ -56,11 +56,26 @@ export async function saveSession(
         await page.waitForURL("**/naver.com**", { timeout: 60000 }).catch(() => {});
       }
 
-      // 네이버 메인까지 이동해서 모든 쿠키 수집
+      // 네이버 메인 이동
       await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
       await page.waitForTimeout(2000);
+      
+      // 블로그 아이디 자동 추출
       await page.goto("https://blog.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
       await page.waitForTimeout(2000);
+      const blogId = await page.evaluate(() => {
+        const myBlogLink = document.querySelector("a.link_mynblog, a[href*='/PostList.naver'], .MyView-module__my_blog___");
+        if (myBlogLink) {
+          const href = myBlogLink.getAttribute("href") || "";
+          const match = href.match(/blog\.naver\.com\/([^?/]+)/);
+          return match ? match[1] : null;
+        }
+        return null;
+      });
+      if (blogId) {
+        console.log(`[session] 블로그 아이디 자동 감지: ${blogId}`);
+        blogName = blogId;
+      }
 
     } else {
       await page.goto("https://www.tistory.com/auth/login", { waitUntil: "networkidle" });
