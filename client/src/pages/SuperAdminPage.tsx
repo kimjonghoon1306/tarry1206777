@@ -2386,493 +2386,463 @@ export default function SuperAdminPage() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 자동발행 관리 — 관리자 전용
+// 자동발행 관리 — Publy 관리자 페이지 연결 전용
+// (실제 발행/계정/히스토리 관리는 Publy 앱 자체에서 처리)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const PUBLY_ADMIN_URL = "https://publy-bap.vercel.app";
+
 function AutoPublishManager() {
-  const [botStatus, setBotStatus] = useState<"online"|"offline"|"checking">("checking");
-  const [flowEmail, setFlowEmail] = useState(() => localStorage.getItem("admin_flow_email") || "");
-  const [flowPw,    setFlowPw]    = useState(() => localStorage.getItem("admin_flow_pw") || "");
-  const [showFlowPw, setShowFlowPw] = useState(false);
-  const [history,   setHistory]   = useState<any[]>([]);
-  const [showGuide, setShowGuide] = useState(false);
-  const [activeSection, setActiveSection] = useState<"status"|"flow"|"history">("status");
-
-  useEffect(() => {
-    fetch("http://localhost:3333/health", { signal: AbortSignal.timeout(3000) })
-      .then(r => setBotStatus(r.ok ? "online" : "offline"))
-      .catch(() => setBotStatus("offline"));
-    try {
-      const h = JSON.parse(localStorage.getItem("blogauto_autopublish_history") || "[]");
-      setHistory(Array.isArray(h) ? h : []);
-    } catch { setHistory([]); }
-  }, []);
-
-  function saveFlow() {
-    localStorage.setItem("admin_flow_email", flowEmail);
-    localStorage.setItem("admin_flow_pw", flowPw);
-    toast.success("Google Flow 계정 저장됨");
-  }
-
-  const dotC = botStatus==="online" ? "#03C75A" : botStatus==="offline" ? "#ef4444" : "#f59e0b";
-  const dotL = botStatus==="online" ? "온라인" : botStatus==="offline" ? "오프라인" : "확인 중";
-
-  const SECTIONS = [
-    { key:"status",  label:"서버 상태",    emoji:"🖥️" },
-    { key:"flow",    label:"Flow 계정",    emoji:"🎨" },
-    { key:"history", label:"발행 히스토리", emoji:"📋" },
-  ] as const;
-
-  const CSS = `
-    @keyframes ap-fade  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-    @keyframes ap-spin  { to{transform:rotate(360deg)} }
-    @keyframes ap-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(3,199,90,.4)} 50%{box-shadow:0 0 0 6px transparent} }
-    @keyframes ap-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-    @keyframes ap-shine { 0%{transform:translateX(-100%) skewX(-15deg)} 100%{transform:translateX(260%) skewX(-15deg)} }
-    @keyframes ap-ring  { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2);opacity:0} }
-    @keyframes guide-in { from{opacity:0;transform:translateX(100%)} to{opacity:1;transform:translateX(0)} }
-
-    .ap-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      transition: all .2s;
-      position: relative;
-      overflow: hidden;
-    }
-    .ap-card::before {
-      content:'';
-      position:absolute;top:0;left:0;right:0;height:1px;
-      background:linear-gradient(90deg,transparent,rgba(3,199,90,.5),transparent);
-    }
-    .ap-card:hover { border-color:rgba(3,199,90,.25); box-shadow:0 4px 20px rgba(3,199,90,.07); }
-
-    .ap-section-btn {
-      flex:1; padding:10px 8px; border-radius:12px; border:none;
-      cursor:pointer; transition:all .18s; font-family:'Noto Sans KR',sans-serif;
-      font-size:12px; font-weight:600; display:flex; flex-direction:column;
-      align-items:center; gap:4px;
-    }
-    .ap-section-btn.active {
-      background:linear-gradient(135deg,rgba(3,199,90,.15),rgba(5,150,105,.1));
-      border:1px solid rgba(3,199,90,.4); color:#03C75A;
-    }
-    .ap-section-btn.inactive {
-      background:var(--muted); color:var(--muted-foreground); border:1px solid transparent;
-    }
-    .ap-section-btn.inactive:hover { background:var(--accent); }
-
-    .ap-primary-btn {
-      background:linear-gradient(135deg,#03C75A,#059669);
-      color:#000; font-weight:800; border:none; border-radius:12px;
-      cursor:pointer; transition:all .18s; position:relative; overflow:hidden;
-      display:flex; align-items:center; gap:7px; font-family:'Noto Sans KR',sans-serif;
-    }
-    .ap-primary-btn::after {
-      content:''; position:absolute; inset:0;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
-      animation:ap-shine 2.5s ease-in-out infinite;
-    }
-    .ap-primary-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(3,199,90,.4); }
-
-    .ap-guide-btn {
-      padding:7px 14px; border-radius:11px; border:none; cursor:pointer;
-      background:linear-gradient(135deg,#f59e0b,#d97706);
-      color:#000; font-weight:800; font-size:12px;
-      font-family:'Noto Sans KR',sans-serif;
-      display:flex; align-items:center; gap:6px;
-      box-shadow:0 4px 12px rgba(245,158,11,.35);
-      overflow:hidden; position:relative; transition:all .2s;
-    }
-    .ap-guide-btn::after {
-      content:''; position:absolute; inset:0;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);
-      animation:ap-shine 2s ease-in-out infinite;
-    }
-    .ap-guide-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(245,158,11,.5); }
-
-    .ap-guide-panel {
-      position:fixed; top:0; right:0; bottom:0; width:min(420px,100vw);
-      background:var(--background); border-left:1px solid var(--border);
-      z-index:10000; overflow-y:auto; padding:24px;
-      animation:guide-in .3s ease both;
-      box-shadow:-8px 0 40px rgba(0,0,0,.15);
-    }
-
-    @media(max-width:768px) {
-      .ap-grid { grid-template-columns:1fr !important; }
-      .ap-guide-panel { width:100vw; }
-    }
-  `;
-
   return (
     <>
-      <style>{CSS}</style>
+      <style>{`
+        @keyframes apm-float-1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(28px, -18px) scale(1.08); }
+        }
+        @keyframes apm-float-2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-22px, 22px) scale(0.92); }
+        }
+        @keyframes apm-pulse {
+          0%, 100% { box-shadow: 0 12px 28px rgba(3,199,90,0.25), inset 0 1px 0 rgba(255,255,255,0.4); }
+          50% { box-shadow: 0 16px 40px rgba(3,199,90,0.45), inset 0 1px 0 rgba(255,255,255,0.4); }
+        }
+        @keyframes apm-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes apm-fade-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes apm-shine {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes apm-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        .apm-card { animation: apm-fade-up 0.6s ease-out backwards; }
+        .apm-card:nth-child(1) { animation-delay: 0.05s; }
+        .apm-card:nth-child(2) { animation-delay: 0.18s; }
+        .apm-card:nth-child(3) { animation-delay: 0.30s; }
+        .apm-cta { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .apm-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(3,199,90,0.45), inset 0 1px 0 rgba(255,255,255,0.4); }
+        .apm-cta:active { transform: translateY(0); }
+        .apm-stat { transition: transform 0.25s ease, border-color 0.25s ease; }
+        .apm-stat:hover { transform: translateY(-3px); border-color: rgba(3,199,90,0.4); }
+        @media (prefers-reduced-motion: reduce) {
+          .apm-card, [class^="apm-orb"] { animation: none !important; }
+        }
+      `}</style>
 
-      {/* 사용설명서 패널 */}
-      {showGuide && (
-        <div className="ap-guide-panel">
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{
-                width:36,height:36,borderRadius:10,
-                background:"linear-gradient(135deg,#f59e0b,#d97706)",
-                display:"flex",alignItems:"center",justifyContent:"center",
-              }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
-                </svg>
-              </div>
-              <h2 style={{fontSize:16,fontWeight:800,color:"var(--foreground)",margin:0}}>사용 설명서</h2>
-            </div>
-            <button onClick={()=>setShowGuide(false)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--muted-foreground)",padding:4}}>
-              <X className="w-5 h-5"/>
-            </button>
-          </div>
+      <div style={{ padding: "6px 0", display: "flex", flexDirection: "column", gap: "clamp(14px, 2.5vw, 20px)" }}>
+        {/* ─── 메인 히어로 ─── */}
+        <div
+          className="apm-card"
+          style={{
+            position: "relative",
+            padding: "clamp(24px, 4.5vw, 40px) clamp(20px, 4vw, 36px)",
+            borderRadius: "clamp(18px, 2.8vw, 24px)",
+            background:
+              "linear-gradient(135deg, color-mix(in srgb, var(--card) 90%, #03C75A 10%) 0%, var(--card) 70%)",
+            border: "1px solid color-mix(in srgb, var(--border) 55%, #03C75A 45%)",
+            boxShadow:
+              "0 18px 50px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.05)",
+            overflow: "hidden",
+          }}
+        >
+          {/* 떠다니는 오브 */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: -90,
+              right: -80,
+              width: 260,
+              height: 260,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(3,199,90,0.18) 0%, transparent 70%)",
+              animation: "apm-float-1 9s ease-in-out infinite",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              bottom: -110,
+              left: -90,
+              width: 300,
+              height: 300,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(0,255,136,0.12) 0%, transparent 70%)",
+              animation: "apm-float-2 11s ease-in-out infinite",
+              pointerEvents: "none",
+            }}
+          />
 
-          {[
-            {
-              step:"STEP 1", title:"봇 서버 실행 (관리자 PC)", color:"#03C75A",
-              items:[
-                { text:"터미널 열기 → 프로젝트 루트에서 cd naver-bot 입력", highlight:true },
-                { text:"최초 1회: npm install 실행", highlight:false },
-                { text:"최초 1회: npx playwright install chromium 실행", highlight:false },
-                { text:".env 파일에 구글 계정 입력 후 저장", highlight:true },
-                { text:"npm run dev 실행 → 서버 종료하면 안됨", highlight:true },
-                { text:"이 페이지 상단 봇 서버 온라인 상태 확인", highlight:false },
-              ]
-            },
-            {
-              step:"STEP 2", title:"네이버/티스토리 계정 연결", color:"#03C75A",
-              items:[
-                { text:"일반 자동발행 페이지(/naver) → 계정 관리 탭 이동", highlight:true },
-                { text:"관리자 본인 네이버 아이디/비번 입력 후 계정 추가", highlight:false },
-                { text:"연결 버튼 클릭 → 브라우저 자동 로그인 진행", highlight:true },
-                { text:"2단계 인증 있으면 직접 처리 후 자동 진행", highlight:false },
-                { text:"티스토리도 동일하게 진행", highlight:false },
-              ]
-            },
-            {
-              step:"STEP 3", title:"Google Flow 계정 설정 (이미지 생성)", color:"#4285F4",
-              items:[
-                { text:"이 페이지 자동발행 탭 → Flow 계정 탭 클릭", highlight:true },
-                { text:"관리자 구글 이메일/비밀번호 입력 후 저장", highlight:true },
-                { text:"최초 발행 시 브라우저가 열리며 구글 로그인 진행", highlight:false },
-                { text:"2단계 인증 있으면 직접 처리 후 자동 저장", highlight:false },
-              ]
-            },
-            {
-              step:"STEP 4", title:"글 작성 및 자동 발행", color:"#f59e0b",
-              items:[
-                { text:"일반 자동발행 페이지(/naver) → 글 생성 탭 이동", highlight:true },
-                { text:"키워드 입력 → 플랫폼 선택 → 글 생성 클릭", highlight:true },
-                { text:"생성된 글 확인/수정 후 발행하기로 넘기기 클릭", highlight:false },
-                { text:"발행하기 탭 → 계정 선택 → 자동 발행 클릭", highlight:true },
-                { text:"브라우저가 자동으로 열려서 글 발행 완료", highlight:false },
-              ]
-            },
-            {
-              step:"STEP 5", title:"발행 현황 모니터링", color:"#a78bfa",
-              items:[
-                { text:"히스토리 탭에서 전체 발행 내역 확인", highlight:false },
-                { text:"실패 건은 빨간색 표시 → 원인 확인 후 재발행", highlight:true },
-                { text:"봇 서버 오프라인 시 npm run dev 재실행", highlight:true },
-                { text:"발행된 글 URL 클릭해서 직접 확인 가능", highlight:false },
-              ]
-            },
-          ].map((section, i) => (
-            <div key={i} style={{
-              marginBottom:16, padding:"16px 18px", borderRadius:14,
-              background:"var(--card)", border:`1px solid ${section.color}30`,
-              animation:`ap-fade .3s ease ${i*.08}s both`,
-            }}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                <span style={{
-                  fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:99,
-                  background:`${section.color}20`,color:section.color,letterSpacing:".05em",
-                }}>{section.step}</span>
-                <span style={{fontSize:13,fontWeight:700,color:"var(--foreground)"}}>{section.title}</span>
-              </div>
-              {section.items.map((item: any, j: number) => (
-                <div key={j} style={{
-                  display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,
-                  padding:item.highlight?"7px 10px":"3px 0",
-                  borderRadius:item.highlight?8:0,
-                  background:item.highlight?`${section.color}12`:"transparent",
-                }}>
-                  <div style={{
-                    width:16,height:16,borderRadius:"50%",flexShrink:0,marginTop:2,
-                    background:`${section.color}20`,border:`1px solid ${section.color}40`,
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:8,fontWeight:800,color:section.color,
-                  }}>{j+1}</div>
-                  <span style={{fontSize:12,lineHeight:1.5,
-                    color:item.highlight?"var(--foreground)":"var(--muted-foreground)",
-                    fontWeight:item.highlight?600:400,
-                  }}>{item.text}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-
-
-
-      {/* 메인 콘텐츠 */}
-      <div style={{paddingBottom:120,animation:"ap-fade .35s ease both"}}>
-
-        {/* 상단 타이틀 */}
-        <div style={{
-          display:"flex",alignItems:"center",gap:14,
-          marginBottom:20,
-          padding:"18px 20px",borderRadius:20,
-          background:"linear-gradient(135deg,rgba(3,199,90,.08),rgba(5,150,105,.04))",
-          border:"1px solid rgba(3,199,90,.2)",
-          position:"relative",overflow:"hidden",
-        }}>
-          {/* 배경 SVG 데코 */}
-          <svg style={{position:"absolute",right:-20,top:-20,opacity:.06,pointerEvents:"none"}} width="120" height="120" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="50" fill="none" stroke="#03C75A" strokeWidth="2"/>
-            <circle cx="60" cy="60" r="35" fill="none" stroke="#03C75A" strokeWidth="1.5"/>
-            <circle cx="60" cy="60" r="20" fill="none" stroke="#03C75A" strokeWidth="1"/>
-            <line x1="10" y1="60" x2="110" y2="60" stroke="#03C75A" strokeWidth="1"/>
-            <line x1="60" y1="10" x2="60" y2="110" stroke="#03C75A" strokeWidth="1"/>
+          {/* 배경 SVG 라인 */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 800 200"
+            preserveAspectRatio="none"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              opacity: 0.15,
+              pointerEvents: "none",
+            }}
+          >
+            <path
+              d="M0,120 C200,80 400,160 600,100 C700,70 750,120 800,90"
+              fill="none"
+              stroke="#03C75A"
+              strokeWidth="1.5"
+              strokeDasharray="6 8"
+            />
+            <path
+              d="M0,160 C150,140 350,180 550,140 C700,110 750,150 800,130"
+              fill="none"
+              stroke="#00ff88"
+              strokeWidth="1"
+              strokeDasharray="3 6"
+              opacity="0.6"
+            />
           </svg>
 
-          <div style={{
-            width:46,height:46,borderRadius:14,flexShrink:0,
-            background:"linear-gradient(135deg,#03C75A,#059669)",
-            display:"flex",alignItems:"center",justifyContent:"center",
-            boxShadow:"0 0 20px rgba(3,199,90,.4)",
-            animation:"ap-float 3s ease-in-out infinite",
-          }}>
-            <Zap className="w-5 h-5" style={{color:"#000"}}/>
-          </div>
-          <div>
-            <h2 style={{
-              fontSize:18,fontWeight:800,margin:0,
-              color:"var(--foreground)",
-              fontFamily:"'Space Grotesk',sans-serif",
-            }}>자동 발행 관리</h2>
-            <p style={{fontSize:11,color:"var(--muted-foreground)",margin:"3px 0 0"}}>
-              네이버 블로그 · 티스토리 매크로 자동발행 관리자 패널
+          <div style={{ position: "relative", zIndex: 1, textAlign: "center" }}>
+            {/* 회전 SVG 링 + 아이콘 */}
+            <div
+              style={{
+                position: "relative",
+                width: "fit-content",
+                margin: "0 auto clamp(14px, 2.5vw, 20px)",
+              }}
+            >
+              <svg
+                aria-hidden="true"
+                width="clamp(100px, 20vw, 130px)"
+                height="clamp(100px, 20vw, 130px)"
+                viewBox="0 0 130 130"
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  animation: "apm-spin 20s linear infinite",
+                }}
+              >
+                <circle
+                  cx="65"
+                  cy="65"
+                  r="60"
+                  fill="none"
+                  stroke="rgba(3,199,90,0.3)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 8"
+                />
+                <circle cx="65" cy="5" r="3" fill="#03C75A" />
+                <circle cx="125" cy="65" r="2" fill="#00ff88" />
+                <circle cx="65" cy="125" r="2" fill="#00cc66" />
+              </svg>
+
+              {/* 메인 아이콘 */}
+              <div
+                style={{
+                  position: "relative",
+                  width: "clamp(58px, 12vw, 78px)",
+                  height: "clamp(58px, 12vw, 78px)",
+                  borderRadius: "clamp(16px, 2.5vw, 22px)",
+                  background: "linear-gradient(135deg, #03C75A 0%, #059669 100%)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  animation: "apm-pulse 3s ease-in-out infinite",
+                  zIndex: 1,
+                }}
+              >
+                <Send
+                  style={{
+                    width: "clamp(26px, 5.5vw, 36px)",
+                    height: "clamp(26px, 5.5vw, 36px)",
+                    color: "#fff",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* 라벨 */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 12px",
+                borderRadius: 999,
+                background: "rgba(3,199,90,0.12)",
+                border: "1px solid rgba(3,199,90,0.3)",
+                fontSize: "clamp(0.65rem, 1.7vw, 0.74rem)",
+                fontWeight: 700,
+                color: "#03C75A",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                marginBottom: 12,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#03C75A",
+                  animation: "apm-blink 1.6s ease-in-out infinite",
+                }}
+              />
+              Publy Admin Console
+            </div>
+
+            <h2
+              style={{
+                fontSize: "clamp(1.3rem, 4.5vw, 1.95rem)",
+                fontWeight: 900,
+                color: "var(--foreground)",
+                margin: 0,
+                marginBottom: 10,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.2,
+              }}
+            >
+              자동발행 관리는{" "}
+              <span
+                style={{
+                  background: "linear-gradient(135deg, #03C75A, #00ff88, #00cc66)",
+                  backgroundSize: "200% auto",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  animation: "apm-shine 4s linear infinite",
+                }}
+              >
+                Publy 관리자
+              </span>{" "}
+              페이지에서
+            </h2>
+
+            <p
+              style={{
+                fontSize: "clamp(0.82rem, 2.3vw, 0.96rem)",
+                color: "var(--muted-foreground)",
+                margin: 0,
+                marginBottom: "clamp(18px, 3.5vw, 24px)",
+                lineHeight: 1.65,
+                maxWidth: 540,
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            >
+              네이버 · 티스토리 자동발행 봇의 모든 운영 관리는{" "}
+              <strong style={{ color: "var(--foreground)" }}>Publy 관리자 콘솔</strong>에서 통합 처리됩니다.
+              <br />아래 버튼으로 바로 이동하세요.
             </p>
-          </div>
 
-          {/* 봇 상태 표시 */}
-          <div style={{
-            marginLeft:"auto",display:"flex",alignItems:"center",gap:7,
-            padding:"8px 14px",borderRadius:12,
-            background:botStatus==="online"?"rgba(3,199,90,.1)":"rgba(255,255,255,.05)",
-            border:`1px solid ${dotC}40`,
-          }}>
-            <div style={{
-              width:8,height:8,borderRadius:"50%",background:dotC,
-              animation:botStatus==="online"?"ap-pulse 2s infinite":"none",
-            }}/>
-            <span style={{fontSize:12,fontWeight:700,color:dotC}}>{dotL}</span>
+            {/* CTA */}
+            <a
+              href={PUBLY_ADMIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="apm-cta"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                padding: "clamp(11px, 2.3vw, 14px) clamp(22px, 4.5vw, 32px)",
+                borderRadius: 14,
+                background: "linear-gradient(135deg, #03C75A, #059669)",
+                color: "#fff",
+                fontSize: "clamp(0.9rem, 2.4vw, 1rem)",
+                fontWeight: 800,
+                textDecoration: "none",
+                boxShadow:
+                  "0 10px 26px rgba(3,199,90,0.35), inset 0 1px 0 rgba(255,255,255,0.4)",
+                minHeight: 46,
+              }}
+            >
+              <Smartphone style={{ width: 18, height: 18 }} />
+              Publy 관리자 페이지 열기
+              <ExternalLink style={{ width: 15, height: 15 }} />
+            </a>
           </div>
         </div>
 
-        {/* 섹션 탭 */}
-        <div style={{display:"flex",gap:8,marginBottom:18}}>
-          {SECTIONS.map(s=>(
-            <button key={s.key}
-              className={`ap-section-btn ${activeSection===s.key?"active":"inactive"}`}
-              onClick={()=>setActiveSection(s.key as any)}>
-              <span style={{fontSize:18}}>{s.emoji}</span>
-              <span>{s.label}</span>
-            </button>
-          ))}
+        {/* ─── 안내 카드 3개 ─── */}
+        <div
+          className="apm-card"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
+            gap: "clamp(10px, 2vw, 14px)",
+          }}
+        >
+          <ApmStatCard
+            color="#03C75A"
+            title="계정 관리"
+            desc="네이버·티스토리 회원 계정 연결 상태와 사용 통계 확인"
+          />
+          <ApmStatCard
+            color="#00ff88"
+            title="발행 모니터링"
+            desc="실시간 발행 현황, 성공·실패 로그, 봇 서버 상태"
+          />
+          <ApmStatCard
+            color="#00cc66"
+            title="시스템 설정"
+            desc="자동화 옵션, 발행 정책, 봇 운영 파라미터 관리"
+          />
         </div>
 
-        {/* ── 서버 상태 ── */}
-        {activeSection==="status" && (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,animation:"ap-fade .3s ease both"}}
-            className="ap-grid">
+        {/* ─── 가이드 카드 ─── */}
+        <div
+          className="apm-card"
+          style={{
+            padding: "clamp(18px, 3.5vw, 24px)",
+            borderRadius: "clamp(14px, 2vw, 18px)",
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "clamp(0.92rem, 2.4vw, 1.05rem)",
+              fontWeight: 800,
+              color: "var(--foreground)",
+              marginBottom: 14,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span
+              style={{
+                width: 4,
+                height: 16,
+                borderRadius: 2,
+                background: "linear-gradient(180deg, #03C75A, #00ff88)",
+              }}
+            />
+            관리자 안내
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
-              {label:"봇 서버",       ok:botStatus==="online", sub:"localhost:3333", icon:"🖥️"},
-              {label:"네이버 세션",   ok:!!localStorage.getItem("blogauto_autopublish_accounts"), sub:"계정 연결 상태", icon:"🟢"},
-              {label:"티스토리",      ok:!!localStorage.getItem("blogauto_autopublish_accounts"), sub:"계정 연결 상태", icon:"🟠"},
-              {label:"Google Flow",  ok:!!localStorage.getItem("admin_flow_email"), sub:"이미지 생성", icon:"🎨"},
-            ].map((item,i)=>(
-              <div key={i} className="ap-card" style={{padding:"18px 20px",animation:`ap-fade .3s ease ${i*.07}s both`}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                  <span style={{fontSize:22}}>{item.icon}</span>
-                  <div style={{
-                    display:"flex",alignItems:"center",gap:5,
-                    padding:"4px 10px",borderRadius:99,
-                    background:item.ok?"rgba(3,199,90,.12)":"rgba(239,68,68,.12)",
-                  }}>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:item.ok?"#03C75A":"#ef4444",
-                      animation:item.ok?"ap-pulse 2s infinite":"none"}}/>
-                    <span style={{fontSize:10,fontWeight:700,color:item.ok?"#03C75A":"#ef4444"}}>
-                      {item.ok?"정상":"미연결"}
-                    </span>
-                  </div>
+              "Publy 관리자 페이지는 비밀번호 인증 후 입장합니다.",
+              "회원 발행 데이터는 Publy 앱의 Supabase에서 실시간으로 관리됩니다.",
+              "BlogAuto Pro 관리자 → Publy 탭에서 회원 현황을 확인할 수도 있습니다.",
+            ].map((text, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  padding: "clamp(8px, 1.8vw, 11px) clamp(10px, 2vw, 14px)",
+                  borderRadius: 10,
+                  background: "color-mix(in srgb, var(--muted) 50%, transparent)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <span
+                  style={{
+                    flexShrink: 0,
+                    width: 20,
+                    height: 20,
+                    borderRadius: 6,
+                    background: "rgba(3,199,90,0.15)",
+                    color: "#03C75A",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.7rem",
+                    fontWeight: 800,
+                    marginTop: 1,
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <div
+                  style={{
+                    fontSize: "clamp(0.78rem, 2.1vw, 0.88rem)",
+                    color: "var(--muted-foreground)",
+                    lineHeight: 1.55,
+                    flex: 1,
+                  }}
+                >
+                  {text}
                 </div>
-                <p style={{fontSize:14,fontWeight:700,color:"var(--foreground)",margin:"0 0 3px"}}>{item.label}</p>
-                <p style={{fontSize:11,color:"var(--muted-foreground)",margin:0}}>{item.sub}</p>
               </div>
             ))}
-
-            {/* 전체 상태 요약 */}
-            <div className="ap-card" style={{
-              padding:"18px 20px",gridColumn:"1/-1",
-              background:"linear-gradient(135deg,rgba(3,199,90,.06),rgba(5,150,105,.03))",
-              animation:"ap-fade .3s ease .28s both",
-            }}>
-              <p style={{fontSize:13,fontWeight:700,color:"var(--foreground)",margin:"0 0 10px",display:"flex",alignItems:"center",gap:6}}>
-                <Activity className="w-4 h-4" style={{color:"#03C75A"}}/> 봇 서버 실행 방법
-              </p>
-              <div style={{
-                background:"rgba(0,0,0,.4)",borderRadius:10,padding:"12px 14px",
-                fontFamily:"monospace",fontSize:12,color:"#03C75A",lineHeight:2,
-              }}>
-                <div><span style={{color:"rgba(255,255,255,.4)"}}>$</span> cd naver-bot</div>
-                <div><span style={{color:"rgba(255,255,255,.4)"}}>$</span> npm install</div>
-                <div><span style={{color:"rgba(255,255,255,.4)"}}>$</span> npx playwright install chromium</div>
-                <div><span style={{color:"rgba(255,255,255,.4)"}}>$</span> npm run dev</div>
-              </div>
-            </div>
           </div>
-        )}
-
-        {/* ── Flow 계정 ── */}
-        {activeSection==="flow" && (
-          <div style={{animation:"ap-fade .3s ease both"}}>
-            <div className="ap-card" style={{padding:"22px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
-                <div style={{
-                  width:36,height:36,borderRadius:10,
-                  background:"linear-gradient(135deg,#4285F4,#34A853)",
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                  fontSize:16,fontWeight:900,color:"white",
-                }}>G</div>
-                <div>
-                  <p style={{fontSize:14,fontWeight:700,color:"var(--foreground)",margin:0}}>Google Flow 공용 계정</p>
-                  <p style={{fontSize:11,color:"var(--muted-foreground)",margin:0}}>이미지 자동 생성에 사용되는 관리자 계정</p>
-                </div>
-              </div>
-
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}} className="ap-grid">
-                <div>
-                  <label style={{fontSize:11,fontWeight:700,color:"var(--muted-foreground)",display:"block",marginBottom:6}}>구글 이메일</label>
-                  <Input value={flowEmail} onChange={e=>setFlowEmail(e.target.value)}
-                    placeholder="admin@gmail.com" className="text-sm h-10"/>
-                </div>
-                <div>
-                  <label style={{fontSize:11,fontWeight:700,color:"var(--muted-foreground)",display:"block",marginBottom:6}}>구글 비밀번호</label>
-                  <div style={{position:"relative"}}>
-                    <Input type={showFlowPw?"text":"password"} value={flowPw}
-                      onChange={e=>setFlowPw(e.target.value)}
-                      placeholder="••••••••" className="text-sm h-10 pr-10"/>
-                    <button onClick={()=>setShowFlowPw(v=>!v)}
-                      style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
-                        background:"none",border:"none",cursor:"pointer",color:"var(--muted-foreground)"}}>
-                      {showFlowPw?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <button className="ap-primary-btn" style={{padding:"11px 22px",fontSize:13}} onClick={saveFlow}>
-                <Save className="w-4 h-4" style={{position:"relative",zIndex:1}}/>
-                <span style={{position:"relative",zIndex:1}}>저장</span>
-              </button>
-
-              <div style={{
-                marginTop:14,padding:"12px 14px",borderRadius:12,
-                background:"rgba(245,158,11,.08)",border:"1px solid rgba(245,158,11,.2)",
-                fontSize:11,color:"var(--muted-foreground)",lineHeight:1.7,
-              }}>
-                ⚠️ naver-bot/.env 파일의 GOOGLE_FLOW_EMAIL / GOOGLE_FLOW_PASSWORD 와 동일하게 설정하세요.<br/>
-                최초 로그인 시 브라우저가 열리며 2단계 인증이 있으면 수동으로 처리해주세요.
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── 발행 히스토리 ── */}
-        {activeSection==="history" && (
-          <div style={{animation:"ap-fade .3s ease both"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-              <span style={{fontSize:13,color:"var(--muted-foreground)"}}>총 {history.length}건</span>
-              {history.length>0 && (
-                <button
-                  style={{
-                    fontSize:11,padding:"6px 12px",borderRadius:10,cursor:"pointer",fontWeight:600,
-                    background:"rgba(239,68,68,.1)",color:"#ef4444",
-                    border:"1px solid rgba(239,68,68,.2)",display:"flex",alignItems:"center",gap:5,
-                  }}
-                  onClick={()=>{
-                    if(!confirm("히스토리를 초기화할까요?"))return;
-                    localStorage.removeItem("blogauto_autopublish_history");
-                    setHistory([]);
-                    toast.success("초기화됨");
-                  }}>
-                  <Trash2 className="w-3 h-3"/>초기화
-                </button>
-              )}
-            </div>
-
-            {history.length===0 ? (
-              <div className="ap-card" style={{padding:"60px",textAlign:"center"}}>
-                <Activity className="w-8 h-8" style={{color:"var(--muted-foreground)",margin:"0 auto 10px"}}/>
-                <p style={{fontSize:13,color:"var(--muted-foreground)"}}>발행 기록 없음</p>
-              </div>
-            ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {history.slice(0,50).map((h:any,i:number)=>(
-                  <div key={i} className="ap-card" style={{
-                    padding:"14px 18px",
-                    animation:`ap-fade .3s ease ${i*.04}s both`,
-                    borderColor:h.status==="success"?"rgba(3,199,90,.2)":h.status==="fail"?"rgba(239,68,68,.2)":"var(--border)",
-                  }}>
-                    <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                      <span style={{fontSize:18}}>{h.platform==="naver"?"🟢":"🟠"}</span>
-                      <div style={{flex:1,minWidth:120}}>
-                        <p style={{fontSize:13,fontWeight:600,color:"var(--foreground)",margin:"0 0 3px",
-                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.title}</p>
-                        <p style={{fontSize:11,color:"var(--muted-foreground)",margin:0,display:"flex",alignItems:"center",gap:6}}>
-                          <span>{h.account}</span>
-                          <span>·</span>
-                          <span>{new Date(h.publishedAt).toLocaleString("ko-KR")}</span>
-                        </p>
-                        {h.error && <p style={{fontSize:11,color:"#ef4444",margin:"3px 0 0"}}>❌ {h.error}</p>}
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <span style={{
-                          fontSize:10,padding:"3px 9px",borderRadius:99,fontWeight:700,
-                          background:h.status==="success"?"rgba(3,199,90,.12)":h.status==="fail"?"rgba(239,68,68,.12)":"rgba(245,158,11,.12)",
-                          color:h.status==="success"?"#03C75A":h.status==="fail"?"#ef4444":"#f59e0b",
-                        }}>
-                          {h.status==="success"?"✅ 완료":h.status==="fail"?"❌ 실패":"⏳ 진행"}
-                        </span>
-                        {h.url && (
-                          <a href={h.url} target="_blank" rel="noopener noreferrer"
-                            style={{fontSize:10,color:"var(--muted-foreground)",textDecoration:"none",
-                              display:"flex",alignItems:"center",gap:3,
-                              padding:"3px 9px",borderRadius:99,
-                              background:"var(--muted)",border:"1px solid var(--border)"}}>
-                            <Globe className="w-3 h-3"/>보기
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      {/* Publy 탭 */}
-      {tab === "publy" && (
-        <div style={{padding:"6px 0"}}>
-          <PublyWidget />
         </div>
-      )}
       </div>
     </>
+  );
+}
+
+// ─── 안내 통계 카드 ────────────────────────────────────────
+function ApmStatCard({ color, title, desc }: { color: string; title: string; desc: string }) {
+  return (
+    <div
+      className="apm-stat"
+      style={{
+        padding: "clamp(14px, 2.8vw, 20px)",
+        borderRadius: "clamp(12px, 2vw, 16px)",
+        background: "var(--card)",
+        border: "1px solid var(--border)",
+        cursor: "default",
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          background: `color-mix(in srgb, ${color} 18%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 10,
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24" />
+        </svg>
+      </div>
+      <div
+        style={{
+          fontSize: "clamp(0.88rem, 2.3vw, 0.98rem)",
+          fontWeight: 800,
+          color: "var(--foreground)",
+          marginBottom: 4,
+        }}
+      >
+        {title}
+      </div>
+      <div
+        style={{
+          fontSize: "clamp(0.74rem, 2vw, 0.82rem)",
+          color: "var(--muted-foreground)",
+          lineHeight: 1.5,
+        }}
+      >
+        {desc}
+      </div>
+    </div>
   );
 }
