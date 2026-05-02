@@ -53,6 +53,7 @@ const LANGUAGES = [
   { code: "pt", label: "Português", flag: "🇧🇷" },
 ];
 
+// updated
 const NAV_ITEMS = [
   { path: "/dashboard", icon: LayoutDashboard, label: "대시보드", labelEn: "Dashboard", pink: false },
   { path: "/keywords", icon: Search, label: "키워드 수집", labelEn: "Keywords", pink: false },
