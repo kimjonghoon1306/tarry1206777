@@ -38,13 +38,11 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
 
     // 글쓰기 새 탭 감지
     console.log("[naver] 글쓰기 버튼 클릭...");
-    const [newPage] = await Promise.all([
-      context.waitForEvent("page", { timeout: 10000 }).catch(() => null),
-      page.click(".btn_write, a[href*='Redirect=Write'], .link_write").catch(async () => {
-        await page.getByText("글쓰기").first().click().catch(() => {});
-      }),
-    ]);
-
+    const pagePromise = context.waitForEvent("page", { timeout: 15000 }).catch(() => null);
+    await page.click(".btn_write, a[href*='Redirect=Write'], .link_write").catch(async () => {
+      await page.getByText("글쓰기").first().click().catch(() => {});
+    });
+    const newPage = await pagePromise;
     const writePage = newPage ?? page;
     await writePage.bringToFront();
     await writePage.waitForLoadState("domcontentloaded");
