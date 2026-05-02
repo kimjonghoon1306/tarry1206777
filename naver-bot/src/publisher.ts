@@ -30,24 +30,14 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
     await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForTimeout(2000);
 
-    // 블로그 홈 방문
+    // 글쓰기 페이지 직접 진입
     const blogId = session.blogName || session.username;
-    console.log("[naver] 블로그 진입:", blogId);
-    await page.goto(`https://blog.naver.com/${blogId}`, { waitUntil: "domcontentloaded", timeout: 30000 });
-    await page.waitForTimeout(3000);
-
-    // 글쓰기 새 탭 감지
-    console.log("[naver] 글쓰기 버튼 클릭...");
-    const pagePromise = context.waitForEvent("page", { timeout: 15000 }).catch(() => null);
-    await page.click(".btn_write, a[href*='Redirect=Write'], .link_write").catch(async () => {
-      await page.getByText("글쓰기").first().click().catch(() => {});
-    });
-    const newPage = await pagePromise;
-    const writePage = newPage ?? page;
-    await writePage.bringToFront();
-    await writePage.waitForLoadState("domcontentloaded");
-    await writePage.waitForTimeout(5000);
-    console.log("[naver] 글쓰기 URL:", writePage.url());
+    console.log("[naver] 글쓰기 직접 진입:", blogId);
+    await page.goto(`https://blog.naver.com/${blogId}?Redirect=Write&`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForTimeout(5000);
+    console.log("[naver] 글쓰기 URL:", page.url());
+    
+    const writePage = page;
 
     // 에디터 로드 대기
     await writePage.waitForSelector(".se-placeholder, .se-title-input, [contenteditable]", { timeout: 30000 });
