@@ -56,25 +56,65 @@ export async function saveSession(
         await page.waitForURL("**/naver.com**", { timeout: 60000 }).catch(() => {});
       }
 
-      // 네이버 메인 이동
+      // 네이버 메인 이동 (쿠키 적용)
       await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
       await page.waitForTimeout(2000);
       
-      // 블로그 아이디 자동 추출
-      await page.goto("https://blog.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
-      await page.waitForTimeout(2000);
-      const blogId = await page.evaluate(() => {
-        const myBlogLink = document.querySelector("a.link_mynblog, a[href*='/PostList.naver'], .MyView-module__my_blog___");
-        if (myBlogLink) {
-          const href = myBlogLink.getAttribute("href") || "";
-          const match = href.match(/blog\.naver\.com\/([^?/]+)/);
-          return match ? match[1] : null;
+      // 블로그 아이디 자동 추출 - 내 블로그 페이지 직접 진입
+      console.log("[session] 블로그 아이디 추출 중...");
+      try {
+        // 방법1: 블로그 메인에서 "내 블로그" 링크 추출
+        await page.goto("https://blog.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.waitForTimeout(3000);
+        
+        let blogId: string | null = await page.evaluate(() => {
+          // 다양한 셀렉터 시도
+          const selectors = [
+            "a.link_mynblog",
+            "a[href*='PostList.naver']",
+            "a[href*='blog.naver.com/']",
+            ".MyView-module__btn___",
+            ".gnb_my a",
+          ];
+          for (const sel of selectors) {
+            const el = document.querySelector(sel) as HTMLAnchorElement;
+            if (el && el.href) {
+              const m = el.href.match(/blog\.naver\.com\/([a-zA-Z0-9_-]+)(?:\?|$|\/)/);
+              if (m && m[1] && m[1] !== "PostList" && m[1] !== "BlogHome") return m[1];
+            }
+          }
+          return null;
+        });
+
+        // 방법2: 글쓰기 버튼 href에서 추출
+        if (!blogId) {
+          blogId = await page.evaluate(() => {
+            const writeBtn = document.querySelector("a[href*='Redirect=Write']") as HTMLAnchorElement;
+            if (writeBtn) {
+              const m = writeBtn.href.match(/blog\.naver\.com\/([a-zA-Z0-9_-]+)/);
+              return m ? m[1] : null;
+            }
+            return null;
+          });
         }
-        return null;
-      });
-      if (blogId) {
-        console.log(`[session] 블로그 아이디 자동 감지: ${blogId}`);
-        blogName = blogId;
+
+        // 방법3: 블로그 글쓰기로 직접 이동해서 URL 추출
+        if (!blogId) {
+          await page.goto("https://blog.naver.com/MyBlog.naver", { waitUntil: "domcontentloaded", timeout: 30000 });
+          await page.waitForTimeout(2000);
+          const url = page.url();
+          const m = url.match(/blog\.naver\.com\/([a-zA-Z0-9_-]+)/);
+          if (m && m[1] !== "MyBlog" && m[1] !== "BlogHome") blogId = m[1];
+        }
+
+        if (blogId) {
+          console.log(`[session] ✅ 블로그 아이디 자동 감지: ${blogId}`);
+          blogName = blogId;
+        } else {
+          console.warn("[session] ⚠️ 블로그 아이디 자동 감지 실패");
+        }
+      } catch (e: any) {
+        console.warn("[session] 블로그 아이디 추출 에러:", e.message);
       }
 
     } else {
