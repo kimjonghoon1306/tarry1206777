@@ -5,6 +5,7 @@ const stealth = require("puppeteer-extra-plugin-stealth")();
 chromium.use(stealth);
 
 const SESSIONS_DIR = path.join(__dirname, "../sessions");
+const PROFILES_DIR = path.join(__dirname, "../profiles");
 
 export interface Session {
   userId: string;
@@ -16,6 +17,7 @@ export interface Session {
 }
 
 const sessionPath = (userId: string) => path.join(SESSIONS_DIR, `${userId}.json`);
+export const profilePath = (userId: string) => path.join(PROFILES_DIR, userId);
 
 export async function saveSession(
   userId: string,
@@ -25,37 +27,44 @@ export async function saveSession(
   blogName?: string
 ): Promise<{ cookies: number }> {
   await fs.ensureDir(SESSIONS_DIR);
+  await fs.ensureDir(profilePath(userId));
 
-  const browser = await chromium.launch({
+  // 영구 컨텍스트 - 사용자별 크롬 프로필 사용
+  const context = await chromium.launchPersistentContext(profilePath(userId), {
     headless: false,
     args: ["--no-sandbox", "--disable-blink-features=AutomationControlled"],
-  });
-  const context = await browser.newContext({
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     viewport: { width: 1366, height: 768 },
     locale: "ko-KR",
   });
-  const page = await context.newPage();
+  const page = context.pages()[0] || await context.newPage();
 
   try {
     if (platform === "naver") {
       await page.goto("https://nid.naver.com/nidlogin.login", { waitUntil: "domcontentloaded" });
-      await page.evaluate((id: string) => {
-        const el = document.querySelector("#id") as HTMLInputElement;
-        if (el) { el.value = id; el.dispatchEvent(new Event("input", { bubbles: true })); }
-      }, username);
-      await page.waitForTimeout(400);
-      await page.evaluate((pw: string) => {
-        const el = document.querySelector("#pw") as HTMLInputElement;
-        if (el) { el.value = pw; el.dispatchEvent(new Event("input", { bubbles: true })); }
-      }, password);
-      await page.waitForTimeout(400);
-      await page.click(".btn_login");
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(1000);
+      
+      // 이미 로그인되어 있으면 스킵
+      if (!page.url().includes("nidlogin")) {
+        console.log("[session] 이미 로그인 상태");
+      } else {
+        await page.evaluate((id: string) => {
+          const el = document.querySelector("#id") as HTMLInputElement;
+          if (el) { el.value = id; el.dispatchEvent(new Event("input", { bubbles: true })); }
+        }, username);
+        await page.waitForTimeout(400);
+        await page.evaluate((pw: string) => {
+          const el = document.querySelector("#pw") as HTMLInputElement;
+          if (el) { el.value = pw; el.dispatchEvent(new Event("input", { bubbles: true })); }
+        }, password);
+        await page.waitForTimeout(400);
+        await page.click(".btn_login");
+        await page.waitForTimeout(3000);
 
-      if (page.url().includes("nid.naver.com")) {
-        console.log("[session] 추가 인증 대기 중 (최대 60초)...");
-        await page.waitForURL("**/naver.com**", { timeout: 60000 }).catch(() => {});
+        if (page.url().includes("nid.naver.com")) {
+          console.log("[session] 추가 인증 대기 중 (최대 60초)...");
+          await page.waitForURL("**/naver.com**", { timeout: 60000 }).catch(() => {});
+        }
       }
 
       await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
@@ -89,42 +98,14 @@ export async function saveSession(
           });
         }
 
-        if (!blogId) {
-          await page.goto("https://blog.naver.com/MyBlog.naver", { waitUntil: "domcontentloaded", timeout: 30000 });
-          await page.waitForTimeout(2000);
-          const url = page.url();
-          const m = url.match(/blog\.naver\.com\/([a-zA-Z0-9_-]+)/);
-          if (m && m[1] !== "MyBlog" && m[1] !== "BlogHome") blogId = m[1];
-        }
-
         if (blogId) {
           console.log(`[session] ✅ 블로그 아이디 자동 감지: ${blogId}`);
           blogName = blogId;
-
-          // 글쓰기 페이지까지 미리 방문
-          console.log("[session] 글쓰기 페이지 방문 중...");
-          await page.goto(`https://blog.naver.com/${blogId}?Redirect=Write&`, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
-          await page.waitForTimeout(5000);
-          console.log("[session] 글쓰기 페이지 URL:", page.url());
         } else {
           console.warn("[session] ⚠️ 블로그 아이디 자동 감지 실패");
         }
       } catch (e: any) {
         console.warn("[session] 블로그 아이디 추출 에러:", e.message);
-      }
-
-    } else {
-      await page.goto("https://www.tistory.com/auth/login", { waitUntil: "networkidle" });
-      await page.click(".btn_login.btn_kakao");
-      await page.waitForTimeout(2000);
-      await page.fill("#loginId--1", username).catch(() => {});
-      await page.fill("#password--2", password).catch(() => {});
-      await page.click(".btn_confirm.btn_login").catch(() => {});
-      await page.waitForTimeout(5000);
-
-      if (page.url().includes("accounts.kakao.com") || page.url().includes("tistory.com/auth")) {
-        console.log("[session] 티스토리 추가 인증 대기 (최대 60초)...");
-        await page.waitForURL("**tistory.com**", { timeout: 60000 }).catch(() => {});
       }
     }
 
@@ -134,11 +115,11 @@ export async function saveSession(
       savedAt: new Date().toISOString(),
     };
     await fs.writeJson(sessionPath(userId), session, { spaces: 2 });
-    await browser.close();
-    console.log(`[session] ${platform} 세션 저장 완료: ${username} (쿠키 ${cookies.length}개)`);
+    await context.close();
+    console.log(`[session] ${platform} 세션 저장 완료: ${username} (쿠키 ${cookies.length}개) — 프로필 영구 저장됨`);
     return { cookies: cookies.length };
   } catch (e) {
-    await browser.close();
+    await context.close();
     throw e;
   }
 }
@@ -160,4 +141,5 @@ export async function updateCookies(userId: string, cookies: any[]) {
 
 export async function deleteSession(userId: string) {
   await fs.remove(sessionPath(userId));
+  await fs.remove(profilePath(userId));
 }
