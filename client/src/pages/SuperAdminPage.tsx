@@ -1,4 +1,3 @@
-// updated
 /**
  * BlogAuto Pro - Super Admin Page v6.0
  * ✅ 설정과 동일한 모든 키 항목 (티스토리/쿠팡/데이터랩/Webhook 포함)
@@ -8,7 +7,7 @@
  * ✅ 모바일 최적화 + 색상 다양하게
  */
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
