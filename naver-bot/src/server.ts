@@ -1,111 +1,171 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import {
+  saveSession,
+  getSession,
+  deleteSession,
+} from "./session-manager";
 import { publishToNaver } from "./publisher";
 import { publishToTistory } from "./tistory";
-import { saveSession, getSession, deleteSession } from "./session-manager";
-import { generateFlowImage } from "./flow-image";
 
 dotenv.config();
+
 const app = express();
-const PORT = process.env.PORT || 3333;
+app.use(cors());
+app.use(express.json({ limit: "20mb" }));
 
-app.use(cors({ origin: "*", credentials: true }));
-app.use(express.json({ limit: "10mb" }));
+const PORT = parseInt(process.env.PORT || "3333", 10);
 
-// ── 헬스체크 ─────────────────────────────────────────────
-app.get("/health", (_, res) => {
-  res.json({ status: "ok", service: "naver-bot", ts: new Date().toISOString() });
+/* ──────────────────────────────────────────────────────────────────
+ * 발행 큐 - 동시 실행 제한
+ * 수천명이 동시에 누르면 크롬 수천개 뜨면서 서버 죽음
+ * 동시 N개로 제한하고 나머지는 대기
+ * ────────────────────────────────────────────────────────────────── */
+const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT || "3", 10);
+let running = 0;
+const waitQueue: Array<() => void> = [];
+
+async function acquireSlot(): Promise<void> {
+  if (running < MAX_CONCURRENT) {
+    running++;
+    return;
+  }
+  return new Promise((resolve) => {
+    waitQueue.push(() => {
+      running++;
+      resolve();
+    });
+  });
+}
+
+function releaseSlot() {
+  running--;
+  const next = waitQueue.shift();
+  if (next) next();
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Health check
+ * ────────────────────────────────────────────────────────────────── */
+app.get("/health", (_req: Request, res: Response) => {
+  res.json({
+    status: "ok",
+    version: "2.0.0",
+    running,
+    queued: waitQueue.length,
+    maxConcurrent: MAX_CONCURRENT,
+  });
 });
 
-// ── 네이버 세션 저장 ──────────────────────────────────────
-app.post("/api/naver/save-session", async (req, res) => {
+/* ──────────────────────────────────────────────────────────────────
+ * 계정 연결 (첫 로그인 - 사용자에게 브라우저 보임)
+ * POST /sessions/connect
+ * body: { userId, platform, username, password, blogName? }
+ * ────────────────────────────────────────────────────────────────── */
+app.post("/sessions/connect", async (req: Request, res: Response) => {
+  const { userId, platform, username, password, blogName } = req.body;
+
+  if (!userId || !platform || !username || !password) {
+    return res.status(400).json({ error: "userId, platform, username, password 필수" });
+  }
+  if (platform !== "naver" && platform !== "tistory") {
+    return res.status(400).json({ error: "platform은 naver 또는 tistory" });
+  }
+
   try {
-    const { userId, id, pw } = req.body;
-    if (!userId || !id || !pw) return res.status(400).json({ error: "필수 정보 누락" });
-    const result = await saveSession(userId, "naver", id, pw);
+    const result = await saveSession(userId, platform, username, password, blogName);
     return res.json({ success: true, ...result });
   } catch (e: any) {
+    console.error("[connect] 실패:", e.message);
     return res.status(500).json({ error: e.message });
   }
 });
 
-// ── 티스토리 세션 저장 ────────────────────────────────────
-app.post("/api/tistory/save-session", async (req, res) => {
-  try {
-    const { userId, id, pw, blogName } = req.body;
-    if (!userId || !id || !pw) return res.status(400).json({ error: "필수 정보 누락" });
-    const result = await saveSession(userId, "tistory", id, pw, blogName);
-    return res.json({ success: true, ...result });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message });
-  }
+/* ──────────────────────────────────────────────────────────────────
+ * 세션 조회
+ * GET /sessions/:userId
+ * ────────────────────────────────────────────────────────────────── */
+app.get("/sessions/:userId", async (req: Request, res: Response) => {
+  const session = await getSession(req.params.userId);
+  if (!session) return res.status(404).json({ error: "세션 없음" });
+  // 쿠키는 응답에서 제외
+  return res.json({
+    userId: session.userId,
+    platform: session.platform,
+    username: session.username,
+    blogName: session.blogName,
+    savedAt: session.savedAt,
+    cookieCount: session.cookies.length,
+  });
 });
 
-// ── 세션 삭제 ────────────────────────────────────────────
-app.delete("/api/session/:userId", async (req, res) => {
+/* ──────────────────────────────────────────────────────────────────
+ * 세션 삭제
+ * DELETE /sessions/:userId
+ * ────────────────────────────────────────────────────────────────── */
+app.delete("/sessions/:userId", async (req: Request, res: Response) => {
   await deleteSession(req.params.userId);
   return res.json({ success: true });
 });
 
-// ── Flow 이미지 생성 ──────────────────────────────────────
-app.post("/api/flow/generate", async (req, res) => {
-  try {
-    const { prompt, count = 1 } = req.body;
-    if (!prompt) return res.status(400).json({ error: "prompt 필수" });
-    const email = process.env.GOOGLE_FLOW_EMAIL!;
-    const pw    = process.env.GOOGLE_FLOW_PASSWORD!;
-    if (!email || !pw) return res.status(500).json({ error: "Google Flow 계정 미설정" });
-    const images = await generateFlowImage({ googleEmail: email, googlePw: pw, prompt, count });
-    return res.json({ success: true, images });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message });
+/* ──────────────────────────────────────────────────────────────────
+ * 발행 (큐에 들어감)
+ * POST /publish
+ * body: { userId, title, content, imageUrls?, tags? }
+ * ────────────────────────────────────────────────────────────────── */
+app.post("/publish", async (req: Request, res: Response) => {
+  const { userId, title, content, imageUrls = [], tags = [] } = req.body;
+
+  if (!userId || !title || !content) {
+    return res.status(400).json({ error: "userId, title, content 필수" });
   }
-});
 
-// ── 통합 발행 (이미지 생성 + 발행) ───────────────────────
-app.post("/api/publish-full", async (req, res) => {
+  const session = await getSession(userId);
+  if (!session) {
+    return res.status(404).json({ error: "세션 없음. 먼저 계정 연결 필요" });
+  }
+
+  // 큐 슬롯 획득까지 대기
+  console.log(`[publish] 요청 수신 userId=${userId} (running=${running}, queued=${waitQueue.length})`);
+  await acquireSlot();
+
   try {
-    const { userId, platform = "naver", title, content, tags = [], imagePrompt } = req.body;
-    if (!userId || !title || !content) return res.status(400).json({ error: "필수 항목 누락" });
-
-    const session = await getSession(userId);
-    if (!session) return res.status(401).json({ error: "세션 없음. 계정 연결 먼저 필요" });
-
-    let imageUrls: string[] = [];
-    if (imagePrompt) {
-      console.log("[bot] Flow 이미지 생성:", imagePrompt);
-      try {
-        const email = process.env.GOOGLE_FLOW_EMAIL!;
-        const pw    = process.env.GOOGLE_FLOW_PASSWORD!;
-        if (email && pw) {
-          imageUrls = await generateFlowImage({ googleEmail: email, googlePw: pw, prompt: imagePrompt, count: 1 });
-        }
-      } catch (e: any) {
-        console.warn("[bot] 이미지 생성 실패 (발행 계속):", e.message);
-      }
-    }
-
-    let result: any;
-    if (platform === "tistory") {
-      result = await publishToTistory({ session, title, content, imageUrls, tags });
-    } else {
+    let result;
+    if (session.platform === "naver") {
       result = await publishToNaver({ session, title, content, imageUrls, tags });
+    } else {
+      result = await publishToTistory({ session, title, content, imageUrls, tags });
     }
-
     return res.json({ success: true, ...result });
   } catch (e: any) {
-    console.error("[bot] 발행 실패:", e.message);
+    console.error(`[publish] 실패 userId=${userId}:`, e.message);
+
+    // 세션 만료면 클라이언트가 재연결 트리거하도록 코드 반환
+    if (e.message?.includes("세션 만료") || e.message?.includes("재연결")) {
+      return res.status(401).json({ error: e.message, code: "SESSION_EXPIRED" });
+    }
     return res.status(500).json({ error: e.message });
+  } finally {
+    releaseSlot();
   }
 });
 
+/* ──────────────────────────────────────────────────────────────────
+ * 서버 시작
+ * ────────────────────────────────────────────────────────────────── */
 app.listen(PORT, () => {
   console.log(`
-  ╔═══════════════════════════════════════╗
-  ║  BlogAuto Pro — Naver Bot             ║
-  ║  http://localhost:${PORT}               ║
-  ╚═══════════════════════════════════════╝
+╔════════════════════════════════════════════════╗
+║  Publy 자동발행 봇 v2.0                        ║
+║  포트: ${String(PORT).padEnd(40)}║
+║  동시발행 최대: ${String(MAX_CONCURRENT).padEnd(31)}║
+╚════════════════════════════════════════════════╝
   `);
+  console.log("API:");
+  console.log(`  GET    http://localhost:${PORT}/health`);
+  console.log(`  POST   http://localhost:${PORT}/sessions/connect`);
+  console.log(`  GET    http://localhost:${PORT}/sessions/:userId`);
+  console.log(`  DELETE http://localhost:${PORT}/sessions/:userId`);
+  console.log(`  POST   http://localhost:${PORT}/publish`);
 });
-
