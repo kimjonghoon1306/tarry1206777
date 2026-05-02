@@ -1,6 +1,8 @@
 import fs from "fs-extra";
 import path from "path";
-import { chromium } from "playwright";
+const { chromium } = require("playwright-extra");
+const stealth = require("puppeteer-extra-plugin-stealth")();
+chromium.use(stealth);
 
 const SESSIONS_DIR = path.join(__dirname, "../sessions");
 
@@ -29,20 +31,21 @@ export async function saveSession(
     args: ["--no-sandbox", "--disable-blink-features=AutomationControlled"],
   });
   const context = await browser.newContext({
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     viewport: { width: 1366, height: 768 },
+    locale: "ko-KR",
   });
   const page = await context.newPage();
 
   try {
     if (platform === "naver") {
       await page.goto("https://nid.naver.com/nidlogin.login", { waitUntil: "domcontentloaded" });
-      await page.evaluate((id) => {
+      await page.evaluate((id: string) => {
         const el = document.querySelector("#id") as HTMLInputElement;
         if (el) { el.value = id; el.dispatchEvent(new Event("input", { bubbles: true })); }
       }, username);
       await page.waitForTimeout(400);
-      await page.evaluate((pw) => {
+      await page.evaluate((pw: string) => {
         const el = document.querySelector("#pw") as HTMLInputElement;
         if (el) { el.value = pw; el.dispatchEvent(new Event("input", { bubbles: true })); }
       }, password);
@@ -50,32 +53,21 @@ export async function saveSession(
       await page.click(".btn_login");
       await page.waitForTimeout(3000);
 
-      // 추가 인증 대기 (최대 60초)
       if (page.url().includes("nid.naver.com")) {
         console.log("[session] 추가 인증 대기 중 (최대 60초)...");
         await page.waitForURL("**/naver.com**", { timeout: 60000 }).catch(() => {});
       }
 
-      // 네이버 메인 이동 (쿠키 적용)
       await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
       await page.waitForTimeout(2000);
-      
-      // 블로그 아이디 자동 추출 - 내 블로그 페이지 직접 진입
+
       console.log("[session] 블로그 아이디 추출 중...");
       try {
-        // 방법1: 블로그 메인에서 "내 블로그" 링크 추출
         await page.goto("https://blog.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
         await page.waitForTimeout(3000);
-        
+
         let blogId: string | null = await page.evaluate(() => {
-          // 다양한 셀렉터 시도
-          const selectors = [
-            "a.link_mynblog",
-            "a[href*='PostList.naver']",
-            "a[href*='blog.naver.com/']",
-            ".MyView-module__btn___",
-            ".gnb_my a",
-          ];
+          const selectors = ["a.link_mynblog", "a[href*='PostList.naver']", "a[href*='blog.naver.com/']", ".gnb_my a"];
           for (const sel of selectors) {
             const el = document.querySelector(sel) as HTMLAnchorElement;
             if (el && el.href) {
@@ -86,7 +78,6 @@ export async function saveSession(
           return null;
         });
 
-        // 방법2: 글쓰기 버튼 href에서 추출
         if (!blogId) {
           blogId = await page.evaluate(() => {
             const writeBtn = document.querySelector("a[href*='Redirect=Write']") as HTMLAnchorElement;
@@ -98,7 +89,6 @@ export async function saveSession(
           });
         }
 
-        // 방법3: 블로그 글쓰기로 직접 이동해서 URL 추출
         if (!blogId) {
           await page.goto("https://blog.naver.com/MyBlog.naver", { waitUntil: "domcontentloaded", timeout: 30000 });
           await page.waitForTimeout(2000);
@@ -110,6 +100,12 @@ export async function saveSession(
         if (blogId) {
           console.log(`[session] ✅ 블로그 아이디 자동 감지: ${blogId}`);
           blogName = blogId;
+
+          // 글쓰기 페이지까지 미리 방문
+          console.log("[session] 글쓰기 페이지 방문 중...");
+          await page.goto(`https://blog.naver.com/${blogId}?Redirect=Write&`, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
+          await page.waitForTimeout(5000);
+          console.log("[session] 글쓰기 페이지 URL:", page.url());
         } else {
           console.warn("[session] ⚠️ 블로그 아이디 자동 감지 실패");
         }
