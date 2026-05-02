@@ -1,7 +1,7 @@
 const { chromium } = require("playwright-extra");
 const stealth = require("puppeteer-extra-plugin-stealth")();
 chromium.use(stealth);
-import { Session, updateCookies, profilePath } from "./session-manager";
+import { Session, updateCookies } from "./session-manager";
 
 interface PublishOptions {
   session: Session;
@@ -14,22 +14,27 @@ interface PublishOptions {
 export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: string; publishedAt: string }> {
   const { session, title, content, tags } = opts;
 
-  // 영구 프로필로 시작 - 로그인 상태 유지됨
-  const context = await chromium.launchPersistentContext(profilePath(session.userId), {
+  const browser = await chromium.launch({
     headless: false,
     args: ["--no-sandbox", "--disable-blink-features=AutomationControlled"],
+  });
+  const context = await browser.newContext({
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     viewport: { width: 1366, height: 768 },
     locale: "ko-KR",
   });
+  await context.addCookies(session.cookies);
 
   try {
-    const page = context.pages()[0] || await context.newPage();
+    const page = await context.newPage();
+
+    console.log("[naver] 쿠키 적용 중...");
+    await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(2000);
+
     const blogId = session.blogName || session.username;
-    
     console.log("[naver] 글쓰기 진입:", blogId);
     
-    // 글쓰기 페이지 이동 - 새 탭 감지
     const pagePromise = context.waitForEvent("page", { timeout: 15000 }).catch(() => null);
     await page.goto(`https://blog.naver.com/${blogId}?Redirect=Write&`, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForTimeout(3000);
@@ -107,12 +112,12 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
 
     const cookies = await context.cookies();
     await updateCookies(session.userId, cookies);
-    await context.close();
+    await browser.close();
 
     console.log("[naver] 발행 완료:", postUrl);
     return { postUrl, publishedAt: new Date().toISOString() };
   } catch (e) {
-    await context.close();
+    await browser.close();
     throw e;
   }
 }
