@@ -76,7 +76,7 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
       const editorBody = editorFrame.locator("[contenteditable='true']").first();
       await editorBody.click();
       await writePage.waitForTimeout(300);
-      await writePage.evaluate((text) => navigator.clipboard.writeText(text).catch(() => {}), content);
+      await writePage.evaluate((text: string) => navigator.clipboard.writeText(text).catch(() => {}), content);
       await writePage.keyboard.press("Control+v");
     } catch {
       await writePage.click("[contenteditable='true']").catch(() => {});
