@@ -60,7 +60,6 @@ const NAV_ITEMS = [
   { path: "/template", icon: Palette, label: "템플릿 선택", labelEn: "Template", pink: false },
   { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images", pink: false },
   { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy", pink: false },
-  { path: "/naver", icon: Rss, label: "자동 발행", labelEn: "Auto Publish", pink: false, yellow: true },
   { path: "/campaigns", icon: Gift, label: "체험단 허브", labelEn: "Campaigns", pink: true },
   { path: "/mypage", icon: User, label: "마이페이지", labelEn: "My Page", pink: false },
   { path: "/settings", icon: Settings, label: "설정", labelEn: "Settings", pink: false },
