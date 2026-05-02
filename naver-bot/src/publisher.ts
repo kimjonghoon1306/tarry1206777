@@ -21,84 +21,79 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
     viewport: { width: 1366, height: 768 },
   });
   await context.addCookies(session.cookies);
-  const page = await context.newPage();
 
   try {
-    // 네이버 메인 먼저 방문해서 쿠키 적용
+    const page = await context.newPage();
+
+    // 네이버 메인 방문
     console.log("[naver] 쿠키 적용 중...");
     await page.goto("https://www.naver.com", { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForTimeout(2000);
 
-    // 글쓰기 진입
-    console.log("[naver] 글쓰기 진입...");
+    // 블로그 홈 방문
     const blogId = session.blogName || session.username;
-    await page.goto(`https://blog.naver.com/${blogId}`, {
-      waitUntil: "domcontentloaded", timeout: 60000,
-    });
+    console.log("[naver] 블로그 진입:", blogId);
+    await page.goto(`https://blog.naver.com/${blogId}`, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForTimeout(3000);
 
-    // 로그인 여부 확인
-    const currentUrl = page.url();
-    console.log("[naver] 현재 URL:", currentUrl);
-    if (currentUrl.includes("nidlogin") || currentUrl.includes("login.naver")) {
-      throw new Error("네이버 세션 만료. 재연결 필요");
-    }
-
-    // 글쓰기 버튼 클릭
+    // 글쓰기 새 탭 감지
     console.log("[naver] 글쓰기 버튼 클릭...");
-    try {
-      await page.click("a.btn_write, a[href*='Redirect=Write'], .link_write");
-    } catch {
-      // 버튼 못 찾으면 텍스트로 찾기
-      await page.getByText("글쓰기").first().click().catch(() => {});
-    }
-    await page.waitForTimeout(5000);
-    console.log("[naver] 글쓰기 후 URL:", page.url());
+    const [newPage] = await Promise.all([
+      context.waitForEvent("page", { timeout: 10000 }).catch(() => null),
+      page.click(".btn_write, a[href*='Redirect=Write'], .link_write").catch(async () => {
+        await page.getByText("글쓰기").first().click().catch(() => {});
+      }),
+    ]);
+
+    const writePage = newPage ?? page;
+    await writePage.bringToFront();
+    await writePage.waitForLoadState("domcontentloaded");
+    await writePage.waitForTimeout(5000);
+    console.log("[naver] 글쓰기 URL:", writePage.url());
 
     // 에디터 로드 대기
-    await page.waitForSelector(".se-placeholder, .se-title-input, .se-document, [contenteditable]", { timeout: 30000 });
-    await page.waitForTimeout(3000);
+    await writePage.waitForSelector(".se-placeholder, .se-title-input, [contenteditable]", { timeout: 30000 });
+    await writePage.waitForTimeout(3000);
 
     // 제목 입력
     console.log("[naver] 제목 입력...");
     try {
-      const titleFrame = page.frameLocator(".se-title-input iframe, iframe[name*='title']").first();
+      const titleFrame = writePage.frameLocator(".se-title-input iframe").first();
       await titleFrame.locator("[contenteditable='true']").fill(title).catch(async () => {
-        await page.click(".se-title-input, .PostTitleInput, input[placeholder*='제목']").catch(() => {});
-        await page.keyboard.type(title, { delay: 20 });
+        await writePage.click(".se-title-input").catch(() => {});
+        await writePage.keyboard.type(title, { delay: 20 });
       });
     } catch {
-      await page.click(".se-title-input").catch(() => {});
-      await page.keyboard.type(title, { delay: 20 });
+      await writePage.click(".se-title-input").catch(() => {});
+      await writePage.keyboard.type(title, { delay: 20 });
     }
-    await page.waitForTimeout(500);
+    await writePage.waitForTimeout(500);
 
     // 본문 입력
     console.log("[naver] 본문 입력...");
     try {
-      const editorFrame = page.frameLocator(".se-main-section iframe, .se-editor iframe").first();
-      const editorBody = editorFrame.locator("[contenteditable='true'], .se-content").first();
+      const editorFrame = writePage.frameLocator(".se-main-section iframe").first();
+      const editorBody = editorFrame.locator("[contenteditable='true']").first();
       await editorBody.click();
-      await page.waitForTimeout(300);
-      await page.evaluate((text) => navigator.clipboard.writeText(text).catch(() => {}), content);
-      await page.keyboard.press("Control+v");
+      await writePage.waitForTimeout(300);
+      await writePage.evaluate((text) => navigator.clipboard.writeText(text).catch(() => {}), content);
+      await writePage.keyboard.press("Control+v");
     } catch {
-      console.warn("[naver] iframe 접근 실패, 직접 입력 시도");
-      await page.click(".se-content, .se-paragraph-text, [contenteditable='true']").catch(() => {});
-      await page.keyboard.type(content.slice(0, 2000), { delay: 5 });
+      await writePage.click("[contenteditable='true']").catch(() => {});
+      await writePage.keyboard.type(content.slice(0, 2000), { delay: 5 });
     }
-    await page.waitForTimeout(800);
+    await writePage.waitForTimeout(800);
 
     // 태그 입력
     if (tags.length > 0) {
       try {
-        const tagInput = await page.$(".tag_input, input[placeholder*='태그'], .se-tag");
+        const tagInput = await writePage.$(".tag_input, input[placeholder*='태그']");
         if (tagInput) {
           await tagInput.click();
           for (const tag of tags.slice(0, 10)) {
             await tagInput.type(tag);
-            await page.keyboard.press("Enter");
-            await page.waitForTimeout(150);
+            await writePage.keyboard.press("Enter");
+            await writePage.waitForTimeout(150);
           }
         }
       } catch { console.warn("[naver] 태그 입력 실패"); }
@@ -106,21 +101,21 @@ export async function publishToNaver(opts: PublishOptions): Promise<{ postUrl?: 
 
     // 발행
     console.log("[naver] 발행 처리...");
-    const publishBtn = await page.$("button[data-action='publish'], button:has-text('발행'), .publish_btn, .se-publish-button");
+    const publishBtn = await writePage.$("button[data-action='publish'], button:has-text('발행'), .publish_btn");
     if (!publishBtn) throw new Error("발행 버튼 없음");
     await publishBtn.click();
-    await page.waitForTimeout(2000);
+    await writePage.waitForTimeout(2000);
 
     // 팝업 처리
     try {
-      const publicBtn = await page.$("label:has-text('전체공개'), input[value='0']");
+      const publicBtn = await writePage.$("label:has-text('전체공개'), input[value='0']");
       if (publicBtn) await publicBtn.click();
-      const confirmBtn = await page.$("button.btn_publish, button:has-text('발행'), .confirm_btn");
+      const confirmBtn = await writePage.$("button.btn_publish, button:has-text('발행')");
       if (confirmBtn) await confirmBtn.click();
-    } catch { console.warn("[naver] 발행 팝업 처리 중 경고"); }
+    } catch { console.warn("[naver] 발행 팝업 경고"); }
 
-    await page.waitForTimeout(3000);
-    const postUrl = page.url();
+    await writePage.waitForTimeout(3000);
+    const postUrl = writePage.url();
 
     const cookies = await context.cookies();
     await updateCookies(session.userId, cookies);
