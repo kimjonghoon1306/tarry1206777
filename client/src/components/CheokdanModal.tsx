@@ -143,59 +143,43 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
   // ── 미리보기 렌더러 ──
   function renderPreview(text: string): string {
     if (!text) return "";
-    // 300자 단위 이미지 마커 삽입
-    const hashtagIdx = text.lastIndexOf("\n");
-    const lastLine = hashtagIdx >= 0 ? text.slice(hashtagIdx+1).trim() : "";
-    let body = /^#/.test(lastLine) ? text.slice(0, hashtagIdx).trimEnd() : text;
-    const hashSuffix = /^#/.test(lastLine) ? lastLine : "";
-    const lines = body.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-    const title = lines[0] || "";
-    let bodyLines = lines.slice(1);
-    if (bodyLines[0] === title) bodyLines = bodyLines.slice(1);
-    const CHUNK = 300;
-    const chunks: string[] = [];
-    let buf = "";
-    for (const l of bodyLines) {
-      if (buf.length > 0 && buf.length + l.length + 1 > CHUNK) { chunks.push(buf.trim()); buf = l; }
-      else { buf = buf ? buf + "\n" + l : l; }
-    }
-    if (buf.trim()) chunks.push(buf.trim());
-
-    const parts: string[] = [];
-    if (title) parts.push(`<div class="ckd-pv-title">${title}</div>`);
-    for (const chunk of chunks) {
-      parts.push(`<div class="ckd-pv-img">📸 여기에 사진 삽입</div>`);
-      const html = chunk.split("\n").map(l => {
-        if (!l.trim()) return "";
-        return `<p class="ckd-pv-p">${l.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>`;
-      }).join("");
-      parts.push(html);
-    }
-    if (hashSuffix) parts.push(`<div class="ckd-pv-hash">${hashSuffix}</div>`);
-    return parts.join("");
+    const lines = text.split("\n");
+    const html = lines.map(line => {
+      const l = line.trim();
+      if (!l) return "";
+      // 📸 마커
+      if (/^\[📸/.test(l)) {
+        const desc = l.replace(/^\[📸\s*/, "").replace(/\]$/, "").trim();
+        return `<div class="ckd-pv-img">📸 ${desc || "사진을 여기에 삽입하세요"}</div>`;
+      }
+      // 🎬 마커
+      if (/^\[🎬/.test(l)) {
+        const desc = l.replace(/^\[🎬\s*/, "").replace(/\]$/, "").trim();
+        return `<div class="ckd-pv-vid">🎬 ${desc || "영상을 여기에 삽입하세요"}</div>`;
+      }
+      // 해시태그
+      if (l.startsWith("#")) return `<div class="ckd-pv-hash">${l.replace(/&/g,"&amp;")}</div>`;
+      // 일반 텍스트
+      return `<p class="ckd-pv-p">${l.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>`;
+    }).join("");
+    return html;
   }
 
   function copyResult() {
     if (!result) return;
-    // 📸 이미지 위치 마커 자동 삽입 (300자 단위)
-    const lines = result.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-    const hashIdx = lines.findIndex(l => l.startsWith("#"));
-    const contentLines = hashIdx > 0 ? lines.slice(0, hashIdx) : lines;
-    const hashLines = hashIdx > 0 ? lines.slice(hashIdx) : [];
-    const CHUNK = 300;
-    const chunks: string[] = [];
-    let buf = "";
-    for (const line of contentLines) {
-      if (buf.length > 0 && buf.length + line.length + 1 > CHUNK) {
-        chunks.push(buf.trim()); buf = line;
-      } else { buf = buf ? buf + "\n" + line : line; }
-    }
-    if (buf.trim()) chunks.push(buf.trim());
-    const parts: string[] = chunks.length > 1
-      ? [chunks[0], ...chunks.slice(1).flatMap(c => ["📸 [여기에 사진 삽입]", c])]
-      : contentLines;
-    const final = [...parts, ...(hashLines.length ? ["", hashLines.join(" ")] : [])].join("\n\n");
-    navigator.clipboard.writeText(final).then(() => toast.success("📋 복사됐어요! 네이버 블로그에 붙여넣으세요 🎉", { duration: 4000 }));
+    // AI가 생성한 [📸 ...] [🎬 ...] 마커를 네이버에서 눈에 잘 보이는 형태로 변환
+    const formatted = result
+      .replace(/\[📸\s*([^\]]+)\]/g, (_: string, desc: string) =>
+        `\n━━━━━━━━━━━━━━━━━━━━━━\n📸 ${desc.trim()}\n━━━━━━━━━━━━━━━━━━━━━━\n`
+      )
+      .replace(/\[🎬\s*([^\]]+)\]/g, (_: string, desc: string) =>
+        `\n▶▶▶ 🎬 ${desc.trim()} ◀◀◀\n`
+      )
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    navigator.clipboard.writeText(formatted).then(() =>
+      toast.success("📋 복사 완료! 📸 위치에 사진을, 🎬 위치에 영상을 삽입하세요!", { duration: 5000 })
+    );
   }
 
   function addMenu() { setMenus(m => [...m, { name:"", price:"" }]); }
@@ -591,7 +575,8 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   <div style={{ height:"100%", overflowY:"auto" }}>
                     <style>{`
                       .ckd-pv-title{font-size:17px;font-weight:900;color:${t.text};margin-bottom:14px;line-height:1.5}
-                      .ckd-pv-img{background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};border:2px dashed rgba(107,203,119,0.5);border-radius:12px;padding:18px;text-align:center;color:#6bcb77;font-weight:800;font-size:13px;margin:14px 0}
+                      .ckd-pv-img{background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};border:2px dashed rgba(107,203,119,0.5);border-radius:12px;padding:16px;text-align:center;color:#6bcb77;font-weight:800;font-size:13px;margin:12px 0}
+                      .ckd-pv-vid{background:${dark?"rgba(77,150,255,0.12)":"rgba(77,150,255,0.18)"};border:2px dashed rgba(77,150,255,0.5);border-radius:12px;padding:16px;text-align:center;color:#4d96ff;font-weight:800;font-size:13px;margin:12px 0}
                       .ckd-pv-p{font-size:13px;color:${t.text};line-height:1.85;margin:0 0 8px}
                       .ckd-pv-hash{font-size:12px;color:#4d96ff;margin-top:16px;line-height:1.7;font-weight:600}
                     `}</style>
