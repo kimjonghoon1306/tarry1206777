@@ -1653,9 +1653,14 @@ export default function DeploymentPage() {
           .replace(/참고자료시작[\s\S]*?\[참고자료끝\]/g, "")
           .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, "")
           .replace(/관련글시작[\s\S]*?\[관련글끝\]/g, "")
+          .replace(/^Q\d+\s*[:.：][\s\S]*?(?=^Q\d+\s*[:.：]|^LINK\d+\s*[:.：]|^POST\d+\s*[:.：]|$)/gm, "")
+          .replace(/^A\d+\s*[:.：].*/gm, "")
+          .replace(/^LINK\d+\s*[:.：].*/gm, "")
+          .replace(/^POST\d+\s*[:.：].*/gm, "")
           .replace(/^#{1,3}\s+/gm, "")
           .replace(/\*\*(.*?)\*\*/g, "$1")
           .replace(/\*(.*?)\*/g, "$1")
+          .replace(/\n{3,}/g, "\n\n")
           .trim();
         if (clean) lines.push(clean);
       } else if (b.type === "image-pair") {
