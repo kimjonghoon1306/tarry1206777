@@ -2080,10 +2080,105 @@ export default function DeploymentPage() {
                 이미지 삽입 · 글 편집 · 발행
               </p>
             </div>
-            <div className="flex items-center gap-1.5 overflow-x-auto sm:flex-wrap sm:justify-end"
-              style={{ scrollbarWidth:"none", WebkitOverflowScrolling:"touch" }}>
-              <style>{`.deploy-tb::-webkit-scrollbar{display:none}`}</style>
-              {/* 쿠팡파트너스 링크 버튼 */}
+
+            {/* 모바일: 2줄 레이아웃 */}
+            <div className="flex sm:hidden flex-col gap-1.5">
+              {/* 모바일 1줄: 보조 버튼 */}
+              <div className="flex items-center gap-1.5">
+                {userGet("coupang_access_key") && (
+                  <Button size="sm" className="gap-1 h-8 px-2.5 flex-shrink-0"
+                    style={{ background: "#C00F0C", color: "white" }}
+                    onClick={fetchCoupangLinks} disabled={coupangLoading}>
+                    {coupangLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShoppingCart className="w-3.5 h-3.5" />}
+                    <span className="text-xs">쿠팡</span>
+                  </Button>
+                )}
+                <button className="flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-semibold flex-shrink-0"
+                  style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
+                  onClick={() => { if (confirm("이미지를 초기화할까요?")) handleReset("image"); }}>
+                  <Image className="w-3.5 h-3.5" /><span>이미지초기화</span>
+                </button>
+                <button className="flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-semibold flex-shrink-0"
+                  style={{ background: "rgba(245,158,11,0.12)", color: "#d97706", border: "1px solid rgba(245,158,11,0.3)" }}
+                  onClick={() => { if (confirm("글을 초기화할까요?")) handleReset("content"); }}>
+                  <FileText className="w-3.5 h-3.5" /><span>글초기화</span>
+                </button>
+              </div>
+              {/* 모바일 2줄: 주요 버튼 */}
+              <div className="flex items-center gap-1.5">
+                {/* N복사 - 바텀시트 */}
+                <button className="flex items-center gap-1 px-3 h-9 rounded-lg text-sm font-bold flex-1"
+                  style={{ background: "#03C75A", color: "white" }}
+                  onClick={() => setShowNaverMenu(v => !v)}>
+                  <Copy className="w-4 h-4" /><span>N복사</span><span style={{fontSize:10}}>▲</span>
+                </button>
+                <button className="flex items-center justify-center gap-1 px-3 h-9 rounded-lg text-sm font-black flex-1"
+                  style={{ background:"linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#c77dff)", color:"#000" }}
+                  onClick={() => setShowCheokdan(true)}>
+                  🍽️<span className="text-xs font-black">체험단</span>
+                </button>
+                <button className="flex items-center justify-center gap-1 px-3 h-9 rounded-lg text-sm font-bold flex-1"
+                  style={{ background: "oklch(0.62 0.22 300)", color: "white" }}
+                  onClick={() => setShowPreview(true)}>
+                  <Eye className="w-4 h-4" /><span className="text-xs">미리보기</span>
+                </button>
+                <button className="flex items-center justify-center gap-1 px-3 h-9 rounded-lg text-sm font-bold flex-1"
+                  style={{ background: "var(--color-emerald)", color: "white", opacity: (isPublishing || selectedPlatforms.length === 0) ? 0.5 : 1 }}
+                  disabled={isPublishing || selectedPlatforms.length === 0}
+                  onClick={handlePublish}>
+                  <Send className="w-4 h-4" /><span className="text-xs">{isPublishing ? "발행중" : "발행"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 모바일 N복사 바텀시트 */}
+            {showNaverMenu && (
+              <div className="sm:hidden">
+                <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setShowNaverMenu(false)} />
+                <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl overflow-hidden"
+                  style={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)" }}>
+                  <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                    <div className="w-10 h-1 rounded-full mx-auto mb-3" style={{ background: "rgba(255,255,255,0.2)" }} />
+                    <p className="text-sm font-bold text-white">📋 복사 방식 선택</p>
+                    <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>글 종류에 맞게 선택하세요</p>
+                  </div>
+                  <button className="w-full text-left px-4 py-4 border-b active:scale-[0.98]"
+                    style={{ background: "rgba(3,199,90,0.15)", borderColor: "rgba(255,255,255,0.08)" }}
+                    onClick={() => { copyForNaver(); setShowNaverMenu(false); }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#03C75A", color: "white" }}>전체</span>
+                      <span className="text-sm font-bold text-white">전체 복사</span>
+                    </div>
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>본문 + FAQ + 참고자료 + 관련글</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#4ade80" }}>✓ 정보성 글 · 리뷰 · 튜토리얼</p>
+                  </button>
+                  <button className="w-full text-left px-4 py-4 border-b active:scale-[0.98]"
+                    style={{ background: "rgba(251,191,36,0.12)", borderColor: "rgba(255,255,255,0.08)" }}
+                    onClick={() => { copyForNaverWithFaq(); setShowNaverMenu(false); }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#fbbf24", color: "#000" }}>FAQ</span>
+                      <span className="text-sm font-bold text-white">본문 + FAQ 복사</span>
+                    </div>
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>참고자료·관련글 제외, Q&A 포함</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#fbbf24" }}>✓ 일반 블로그 · 상품 리뷰</p>
+                  </button>
+                  <button className="w-full text-left px-4 py-4 active:scale-[0.98]"
+                    style={{ background: "rgba(244,114,182,0.12)" }}
+                    onClick={() => { copyForNaverBodyOnly(); setShowNaverMenu(false); }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#f472b6", color: "white" }}>본문</span>
+                      <span className="text-sm font-bold text-white">본문만 복사</span>
+                    </div>
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>FAQ·참고자료·관련글 전부 제외</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#f472b6" }}>✓ 체험단 · 맛집 · 여행 후기</p>
+                  </button>
+                  <div className="h-safe-bottom" style={{ height: "env(safe-area-inset-bottom, 12px)" }} />
+                </div>
+              </div>
+            )}
+
+            {/* PC: 기존 한줄 레이아웃 */}
+            <div className="hidden sm:flex items-center gap-2 flex-wrap justify-end">
               {userGet("coupang_access_key") && (
                 <Button size="sm" className="gap-1.5 h-9"
                   style={{ background: "#C00F0C", color: "white" }}
@@ -2092,8 +2187,7 @@ export default function DeploymentPage() {
                   {coupangLoading
                     ? <RefreshCw className="w-4 h-4 animate-spin" />
                     : <ShoppingCart className="w-4 h-4" />}
-                  <span className="hidden sm:inline">쿠팡 링크</span>
-                  <span className="sm:hidden">쿠팡</span>
+                  <span>쿠팡 링크</span>
                 </Button>
               )}
               {/* 초기화 버튼 그룹 */}
