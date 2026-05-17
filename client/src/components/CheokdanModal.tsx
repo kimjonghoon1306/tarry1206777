@@ -121,6 +121,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
           menus: menus.filter(m => m.name.trim()),
           tasteStar, atmosphereStar, serviceStar,
           highlight, weakness,
+          minChars: 1500,
         }),
       });
       const data = await resp.json();
@@ -325,7 +326,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
             background: dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
           }}>
             <div style={{ padding:"20px 18px" }}>
-              <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2, marginBottom:16, textTransform:"uppercase" }}>
+              <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2, marginBottom:16 }}>
                 사용 가이드
               </div>
               {GUIDE_STEPS.map((step, i) => (
@@ -344,7 +345,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                     </div>
                     <div>
                       <div style={{ fontSize:10, fontWeight:700, color:step.color, letterSpacing:1 }}>
-                        STEP {i+1}
+                        {i+1}단계
                       </div>
                       <div style={{ fontSize:14, fontWeight:800, color:t.text }}>{step.title}</div>
                     </div>
@@ -372,7 +373,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   borderRadius:12, padding:"14px 16px",
                 }}>
                   <div style={{ fontSize:12, fontWeight:900, color:"#ffd93d", marginBottom:8, display:"flex", alignItems:"center", gap:6 }}>
-                    <Sparkles size={14}/> PRO TIP
+                    <Sparkles size={14}/> 프로 팁
                   </div>
                   <div style={{ fontSize:12, color:t.muted, lineHeight:1.7 }}>
                     체험단 글은 <strong style={{color:t.text}}>솔직함</strong>이 생명이에요. 좋은 점만 나열하는 것보다 아쉬운 점도 살짝 언급하면 독자들에게 훨씬 신뢰감을 줄 수 있어요. 진짜 후기처럼 보이는 게 핵심!
@@ -388,7 +389,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
             minWidth:0,
           }}>
             <div className="ckd-form-inner" style={{ padding:"20px 22px" }}>
-              <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2, marginBottom:18, textTransform:"uppercase" }}>
+              <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2, marginBottom:18 }}>
                 체험단 정보 입력
               </div>
 
@@ -541,11 +542,21 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
           }}>
             <div style={{ padding:"14px 20px 10px", borderBottom:`1px solid ${t.border}`, flexShrink:0 }}>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2, textTransform:"uppercase" }}>
+                <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2 }}>
                   완성된 글
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  {result && <span style={{ fontSize:11, color:t.muted }}>{result.length.toLocaleString()}자</span>}
+                  {result && (
+                    <span style={{
+                      fontSize:11, fontWeight:700,
+                      color: result.length >= 1500 ? "#6bcb77" : "#ff6b6b",
+                      background: result.length >= 1500 ? "rgba(107,203,119,0.15)" : "rgba(255,107,107,0.15)",
+                      border: `1px solid ${result.length >= 1500 ? "rgba(107,203,119,0.4)" : "rgba(255,107,107,0.4)"}`,
+                      borderRadius:8, padding:"3px 8px",
+                    }}>
+                      {result.length.toLocaleString()}자 {result.length >= 1500 ? "✓" : `/ 1500자 필요`}
+                    </span>
+                  )}
                   {result && (
                     <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:`1px solid ${t.border}` }}>
                       <button onClick={()=>setPreviewMode(false)} style={{
@@ -603,6 +614,15 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
               )}
             </div>
 
+            {result && result.length < 1500 && (
+              <div style={{
+                margin:"0 20px 8px", padding:"10px 13px", borderRadius:10, flexShrink:0,
+                background:"rgba(255,107,107,0.12)", border:"1px solid rgba(255,107,107,0.35)",
+                fontSize:12, color:"#ff6b6b", lineHeight:1.6,
+              }}>
+                ⚠️ 현재 <strong>{result.length}자</strong>에요. 체험단 글은 <strong>1,500자 이상</strong>이어야 해요. '다시 생성하기'를 눌러보세요.
+              </div>
+            )}
             {result && (
               <div style={{ padding:"14px 20px", borderTop:`1px solid ${t.border}`, flexShrink:0, display:"flex", flexDirection:"column", gap:10 }}>
                 {/* 복사 방법 안내 */}
