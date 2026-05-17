@@ -214,19 +214,19 @@ export default async function handler(req, res) {
     }
   }
 
-    // ── OpenAI DALL-E 3 ─────────────────────────────────
-  // DALL-E 3는 1회 1장만 생성 가능 → 병렬로 여러 번 호출
+    // ── OpenAI gpt-image-1 ───────────────────────────────
+  // gpt-image-1: 1회 1장만 생성 가능 → 병렬로 여러 번 호출
   if (provider === "openai") {
-    // DALL-E 3 지원 사이즈 매핑
-    function toDallESize(s) {
+    // gpt-image-1 지원 사이즈 매핑
+    function toGptImageSize(s) {
       const [w, h] = (s || "1024x1024").split("x").map(Number);
       if (!w || !h) return "1024x1024";
       const ratio = w / h;
-      if (ratio > 1.4) return "1792x1024";  // 가로
-      if (ratio < 0.7) return "1024x1792";  // 세로
+      if (ratio > 1.4) return "1536x1024";  // 가로
+      if (ratio < 0.7) return "1024x1536";  // 세로
       return "1024x1024";                    // 정사각형
     }
-    const dallESize = toDallESize(size);
+    const gptImageSize = toGptImageSize(size);
 
     try {
       const requests = Array.from({ length: numImages }, () =>
@@ -237,12 +237,11 @@ export default async function handler(req, res) {
             Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model: "dall-e-3",
+            model: "gpt-image-1",
             prompt: optimizedPrompt,
             n: 1,
-            size: dallESize,
-            quality: "standard",
-            response_format: "url",
+            size: gptImageSize,
+            quality: "auto",
           }),
         })
       );
@@ -259,8 +258,14 @@ export default async function handler(req, res) {
           throw new Error(`OpenAI 오류 (${resp.status}): ${msg}`);
         }
         const data = await resp.json();
-        const url = data.data?.[0]?.url;
-        if (url) images.push(url);
+        const item = data.data?.[0];
+        // gpt-image-1은 b64_json 반환, url도 지원
+        const imgData = item?.url
+          ? item.url
+          : item?.b64_json
+            ? `data:image/png;base64,${item.b64_json}`
+            : null;
+        if (imgData) images.push(imgData);
       }
 
       if (images.length === 0) throw new Error("이미지가 생성되지 않았습니다.");
@@ -329,3 +334,4 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: "지원하지 않는 provider입니다 (gemini / openai / replicate)" });
 }
+
