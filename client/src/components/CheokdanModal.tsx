@@ -115,11 +115,11 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
   const RAINBOW = "linear-gradient(135deg, #ff6b6b 0%, #ffd93d 22%, #6bcb77 44%, #4d96ff 66%, #c77dff 88%, #ff6b6b 100%)";
 
-  // 1300자 미만이면 서버(/api/generate-content)에 이어쓰기 요청, 1500자 초과하면 자르기
+  // 1200자 미만이면 서버(/api/generate-content)에 이어쓰기 요청, 1500자 초과하면 자르기
   async function extendToMin(content: string, provider: string, apiKey: string): Promise<string> {
     let current = content;
     let attempts = 0;
-    while (current.length < 1300 && attempts < 3) {
+    while (current.length < 1200 && attempts < 3) {
       attempts++;
       try {
         const resp = await fetch("/api/generate-content", {
@@ -161,6 +161,61 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
     return current;
   }
 
+  // ── 후처리 파이프라인 (마커 정규화 + 한자 제거 + 해시태그 정리) ──
+  function postProcess(raw: string): string {
+    let s = raw
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/^#{1,6}\s+/gm, "")
+      // CJK 한자 전체 범위 제거 (한글·숫자·기호 유지)
+      .replace(/[\u2E80-\u2EFF\u2F00-\u2FDF\u3000-\u303F\u3200-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFE30-\uFE4F]/g, "")
+      .trim();
+
+    // 카메라·영상 이모지 변형 통일 (📷🤳 → 📸 / 🎥📹📽️ → 🎬)
+    s = s.replace(/📷|🤳/g, "📸").replace(/🎥|📹|📽️/g, "🎬");
+
+    // 괄호 없이 단독 이모지로 쓰인 경우 → [📸 설명] / [🎬 설명] 형식으로 변환
+    // 예: "맛있었어요. 📸 음식 클로즈업 사진 🎬..." → 각각 독립 마커로
+    s = s.replace(/(?<!\[)📸\s+([^📸🎬\[\n]{2,50}?)(?=\s*[.!?\n📸🎬\[]|$)/g,
+      (_, desc) => `[📸 ${desc.trim()}]`);
+    s = s.replace(/(?<!\[)🎬\s+([^📸🎬\[\n]{2,65}?)(?=\s*[.!?\n📸🎬\[]|$)/g,
+      (_, desc) => `[🎬 ${desc.trim()}]`);
+
+    // 마커를 독립 줄로 강제 분리 (3회 반복 → 연속·중첩 케이스 모두 처리)
+    for (let i = 0; i < 3; i++) {
+      s = s
+        .replace(/([^\n])(\[📸[^\]]*\])/g, "$1\n\n$2")
+        .replace(/([^\n])(\[🎬[^\]]*\])/g, "$1\n\n$2")
+        .replace(/(\[📸[^\]]*\])([^\n])/g, "$1\n\n$2")
+        .replace(/(\[🎬[^\]]*\])([^\n])/g, "$1\n\n$2");
+    }
+
+    // 해시태그 수집 → 맨 아래로 강제 이동
+    const tagSet = new Set<string>();
+    const bodyLines: string[] = [];
+
+    for (const line of s.split("\n")) {
+      const trimmed = line.trim();
+      // 순수 해시태그 줄 (예: "#맛집 #한식 #체험단")
+      if (trimmed && /^(#[^\s]+\s*)+$/.test(trimmed)) {
+        (trimmed.match(/#[^\s]+/g) || []).forEach(tag => tagSet.add(tag));
+        continue;
+      }
+      // 마커 줄이 아닌데 해시태그가 섞인 줄 → 태그만 분리
+      if (!trimmed.startsWith("[") && /#[가-힣\w]/.test(trimmed)) {
+        (trimmed.match(/#[^\s]+/g) || []).forEach(tag => tagSet.add(tag));
+        const clean = trimmed.replace(/#[^\s]+/g, "").replace(/\s{2,}/g, " ").trim();
+        if (clean) bodyLines.push(clean);
+        continue;
+      }
+      bodyLines.push(line);
+    }
+
+    let body = bodyLines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    if (tagSet.size > 0) body += `\n\n${[...tagSet].join(" ")}`;
+    return body;
+  }
+
   async function generate() {
     if (!shopName.trim()) { toast.error("가게명을 입력해주세요!"); return; }
     setLoading(true);
@@ -181,46 +236,33 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
           menus: menus.filter(m => m.name.trim()),
           tasteStar, atmosphereStar, serviceStar,
           highlight, weakness,
-          minChars: 1300,
+          minChars: 1200,
           maxChars: 1499,
-          // 핵심 지시: 한자 절대 금지, 글자수 1300~1499자, 사진 15장/영상 3개 위치 명시
           systemInstructions: [
-            "절대 한자(漢字)를 사용하지 마세요. 한자가 포함되면 무조건 한글로 변환하세요.",
-            "완성된 글의 총 글자수는 반드시 1300자 이상 1499자 이하여야 합니다.",
-            "【마커 배치 규칙 — 절대 어기지 마세요】",
-            "[📸 ...] 마커와 [🎬 ...] 마커는 반드시 독립된 한 줄에 단독으로 배치하세요.",
-            "마커는 절대 문장 중간이나 문장 끝에 붙이면 안 됩니다.",
-            "마커 앞뒤에 반드시 빈 줄(\\n\\n)을 넣어 텍스트 단락과 완전히 분리하세요.",
-            "올바른 예시: '...음식이 맛있었어요.\\n\\n[📸 메인 메뉴 클로즈업]\\n\\n서비스도 훌륭했어요...'",
-            "잘못된 예시: '...음식이 맛있었어요. [📸 메인 메뉴] 서비스도...' — 이렇게 하면 절대 안 됩니다.",
-            "[📸 사진설명] 마커를 정확히 15개 배치하세요: ①외관 2개 ②내부 2개 ③메뉴판 1개 ④세팅 1개 ⑤메인메뉴 3개 ⑥사이드 2개 ⑦분위기 2개 ⑧디저트/영수증 1개 ⑨마무리 1개.",
-            "[🎬 영상설명] 마커를 정확히 3개 배치하세요: ①입장/외관 영상 ②음식 영상 ③분위기 영상.",
+            "【필수 규칙 — 위반 시 무효】",
+            "① 한글로만 작성. 한자·영문·특수기호 절대 금지.",
+            "② 총 글자수 1,200자 이상 1,499자 이하.",
+            "③ 해시태그(#단어)는 글 맨 마지막 줄에만 5개 이상. 본문 중간 절대 금지.",
+            "【마커 형식 — 반드시 독립 줄, 앞뒤 빈 줄 필수】",
+            "올바른 예: '음식이 맛있었어요.\\n\\n[📸 메인 메뉴 클로즈업]\\n\\n서비스도 훌륭했어요.'",
+            "금지 예: '맛있었어요. [📸 메인 메뉴] 서비스도...' 또는 '맛있었어요. 📸 메뉴 사진 서비스...'",
+            "[📸 설명] 정확히 15개: 외관2·내부2·메뉴판1·세팅1·메인메뉴3·사이드2·분위기2·디저트/영수증1·마무리1",
+            "[🎬 설명] 정확히 3개: 입장영상·음식영상·분위기영상",
+            "【글 품질】",
+            "실제 방문한 사람이 쓴 생생한 후기처럼 작성. 맛·향·식감·분위기를 구체적 감각 표현으로 묘사.",
+            "스토리텔링 구조: 방문 전 기대 → 입장 → 주문 → 식사 → 총평.",
+            "장점과 아쉬운 점을 자연스럽게 섞어 신뢰감 있는 솔직한 후기 스타일로 작성.",
+            "문장 길이를 다양하게 하여 리듬감을 살리세요.",
           ].join(" "),
         }),
       });
       const data = await resp.json();
       if (!resp.ok || data.error) throw new Error(data.error || "생성 실패");
 
-      let content = (data.content || "")
-        .replace(/\*\*(.*?)\*\*/g, "$1")
-        .replace(/\*(.*?)\*/g, "$1")
-        .replace(/^#{1,3}\s+/gm, "")
-        // 한자 완전 제거
-        .replace(/[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]/g, "")
-        .replace(/\s{2,}/g, " ")
-        // ★ 핵심: 마커가 문장 중간에 있으면 앞뒤로 줄바꿈 강제 삽입
-        // "[📸 ...]" 또는 "[🎬 ...]"가 줄 시작이 아닐 경우 앞에 \n\n 추가
-        .replace(/([^\n])(\[📸[^\]]*\])/g, "$1\n\n$2")
-        .replace(/([^\n])(\[🎬[^\]]*\])/g, "$1\n\n$2")
-        // 마커 뒤에도 줄바꿈 보장
-        .replace(/(\[📸[^\]]*\])([^\n])/g, "$1\n\n$2")
-        .replace(/(\[🎬[^\]]*\])([^\n])/g, "$1\n\n$2")
-        // 3줄 이상 빈 줄 정리
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
+      let content = postProcess(data.content || "");
 
-      // 1300자 미만이면 자동으로 이어쓰기
-      if (content.length < 1300) {
+      // 1200자 미만이면 자동으로 이어쓰기
+      if (content.length < 1200) {
         toast.info("✍️ 글이 짧아서 자동으로 보완 중이에요...", { duration: 4000 });
         content = await extendToMin(content, provider, apiKey);
       }
@@ -250,13 +292,8 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
   function renderPreview(text: string): string {
     if (!text) return "";
 
-    // 1단계: 혹시라도 마커가 인라인에 있으면 독립 줄로 분리 (이중 안전망)
-    const normalized = text
-      .replace(/([^\n])(\[📸[^\]]*\])/g, "$1\n\n$2")
-      .replace(/([^\n])(\[🎬[^\]]*\])/g, "$1\n\n$2")
-      .replace(/(\[📸[^\]]*\])([^\n])/g, "$1\n\n$2")
-      .replace(/(\[🎬[^\]]*\])([^\n])/g, "$1\n\n$2")
-      .replace(/\n{3,}/g, "\n\n");
+    // 1단계: postProcess로 정규화 (마커 분리 + 해시태그 정리 이중 안전망)
+    const normalized = postProcess(text).replace(/\n{3,}/g, "\n\n");
 
     // 2단계: 줄 단위 렌더링
     const lines = normalized.split("\n");
@@ -286,12 +323,8 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
   function copyResult() {
     if (!result) return;
-    const formatted = result
-      // 마커가 인라인에 있을 경우 독립 줄로 분리 (최후 안전망)
-      .replace(/([^\n])(\[📸[^\]]*\])/g, "$1\n\n$2")
-      .replace(/([^\n])(\[🎬[^\]]*\])/g, "$1\n\n$2")
-      .replace(/(\[📸[^\]]*\])([^\n])/g, "$1\n\n$2")
-      .replace(/(\[🎬[^\]]*\])([^\n])/g, "$1\n\n$2")
+    const clean = postProcess(result);
+    const formatted = clean
       // 네이버 블로그 붙여넣기용 마커 변환
       .replace(/\[📸\s*([^\]]+)\]/g, (_: string, desc: string) =>
         `\n\n━━━━━━━━━━━━━━━━━\n📸 사진 삽입 위치: ${desc.trim()}\n━━━━━━━━━━━━━━━━━\n`
@@ -371,9 +404,9 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
               <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                 <span style={{
                   fontSize:11, fontWeight:700, borderRadius:8, padding:"3px 8px",
-                  color: result.length >= 1300 && result.length < 1500 ? "#6bcb77" : "#ff6b6b",
-                  background: result.length >= 1300 && result.length < 1500 ? "rgba(107,203,119,0.15)" : "rgba(255,107,107,0.15)",
-                  border: `1px solid ${result.length >= 1300 && result.length < 1500 ? "rgba(107,203,119,0.4)" : "rgba(255,107,107,0.4)"}`,
+                  color: result.length >= 1200 && result.length < 1500 ? "#6bcb77" : "#ff6b6b",
+                  background: result.length >= 1200 && result.length < 1500 ? "rgba(107,203,119,0.15)" : "rgba(255,107,107,0.15)",
+                  border: `1px solid ${result.length >= 1200 && result.length < 1500 ? "rgba(107,203,119,0.4)" : "rgba(255,107,107,0.4)"}`,
                 }}>
                   {result.length.toLocaleString()}자
                 </span>
@@ -830,12 +863,12 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   {result && (
                     <span style={{
                       fontSize:11, fontWeight:700,
-                      color: result.length >= 1300 && result.length < 1500 ? "#6bcb77" : result.length >= 1500 ? "#ffd93d" : "#ff6b6b",
-                      background: result.length >= 1300 && result.length < 1500 ? "rgba(107,203,119,0.15)" : result.length >= 1500 ? "rgba(255,217,61,0.15)" : "rgba(255,107,107,0.15)",
-                      border: `1px solid ${result.length >= 1300 && result.length < 1500 ? "rgba(107,203,119,0.4)" : result.length >= 1500 ? "rgba(255,217,61,0.4)" : "rgba(255,107,107,0.4)"}`,
+                      color: result.length >= 1200 && result.length < 1500 ? "#6bcb77" : result.length >= 1500 ? "#ffd93d" : "#ff6b6b",
+                      background: result.length >= 1200 && result.length < 1500 ? "rgba(107,203,119,0.15)" : result.length >= 1500 ? "rgba(255,217,61,0.15)" : "rgba(255,107,107,0.15)",
+                      border: `1px solid ${result.length >= 1200 && result.length < 1500 ? "rgba(107,203,119,0.4)" : result.length >= 1500 ? "rgba(255,217,61,0.4)" : "rgba(255,107,107,0.4)"}`,
                       borderRadius:8, padding:"3px 8px",
                     }}>
-                      {result.length.toLocaleString()}자 {result.length >= 1300 && result.length < 1500 ? "✓ 적정" : result.length >= 1500 ? "⚠️ 초과" : `/ 1300자 필요`}
+                      {result.length.toLocaleString()}자 {result.length >= 1200 && result.length < 1500 ? "✓ 적정" : result.length >= 1500 ? "⚠️ 초과" : `/ 1200자 필요`}
                     </span>
                   )}
                   {result && (
@@ -882,13 +915,13 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
               )}
             </div>
 
-            {result && result.length < 1300 && (
+            {result && result.length < 1200 && (
               <div style={{
                 margin:"0 20px 8px", padding:"10px 13px", borderRadius:10, flexShrink:0,
                 background:"rgba(255,107,107,0.12)", border:"1px solid rgba(255,107,107,0.35)",
                 fontSize:12, color:"#ff6b6b", lineHeight:1.6,
               }}>
-                ⚠️ 현재 <strong>{result.length}자</strong>에요. 체험단 글은 <strong>1,300자 이상</strong>이어야 해요. '다시 생성하기'를 눌러보세요.
+                ⚠️ 현재 <strong>{result.length}자</strong>에요. 체험단 글은 <strong>1,200자 이상</strong>이어야 해요. '다시 생성하기'를 눌러보세요.
               </div>
             )}
             {result && (
