@@ -121,7 +121,7 @@ export default async function handler(req, res) {
 - 마크다운 기호(*, #) 절대 사용 금지, 일반 텍스트만
 - FAQ/참고자료/관련글 절대 금지
 - 반드시 완전히 끝마칠 것 (마침표/느낌표로 마무리)
-- 총 글자수 1500자 내외 (마커 제외)
+- 총 글자수 반드시 1500자 이상 (마커 제외, 짧으면 절대 안 됨)
 
 [필수 구조 - 아래 순서와 마커를 정확히 그대로 사용할 것]
 
@@ -190,6 +190,50 @@ export default async function handler(req, res) {
       return res.json({ content });
     } catch(e) {
       return res.status(500).json({ error: e.message || "체험단 글 생성 오류" });
+    }
+  }
+  // ─────────────────────────────────────────────────────────
+
+  // ── extend 모드: 기존 글 이어쓰기 ────────────────────────
+  if (req.body.extendMode) {
+    const { existingContent, shopName: sn } = req.body;
+    const needed = 1500 - (existingContent || "").length;
+    const extPrompt = `아래 체험단 블로그 글이 현재 ${(existingContent||"").length}자로 짧아요. 최소 ${needed}자 이상 자연스럽게 이어서 써주세요. 추가 내용만 출력하고 기존 글은 반복하지 마세요. 마크다운(**,#)은 쓰지 마세요.\n\n기존 글:\n${existingContent}`;
+    try {
+      let added = "";
+      if (provider === "gemini") {
+        const models = ["gemini-2.0-flash","gemini-2.5-flash","gemini-1.5-flash"];
+        for (const model of models) {
+          try {
+            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+              { method:"POST", headers:{"Content-Type":"application/json"},
+                body: JSON.stringify({ contents:[{parts:[{text:extPrompt}]}], generationConfig:{maxOutputTokens:2048,temperature:0.7} }) });
+            if (!r.ok) continue;
+            const d = await r.json();
+            const t = d.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (t) { added = t; break; }
+          } catch {}
+        }
+      } else if (provider === "openai") {
+        const r = await fetch("https://api.openai.com/v1/chat/completions",
+          { method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${apiKey}`},
+            body: JSON.stringify({ model:"gpt-4o-mini", messages:[{role:"user",content:extPrompt}], max_tokens:2048 }) });
+        const d = await r.json(); added = d.choices?.[0]?.message?.content || "";
+      } else if (provider === "groq") {
+        const r = await fetch("https://api.groq.com/openai/v1/chat/completions",
+          { method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${apiKey}`},
+            body: JSON.stringify({ model:"llama-3.3-70b-versatile", messages:[{role:"user",content:extPrompt}], max_tokens:2048 }) });
+        const d = await r.json(); added = d.choices?.[0]?.message?.content || "";
+      } else if (provider === "claude") {
+        const r = await fetch("https://api.anthropic.com/v1/messages",
+          { method:"POST", headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
+            body: JSON.stringify({ model:"claude-3-5-haiku-20241022", max_tokens:2048, messages:[{role:"user",content:extPrompt}] }) });
+        const d = await r.json(); added = d.content?.[0]?.text || "";
+      }
+      if (!added) throw new Error("이어쓰기 응답이 비어있습니다.");
+      return res.json({ content: added.replace(/\*\*(.*?)\*\*/g,"$1").replace(/\*(.*?)\*/g,"$1").replace(/^#{1,3}\s+/gm,"").trim() });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
     }
   }
   // ─────────────────────────────────────────────────────────
