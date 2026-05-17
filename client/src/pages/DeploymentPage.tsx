@@ -2107,10 +2107,10 @@ export default function DeploymentPage() {
               {/* 모바일 2줄: 주요 버튼 */}
               <div className="flex items-center gap-1.5">
                 {/* N복사 - 바텀시트 */}
-                <button className="flex items-center gap-1 px-3 h-9 rounded-lg text-sm font-bold flex-1"
+                <button className="flex items-center justify-center gap-1 px-3 h-9 rounded-lg text-sm font-bold flex-1 whitespace-nowrap"
                   style={{ background: "#03C75A", color: "white" }}
                   onClick={() => setShowNaverMenu(v => !v)}>
-                  <Copy className="w-4 h-4" /><span>N복사</span><span style={{fontSize:10}}>▲</span>
+                  <Copy className="w-4 h-4 flex-shrink-0" /><span>N복사</span><span style={{fontSize:10}}>▲</span>
                 </button>
                 <button className="flex items-center justify-center gap-1 px-3 h-9 rounded-lg text-sm font-black flex-1"
                   style={{ background:"linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#c77dff)", color:"#000" }}
