@@ -233,9 +233,9 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
             .ckd-modal { margin:0 !important; border-radius:0 !important;
               width:100vw !important; max-width:100vw !important;
               height:100dvh !important; max-height:100dvh !important; }
-            .ckd-body { flex-direction:column !important; }
+            .ckd-body { flex-direction:column !important; flex:1 !important; overflow:hidden !important; min-height:0 !important; }
             .ckd-panel { display:none !important; }
-            .ckd-panel.active { display:flex !important; }
+            .ckd-panel.active { display:flex !important; flex:1 !important; width:100% !important; min-height:0 !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; }
             .ckd-mobile-tabs { display:flex !important; }
             .ckd-desktop-only { display:none !important; }
             .ckd-2col { grid-template-columns: 1fr !important; gap:10px !important; }
