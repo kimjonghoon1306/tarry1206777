@@ -77,14 +77,14 @@ export const CONTENT_AI_OPTIONS = [
 export const IMAGE_AI_OPTIONS = [
   {
     value: "openai" as ImageAIProvider,
-    label: "GPT Image",
+    label: "GPT Image (gpt-image-1)",
     badge: "유료",
     badgeColor: "oklch(0.75 0.12 300)",
-    desc: "OpenAI · 최고 품질 이미지",
+    desc: "OpenAI · gpt-image-1 최신 모델",
     pros: "최고 품질 이미지 · 정확한 프롬프트 이해",
     cons: "유료 · 이미지당 비용 발생",
     logo: "O", logoColor: "oklch(0.75 0.12 300)",
-    keyLabel: "OpenAI API Key", keyPlaceholder: "sk-...",
+    keyLabel: "OpenAI API Key (gpt-image-1)", keyPlaceholder: "sk-...",
     keyStorageKey: SETTINGS_KEYS.OPENAI_KEY,
     keyLink: "https://platform.openai.com/api-keys",
   },
