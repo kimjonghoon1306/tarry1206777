@@ -1612,9 +1612,8 @@ export default function DeploymentPage() {
 
   // ── 이미지 위치 마커 자동 삽입 헬퍼 ──
   // AI 이미지 또는 직접 삽입 실사 사진 있으면 절대 건드리지 않음
-  // 없을 때만: 제목 다음부터 300자 단위로 📸 삽입, 마지막 본문 뒤에는 넣지 않음
+  // 없을 때만: 300자 단위로 📸 삽입, 마지막 본문 뒤에는 넣지 않음
   function addNaverImageMarkers(text: string): string {
-    // 이미지 있으면 그대로 반환
     const hasRealImages =
       text.includes("[이미지]") ||
       blocks.some(b =>
@@ -1629,31 +1628,34 @@ export default function DeploymentPage() {
       ? text.slice(0, text.lastIndexOf(hashtags[0])).trimEnd()
       : text;
 
-    // 단락 분리
-    const paras = bodyText.split(/\n\n+/).filter(s => s.trim());
-    if (paras.length <= 1) return text;
+    // 줄 단위로 분리 (빈 줄 제거)
+    const lines = bodyText.split(/\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length <= 1) return text;
 
-    // 첫 단락(제목/인사)은 header로 분리, 나머지를 300자 단위로 청크
-    const header = paras[0];
-    const bodyParas = paras.slice(1);
+    // 첫 줄 = 제목. 두 번째 줄이 제목과 같으면 중복 제거
+    const titleLine = lines[0];
+    const bodyLines = lines.slice(1).filter((l, i) => !(i === 0 && l === titleLine));
 
-    if (bodyParas.length === 0) return text;
+    if (bodyLines.length === 0) return text;
 
+    // 300자 단위로 청크 묶기
     const CHUNK = 300;
     const chunks: string[] = [];
     let buf = "";
-    for (const p of bodyParas) {
-      if (buf.length > 0 && buf.length + p.length > CHUNK) {
+    for (const line of bodyLines) {
+      if (buf.length > 0 && buf.length + line.length > CHUNK) {
         chunks.push(buf.trim());
-        buf = p;
+        buf = line;
       } else {
-        buf = buf ? buf + "\n\n" + p : p;
+        buf = buf ? buf + "\n" + line : line;
       }
     }
     if (buf.trim()) chunks.push(buf.trim());
 
-    // 각 청크 앞에 📸 삽입, 마지막 청크 뒤에는 없음
-    const result: string[] = [header];
+    if (chunks.length <= 1) return text;
+
+    // 제목 + [📸 + 청크] 순서로 조립, 마지막 청크 뒤에는 이미지 없음
+    const result: string[] = [titleLine];
     for (let i = 0; i < chunks.length; i++) {
       result.push("📸 [여기에 사진 삽입]");
       result.push(chunks[i]);
