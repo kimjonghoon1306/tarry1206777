@@ -695,6 +695,7 @@ export default function DeploymentPage() {
   const [autoInserted, setAutoInserted] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showPublishPanel, setShowPublishPanel] = useState(false);
+  const [showNaverMenu, setShowNaverMenu] = useState(false);
 
   const [deployImages, setDeployImages] = useState<{ id: number; src: string; alt?: string }[]>(
     () => safeParseJSON("blogauto_deploy_images", [])
@@ -1670,6 +1671,36 @@ export default function DeploymentPage() {
     });
   }
 
+  // ── 네이버 블로그용 복사 (본문 + FAQ — 참고자료·관련글만 제외) ──
+  function copyForNaverWithFaq() {
+    const lines: string[] = [];
+    if (title.trim()) lines.push(title.trim() + "\n");
+    if (greeting.trim()) lines.push(greeting.trim() + "\n");
+    blocks.forEach(b => {
+      if (b.type === "text") {
+        const clean = b.content
+          .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
+          .replace(/참고자료시작[\s\S]*?\[참고자료끝\]/g, "")
+          .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, "")
+          .replace(/관련글시작[\s\S]*?\[관련글끝\]/g, "")
+          .replace(/^#{1,3}\s+/gm, "")
+          .replace(/\*\*(.*?)\*\*/g, "$1")
+          .replace(/\*(.*?)\*/g, "$1")
+          .trim();
+        if (clean) lines.push(clean);
+      } else if (b.type === "image-pair") {
+        lines.push("[이미지]\n[이미지]");
+      } else if (b.type === "image" && b.src) {
+        lines.push("[이미지]");
+      }
+    });
+    if (hashtags.length > 0) lines.push("\n" + hashtags.join(" "));
+    const text = lines.filter(Boolean).join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("✅ 본문 + FAQ 복사됐어요! (참고자료·관련글 제외) 📋", { duration: 4000 });
+    });
+  }
+
   // ── Webhook 발행 ──
   async function publishToWebhook(platformId: string, platformCategory?: string) {
     // 1. platform_custom_list 우선 (신규 방식)
@@ -1989,20 +2020,62 @@ export default function DeploymentPage() {
                 </button>
               </div>
               {/* 네이버 블로그 복사 버튼 */}
-              <Button size="sm" className="gap-1.5 h-9"
-                style={{ background: "#03C75A", color: "white" }}
-                onClick={copyForNaver}>
-                <Copy className="w-4 h-4" />
-                <span className="hidden sm:inline">네이버 복사</span>
-                <span className="sm:hidden">N복사</span>
-              </Button>
-              <Button size="sm" className="gap-1.5 h-9"
-                style={{ background: "#028a45", color: "white" }}
-                onClick={copyForNaverBodyOnly}>
-                <Copy className="w-4 h-4" />
-                <span className="hidden sm:inline">본문만 복사</span>
-                <span className="sm:hidden">본문</span>
-              </Button>
+              <div className="relative">
+                <Button size="sm" className="gap-1.5 h-9"
+                  style={{ background: "#03C75A", color: "white" }}
+                  onClick={() => setShowNaverMenu(v => !v)}>
+                  <Copy className="w-4 h-4" />
+                  <span className="hidden sm:inline">네이버 복사</span>
+                  <span className="sm:hidden">N복사</span>
+                  <span style={{ fontSize: "10px", marginLeft: "2px" }}>▲</span>
+                </Button>
+                {showNaverMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowNaverMenu(false)} />
+                    <div className="absolute bottom-11 right-0 z-50 w-72 rounded-2xl shadow-2xl overflow-hidden"
+                      style={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)" }}>
+                      {/* 헤더 */}
+                      <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                        <p className="text-xs font-bold text-white">📋 네이버 블로그 복사 방식 선택</p>
+                        <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>글 종류에 맞게 선택하세요</p>
+                      </div>
+                      {/* 옵션 1 - 전체 */}
+                      <button className="w-full text-left px-4 py-3 transition-all hover:opacity-90 active:scale-[0.98] border-b"
+                        style={{ background: "rgba(3,199,90,0.15)", borderColor: "rgba(255,255,255,0.08)" }}
+                        onClick={() => { copyForNaver(); setShowNaverMenu(false); }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: "#03C75A", color: "white" }}>전체</span>
+                          <span className="text-xs font-bold text-white">전체 복사</span>
+                        </div>
+                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>본문 + FAQ + 참고자료 + 관련글 포함</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#4ade80" }}>✓ 정보성 글 · 리뷰 · 튜토리얼에 적합</p>
+                      </button>
+                      {/* 옵션 2 - 본문+FAQ */}
+                      <button className="w-full text-left px-4 py-3 transition-all hover:opacity-90 active:scale-[0.98] border-b"
+                        style={{ background: "rgba(251,191,36,0.12)", borderColor: "rgba(255,255,255,0.08)" }}
+                        onClick={() => { copyForNaverWithFaq(); setShowNaverMenu(false); }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: "#fbbf24", color: "#000" }}>FAQ</span>
+                          <span className="text-xs font-bold text-white">본문 + FAQ 복사</span>
+                        </div>
+                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>참고자료·관련글 제외, Q&A 포함</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#fbbf24" }}>✓ 일반 블로그 · 상품 리뷰에 적합</p>
+                      </button>
+                      {/* 옵션 3 - 본문만 */}
+                      <button className="w-full text-left px-4 py-3 transition-all hover:opacity-90 active:scale-[0.98]"
+                        style={{ background: "rgba(244,114,182,0.12)" }}
+                        onClick={() => { copyForNaverBodyOnly(); setShowNaverMenu(false); }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: "#f472b6", color: "white" }}>본문</span>
+                          <span className="text-xs font-bold text-white">본문만 복사</span>
+                        </div>
+                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>FAQ·참고자료·관련글 전부 제외</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#f472b6" }}>✓ 체험단 · 맛집 · 여행 후기에 적합</p>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <Button size="sm" className="gap-1.5" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
                 <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">구독자 미리보기</span>
@@ -2588,24 +2661,62 @@ export default function DeploymentPage() {
         className="fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t"
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
       >
-        {/* 네이버 복사 버튼 - 가장 크게 강조 */}
-        <div className="flex gap-2 px-3 pt-2">
+        {/* 네이버 복사 버튼 - 팝업 메뉴 */}
+        <div className="px-3 pt-2 relative">
           <button
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
             style={{ background: "#03C75A", color: "white" }}
-            onClick={copyForNaver}
+            onClick={() => setShowNaverMenu(v => !v)}
           >
             <Copy className="w-4 h-4" />
-            전체 복사 📋
+            네이버 블로그 복사하기 📋 ▲
           </button>
-          <button
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
-            style={{ background: "#028a45", color: "white" }}
-            onClick={copyForNaverBodyOnly}
-          >
-            <Copy className="w-4 h-4" />
-            본문만 복사 📋
-          </button>
+          {showNaverMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowNaverMenu(false)} />
+              <div className="absolute bottom-14 left-0 right-0 mx-0 z-50 rounded-2xl shadow-2xl overflow-hidden"
+                style={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)" }}>
+                {/* 헤더 */}
+                <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                  <p className="text-sm font-bold text-white">📋 복사 방식 선택</p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>글 종류에 맞게 선택하세요</p>
+                </div>
+                {/* 옵션 1 */}
+                <button className="w-full text-left px-4 py-4 transition-all active:scale-[0.98] border-b"
+                  style={{ background: "rgba(3,199,90,0.15)", borderColor: "rgba(255,255,255,0.08)" }}
+                  onClick={() => { copyForNaver(); setShowNaverMenu(false); }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#03C75A", color: "white" }}>전체</span>
+                    <span className="text-sm font-bold text-white">전체 복사</span>
+                  </div>
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>본문 + FAQ + 참고자료 + 관련글</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#4ade80" }}>✓ 정보성 글 · 리뷰 · 튜토리얼</p>
+                </button>
+                {/* 옵션 2 */}
+                <button className="w-full text-left px-4 py-4 transition-all active:scale-[0.98] border-b"
+                  style={{ background: "rgba(251,191,36,0.12)", borderColor: "rgba(255,255,255,0.08)" }}
+                  onClick={() => { copyForNaverWithFaq(); setShowNaverMenu(false); }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#fbbf24", color: "#000" }}>FAQ</span>
+                    <span className="text-sm font-bold text-white">본문 + FAQ 복사</span>
+                  </div>
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>참고자료·관련글 제외, Q&A 포함</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#fbbf24" }}>✓ 일반 블로그 · 상품 리뷰</p>
+                </button>
+                {/* 옵션 3 */}
+                <button className="w-full text-left px-4 py-4 transition-all active:scale-[0.98]"
+                  style={{ background: "rgba(244,114,182,0.12)" }}
+                  onClick={() => { copyForNaverBodyOnly(); setShowNaverMenu(false); }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#f472b6", color: "white" }}>본문</span>
+                    <span className="text-sm font-bold text-white">본문만 복사</span>
+                  </div>
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>FAQ·참고자료·관련글 전부 제외</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#f472b6" }}>✓ 체험단 · 맛집 · 여행 후기</p>
+                </button>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex gap-2 px-3 py-2">
           <Button className="flex-1 gap-1.5 h-10" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
@@ -2645,16 +2756,45 @@ export default function DeploymentPage() {
               <div className="w-2 h-2 rounded-full" style={{ background: "var(--color-emerald)" }} />
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-foreground">구독자 시점 미리보기</span>
-                <button className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-semibold"
-                  style={{ background: "#03C75A", color: "white" }}
-                  onClick={copyForNaver}>
-                  <Copy className="w-3 h-3" /> 네이버 복사
-                </button>
-                <button className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-semibold"
-                  style={{ background: "#028a45", color: "white" }}
-                  onClick={copyForNaverBodyOnly}>
-                  <Copy className="w-3 h-3" /> 본문만
-                </button>
+                <div className="relative">
+                  <button className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-semibold"
+                    style={{ background: "#03C75A", color: "white" }}
+                    onClick={() => setShowNaverMenu(v => !v)}>
+                    <Copy className="w-3 h-3" /> 네이버 복사 ▲
+                  </button>
+                  {showNaverMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowNaverMenu(false)} />
+                      <div className="absolute bottom-9 left-0 z-50 w-64 rounded-2xl shadow-2xl overflow-hidden"
+                        style={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)" }}>
+                        <div className="px-3 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                          <p className="text-xs font-bold text-white">📋 복사 방식 선택</p>
+                        </div>
+                        <button className="w-full text-left px-3 py-2.5 border-b active:scale-[0.98]"
+                          style={{ background: "rgba(3,199,90,0.15)", borderColor: "rgba(255,255,255,0.08)" }}
+                          onClick={() => { copyForNaver(); setShowNaverMenu(false); }}>
+                          <span className="text-xs font-black px-1.5 py-0.5 rounded-full mr-1.5" style={{ background: "#03C75A", color: "white" }}>전체</span>
+                          <span className="text-xs font-bold text-white">전체 복사</span>
+                          <p className="text-xs mt-0.5" style={{ color: "#4ade80" }}>✓ 정보성 글 · 리뷰</p>
+                        </button>
+                        <button className="w-full text-left px-3 py-2.5 border-b active:scale-[0.98]"
+                          style={{ background: "rgba(251,191,36,0.12)", borderColor: "rgba(255,255,255,0.08)" }}
+                          onClick={() => { copyForNaverWithFaq(); setShowNaverMenu(false); }}>
+                          <span className="text-xs font-black px-1.5 py-0.5 rounded-full mr-1.5" style={{ background: "#fbbf24", color: "#000" }}>FAQ</span>
+                          <span className="text-xs font-bold text-white">본문 + FAQ</span>
+                          <p className="text-xs mt-0.5" style={{ color: "#fbbf24" }}>✓ 일반 블로그 · 상품 리뷰</p>
+                        </button>
+                        <button className="w-full text-left px-3 py-2.5 active:scale-[0.98]"
+                          style={{ background: "rgba(244,114,182,0.12)" }}
+                          onClick={() => { copyForNaverBodyOnly(); setShowNaverMenu(false); }}>
+                          <span className="text-xs font-black px-1.5 py-0.5 rounded-full mr-1.5" style={{ background: "#f472b6", color: "white" }}>본문</span>
+                          <span className="text-xs font-bold text-white">본문만</span>
+                          <p className="text-xs mt-0.5" style={{ color: "#f472b6" }}>✓ 체험단 · 맛집 · 여행</p>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
               <span
                 className="text-xs px-2 py-0.5 rounded-full hidden sm:inline"
