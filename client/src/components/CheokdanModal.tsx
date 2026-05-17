@@ -186,7 +186,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       padding: "env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0)",
     }}>
       {/* Modal */}
-      <div style={{
+      <div className="ckd-modal" style={{
         width:"calc(100vw - 24px)", maxWidth:1600, maxHeight:"96vh",
         background: t.bg, borderRadius: 20,
         boxShadow: t.shadow,
@@ -203,16 +203,31 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
           .ckd-tab { transition: all .2s; }
           ::-webkit-scrollbar { width:5px; }
           ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius:10px; }
+
           @media (max-width:768px) {
+            .ckd-modal { margin:0 !important; border-radius:0 !important;
+              width:100vw !important; max-width:100vw !important;
+              height:100dvh !important; max-height:100dvh !important; }
             .ckd-body { flex-direction:column !important; }
             .ckd-panel { display:none !important; }
             .ckd-panel.active { display:flex !important; }
             .ckd-mobile-tabs { display:flex !important; }
             .ckd-desktop-only { display:none !important; }
+            .ckd-2col { grid-template-columns: 1fr !important; gap:10px !important; }
+            .ckd-form-inner { padding:14px 14px !important; }
+            .ckd-menu-num { display:none !important; }
+            .ckd-header { padding:12px 14px !important; }
+            .ckd-header-logo { width:32px !important; height:32px !important; font-size:16px !important; }
+            .ckd-header-title { font-size:14px !important; }
+            .ckd-header-sub { display:none !important; }
+            .ckd-tab-label-short { display:inline !important; }
+            .ckd-tab-label-long { display:none !important; }
           }
           @media (min-width:769px) {
             .ckd-mobile-tabs { display:none !important; }
             .ckd-panel { display:flex !important; }
+            .ckd-tab-label-short { display:none !important; }
+            .ckd-tab-label-long { display:inline !important; }
           }
         `}</style>
 
@@ -220,22 +235,22 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
         <div style={{ height:5, background:RAINBOW, flexShrink:0 }} />
 
         {/* Header */}
-        <div style={{
+        <div className="ckd-header" style={{
           padding:"16px 20px", display:"flex", alignItems:"center", gap:12,
           borderBottom:`1px solid ${t.border}`, flexShrink:0,
           background: dark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
         }}>
           {/* Logo */}
-          <div style={{
+          <div className="ckd-header-logo" style={{
             width:40, height:40, borderRadius:12, flexShrink:0,
             background:RAINBOW, display:"flex", alignItems:"center", justifyContent:"center",
             fontSize:20, boxShadow:"0 4px 16px rgba(0,0,0,.3)",
           }}>🍽️</div>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontWeight:900, fontSize:16, color:t.text, letterSpacing:"-.3px" }}>
+            <div className="ckd-header-title" style={{ fontWeight:900, fontSize:16, color:t.text, letterSpacing:"-.3px" }}>
               체험단 블로그 작성 도우미
             </div>
-            <div style={{ fontSize:11, color:t.muted, marginTop:1 }}>
+            <div className="ckd-header-sub" style={{ fontSize:11, color:t.muted, marginTop:1 }}>
               AI가 생생한 방문 후기를 자동으로 작성해드려요
             </div>
           </div>
@@ -264,11 +279,14 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
         }}>
           {tabs.map(({ id, label }) => (
             <button key={id} onClick={()=>setTab(id as any)} className="ckd-tab" style={{
-              flex:1, padding:"12px 6px", border:"none", background:"none", cursor:"pointer",
+              flex:1, padding:"12px 4px", border:"none", background:"none", cursor:"pointer",
               fontSize:12, fontWeight:700, color: tab===id ? "#6bcb77" : t.muted,
               borderBottom: tab===id ? "2px solid #6bcb77" : "2px solid transparent",
-              transition:"all .2s",
-            }}>{label}</button>
+              transition:"all .2s", whiteSpace:"nowrap",
+            }}>
+              <span className="ckd-tab-label-long">{label}</span>
+              <span className="ckd-tab-label-short">{id==="guide"?"📖 가이드":id==="form"?"✍️ 작성":"🎉 결과"}</span>
+            </button>
           ))}
         </div>
 
@@ -344,13 +362,13 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
             flex:1, flexDirection:"column", overflowY:"auto",
             minWidth:0,
           }}>
-            <div style={{ padding:"20px 22px" }}>
+            <div className="ckd-form-inner" style={{ padding:"20px 22px" }}>
               <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2, marginBottom:18, textTransform:"uppercase" }}>
                 체험단 정보 입력
               </div>
 
               {/* 가게명 + 지역 */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+              <div className="ckd-2col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
                 <div>
                   <label style={labelStyle}><MapPin size={11} style={{display:"inline",marginRight:4}}/>가게명 *</label>
                   <input className="ckd-input" style={inputStyle}
@@ -382,7 +400,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
               </div>
 
               {/* 방문일 + 동반인 */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+              <div className="ckd-2col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
                 <div>
                   <label style={labelStyle}><Calendar size={11} style={{display:"inline",marginRight:4}}/>방문일</label>
                   <input className="ckd-input" type="date" style={inputStyle}
@@ -409,13 +427,17 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                 <label style={labelStyle}><Utensils size={11} style={{display:"inline",marginRight:4}}/>주문 메뉴 & 가격</label>
                 {menus.map((m, i) => (
                   <div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
-                    <div style={{ fontSize:11, color:t.muted, width:18, flexShrink:0, textAlign:"center" }}>{i+1}</div>
+                    <div className="ckd-menu-num" style={{ fontSize:11, color:t.muted, width:18, flexShrink:0, textAlign:"center" }}>{i+1}</div>
                     <input className="ckd-input" style={{...inputStyle, flex:2}}
                       placeholder="메뉴명 (예: 보리굴비정식)" value={m.name}
                       onChange={e=>updateMenu(i,"name",e.target.value)}/>
                     <input className="ckd-input" style={{...inputStyle, flex:1}}
                       placeholder="가격 (원)" value={m.price}
-                      onChange={e=>updateMenu(i,"price",e.target.value)}/>
+                      onChange={e => {
+                        const raw = e.target.value.replace(/[^0-9]/g, "");
+                        const formatted = raw ? Number(raw).toLocaleString("ko-KR") : "";
+                        updateMenu(i, "price", formatted);
+                      }}/>
                     {menus.length>1 && (
                       <button onClick={()=>removeMenu(i)} style={{
                         width:30, height:30, borderRadius:8, border:`1px solid ${t.inputBorder}`,
