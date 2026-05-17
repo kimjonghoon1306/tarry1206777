@@ -65,6 +65,7 @@ const GUIDE_STEPS = [
 export default function CheokdanModal({ isOpen, onClose }: Props) {
   const [dark, setDark] = useState(true);
   const [tab, setTab] = useState<"guide"|"form"|"result">("guide");
+  const [previewMode, setPreviewMode] = useState(false);
 
   // Form state
   const [shopName, setShopName] = useState("");
@@ -124,7 +125,12 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       });
       const data = await resp.json();
       if (!resp.ok || data.error) throw new Error(data.error || "생성 실패");
-      setResult(data.content || "");
+      setResult(data.content
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\*(.*?)\*/g, "$1")
+        .replace(/^#{1,3}\s+/gm, "")
+        .trim()
+      || "");
       toast.success("✅ 체험단 글이 완성됐어요!");
     } catch (e: any) {
       toast.error(e.message || "글 생성 중 오류가 발생했습니다.");
@@ -132,6 +138,41 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
     } finally {
       setLoading(false);
     }
+  }
+
+  // ── 미리보기 렌더러 ──
+  function renderPreview(text: string): string {
+    if (!text) return "";
+    // 300자 단위 이미지 마커 삽입
+    const hashtagIdx = text.lastIndexOf("\n");
+    const lastLine = hashtagIdx >= 0 ? text.slice(hashtagIdx+1).trim() : "";
+    let body = /^#/.test(lastLine) ? text.slice(0, hashtagIdx).trimEnd() : text;
+    const hashSuffix = /^#/.test(lastLine) ? lastLine : "";
+    const lines = body.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    const title = lines[0] || "";
+    let bodyLines = lines.slice(1);
+    if (bodyLines[0] === title) bodyLines = bodyLines.slice(1);
+    const CHUNK = 300;
+    const chunks: string[] = [];
+    let buf = "";
+    for (const l of bodyLines) {
+      if (buf.length > 0 && buf.length + l.length + 1 > CHUNK) { chunks.push(buf.trim()); buf = l; }
+      else { buf = buf ? buf + "\n" + l : l; }
+    }
+    if (buf.trim()) chunks.push(buf.trim());
+
+    const parts: string[] = [];
+    if (title) parts.push(`<div class="ckd-pv-title">${title}</div>`);
+    for (const chunk of chunks) {
+      parts.push(`<div class="ckd-pv-img">📸 여기에 사진 삽입</div>`);
+      const html = chunk.split("\n").map(l => {
+        if (!l.trim()) return "";
+        return `<p class="ckd-pv-p">${l.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>`;
+      }).join("");
+      parts.push(html);
+    }
+    if (hashSuffix) parts.push(`<div class="ckd-pv-hash">${hashSuffix}</div>`);
+    return parts.join("");
   }
 
   function copyResult() {
@@ -514,16 +555,26 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
             width:480, flexShrink:0, flexDirection:"column",
             borderLeft:`1px solid ${t.border}`,
           }}>
-            <div style={{ padding:"20px 20px 12px", borderBottom:`1px solid ${t.border}`, flexShrink:0 }}>
+            <div style={{ padding:"14px 20px 10px", borderBottom:`1px solid ${t.border}`, flexShrink:0 }}>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2, textTransform:"uppercase" }}>
                   완성된 글
                 </div>
-                {result && (
-                  <span style={{ fontSize:11, color:t.muted }}>
-                    {result.length.toLocaleString()}자
-                  </span>
-                )}
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  {result && <span style={{ fontSize:11, color:t.muted }}>{result.length.toLocaleString()}자</span>}
+                  {result && (
+                    <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:`1px solid ${t.border}` }}>
+                      <button onClick={()=>setPreviewMode(false)} style={{
+                        padding:"5px 10px", fontSize:11, fontWeight:700, border:"none", cursor:"pointer",
+                        background: !previewMode ? "#6bcb77" : t.input, color: !previewMode ? "#000" : t.muted,
+                      }}>✏️ 편집</button>
+                      <button onClick={()=>setPreviewMode(true)} style={{
+                        padding:"5px 10px", fontSize:11, fontWeight:700, border:"none", cursor:"pointer",
+                        background: previewMode ? "#6bcb77" : t.input, color: previewMode ? "#000" : t.muted,
+                      }}>👁️ 미리보기</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -536,15 +587,27 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   </div>
                 </div>
               ) : result ? (
-                <textarea ref={resultRef}
-                  value={result} onChange={e=>setResult(e.target.value)}
-                  style={{
-                    width:"100%", height:"100%", minHeight:300,
-                    background:t.input, border:`1px solid ${t.inputBorder}`,
-                    borderRadius:12, padding:14, color:t.text, fontSize:13,
-                    lineHeight:1.8, resize:"none", outline:"none", boxSizing:"border-box",
-                    fontFamily:"inherit",
-                  }}/>
+                previewMode ? (
+                  <div style={{ height:"100%", overflowY:"auto" }}>
+                    <style>{`
+                      .ckd-pv-title{font-size:17px;font-weight:900;color:${t.text};margin-bottom:14px;line-height:1.5}
+                      .ckd-pv-img{background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};border:2px dashed rgba(107,203,119,0.5);border-radius:12px;padding:18px;text-align:center;color:#6bcb77;font-weight:800;font-size:13px;margin:14px 0}
+                      .ckd-pv-p{font-size:13px;color:${t.text};line-height:1.85;margin:0 0 8px}
+                      .ckd-pv-hash{font-size:12px;color:#4d96ff;margin-top:16px;line-height:1.7;font-weight:600}
+                    `}</style>
+                    <div dangerouslySetInnerHTML={{ __html: renderPreview(result) }} />
+                  </div>
+                ) : (
+                  <textarea ref={resultRef}
+                    value={result} onChange={e=>setResult(e.target.value)}
+                    style={{
+                      width:"100%", height:"100%", minHeight:300,
+                      background:t.input, border:`1px solid ${t.inputBorder}`,
+                      borderRadius:12, padding:14, color:t.text, fontSize:13,
+                      lineHeight:1.8, resize:"none", outline:"none", boxSizing:"border-box",
+                      fontFamily:"inherit",
+                    }}/>
+                )
               ) : (
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", gap:12, opacity:.5 }}>
                   <div style={{ fontSize:48 }}>✍️</div>
