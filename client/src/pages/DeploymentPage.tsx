@@ -2068,7 +2068,7 @@ export default function DeploymentPage() {
         <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-44 sm:pb-6">
 
           {/* 헤더 */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
               <h1
                 className="text-lg sm:text-2xl font-bold text-foreground"
@@ -2080,7 +2080,9 @@ export default function DeploymentPage() {
                 이미지 삽입 · 글 편집 · 발행
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex items-center gap-1.5 overflow-x-auto sm:flex-wrap sm:justify-end"
+              style={{ scrollbarWidth:"none", WebkitOverflowScrolling:"touch" }}>
+              <style>{`.deploy-tb::-webkit-scrollbar{display:none}`}</style>
               {/* 쿠팡파트너스 링크 버튼 */}
               {userGet("coupang_access_key") && (
                 <Button size="sm" className="gap-1.5 h-9"
@@ -2095,16 +2097,16 @@ export default function DeploymentPage() {
                 </Button>
               )}
               {/* 초기화 버튼 그룹 */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 <button
-                  className="flex items-center gap-1 px-2.5 h-9 rounded-lg text-xs font-semibold transition-colors"
+                  className="flex items-center gap-1 px-2 h-8 sm:px-2.5 sm:h-9 rounded-lg text-xs font-semibold transition-colors flex-shrink-0"
                   style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
                   onClick={() => { if (confirm("이미지를 초기화할까요?")) handleReset("image"); }}>
                   <Image className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">이미지초기화</span>
                 </button>
                 <button
-                  className="flex items-center gap-1 px-2.5 h-9 rounded-lg text-xs font-semibold transition-colors"
+                  className="flex items-center gap-1 px-2 h-8 sm:px-2.5 sm:h-9 rounded-lg text-xs font-semibold transition-colors flex-shrink-0"
                   style={{ background: "rgba(245,158,11,0.12)", color: "#d97706", border: "1px solid rgba(245,158,11,0.3)" }}
                   onClick={() => { if (confirm("글을 초기화할까요?")) handleReset("content"); }}>
                   <FileText className="w-3.5 h-3.5" />
@@ -2112,14 +2114,14 @@ export default function DeploymentPage() {
                 </button>
               </div>
               {/* 네이버 블로그 복사 버튼 */}
-              <div className="relative">
-                <Button size="sm" className="gap-1.5 h-9"
+              <div className="relative flex-shrink-0">
+                <Button size="sm" className="gap-1 h-8 sm:h-9 px-2.5 sm:px-3"
                   style={{ background: "#03C75A", color: "white" }}
                   onClick={() => setShowNaverMenu(v => !v)}>
-                  <Copy className="w-4 h-4" />
-                  <span className="hidden sm:inline">네이버 복사</span>
-                  <span className="sm:hidden">N복사</span>
-                  <span style={{ fontSize: "10px", marginLeft: "2px" }}>▲</span>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-xs">네이버 복사</span>
+                  <span className="sm:hidden text-xs">N복사</span>
+                  <span style={{ fontSize: "9px" }}>▲</span>
                 </Button>
                 {showNaverMenu && (
                   <>
@@ -2169,25 +2171,26 @@ export default function DeploymentPage() {
                 )}
               </div>
               {/* 체험단 작성 버튼 */}
-              <Button size="sm" className="gap-1.5 h-9 font-black"
+              <Button size="sm" className="gap-1 h-8 sm:h-9 px-2.5 sm:px-3 font-black flex-shrink-0"
                 style={{ background:"linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#c77dff)", color:"#000", border:"none" }}
                 onClick={() => setShowCheokdan(true)}>
-                🍽️ <span className="hidden sm:inline">체험단 작성</span><span className="sm:hidden">체험단</span>
+                🍽️ <span className="hidden sm:inline text-xs">체험단 작성</span><span className="sm:hidden text-xs">체험단</span>
               </Button>
-              <Button size="sm" className="gap-1.5" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
-                <Eye className="w-4 h-4" />
-                <span className="hidden sm:inline">구독자 미리보기</span>
-                <span className="sm:hidden">미리보기</span>
+              <Button size="sm" className="gap-1 h-8 sm:h-9 px-2.5 sm:px-3 flex-shrink-0" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
+                <Eye className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-xs">구독자 미리보기</span>
+                <span className="sm:hidden text-xs">미리보기</span>
               </Button>
               <Button
                 size="sm"
-                className="gap-1.5"
+                className="gap-1 h-8 sm:h-9 px-2.5 sm:px-3 flex-shrink-0"
                 style={{ background: "var(--color-emerald)", color: "white" }}
                 disabled={isPublishing || selectedPlatforms.length === 0}
                 onClick={handlePublish}
               >
-                <Send className="w-4 h-4" />
-                {isPublishing ? "발행 중..." : publishMode === "instant" ? "즉시 발행" : "예약 발행"}
+                <Send className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-xs">{isPublishing ? "발행 중..." : publishMode === "instant" ? "즉시 발행" : "예약 발행"}</span>
+                <span className="sm:hidden text-xs">{isPublishing ? "..." : "발행"}</span>
               </Button>
             </div>
           </div>
