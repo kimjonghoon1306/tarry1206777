@@ -185,11 +185,16 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
           maxChars: 1499,
           // 핵심 지시: 한자 절대 금지, 글자수 1300~1499자, 사진 15장/영상 3개 위치 명시
           systemInstructions: [
-            "절대 한자(漢字)를 사용하지 마세요. 한자가 포함되면 무조건 한글로 변환하세요. 예: 訪問→방문, 料理→요리, 雰圍氣→분위기 등.",
-            "완성된 글의 총 글자수는 반드시 1300자 이상 1499자 이하여야 합니다. 이 범위를 벗어나면 안 됩니다.",
-            "글 전체에 걸쳐 [📸 사진설명] 마커를 정확히 15개 배치하세요. 각 마커는 해당 단락의 내용에 맞는 구체적인 사진 설명을 포함하세요.",
-            "글 전체에 걸쳐 [🎬 영상설명] 마커를 정확히 3개 배치하세요. ① 입장/외관 영상, ② 음식 영상, ③ 분위기 영상 순서로 배치하세요.",
-            "사진과 영상 마커는 해당 내용이 나오는 문단 바로 다음 줄에 배치해 자연스럽게 흐르도록 하세요.",
+            "절대 한자(漢字)를 사용하지 마세요. 한자가 포함되면 무조건 한글로 변환하세요.",
+            "완성된 글의 총 글자수는 반드시 1300자 이상 1499자 이하여야 합니다.",
+            "【마커 배치 규칙 — 절대 어기지 마세요】",
+            "[📸 ...] 마커와 [🎬 ...] 마커는 반드시 독립된 한 줄에 단독으로 배치하세요.",
+            "마커는 절대 문장 중간이나 문장 끝에 붙이면 안 됩니다.",
+            "마커 앞뒤에 반드시 빈 줄(\\n\\n)을 넣어 텍스트 단락과 완전히 분리하세요.",
+            "올바른 예시: '...음식이 맛있었어요.\\n\\n[📸 메인 메뉴 클로즈업]\\n\\n서비스도 훌륭했어요...'",
+            "잘못된 예시: '...음식이 맛있었어요. [📸 메인 메뉴] 서비스도...' — 이렇게 하면 절대 안 됩니다.",
+            "[📸 사진설명] 마커를 정확히 15개 배치하세요: ①외관 2개 ②내부 2개 ③메뉴판 1개 ④세팅 1개 ⑤메인메뉴 3개 ⑥사이드 2개 ⑦분위기 2개 ⑧디저트/영수증 1개 ⑨마무리 1개.",
+            "[🎬 영상설명] 마커를 정확히 3개 배치하세요: ①입장/외관 영상 ②음식 영상 ③분위기 영상.",
           ].join(" "),
         }),
       });
@@ -200,9 +205,17 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
         .replace(/\*\*(.*?)\*\*/g, "$1")
         .replace(/\*(.*?)\*/g, "$1")
         .replace(/^#{1,3}\s+/gm, "")
-        // 한자 완전 제거: 유니코드 한자 범위(CJK) 제거 후 공백 정리
+        // 한자 완전 제거
         .replace(/[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]/g, "")
         .replace(/\s{2,}/g, " ")
+        // ★ 핵심: 마커가 문장 중간에 있으면 앞뒤로 줄바꿈 강제 삽입
+        // "[📸 ...]" 또는 "[🎬 ...]"가 줄 시작이 아닐 경우 앞에 \n\n 추가
+        .replace(/([^\n])(\[📸[^\]]*\])/g, "$1\n\n$2")
+        .replace(/([^\n])(\[🎬[^\]]*\])/g, "$1\n\n$2")
+        // 마커 뒤에도 줄바꿈 보장
+        .replace(/(\[📸[^\]]*\])([^\n])/g, "$1\n\n$2")
+        .replace(/(\[🎬[^\]]*\])([^\n])/g, "$1\n\n$2")
+        // 3줄 이상 빈 줄 정리
         .replace(/\n{3,}/g, "\n\n")
         .trim();
 
@@ -236,22 +249,35 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
   // ── 미리보기 렌더러 ──
   function renderPreview(text: string): string {
     if (!text) return "";
-    const lines = text.split("\n");
+
+    // 1단계: 혹시라도 마커가 인라인에 있으면 독립 줄로 분리 (이중 안전망)
+    const normalized = text
+      .replace(/([^\n])(\[📸[^\]]*\])/g, "$1\n\n$2")
+      .replace(/([^\n])(\[🎬[^\]]*\])/g, "$1\n\n$2")
+      .replace(/(\[📸[^\]]*\])([^\n])/g, "$1\n\n$2")
+      .replace(/(\[🎬[^\]]*\])([^\n])/g, "$1\n\n$2")
+      .replace(/\n{3,}/g, "\n\n");
+
+    // 2단계: 줄 단위 렌더링
+    const lines = normalized.split("\n");
     const html = lines.map(line => {
       const l = line.trim();
-      if (!l) return "";
-      // 📸 마커
+      if (!l) return `<div style="height:8px"></div>`;
+
+      // 📸 마커 — 풀 블록으로 렌더링
       if (/^\[📸/.test(l)) {
         const desc = l.replace(/^\[📸\s*/, "").replace(/\]$/, "").trim();
-        return `<div class="ckd-pv-img">📸 ${desc || "사진을 여기에 삽입하세요"}</div>`;
+        return `<div class="ckd-pv-img">📸&nbsp; ${desc || "사진을 여기에 삽입하세요"}</div>`;
       }
-      // 🎬 마커
+      // 🎬 마커 — 풀 블록으로 렌더링
       if (/^\[🎬/.test(l)) {
         const desc = l.replace(/^\[🎬\s*/, "").replace(/\]$/, "").trim();
-        return `<div class="ckd-pv-vid">🎬 ${desc || "영상을 여기에 삽입하세요"}</div>`;
+        return `<div class="ckd-pv-vid">🎬&nbsp; ${desc || "영상을 여기에 삽입하세요"}</div>`;
       }
       // 해시태그
-      if (l.startsWith("#")) return `<div class="ckd-pv-hash">${l.replace(/&/g,"&amp;")}</div>`;
+      if (l.startsWith("#")) {
+        return `<div class="ckd-pv-hash">${l.replace(/&/g,"&amp;")}</div>`;
+      }
       // 일반 텍스트
       return `<p class="ckd-pv-p">${l.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>`;
     }).join("");
@@ -260,18 +286,23 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
   function copyResult() {
     if (!result) return;
-    // AI가 생성한 [📸 ...] [🎬 ...] 마커를 네이버에서 눈에 잘 보이는 형태로 변환
     const formatted = result
+      // 마커가 인라인에 있을 경우 독립 줄로 분리 (최후 안전망)
+      .replace(/([^\n])(\[📸[^\]]*\])/g, "$1\n\n$2")
+      .replace(/([^\n])(\[🎬[^\]]*\])/g, "$1\n\n$2")
+      .replace(/(\[📸[^\]]*\])([^\n])/g, "$1\n\n$2")
+      .replace(/(\[🎬[^\]]*\])([^\n])/g, "$1\n\n$2")
+      // 네이버 블로그 붙여넣기용 마커 변환
       .replace(/\[📸\s*([^\]]+)\]/g, (_: string, desc: string) =>
-        `\n━━━━━━━━━━━━━━━━━━━━━━\n📸 ${desc.trim()}\n━━━━━━━━━━━━━━━━━━━━━━\n`
+        `\n\n━━━━━━━━━━━━━━━━━\n📸 사진 삽입 위치: ${desc.trim()}\n━━━━━━━━━━━━━━━━━\n`
       )
       .replace(/\[🎬\s*([^\]]+)\]/g, (_: string, desc: string) =>
-        `\n▶▶▶ 🎬 ${desc.trim()} ◀◀◀\n`
+        `\n\n▶▶▶ 🎬 영상 삽입 위치: ${desc.trim()} ◀◀◀\n`
       )
       .replace(/\n{3,}/g, "\n\n")
       .trim();
     navigator.clipboard.writeText(formatted).then(() =>
-      toast.success("📋 복사 완료! 📸 위치에 사진을, 🎬 위치에 영상을 삽입하세요!", { duration: 5000 })
+      toast.success("📋 복사 완료! 📸·🎬 위치에 사진과 영상을 삽입하세요!", { duration: 5000 })
     );
   }
 
@@ -362,10 +393,36 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
               minHeight:0,
             } as React.CSSProperties}>
               <style>{`
-                .ckd-pv-img{background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};border:2px dashed rgba(107,203,119,0.5);border-radius:12px;padding:14px 16px;text-align:center;color:#6bcb77;font-weight:800;font-size:13px;margin:14px 0;display:flex;align-items:center;justify-content:center;gap:8px;word-break:break-word}
-                .ckd-pv-vid{background:${dark?"rgba(77,150,255,0.12)":"rgba(77,150,255,0.18)"};border:2px dashed rgba(77,150,255,0.5);border-radius:12px;padding:14px 16px;text-align:center;color:#4d96ff;font-weight:800;font-size:13px;margin:14px 0;display:flex;align-items:center;justify-content:center;gap:8px;word-break:break-word}
-                .ckd-pv-p{font-size:15px;color:${t.text};line-height:1.95;margin:0 0 10px;word-break:break-word}
-                .ckd-pv-hash{font-size:13px;color:#4d96ff;margin-top:20px;line-height:1.8;font-weight:600;word-break:break-all}
+                .ckd-pv-img{
+                  display:block; width:100%;
+                  background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};
+                  border:2px dashed rgba(107,203,119,0.6);
+                  border-radius:14px; padding:18px 16px;
+                  text-align:center; color:#6bcb77;
+                  font-weight:800; font-size:14px;
+                  margin:16px 0; box-sizing:border-box;
+                  word-break:break-word; line-height:1.5;
+                }
+                .ckd-pv-vid{
+                  display:block; width:100%;
+                  background:${dark?"rgba(77,150,255,0.12)":"rgba(77,150,255,0.18)"};
+                  border:2px dashed rgba(77,150,255,0.6);
+                  border-radius:14px; padding:18px 16px;
+                  text-align:center; color:#4d96ff;
+                  font-weight:800; font-size:14px;
+                  margin:16px 0; box-sizing:border-box;
+                  word-break:break-word; line-height:1.5;
+                }
+                .ckd-pv-p{
+                  font-size:15px; color:${t.text};
+                  line-height:1.95; margin:0 0 12px;
+                  word-break:break-word;
+                }
+                .ckd-pv-hash{
+                  font-size:13px; color:#4d96ff;
+                  margin-top:20px; line-height:1.8;
+                  font-weight:600; word-break:break-all;
+                }
               `}</style>
               <div dangerouslySetInnerHTML={{ __html: renderPreview(result) }} />
             </div>
