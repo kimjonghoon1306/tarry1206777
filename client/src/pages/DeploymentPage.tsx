@@ -1611,8 +1611,10 @@ export default function DeploymentPage() {
 
 
   // ── 이미지 위치 마커 자동 삽입 헬퍼 ──
-  // AI 이미지 또는 직접 삽입한 실사 사진이 있으면 절대 건드리지 않음
+  // AI 이미지 또는 직접 삽입 실사 사진 있으면 절대 건드리지 않음
+  // 없을 때만: 제목 다음부터 300자 단위로 📸 삽입, 마지막 본문 뒤에는 넣지 않음
   function addNaverImageMarkers(text: string): string {
+    // 이미지 있으면 그대로 반환
     const hasRealImages =
       text.includes("[이미지]") ||
       blocks.some(b =>
@@ -1620,14 +1622,44 @@ export default function DeploymentPage() {
         b.type === "image-pair"
       );
     if (hasRealImages) return text;
-    const parts = text.split(/\n\n+/).filter(s => s.trim());
-    if (parts.length <= 1) return text;
-    const result: string[] = [parts[0]];
-    for (let i = 1; i < parts.length; i++) {
-      result.push("📸 [여기에 사진 삽입]");
-      result.push(parts[i]);
+
+    // 해시태그 분리
+    const hashtagSuffix = hashtags.length > 0 ? "\n\n" + hashtags.join(" ") : "";
+    const bodyText = hashtagSuffix
+      ? text.slice(0, text.lastIndexOf(hashtags[0])).trimEnd()
+      : text;
+
+    // 단락 분리
+    const paras = bodyText.split(/\n\n+/).filter(s => s.trim());
+    if (paras.length <= 1) return text;
+
+    // 첫 단락(제목/인사)은 header로 분리, 나머지를 300자 단위로 청크
+    const header = paras[0];
+    const bodyParas = paras.slice(1);
+
+    if (bodyParas.length === 0) return text;
+
+    const CHUNK = 300;
+    const chunks: string[] = [];
+    let buf = "";
+    for (const p of bodyParas) {
+      if (buf.length > 0 && buf.length + p.length > CHUNK) {
+        chunks.push(buf.trim());
+        buf = p;
+      } else {
+        buf = buf ? buf + "\n\n" + p : p;
+      }
     }
-    return result.join("\n\n");
+    if (buf.trim()) chunks.push(buf.trim());
+
+    // 각 청크 앞에 📸 삽입, 마지막 청크 뒤에는 없음
+    const result: string[] = [header];
+    for (let i = 0; i < chunks.length; i++) {
+      result.push("📸 [여기에 사진 삽입]");
+      result.push(chunks[i]);
+    }
+
+    return result.join("\n\n") + hashtagSuffix;
   }
 
   // ── 네이버 블로그용 복사 (제목 + 본문 + 해시태그) ──
