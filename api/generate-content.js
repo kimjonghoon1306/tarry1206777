@@ -127,6 +127,8 @@ export default async function handler(req, res) {
 8. [이미지] 마커 절대 금지
 9. 총 글자수 1200~1800자
 10. 마지막 줄 해시태그: #${shopName||""} #${region||""}맛집 #${category||""} #네이버블로그 #체험단
+11. 반드시 글을 완전히 끝마칠 것 — 마지막 문장은 마침표 또는 느낌표로 끝나야 함
+12. **별표(*)나 마크다운 기호 절대 사용 금지** — 일반 텍스트로만 작성
 
 블로그 포스팅을 작성해주세요:`;
 
@@ -138,7 +140,7 @@ export default async function handler(req, res) {
           try {
             const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
               { method:"POST", headers:{"Content-Type":"application/json"},
-                body: JSON.stringify({ contents:[{parts:[{text:cheokdanPrompt}]}], generationConfig:{maxOutputTokens:2048,temperature:0.8} }) });
+                body: JSON.stringify({ contents:[{parts:[{text:cheokdanPrompt}]}], generationConfig:{maxOutputTokens:4096,temperature:0.8} }) });
             if (!r.ok) continue;
             const d = await r.json();
             const t = d.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -148,17 +150,17 @@ export default async function handler(req, res) {
       } else if (provider === "claude") {
         const r = await fetch("https://api.anthropic.com/v1/messages", {
           method:"POST", headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
-          body: JSON.stringify({ model:"claude-3-5-haiku-20241022", max_tokens:2048, messages:[{role:"user",content:cheokdanPrompt}] }) });
+          body: JSON.stringify({ model:"claude-3-5-haiku-20241022", max_tokens:4096, messages:[{role:"user",content:cheokdanPrompt}] }) });
         const d = await r.json(); content = d.content?.[0]?.text || "";
       } else if (provider === "openai") {
         const r = await fetch("https://api.openai.com/v1/chat/completions", {
           method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${apiKey}`},
-          body: JSON.stringify({ model:"gpt-4o-mini", messages:[{role:"user",content:cheokdanPrompt}], max_tokens:2048, temperature:0.8 }) });
+          body: JSON.stringify({ model:"gpt-4o-mini", messages:[{role:"user",content:cheokdanPrompt}], max_tokens:4096, temperature:0.8 }) });
         const d = await r.json(); content = d.choices?.[0]?.message?.content || "";
       } else if (provider === "groq") {
         const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${apiKey}`},
-          body: JSON.stringify({ model:"llama-3.3-70b-versatile", messages:[{role:"user",content:cheokdanPrompt}], max_tokens:2048, temperature:0.8 }) });
+          body: JSON.stringify({ model:"llama-3.3-70b-versatile", messages:[{role:"user",content:cheokdanPrompt}], max_tokens:4096, temperature:0.8 }) });
         const d = await r.json(); content = d.choices?.[0]?.message?.content || "";
       }
       if (!content) throw new Error("AI 응답이 비어있습니다.");
