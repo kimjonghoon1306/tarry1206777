@@ -6,7 +6,7 @@ import {
   CheckCircle2, Camera, Loader2, ChevronRight,
   BookOpen, PenLine, Rocket, Hash
 } from "lucide-react";
-import { getContentAI, getAPIKey } from "@/lib/ai-config";
+import { getContentProvider, getAPIKey } from "@/lib/ai-config";
 import { toast } from "sonner";
 
 interface Menu { name: string; price: string }
@@ -105,15 +105,17 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
     setLoading(true);
     setTab("result");
     try {
-      const provider = getContentAI();
+      const provider = getContentProvider();
       const apiKey = getAPIKey(provider);
       if (!apiKey) { toast.error("AI API 키가 설정되지 않았습니다. 설정 페이지에서 키를 입력해주세요."); setLoading(false); return; }
 
-      const resp = await fetch("/api/generate-cheokdan", {
+      const resp = await fetch("/api/generate-content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           provider, apiKey,
+          cheokdanMode: true,
+          keyword: shopName,
           shopName, region, category, visitDate, companions: companion,
           menus: menus.filter(m => m.name.trim()),
           tasteStar, atmosphereStar, serviceStar,
