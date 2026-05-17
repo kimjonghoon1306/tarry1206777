@@ -289,16 +289,23 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
       let content = postProcess(data.content || "");
 
+      // restructure 전에 단락 수 확인 → 부족하면 먼저 텍스트 보완
+      const rawParaCount = content.split(/\n\n+/).filter(p => {
+        const t = p.trim(); return t && !/^\[📸|^\[🎬/.test(t);
+      }).length;
+      if (rawParaCount < 7) {
+        toast.info("✍️ 내용을 보완 중이에요...", { duration: 3000 });
+        content = postProcess(await extendToMin(content, provider, apiKey));
+      }
+
       // ── 네이버 블로그 구조 재편성 ──
-      // 고정 스크립트: 글 내용 흐름에 맞게 마커를 배치
-      // 썸네일(1장) → 글 → 마커(1~2장/영상) → 글 → ... → 마무리(1장) → 해시태그
+      // 글 내용이 있는 슬롯에만 마커 배치 — 텍스트 없는 슬롯은 마커도 생략
+      // 썸네일(첫 슬롯)·마무리(마지막 슬롯)는 텍스트 없어도 무조건 유지
       function restructureContent(raw: string): string {
-        // 해시태그 분리
         const hashMatch = raw.match(/\n+(#[^\n]+)$/);
         const hashLine = hashMatch ? hashMatch[1] : "";
         const bodyOnly = hashMatch ? raw.slice(0, raw.length - hashMatch[0].length) : raw;
 
-        // 텍스트 단락만 추출 (마커 줄 제외, 빈 줄 제외)
         const paragraphs = bodyOnly
           .split(/\n\n+/)
           .map(p => p.trim())
@@ -306,68 +313,59 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
         if (paragraphs.length === 0) return raw;
 
-        // ── 스크립트 정의 ──
-        // 각 슬롯: markers[] + 그 다음에 오는 글 단락
-        // 영상 위치: 입장(초반) / 음식(중반) / 분위기(후반) — 글 흐름과 일치
         const SCRIPT: string[][] = [
-          // 썸네일 — 무조건 1장
-          ["[📸 가게 외관 전경]"],
-          // 입장 전후
-          ["[📸 가게 간판]", "[🎬 입장 영상 - 외관에서 내부로]"],
-          // 내부 분위기
-          ["[📸 내부 인테리어]", "[📸 테이블 분위기]"],
-          // 주문
-          ["[📸 메뉴판]", "[📸 음식 나오기 전 세팅]"],
-          // 메인 메뉴 등장
-          ["[📸 메인 메뉴 전체]", "[📸 메인 메뉴 클로즈업]"],
-          // 음식 영상 + 단면
-          ["[🎬 음식 영상 - 메인 메뉴 클로즈업]", "[📸 메인 메뉴 단면]"],
-          // 사이드
-          ["[📸 사이드 메뉴]", "[📸 반찬 또는 음료]"],
-          // 먹는 모습 + 분위기 영상
-          ["[📸 먹는 모습]", "[🎬 분위기 영상 - 테이블 주변]"],
-          // 함께한 분위기
-          ["[📸 함께한 분위기]", "[📸 디저트 또는 영수증]"],
-          // 마무리 — 무조건 1장 단독 (해시태그 바로 위)
-          ["[📸 가게 외부 마무리]"],
+          ["[📸 가게 외관 전경]"],                                              // 썸네일
+          ["[📸 가게 간판]", "[🎬 입장 영상 - 외관에서 내부로]"],               // 입장
+          ["[📸 내부 인테리어]", "[📸 테이블 분위기]"],                          // 내부
+          ["[📸 메뉴판]", "[📸 음식 나오기 전 세팅]"],                           // 주문
+          ["[📸 메인 메뉴 전체]", "[📸 메인 메뉴 클로즈업]"],                    // 메인 등장
+          ["[🎬 음식 영상 - 메인 메뉴 클로즈업]", "[📸 메인 메뉴 단면]"],        // 음식 영상
+          ["[📸 사이드 메뉴]", "[📸 반찬 또는 음료]"],                           // 사이드
+          ["[📸 먹는 모습]", "[🎬 분위기 영상 - 테이블 주변]"],                  // 분위기 영상
+          ["[📸 함께한 분위기]", "[📸 디저트 또는 영수증]"],                      // 마무리 전
+          ["[📸 가게 외부 마무리]"],                                             // 피날레
         ];
 
-        // 단락 수에 맞게 SCRIPT 슬롯에 텍스트 배정
-        // SCRIPT 슬롯 = 10개, 단락 수가 다를 경우 합치거나 분산
         const totalSlots = SCRIPT.length;
         const totalParas = paragraphs.length;
 
-        // 단락을 슬롯 수에 맞게 배분 (부족하면 앞 슬롯부터, 넘치면 마지막 슬롯에 합침)
+        // 단락을 슬롯에 고르게 배분 (step 간격)
+        // 마지막 슬롯(피날레)은 항상 비워둠 — 마커만 단독
         const assigned: string[] = new Array(totalSlots).fill("");
+        const usableSlots = totalSlots - 1;
+        const step = (usableSlots - 1) / Math.max(totalParas - 1, 1);
         for (let i = 0; i < totalParas; i++) {
-          const slot = Math.min(i, totalSlots - 1);
+          const slot = Math.min(Math.round(i * step), usableSlots - 1);
           assigned[slot] = assigned[slot]
             ? assigned[slot] + "\n\n" + paragraphs[i]
             : paragraphs[i];
         }
 
-        // 최종 조립
         const parts: string[] = [];
         for (let i = 0; i < totalSlots; i++) {
-          // 마커 추가
-          for (const marker of SCRIPT[i]) {
-            parts.push(marker);
-          }
-          // 해당 슬롯 텍스트 (있을 때만)
+          const isFirst = i === 0;
+          const isLast  = i === totalSlots - 1;
+          // 텍스트 없는 중간 슬롯은 마커도 생략 (억지로 끼우지 않음)
+          if (!assigned[i] && !isFirst && !isLast) continue;
+          for (const marker of SCRIPT[i]) parts.push(marker);
           if (assigned[i]) parts.push(assigned[i]);
         }
 
-        const body = parts.join("\n\n");
-        return hashLine ? `${body}\n\n${hashLine}` : body;
+        return hashLine ? parts.join("\n\n") + `\n\n${hashLine}` : parts.join("\n\n");
       }
 
       content = restructureContent(content);
 
-      // 1200자 미만이면 자동으로 이어쓰기
-      if (content.length < 1200) {
-        toast.info("✍️ 글이 짧아서 자동으로 보완 중이에요...", { duration: 4000 });
-        content = await extendToMin(content, provider, apiKey);
+      // 해시태그 없으면 shopName·region·category로 자동 생성
+      if (!content.includes("#")) {
+        const tags: string[] = [];
+        if (shopName) tags.push(`#${shopName.replace(/\s/g, "")}`);
+        if (region) region.split(/[\s·]/).filter(Boolean).forEach(r => tags.push(`#${r}맛집`));
+        if (category) tags.push(`#${category}`);
+        tags.push("#네이버블로그", "#체험단", "#블로그리뷰", "#맛집추천", "#방문후기");
+        content = content.trimEnd() + `\n\n${tags.slice(0, 8).join(" ")}`;
       }
+
       // 1500자 이상이면 문장 단위로 자르기
       if (content.length >= 1500) {
         const cutTarget = content.slice(0, 1499);
