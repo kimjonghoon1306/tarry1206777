@@ -101,6 +101,27 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
   const RAINBOW = "linear-gradient(135deg, #ff6b6b 0%, #ffd93d 22%, #6bcb77 44%, #4d96ff 66%, #c77dff 88%, #ff6b6b 100%)";
 
+  // 1500자 미만이면 서버(/api/generate-content)에 이어쓰기 요청
+  async function extendToMin(content: string, provider: string, apiKey: string): Promise<string> {
+    let current = content;
+    let attempts = 0;
+    while (current.length < 1500 && attempts < 3) {
+      attempts++;
+      try {
+        const resp = await fetch("/api/generate-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider, apiKey, extendMode: true, existingContent: current }),
+        });
+        const data = await resp.json();
+        if (data.content) {
+          current = current + "\n\n" + data.content;
+        } else break;
+      } catch { break; }
+    }
+    return current;
+  }
+
   async function generate() {
     if (!shopName.trim()) { toast.error("가게명을 입력해주세요!"); return; }
     setLoading(true);
@@ -126,13 +147,21 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       });
       const data = await resp.json();
       if (!resp.ok || data.error) throw new Error(data.error || "생성 실패");
-      setResult(data.content
+
+      let content = (data.content || "")
         .replace(/\*\*(.*?)\*\*/g, "$1")
         .replace(/\*(.*?)\*/g, "$1")
         .replace(/^#{1,3}\s+/gm, "")
-        .trim()
-      || "");
-      toast.success("✅ 체험단 글이 완성됐어요!");
+        .trim();
+
+      // 1500자 미만이면 자동으로 이어쓰기
+      if (content.length < 1500) {
+        toast.info("✍️ 글이 짧아서 자동으로 보완 중이에요...", { duration: 4000 });
+        content = await extendToMin(content, provider, apiKey);
+      }
+
+      setResult(content);
+      toast.success(`✅ 체험단 글 완성! (${content.length.toLocaleString()}자)`);
     } catch (e: any) {
       toast.error(e.message || "글 생성 중 오류가 발생했습니다.");
       setTab("form");
