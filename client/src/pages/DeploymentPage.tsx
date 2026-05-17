@@ -1638,6 +1638,38 @@ export default function DeploymentPage() {
     });
   }
 
+  // ── 네이버 블로그용 복사 (본문만 — FAQ·참고자료·관련글 제외) ──
+  function copyForNaverBodyOnly() {
+    const lines: string[] = [];
+    if (title.trim()) lines.push(title.trim() + "\n");
+    if (greeting.trim()) lines.push(greeting.trim() + "\n");
+    blocks.forEach(b => {
+      if (b.type === "text") {
+        const clean = b.content
+          .replace(/\[FAQ시작\][\s\S]*?\[FAQ끝\]/g, "")
+          .replace(/FAQ시작[\s\S]*?\[FAQ끝\]/g, "")
+          .replace(/\[참고자료시작\][\s\S]*?\[참고자료끝\]/g, "")
+          .replace(/참고자료시작[\s\S]*?\[참고자료끝\]/g, "")
+          .replace(/\[관련글시작\][\s\S]*?\[관련글끝\]/g, "")
+          .replace(/관련글시작[\s\S]*?\[관련글끝\]/g, "")
+          .replace(/^#{1,3}\s+/gm, "")
+          .replace(/\*\*(.*?)\*\*/g, "$1")
+          .replace(/\*(.*?)\*/g, "$1")
+          .trim();
+        if (clean) lines.push(clean);
+      } else if (b.type === "image-pair") {
+        lines.push("[이미지]\n[이미지]");
+      } else if (b.type === "image" && b.src) {
+        lines.push("[이미지]");
+      }
+    });
+    if (hashtags.length > 0) lines.push("\n" + hashtags.join(" "));
+    const text = lines.filter(Boolean).join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("✅ 본문만 복사됐어요! (FAQ·참고자료·관련글 제외) 📋", { duration: 4000 });
+    });
+  }
+
   // ── Webhook 발행 ──
   async function publishToWebhook(platformId: string, platformCategory?: string) {
     // 1. platform_custom_list 우선 (신규 방식)
@@ -1963,6 +1995,13 @@ export default function DeploymentPage() {
                 <Copy className="w-4 h-4" />
                 <span className="hidden sm:inline">네이버 복사</span>
                 <span className="sm:hidden">N복사</span>
+              </Button>
+              <Button size="sm" className="gap-1.5 h-9"
+                style={{ background: "#028a45", color: "white" }}
+                onClick={copyForNaverBodyOnly}>
+                <Copy className="w-4 h-4" />
+                <span className="hidden sm:inline">본문만 복사</span>
+                <span className="sm:hidden">본문</span>
               </Button>
               <Button size="sm" className="gap-1.5" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
                 <Eye className="w-4 h-4" />
@@ -2550,14 +2589,22 @@ export default function DeploymentPage() {
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
       >
         {/* 네이버 복사 버튼 - 가장 크게 강조 */}
-        <div className="px-3 pt-2">
+        <div className="flex gap-2 px-3 pt-2">
           <button
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
             style={{ background: "#03C75A", color: "white" }}
             onClick={copyForNaver}
           >
             <Copy className="w-4 h-4" />
-            네이버 블로그 복사하기 📋
+            전체 복사 📋
+          </button>
+          <button
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
+            style={{ background: "#028a45", color: "white" }}
+            onClick={copyForNaverBodyOnly}
+          >
+            <Copy className="w-4 h-4" />
+            본문만 복사 📋
           </button>
         </div>
         <div className="flex gap-2 px-3 py-2">
@@ -2602,6 +2649,11 @@ export default function DeploymentPage() {
                   style={{ background: "#03C75A", color: "white" }}
                   onClick={copyForNaver}>
                   <Copy className="w-3 h-3" /> 네이버 복사
+                </button>
+                <button className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-semibold"
+                  style={{ background: "#028a45", color: "white" }}
+                  onClick={copyForNaverBodyOnly}>
+                  <Copy className="w-3 h-3" /> 본문만
                 </button>
               </div>
               <span
