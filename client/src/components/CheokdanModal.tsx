@@ -167,8 +167,10 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       .replace(/\*\*(.*?)\*\*/g, "$1")
       .replace(/\*(.*?)\*/g, "$1")
       .replace(/^#{1,6}\s+/gm, "")
-      // CJK 한자 전체 범위 제거 (한글·숫자·기호 유지)
-      .replace(/[\u2E80-\u2EFF\u2F00-\u2FDF\u3000-\u303F\u3200-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFE30-\uFE4F]/g, "")
+      // 한글 외 모든 외국 문자 제거 (CJK·일본어·아랍어·페르시아어 등)
+      .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\u3040-\u309F\u30A0-\u30FF\u31F0-\u31FF\u2E80-\u2EFF\u2F00-\u2FDF\u3000-\u303F\u3200-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFE30-\uFE4F]/g, "")
+      // 영문 알파벳 제거
+      .replace(/[a-zA-Z]+/g, "")
       .trim();
 
     // 카메라·영상 이모지 변형 통일 (📷🤳 → 📸 / 🎥📹📽️ → 🎬)
@@ -287,59 +289,79 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
       let content = postProcess(data.content || "");
 
-      // ── 마커 개수 자동 보정 ──
-      // 사진 15개 / 영상 3개 미달이면 단락 사이에 자동 삽입
-      const PHOTO_MARKERS = [
-        "[📸 가게 외관 전경]","[📸 가게 간판]","[📸 내부 인테리어]","[📸 테이블 분위기]",
-        "[📸 메뉴판]","[📸 음식 나오기 전 세팅]","[📸 메인 메뉴 전체]","[📸 메인 메뉴 클로즈업]",
-        "[📸 메인 메뉴 단면]","[📸 사이드 메뉴]","[📸 반찬 또는 음료]","[📸 먹는 모습]",
-        "[📸 함께한 분위기]","[📸 디저트 또는 영수증]","[📸 가게 외부 마무리]",
-      ];
-      const VIDEO_MARKERS = [
-        "[🎬 입장 영상 - 외관에서 내부로]",
-        "[🎬 음식 영상 - 메인 메뉴 클로즈업]",
-        "[🎬 분위기 영상 - 테이블 주변]",
-      ];
-
-      function fillMarkers(text: string): string {
+      // ── 네이버 블로그 구조 재편성 ──
+      // 고정 스크립트: 글 내용 흐름에 맞게 마커를 배치
+      // 썸네일(1장) → 글 → 마커(1~2장/영상) → 글 → ... → 마무리(1장) → 해시태그
+      function restructureContent(raw: string): string {
         // 해시태그 분리
-        const hashMatch = text.match(/\n+(#[^\n]+)$/);
-        const hashLine = hashMatch ? hashMatch[0] : "";
-        const bodyOnly = hashMatch ? text.slice(0, text.length - hashLine.length) : text;
+        const hashMatch = raw.match(/\n+(#[^\n]+)$/);
+        const hashLine = hashMatch ? hashMatch[1] : "";
+        const bodyOnly = hashMatch ? raw.slice(0, raw.length - hashMatch[0].length) : raw;
 
-        // 현재 마커 확인
-        const existingPhotos = (bodyOnly.match(/\[📸[^\]]*\]/g) || []).map(m => m.trim());
-        const existingVideos = (bodyOnly.match(/\[🎬[^\]]*\]/g) || []).map(m => m.trim());
+        // 텍스트 단락만 추출 (마커 줄 제외, 빈 줄 제외)
+        const paragraphs = bodyOnly
+          .split(/\n\n+/)
+          .map(p => p.trim())
+          .filter(p => p && !/^\[📸|^\[🎬/.test(p));
 
-        // 필요한 마커만 추출
-        const missingPhotos = PHOTO_MARKERS.filter(m => !existingPhotos.some(e => e === m));
-        const missingVideos = VIDEO_MARKERS.filter(m => !existingVideos.some(e => e === m));
+        if (paragraphs.length === 0) return raw;
 
-        if (missingPhotos.length === 0 && missingVideos.length === 0) return text;
+        // ── 스크립트 정의 ──
+        // 각 슬롯: markers[] + 그 다음에 오는 글 단락
+        // 영상 위치: 입장(초반) / 음식(중반) / 분위기(후반) — 글 흐름과 일치
+        const SCRIPT: string[][] = [
+          // 썸네일 — 무조건 1장
+          ["[📸 가게 외관 전경]"],
+          // 입장 전후
+          ["[📸 가게 간판]", "[🎬 입장 영상 - 외관에서 내부로]"],
+          // 내부 분위기
+          ["[📸 내부 인테리어]", "[📸 테이블 분위기]"],
+          // 주문
+          ["[📸 메뉴판]", "[📸 음식 나오기 전 세팅]"],
+          // 메인 메뉴 등장
+          ["[📸 메인 메뉴 전체]", "[📸 메인 메뉴 클로즈업]"],
+          // 음식 영상 + 단면
+          ["[🎬 음식 영상 - 메인 메뉴 클로즈업]", "[📸 메인 메뉴 단면]"],
+          // 사이드
+          ["[📸 사이드 메뉴]", "[📸 반찬 또는 음료]"],
+          // 먹는 모습 + 분위기 영상
+          ["[📸 먹는 모습]", "[🎬 분위기 영상 - 테이블 주변]"],
+          // 함께한 분위기
+          ["[📸 함께한 분위기]", "[📸 디저트 또는 영수증]"],
+          // 마무리 — 무조건 1장 단독 (해시태그 바로 위)
+          ["[📸 가게 외부 마무리]"],
+        ];
 
-        // 단락 분리 후 빈 자리에 마커 삽입
-        const paragraphs = bodyOnly.split(/\n\n+/);
-        const toInsert = [...missingPhotos, ...missingVideos];
-        let insertIdx = 0;
+        // 단락 수에 맞게 SCRIPT 슬롯에 텍스트 배정
+        // SCRIPT 슬롯 = 10개, 단락 수가 다를 경우 합치거나 분산
+        const totalSlots = SCRIPT.length;
+        const totalParas = paragraphs.length;
 
-        const filled = paragraphs.map((p, i) => {
-          // 마커 줄 자체는 건너뜀
-          if (/^\[📸|^\[🎬/.test(p.trim())) return p;
-          // 짝수 단락마다 삽입 (골고루 분산)
-          if (insertIdx < toInsert.length && i % 2 === 1) {
-            const marker = toInsert[insertIdx++];
-            return `${p}\n\n${marker}`;
+        // 단락을 슬롯 수에 맞게 배분 (부족하면 앞 슬롯부터, 넘치면 마지막 슬롯에 합침)
+        const assigned: string[] = new Array(totalSlots).fill("");
+        for (let i = 0; i < totalParas; i++) {
+          const slot = Math.min(i, totalSlots - 1);
+          assigned[slot] = assigned[slot]
+            ? assigned[slot] + "\n\n" + paragraphs[i]
+            : paragraphs[i];
+        }
+
+        // 최종 조립
+        const parts: string[] = [];
+        for (let i = 0; i < totalSlots; i++) {
+          // 마커 추가
+          for (const marker of SCRIPT[i]) {
+            parts.push(marker);
           }
-          return p;
-        });
+          // 해당 슬롯 텍스트 (있을 때만)
+          if (assigned[i]) parts.push(assigned[i]);
+        }
 
-        // 남은 마커는 해시태그 바로 위에 추가
-        const remaining = toInsert.slice(insertIdx).join("\n\n");
-        const bodyResult = filled.join("\n\n") + (remaining ? `\n\n${remaining}` : "");
-        return bodyResult + hashLine;
+        const body = parts.join("\n\n");
+        return hashLine ? `${body}\n\n${hashLine}` : body;
       }
 
-      content = fillMarkers(content);
+      content = restructureContent(content);
 
       // 1200자 미만이면 자동으로 이어쓰기
       if (content.length < 1200) {
