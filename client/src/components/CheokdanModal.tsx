@@ -283,7 +283,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
   const inputStyle: React.CSSProperties = {
     width: "100%", background: t.input, border: `1px solid ${t.inputBorder}`,
-    borderRadius: 10, padding: "10px 13px", color: t.text, fontSize: 14,
+    borderRadius: 10, padding: "10px 13px", color: t.text, fontSize: 16,
     outline: "none", boxSizing: "border-box", transition: "border-color .2s",
     fontFamily: "inherit",
   };
@@ -301,25 +301,27 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       position:"fixed", inset:0, zIndex:9999,
       background: "rgba(0,0,0,0.75)", backdropFilter:"blur(8px)",
       display:"flex", alignItems:"center", justifyContent:"center",
-      padding: "env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0)",
+      overflow:"hidden",
     }}>
 
       {/* ── 미리보기 풀스크린 오버레이 ── */}
       {previewMode && result && (
         <div style={{
           position:"fixed", inset:0, zIndex:10100,
-          background:"rgba(0,0,0,0.85)", backdropFilter:"blur(12px)",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          padding:"16px",
+          background:"rgba(0,0,0,0.9)", backdropFilter:"blur(12px)",
+          display:"flex", alignItems:"flex-end", justifyContent:"center",
         }} onClick={()=>setPreviewMode(false)}>
           <div onClick={e=>e.stopPropagation()} style={{
             width:"100%", maxWidth:720,
-            maxHeight:"92vh",
+            height:"92dvh",
             background: dark ? "#0d0d1e" : "#ffffff",
-            borderRadius:20, overflow:"hidden",
+            borderRadius:"20px 20px 0 0",
+            overflow:"hidden",
             display:"flex", flexDirection:"column",
-            boxShadow:"0 40px 100px rgba(0,0,0,0.8)",
+            boxShadow:"0 -20px 80px rgba(0,0,0,0.6)",
             border:`1px solid ${t.border}`,
+            borderBottom:"none",
+            paddingBottom:"env(safe-area-inset-bottom, 0px)",
           }}>
             {/* 미리보기 헤더 */}
             <div style={{
@@ -349,39 +351,45 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   border:`1px solid ${t.border}`, background:t.card,
                   color:t.text, cursor:"pointer", fontSize:18,
                   display:"flex", alignItems:"center", justifyContent:"center",
+                  flexShrink:0,
                 }}>✕</button>
               </div>
             </div>
             {/* 미리보기 본문 */}
-            <div style={{ flex:1, overflowY:"auto", padding:"24px 28px", WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
+            <div style={{
+              flex:1, overflowY:"auto", padding:"20px 22px",
+              WebkitOverflowScrolling:"touch",
+              minHeight:0,
+            } as React.CSSProperties}>
               <style>{`
-                .ckd-pv-title{font-size:17px;font-weight:900;color:${t.text};margin-bottom:14px;line-height:1.5}
-                .ckd-pv-img{background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};border:2px dashed rgba(107,203,119,0.5);border-radius:12px;padding:16px 18px;text-align:center;color:#6bcb77;font-weight:800;font-size:13px;margin:14px 0;display:flex;align-items:center;justify-content:center;gap:8px}
-                .ckd-pv-vid{background:${dark?"rgba(77,150,255,0.12)":"rgba(77,150,255,0.18)"};border:2px dashed rgba(77,150,255,0.5);border-radius:12px;padding:16px 18px;text-align:center;color:#4d96ff;font-weight:800;font-size:13px;margin:14px 0;display:flex;align-items:center;justify-content:center;gap:8px}
-                .ckd-pv-p{font-size:14.5px;color:${t.text};line-height:1.95;margin:0 0 10px}
-                .ckd-pv-hash{font-size:13px;color:#4d96ff;margin-top:20px;line-height:1.8;font-weight:600}
+                .ckd-pv-img{background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};border:2px dashed rgba(107,203,119,0.5);border-radius:12px;padding:14px 16px;text-align:center;color:#6bcb77;font-weight:800;font-size:13px;margin:14px 0;display:flex;align-items:center;justify-content:center;gap:8px;word-break:break-word}
+                .ckd-pv-vid{background:${dark?"rgba(77,150,255,0.12)":"rgba(77,150,255,0.18)"};border:2px dashed rgba(77,150,255,0.5);border-radius:12px;padding:14px 16px;text-align:center;color:#4d96ff;font-weight:800;font-size:13px;margin:14px 0;display:flex;align-items:center;justify-content:center;gap:8px;word-break:break-word}
+                .ckd-pv-p{font-size:15px;color:${t.text};line-height:1.95;margin:0 0 10px;word-break:break-word}
+                .ckd-pv-hash{font-size:13px;color:#4d96ff;margin-top:20px;line-height:1.8;font-weight:600;word-break:break-all}
               `}</style>
               <div dangerouslySetInnerHTML={{ __html: renderPreview(result) }} />
             </div>
             {/* 미리보기 하단 버튼 */}
             <div style={{
-              padding:"14px 20px", borderTop:`1px solid ${t.border}`,
+              padding:"12px 16px", borderTop:`1px solid ${t.border}`,
               display:"flex", gap:10, flexShrink:0,
               background: dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
             }}>
               <button onClick={copyResult} style={{
-                flex:1, padding:"13px", borderRadius:12, border:"none",
+                flex:1, padding:"14px", borderRadius:12, border:"none",
                 background:"#03C75A", color:"white",
-                fontSize:14, fontWeight:900, cursor:"pointer",
+                fontSize:15, fontWeight:900, cursor:"pointer",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:8,
                 boxShadow:"0 4px 16px rgba(3,199,90,.35)",
+                minHeight:48,
               }}>
-                <Copy size={16}/> 네이버 블로그에 복사하기 📋
+                <Copy size={16}/> 복사하기 📋
               </button>
               <button onClick={()=>setPreviewMode(false)} style={{
-                padding:"13px 18px", borderRadius:12,
+                padding:"14px 16px", borderRadius:12,
                 border:`1px solid ${t.border}`, background:t.card,
-                color:t.muted, fontSize:13, fontWeight:700, cursor:"pointer",
+                color:t.muted, fontSize:14, fontWeight:700, cursor:"pointer",
+                minHeight:48, flexShrink:0,
               }}>
                 닫기
               </button>
@@ -391,43 +399,81 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       )}
       {/* Modal */}
       <div className="ckd-modal" style={{
-        width:"calc(100vw - 24px)", maxWidth:1600, maxHeight:"96vh",
-        background: t.bg, borderRadius: 20,
+        background: t.bg,
         boxShadow: t.shadow,
         display:"flex", flexDirection:"column",
-        overflow:"hidden", margin: 12,
+        overflow:"hidden",
         border: `1px solid ${t.border}`,
-        animation: "ckdSlideUp .35s cubic-bezier(.22,1,.36,1) both",
       }}>
         <style>{`
+          * { box-sizing: border-box; }
           @keyframes ckdSlideUp { from { opacity:0; transform:translateY(32px) scale(.97) } to { opacity:1; transform:none } }
+          @keyframes spin { to { transform:rotate(360deg) } }
           .ckd-input:focus { border-color: #6bcb77 !important; box-shadow: 0 0 0 3px rgba(107,203,119,.18) !important; }
           .ckd-pill { transition: all .18s; cursor:pointer; }
           .ckd-pill:hover { transform:scale(1.05); }
           .ckd-tab { transition: all .2s; }
-          ::-webkit-scrollbar { width:5px; }
+          ::-webkit-scrollbar { width:4px; }
           ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius:10px; }
 
+          /* ── 모바일 (768px 이하) ── */
           @media (max-width:768px) {
-            .ckd-modal { margin:0 !important; border-radius:0 !important;
+            .ckd-modal {
+              position:fixed !important;
+              top:0 !important; left:0 !important;
               width:100vw !important; max-width:100vw !important;
-              height:100dvh !important; max-height:100dvh !important; }
-            .ckd-body { flex-direction:column !important; flex:1 !important; overflow:hidden !important; min-height:0 !important; }
-            .ckd-panel { display:none !important; }
-            .ckd-panel.active { display:flex !important; flex:1 !important; width:100% !important; min-height:0 !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; }
+              height:100dvh !important; max-height:100dvh !important;
+              margin:0 !important; border-radius:0 !important;
+              padding-top: env(safe-area-inset-top, 0px) !important;
+              padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+            }
+            .ckd-body {
+              flex-direction:column !important;
+              flex:1 !important;
+              overflow:hidden !important;
+              min-height:0 !important;
+            }
+            .ckd-panel {
+              display:none !important;
+            }
+            .ckd-panel.active {
+              display:flex !important;
+              flex:1 !important;
+              width:100% !important;
+              min-height:0 !important;
+              overflow-y:auto !important;
+              -webkit-overflow-scrolling:touch !important;
+              flex-direction:column !important;
+            }
             .ckd-mobile-tabs { display:flex !important; }
             .ckd-desktop-only { display:none !important; }
-            .ckd-2col { grid-template-columns: 1fr !important; gap:10px !important; }
-            .ckd-form-inner { padding:14px 14px !important; }
+            .ckd-2col { grid-template-columns: 1fr !important; gap:8px !important; }
+            .ckd-form-inner { padding:12px !important; }
             .ckd-menu-num { display:none !important; }
-            .ckd-header { padding:12px 14px !important; }
-            .ckd-header-logo { width:32px !important; height:32px !important; font-size:16px !important; }
-            .ckd-header-title { font-size:14px !important; }
+            .ckd-header { padding:10px 12px !important; }
+            .ckd-header-logo { width:30px !important; height:30px !important; font-size:15px !important; }
+            .ckd-header-title { font-size:13px !important; }
             .ckd-header-sub { display:none !important; }
             .ckd-tab-label-short { display:inline !important; }
             .ckd-tab-label-long { display:none !important; }
+            .ckd-result-footer { padding:10px 12px !important; }
+            .ckd-result-header { padding:10px 12px 8px !important; }
+            /* iOS 입력창 줌인 방지: font-size 16px 이상 강제 */
+            .ckd-input { font-size:16px !important; }
+            /* 버튼 탭 영역 최소 44px (애플 HIG 기준) */
+            .ckd-tab { min-height:44px !important; }
           }
+
+          /* ── 데스크탑 (769px 이상) ── */
           @media (min-width:769px) {
+            .ckd-modal {
+              width:calc(100vw - 24px) !important;
+              max-width:1600px !important;
+              max-height:96vh !important;
+              border-radius:20px !important;
+              margin:12px !important;
+              animation: ckdSlideUp .35s cubic-bezier(.22,1,.36,1) both;
+            }
             .ckd-mobile-tabs { display:none !important; }
             .ckd-panel { display:flex !important; }
             .ckd-tab-label-short { display:none !important; }
@@ -718,7 +764,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
             width:480, flexShrink:0, flexDirection:"column",
             borderLeft:`1px solid ${t.border}`,
           }}>
-            <div style={{ padding:"14px 20px 10px", borderBottom:`1px solid ${t.border}`, flexShrink:0 }}>
+            <div className="ckd-result-header" style={{ padding:"14px 20px 10px", borderBottom:`1px solid ${t.border}`, flexShrink:0 }}>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 <div style={{ fontSize:13, fontWeight:900, color:t.muted, letterSpacing:2 }}>
                   완성된 글
@@ -751,7 +797,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
               </div>
             </div>
 
-            <div style={{ flex:1, overflowY:"auto", padding:"16px 20px" }}>
+            <div style={{ flex:1, overflowY:"auto", padding:"16px 20px", minHeight:0, WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
               {loading ? (
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", gap:16 }}>
                   <div style={{ fontSize:40, animation:"spin 2s linear infinite" }}>🌈</div>
@@ -763,9 +809,9 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   <textarea ref={resultRef}
                     value={result} onChange={e=>setResult(e.target.value)}
                     style={{
-                      width:"100%", height:"100%", minHeight:300,
+                      width:"100%", height:"100%", minHeight:240,
                       background:t.input, border:`1px solid ${t.inputBorder}`,
-                      borderRadius:12, padding:14, color:t.text, fontSize:13,
+                      borderRadius:12, padding:14, color:t.text, fontSize:16,
                       lineHeight:1.8, resize:"none", outline:"none", boxSizing:"border-box",
                       fontFamily:"inherit",
                     }}/>
@@ -789,7 +835,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
               </div>
             )}
             {result && (
-              <div style={{ padding:"14px 20px", borderTop:`1px solid ${t.border}`, flexShrink:0, display:"flex", flexDirection:"column", gap:10 }}>
+              <div className="ckd-result-footer" style={{ padding:"14px 20px", borderTop:`1px solid ${t.border}`, flexShrink:0, display:"flex", flexDirection:"column", gap:10 }}>
                 {/* 복사 방법 안내 */}
                 <div style={{
                   background:"rgba(107,203,119,0.1)", border:"1px solid rgba(107,203,119,0.25)",
@@ -798,20 +844,21 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   <strong>📸 복사 후</strong> 네이버 블로그 에디터에 붙여넣고, '여기에 사진 삽입' 위치에 직접 찍은 사진을 추가하세요!
                 </div>
                 <button onClick={copyResult} style={{
-                  width:"100%", padding:"13px", borderRadius:12, border:"none",
+                  width:"100%", padding:"14px", borderRadius:12, border:"none",
                   background:"#03C75A", color:"white",
-                  fontSize:14, fontWeight:900, cursor:"pointer",
+                  fontSize:15, fontWeight:900, cursor:"pointer",
                   display:"flex", alignItems:"center", justifyContent:"center", gap:8,
                   boxShadow:"0 4px 16px rgba(3,199,90,.35)",
-                  transition:"all .2s",
+                  transition:"all .2s", minHeight:48,
                 }}>
                   <Copy size={16}/> 네이버 블로그에 복사하기 📋
                 </button>
                 <button onClick={generate} disabled={loading} style={{
-                  width:"100%", padding:"10px", borderRadius:12,
+                  width:"100%", padding:"12px", borderRadius:12,
                   border:`1px solid ${t.border}`, background:t.card,
-                  color:t.muted, fontSize:12, fontWeight:700, cursor:"pointer",
+                  color:t.muted, fontSize:13, fontWeight:700, cursor:"pointer",
                   display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  minHeight:44,
                 }}>
                   <Sparkles size={13}/> 다시 생성하기
                 </button>
