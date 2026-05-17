@@ -40,25 +40,39 @@ const GUIDE_STEPS = [
     icon: <BookOpen size={20}/>, color: "#ff6b6b", bg: "rgba(255,107,107,0.12)",
     title: "체험단이란?",
     desc: "네이버 플레이스에 등록된 가게를 직접 방문해 음식·서비스·분위기를 경험하고, 블로그에 솔직한 후기를 작성하는 활동이에요.",
-    tips: ["사진을 최소 15장 이상 찍어두세요","짧은 영상(릴스용) 3개 이상 촬영하면 좋아요","영수증·메뉴판도 함께 촬영하면 좋아요","방문 당일 작성할수록 생생해요"]
-  },
-  {
-    icon: <PenLine size={20}/>, color: "#ffd93d", bg: "rgba(255,217,61,0.12)",
-    title: "정보 입력 방법",
-    desc: "오른쪽 폼에 가게 정보를 입력하세요. 별점과 특별했던 점을 구체적으로 적을수록 AI가 더 생생한 글을 만들어요.",
-    tips: ["가게명은 네이버 플레이스에 등록된 정확한 이름으로 입력","메뉴와 가격을 입력하면 글에 자동 반영","별점은 솔직하게 — 3~4점대 리뷰가 더 신뢰감"]
-  },
-  {
-    icon: <Sparkles size={20}/>, color: "#6bcb77", bg: "rgba(107,203,119,0.12)",
-    title: "AI 글 생성",
-    desc: "입력 완료 후 하단의 'AI 글 생성' 버튼을 누르세요. 10~20초 내로 체험단 스타일의 자연스러운 블로그 글이 완성돼요.",
-    tips: ["생성 후 내용 수정은 자유롭게","여러 번 생성해서 마음에 드는 버전 선택","가게 특색에 맞게 문체를 살짝 다듬으면 완성"]
+    tips: ["방문 전 가게 외관·간판 사진부터 찍어두세요","방문 당일 작성할수록 기억이 생생해요","영수증·메뉴판도 함께 촬영하면 글에 도움이 돼요"]
   },
   {
     icon: <Camera size={20}/>, color: "#4d96ff", bg: "rgba(77,150,255,0.12)",
-    title: "복사 & 발행",
-    desc: "생성된 글을 복사한 후 네이버 블로그 에디터에 붙여넣으세요. 📸 표시된 곳에 직접 찍은 사진을 삽입하면 완성!",
-    tips: ["'📸 [여기에 사진 삽입]' 위치에 사진 배치","해시태그는 자동 생성 — 필요시 추가","발행 전 맞춤법 검사 한 번 더!"]
+    title: "📸 사진 15장 촬영 가이드",
+    desc: "AI가 글에 사진 위치를 자동 표시해줘요. 아래 순서대로 15장을 찍어두면 완벽해요!",
+    tips: [
+      "① 가게 외관·간판 (2장)",
+      "② 내부 분위기·인테리어 (2장)",
+      "③ 메뉴판 또는 주문표 (1장)",
+      "④ 음식 나오기 전 세팅 (1장)",
+      "⑤ 메인 메뉴 클로즈업 (3장)",
+      "⑥ 사이드·반찬·음료 (2장)",
+      "⑦ 먹는 모습·분위기샷 (2장)",
+      "⑧ 디저트·후식 또는 영수증 (1장)",
+      "⑨ 가게 외부·골목 마무리샷 (1장)",
+    ]
+  },
+  {
+    icon: <Sparkles size={20}/>, color: "#6bcb77", bg: "rgba(107,203,119,0.12)",
+    title: "🎬 영상 3개 촬영 가이드",
+    desc: "짧은 영상(15~30초)을 3개 찍어두면 블로그 상위 노출에 유리해요. AI가 글 안에 영상 삽입 위치도 표시해줘요!",
+    tips: [
+      "① 입장 영상 — 가게 입구부터 내부까지 이동하며 촬영",
+      "② 음식 영상 — 메인 메뉴 담음새·김 오르는 모습 클로즈업",
+      "③ 분위기 영상 — 테이블 주변·창밖·손님들 자연스러운 컷",
+    ]
+  },
+  {
+    icon: <PenLine size={20}/>, color: "#ffd93d", bg: "rgba(255,217,61,0.12)",
+    title: "정보 입력 & AI 글 생성",
+    desc: "정보 입력 탭에서 가게 정보를 채운 뒤 'AI 글 생성' 버튼을 누르세요. 1,300자 이상의 체험단 글이 자동 완성돼요!",
+    tips: ["가게명은 네이버 플레이스 정확한 이름으로 입력","메뉴와 가격 입력 시 글에 자동 반영","별점은 솔직하게 — 3~4점대 리뷰가 더 신뢰감","생성 후 '📸 사진 위치'와 '🎬 영상 위치'에 직접 찍은 사진·영상 삽입"]
   },
 ];
 
@@ -101,11 +115,11 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
   const RAINBOW = "linear-gradient(135deg, #ff6b6b 0%, #ffd93d 22%, #6bcb77 44%, #4d96ff 66%, #c77dff 88%, #ff6b6b 100%)";
 
-  // 1500자 미만이면 서버(/api/generate-content)에 이어쓰기 요청
+  // 1300자 미만이면 서버(/api/generate-content)에 이어쓰기 요청, 1500자 초과하면 자르기
   async function extendToMin(content: string, provider: string, apiKey: string): Promise<string> {
     let current = content;
     let attempts = 0;
-    while (current.length < 1500 && attempts < 3) {
+    while (current.length < 1300 && attempts < 3) {
       attempts++;
       try {
         const resp = await fetch("/api/generate-content", {
@@ -115,9 +129,34 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
         });
         const data = await resp.json();
         if (data.content) {
-          current = current + "\n\n" + data.content;
+          const extended = current + "\n\n" + data.content;
+          // 1500자 초과 시 자연스러운 문장 단위로 자르기
+          if (extended.length > 1500) {
+            // 1500자 근처에서 문장 끝(. ! ? \n) 찾기
+            const cutTarget = extended.slice(0, 1500);
+            const lastSentence = Math.max(
+              cutTarget.lastIndexOf(".\n"),
+              cutTarget.lastIndexOf("!\n"),
+              cutTarget.lastIndexOf("?\n"),
+              cutTarget.lastIndexOf("\n\n"),
+            );
+            current = lastSentence > 1200 ? extended.slice(0, lastSentence + 1) : cutTarget;
+          } else {
+            current = extended;
+          }
         } else break;
       } catch { break; }
+    }
+    // 최종 1500자 초과 방지
+    if (current.length > 1500) {
+      const cutTarget = current.slice(0, 1500);
+      const lastSentence = Math.max(
+        cutTarget.lastIndexOf(".\n"),
+        cutTarget.lastIndexOf("!\n"),
+        cutTarget.lastIndexOf("?\n"),
+        cutTarget.lastIndexOf("\n\n"),
+      );
+      current = lastSentence > 1200 ? current.slice(0, lastSentence + 1) : cutTarget;
     }
     return current;
   }
@@ -142,7 +181,16 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
           menus: menus.filter(m => m.name.trim()),
           tasteStar, atmosphereStar, serviceStar,
           highlight, weakness,
-          minChars: 1500,
+          minChars: 1300,
+          maxChars: 1499,
+          // 핵심 지시: 한자 절대 금지, 글자수 1300~1499자, 사진 15장/영상 3개 위치 명시
+          systemInstructions: [
+            "절대 한자(漢字)를 사용하지 마세요. 한자가 포함되면 무조건 한글로 변환하세요. 예: 訪問→방문, 料理→요리, 雰圍氣→분위기 등.",
+            "완성된 글의 총 글자수는 반드시 1300자 이상 1499자 이하여야 합니다. 이 범위를 벗어나면 안 됩니다.",
+            "글 전체에 걸쳐 [📸 사진설명] 마커를 정확히 15개 배치하세요. 각 마커는 해당 단락의 내용에 맞는 구체적인 사진 설명을 포함하세요.",
+            "글 전체에 걸쳐 [🎬 영상설명] 마커를 정확히 3개 배치하세요. ① 입장/외관 영상, ② 음식 영상, ③ 분위기 영상 순서로 배치하세요.",
+            "사진과 영상 마커는 해당 내용이 나오는 문단 바로 다음 줄에 배치해 자연스럽게 흐르도록 하세요.",
+          ].join(" "),
         }),
       });
       const data = await resp.json();
@@ -152,12 +200,27 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
         .replace(/\*\*(.*?)\*\*/g, "$1")
         .replace(/\*(.*?)\*/g, "$1")
         .replace(/^#{1,3}\s+/gm, "")
+        // 한자 완전 제거: 유니코드 한자 범위(CJK) 제거 후 공백 정리
+        .replace(/[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]/g, "")
+        .replace(/\s{2,}/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
         .trim();
 
-      // 1500자 미만이면 자동으로 이어쓰기
-      if (content.length < 1500) {
+      // 1300자 미만이면 자동으로 이어쓰기
+      if (content.length < 1300) {
         toast.info("✍️ 글이 짧아서 자동으로 보완 중이에요...", { duration: 4000 });
         content = await extendToMin(content, provider, apiKey);
+      }
+      // 1500자 이상이면 문장 단위로 자르기
+      if (content.length >= 1500) {
+        const cutTarget = content.slice(0, 1499);
+        const lastSentence = Math.max(
+          cutTarget.lastIndexOf(".\n"),
+          cutTarget.lastIndexOf("!\n"),
+          cutTarget.lastIndexOf("?\n"),
+          cutTarget.lastIndexOf("\n\n"),
+        );
+        content = lastSentence > 1200 ? content.slice(0, lastSentence + 1) : cutTarget;
       }
 
       setResult(content);
@@ -240,6 +303,92 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       display:"flex", alignItems:"center", justifyContent:"center",
       padding: "env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0)",
     }}>
+
+      {/* ── 미리보기 풀스크린 오버레이 ── */}
+      {previewMode && result && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:10100,
+          background:"rgba(0,0,0,0.85)", backdropFilter:"blur(12px)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          padding:"16px",
+        }} onClick={()=>setPreviewMode(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            width:"100%", maxWidth:720,
+            maxHeight:"92vh",
+            background: dark ? "#0d0d1e" : "#ffffff",
+            borderRadius:20, overflow:"hidden",
+            display:"flex", flexDirection:"column",
+            boxShadow:"0 40px 100px rgba(0,0,0,0.8)",
+            border:`1px solid ${t.border}`,
+          }}>
+            {/* 미리보기 헤더 */}
+            <div style={{
+              padding:"14px 20px", borderBottom:`1px solid ${t.border}`,
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+              flexShrink:0,
+              background: dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+            }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ fontSize:18 }}>📝</div>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:900, color:t.text }}>블로그 미리보기</div>
+                  <div style={{ fontSize:11, color:t.muted, marginTop:1 }}>네이버 블로그에 발행될 글 미리보기</div>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                <span style={{
+                  fontSize:11, fontWeight:700, borderRadius:8, padding:"3px 8px",
+                  color: result.length >= 1300 && result.length < 1500 ? "#6bcb77" : "#ff6b6b",
+                  background: result.length >= 1300 && result.length < 1500 ? "rgba(107,203,119,0.15)" : "rgba(255,107,107,0.15)",
+                  border: `1px solid ${result.length >= 1300 && result.length < 1500 ? "rgba(107,203,119,0.4)" : "rgba(255,107,107,0.4)"}`,
+                }}>
+                  {result.length.toLocaleString()}자
+                </span>
+                <button onClick={()=>setPreviewMode(false)} style={{
+                  width:36, height:36, borderRadius:10,
+                  border:`1px solid ${t.border}`, background:t.card,
+                  color:t.text, cursor:"pointer", fontSize:18,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                }}>✕</button>
+              </div>
+            </div>
+            {/* 미리보기 본문 */}
+            <div style={{ flex:1, overflowY:"auto", padding:"24px 28px", WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
+              <style>{`
+                .ckd-pv-title{font-size:17px;font-weight:900;color:${t.text};margin-bottom:14px;line-height:1.5}
+                .ckd-pv-img{background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};border:2px dashed rgba(107,203,119,0.5);border-radius:12px;padding:16px 18px;text-align:center;color:#6bcb77;font-weight:800;font-size:13px;margin:14px 0;display:flex;align-items:center;justify-content:center;gap:8px}
+                .ckd-pv-vid{background:${dark?"rgba(77,150,255,0.12)":"rgba(77,150,255,0.18)"};border:2px dashed rgba(77,150,255,0.5);border-radius:12px;padding:16px 18px;text-align:center;color:#4d96ff;font-weight:800;font-size:13px;margin:14px 0;display:flex;align-items:center;justify-content:center;gap:8px}
+                .ckd-pv-p{font-size:14.5px;color:${t.text};line-height:1.95;margin:0 0 10px}
+                .ckd-pv-hash{font-size:13px;color:#4d96ff;margin-top:20px;line-height:1.8;font-weight:600}
+              `}</style>
+              <div dangerouslySetInnerHTML={{ __html: renderPreview(result) }} />
+            </div>
+            {/* 미리보기 하단 버튼 */}
+            <div style={{
+              padding:"14px 20px", borderTop:`1px solid ${t.border}`,
+              display:"flex", gap:10, flexShrink:0,
+              background: dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
+            }}>
+              <button onClick={copyResult} style={{
+                flex:1, padding:"13px", borderRadius:12, border:"none",
+                background:"#03C75A", color:"white",
+                fontSize:14, fontWeight:900, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                boxShadow:"0 4px 16px rgba(3,199,90,.35)",
+              }}>
+                <Copy size={16}/> 네이버 블로그에 복사하기 📋
+              </button>
+              <button onClick={()=>setPreviewMode(false)} style={{
+                padding:"13px 18px", borderRadius:12,
+                border:`1px solid ${t.border}`, background:t.card,
+                color:t.muted, fontSize:13, fontWeight:700, cursor:"pointer",
+              }}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modal */}
       <div className="ckd-modal" style={{
         width:"calc(100vw - 24px)", maxWidth:1600, maxHeight:"96vh",
@@ -578,12 +727,12 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   {result && (
                     <span style={{
                       fontSize:11, fontWeight:700,
-                      color: result.length >= 1500 ? "#6bcb77" : "#ff6b6b",
-                      background: result.length >= 1500 ? "rgba(107,203,119,0.15)" : "rgba(255,107,107,0.15)",
-                      border: `1px solid ${result.length >= 1500 ? "rgba(107,203,119,0.4)" : "rgba(255,107,107,0.4)"}`,
+                      color: result.length >= 1300 && result.length < 1500 ? "#6bcb77" : result.length >= 1500 ? "#ffd93d" : "#ff6b6b",
+                      background: result.length >= 1300 && result.length < 1500 ? "rgba(107,203,119,0.15)" : result.length >= 1500 ? "rgba(255,217,61,0.15)" : "rgba(255,107,107,0.15)",
+                      border: `1px solid ${result.length >= 1300 && result.length < 1500 ? "rgba(107,203,119,0.4)" : result.length >= 1500 ? "rgba(255,217,61,0.4)" : "rgba(255,107,107,0.4)"}`,
                       borderRadius:8, padding:"3px 8px",
                     }}>
-                      {result.length.toLocaleString()}자 {result.length >= 1500 ? "✓" : `/ 1500자 필요`}
+                      {result.length.toLocaleString()}자 {result.length >= 1300 && result.length < 1500 ? "✓ 적정" : result.length >= 1500 ? "⚠️ 초과" : `/ 1300자 필요`}
                     </span>
                   )}
                   {result && (
@@ -595,7 +744,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                       <button onClick={()=>setPreviewMode(true)} style={{
                         padding:"5px 10px", fontSize:11, fontWeight:700, border:"none", cursor:"pointer",
                         background: previewMode ? "#6bcb77" : t.input, color: previewMode ? "#000" : t.muted,
-                      }}>👁️ 미리보기</button>
+                      }}>👁️ 미리보기 (전체화면)</button>
                     </div>
                   )}
                 </div>
@@ -611,18 +760,6 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                   </div>
                 </div>
               ) : result ? (
-                previewMode ? (
-                  <div style={{ height:"100%", overflowY:"auto" }}>
-                    <style>{`
-                      .ckd-pv-title{font-size:17px;font-weight:900;color:${t.text};margin-bottom:14px;line-height:1.5}
-                      .ckd-pv-img{background:${dark?"rgba(107,203,119,0.12)":"rgba(107,203,119,0.18)"};border:2px dashed rgba(107,203,119,0.5);border-radius:12px;padding:16px;text-align:center;color:#6bcb77;font-weight:800;font-size:13px;margin:12px 0}
-                      .ckd-pv-vid{background:${dark?"rgba(77,150,255,0.12)":"rgba(77,150,255,0.18)"};border:2px dashed rgba(77,150,255,0.5);border-radius:12px;padding:16px;text-align:center;color:#4d96ff;font-weight:800;font-size:13px;margin:12px 0}
-                      .ckd-pv-p{font-size:13px;color:${t.text};line-height:1.85;margin:0 0 8px}
-                      .ckd-pv-hash{font-size:12px;color:#4d96ff;margin-top:16px;line-height:1.7;font-weight:600}
-                    `}</style>
-                    <div dangerouslySetInnerHTML={{ __html: renderPreview(result) }} />
-                  </div>
-                ) : (
                   <textarea ref={resultRef}
                     value={result} onChange={e=>setResult(e.target.value)}
                     style={{
@@ -632,7 +769,6 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
                       lineHeight:1.8, resize:"none", outline:"none", boxSizing:"border-box",
                       fontFamily:"inherit",
                     }}/>
-                )
               ) : (
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", gap:12, opacity:.5 }}>
                   <div style={{ fontSize:48 }}>✍️</div>
@@ -643,13 +779,13 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
               )}
             </div>
 
-            {result && result.length < 1500 && (
+            {result && result.length < 1300 && (
               <div style={{
                 margin:"0 20px 8px", padding:"10px 13px", borderRadius:10, flexShrink:0,
                 background:"rgba(255,107,107,0.12)", border:"1px solid rgba(255,107,107,0.35)",
                 fontSize:12, color:"#ff6b6b", lineHeight:1.6,
               }}>
-                ⚠️ 현재 <strong>{result.length}자</strong>에요. 체험단 글은 <strong>1,500자 이상</strong>이어야 해요. '다시 생성하기'를 눌러보세요.
+                ⚠️ 현재 <strong>{result.length}자</strong>에요. 체험단 글은 <strong>1,300자 이상</strong>이어야 해요. '다시 생성하기'를 눌러보세요.
               </div>
             )}
             {result && (
