@@ -190,13 +190,13 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
         .replace(/(\[🎬[^\]]*\])([^\n])/g, "$1\n\n$2");
     }
 
-    // 해시태그 수집 → 맨 아래로 강제 이동
+    // 해시태그 수집 → 마커 뒤, 글 맨 마지막으로 강제 이동
     const tagSet = new Set<string>();
     const bodyLines: string[] = [];
 
     for (const line of s.split("\n")) {
       const trimmed = line.trim();
-      // 순수 해시태그 줄 (예: "#맛집 #한식 #체험단")
+      // 순수 해시태그 줄
       if (trimmed && /^(#[^\s]+\s*)+$/.test(trimmed)) {
         (trimmed.match(/#[^\s]+/g) || []).forEach(tag => tagSet.add(tag));
         continue;
@@ -211,9 +211,17 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       bodyLines.push(line);
     }
 
+    // 본문 정리: 마지막 마커 이후에 해시태그가 끼어드는 케이스 방지
+    // 구조 보장: ...글 본문... → [📸/🎬 마지막 마커] → 해시태그
     let body = bodyLines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-    if (tagSet.size > 0) body += `\n\n${[...tagSet].join(" ")}`;
-    return body;
+
+    // 본문 끝에 마커가 아닌 빈 줄 이후 해시태그가 붙는 형태로 완성
+    const hashtagLine = tagSet.size > 0 ? [...tagSet].join(" ") : "";
+
+    // 혹시 body 맨 끝에 해시태그가 남아있으면 제거 후 재조합
+    body = body.replace(/\n+(#[^\n]+)$/, "").trim();
+
+    return hashtagLine ? `${body}\n\n${hashtagLine}` : body;
   }
 
   async function generate() {
@@ -239,19 +247,37 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
           minChars: 1200,
           maxChars: 1499,
           systemInstructions: [
-            "【필수 규칙 — 위반 시 무효】",
+            "【필수 규칙】",
             "① 한글로만 작성. 한자·영문·특수기호 절대 금지.",
             "② 총 글자수 1,200자 이상 1,499자 이하.",
-            "③ 해시태그(#단어)는 글 맨 마지막 줄에만 5개 이상. 본문 중간 절대 금지.",
+            "③ 해시태그는 글 맨 마지막 줄에만 5개 이상. 본문 중간 절대 금지.",
             "【마커 형식 — 반드시 독립 줄, 앞뒤 빈 줄 필수】",
-            "올바른 예: '음식이 맛있었어요.\\n\\n[📸 메인 메뉴 클로즈업]\\n\\n서비스도 훌륭했어요.'",
-            "금지 예: '맛있었어요. [📸 메인 메뉴] 서비스도...' 또는 '맛있었어요. 📸 메뉴 사진 서비스...'",
-            "[📸 설명] 정확히 15개: 외관2·내부2·메뉴판1·세팅1·메인메뉴3·사이드2·분위기2·디저트/영수증1·마무리1",
-            "[🎬 설명] 정확히 3개: 입장영상·음식영상·분위기영상",
+            "올바른 예: '맛있었어요.\\n\\n[📸 메인 메뉴 클로즈업]\\n\\n서비스도...'",
+            "금지 예: '맛있었어요. [📸 메뉴] 서비스...' (인라인 절대 금지)",
+            "【사진 마커 정확히 15개 — 아래 이름 그대로 순서대로 배치】",
+            "[📸 가게 외관 전경]",
+            "[📸 가게 간판]",
+            "[📸 내부 인테리어]",
+            "[📸 테이블 분위기]",
+            "[📸 메뉴판]",
+            "[📸 음식 나오기 전 세팅]",
+            "[📸 메인 메뉴 전체]",
+            "[📸 메인 메뉴 클로즈업]",
+            "[📸 메인 메뉴 단면]",
+            "[📸 사이드 메뉴]",
+            "[📸 반찬 또는 음료]",
+            "[📸 먹는 모습]",
+            "[📸 함께한 분위기]",
+            "[📸 디저트 또는 영수증]",
+            "[📸 가게 외부 마무리]",
+            "【영상 마커 정확히 3개 — 아래 이름 그대로 순서대로 배치】",
+            "[🎬 입장 영상 - 외관에서 내부로]",
+            "[🎬 음식 영상 - 메인 메뉴 클로즈업]",
+            "[🎬 분위기 영상 - 테이블 주변]",
             "【글 품질】",
-            "실제 방문한 사람이 쓴 생생한 후기처럼 작성. 맛·향·식감·분위기를 구체적 감각 표현으로 묘사.",
-            "스토리텔링 구조: 방문 전 기대 → 입장 → 주문 → 식사 → 총평.",
-            "장점과 아쉬운 점을 자연스럽게 섞어 신뢰감 있는 솔직한 후기 스타일로 작성.",
+            "실제 방문한 사람의 생생한 후기. 맛·향·식감·분위기를 구체적 감각 표현으로 묘사.",
+            "스토리텔링: 방문 전 기대 → 입장 → 주문 → 식사 → 총평.",
+            "장점과 아쉬운 점을 자연스럽게 섞어 신뢰감 있는 솔직한 스타일.",
             "문장 길이를 다양하게 하여 리듬감을 살리세요.",
           ].join(" "),
         }),
@@ -260,6 +286,60 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
       if (!resp.ok || data.error) throw new Error(data.error || "생성 실패");
 
       let content = postProcess(data.content || "");
+
+      // ── 마커 개수 자동 보정 ──
+      // 사진 15개 / 영상 3개 미달이면 단락 사이에 자동 삽입
+      const PHOTO_MARKERS = [
+        "[📸 가게 외관 전경]","[📸 가게 간판]","[📸 내부 인테리어]","[📸 테이블 분위기]",
+        "[📸 메뉴판]","[📸 음식 나오기 전 세팅]","[📸 메인 메뉴 전체]","[📸 메인 메뉴 클로즈업]",
+        "[📸 메인 메뉴 단면]","[📸 사이드 메뉴]","[📸 반찬 또는 음료]","[📸 먹는 모습]",
+        "[📸 함께한 분위기]","[📸 디저트 또는 영수증]","[📸 가게 외부 마무리]",
+      ];
+      const VIDEO_MARKERS = [
+        "[🎬 입장 영상 - 외관에서 내부로]",
+        "[🎬 음식 영상 - 메인 메뉴 클로즈업]",
+        "[🎬 분위기 영상 - 테이블 주변]",
+      ];
+
+      function fillMarkers(text: string): string {
+        // 해시태그 분리
+        const hashMatch = text.match(/\n+(#[^\n]+)$/);
+        const hashLine = hashMatch ? hashMatch[0] : "";
+        const bodyOnly = hashMatch ? text.slice(0, text.length - hashLine.length) : text;
+
+        // 현재 마커 확인
+        const existingPhotos = (bodyOnly.match(/\[📸[^\]]*\]/g) || []).map(m => m.trim());
+        const existingVideos = (bodyOnly.match(/\[🎬[^\]]*\]/g) || []).map(m => m.trim());
+
+        // 필요한 마커만 추출
+        const missingPhotos = PHOTO_MARKERS.filter(m => !existingPhotos.some(e => e === m));
+        const missingVideos = VIDEO_MARKERS.filter(m => !existingVideos.some(e => e === m));
+
+        if (missingPhotos.length === 0 && missingVideos.length === 0) return text;
+
+        // 단락 분리 후 빈 자리에 마커 삽입
+        const paragraphs = bodyOnly.split(/\n\n+/);
+        const toInsert = [...missingPhotos, ...missingVideos];
+        let insertIdx = 0;
+
+        const filled = paragraphs.map((p, i) => {
+          // 마커 줄 자체는 건너뜀
+          if (/^\[📸|^\[🎬/.test(p.trim())) return p;
+          // 짝수 단락마다 삽입 (골고루 분산)
+          if (insertIdx < toInsert.length && i % 2 === 1) {
+            const marker = toInsert[insertIdx++];
+            return `${p}\n\n${marker}`;
+          }
+          return p;
+        });
+
+        // 남은 마커는 해시태그 바로 위에 추가
+        const remaining = toInsert.slice(insertIdx).join("\n\n");
+        const bodyResult = filled.join("\n\n") + (remaining ? `\n\n${remaining}` : "");
+        return bodyResult + hashLine;
+      }
+
+      content = fillMarkers(content);
 
       // 1200자 미만이면 자동으로 이어쓰기
       if (content.length < 1200) {
