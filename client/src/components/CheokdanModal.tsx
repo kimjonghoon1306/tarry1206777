@@ -40,7 +40,7 @@ const GUIDE_STEPS = [
     icon: <BookOpen size={20}/>, color: "#ff6b6b", bg: "rgba(255,107,107,0.12)",
     title: "체험단이란?",
     desc: "네이버 플레이스에 등록된 가게를 직접 방문해 음식·서비스·분위기를 경험하고, 블로그에 솔직한 후기를 작성하는 활동이에요.",
-    tips: ["사진을 최소 10장 이상 찍어두세요","영수증·메뉴판도 함께 촬영하면 좋아요","방문 당일 작성할수록 생생해요"]
+    tips: ["사진을 최소 15장 이상 찍어두세요","짧은 영상(릴스용) 3개 이상 촬영하면 좋아요","영수증·메뉴판도 함께 촬영하면 좋아요","방문 당일 작성할수록 생생해요"]
   },
   {
     icon: <PenLine size={20}/>, color: "#ffd93d", bg: "rgba(255,217,61,0.12)",
@@ -187,11 +187,11 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
     }}>
       {/* Modal */}
       <div style={{
-        width:"100%", maxWidth:1100, maxHeight:"96vh",
+        width:"calc(100vw - 24px)", maxWidth:1600, maxHeight:"96vh",
         background: t.bg, borderRadius: 20,
         boxShadow: t.shadow,
         display:"flex", flexDirection:"column",
-        overflow:"hidden", margin: 8,
+        overflow:"hidden", margin: 12,
         border: `1px solid ${t.border}`,
         animation: "ckdSlideUp .35s cubic-bezier(.22,1,.36,1) both",
       }}>
@@ -277,7 +277,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
           {/* LEFT — Guide Panel */}
           <div className={`ckd-panel ${tab==="guide"?"active":""}`} style={{
-            width:340, flexShrink:0, flexDirection:"column",
+            width:400, flexShrink:0, flexDirection:"column",
             overflowY:"auto", borderRight:`1px solid ${t.border}`,
             background: dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
           }}>
@@ -489,7 +489,7 @@ export default function CheokdanModal({ isOpen, onClose }: Props) {
 
           {/* RIGHT — Result Panel */}
           <div className={`ckd-panel ${tab==="result"?"active":""}`} style={{
-            width:380, flexShrink:0, flexDirection:"column",
+            width:480, flexShrink:0, flexDirection:"column",
             borderLeft:`1px solid ${t.border}`,
           }}>
             <div style={{ padding:"20px 20px 12px", borderBottom:`1px solid ${t.border}`, flexShrink:0 }}>
