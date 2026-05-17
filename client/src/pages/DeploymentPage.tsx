@@ -2124,8 +2124,8 @@ export default function DeploymentPage() {
                 {showNaverMenu && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowNaverMenu(false)} />
-                    <div className="absolute top-11 right-0 z-50 w-72 rounded-2xl shadow-2xl overflow-hidden"
-                      style={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)" }}>
+                    <div className="absolute top-11 right-0 z-50 rounded-2xl shadow-2xl overflow-hidden"
+                      style={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)", width: 288, maxWidth: "calc(100vw - 16px)" }}>
                       {/* 헤더 */}
                       <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
                         <p className="text-xs font-bold text-white">📋 네이버 블로그 복사 방식 선택</p>
@@ -2172,7 +2172,7 @@ export default function DeploymentPage() {
               <Button size="sm" className="gap-1.5 h-9 font-black"
                 style={{ background:"linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#c77dff)", color:"#000", border:"none" }}
                 onClick={() => setShowCheokdan(true)}>
-                🍽️ <span className="hidden sm:inline">체험단 작성</span>
+                🍽️ <span className="hidden sm:inline">체험단 작성</span><span className="sm:hidden">체험단</span>
               </Button>
               <Button size="sm" className="gap-1.5" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
                 <Eye className="w-4 h-4" />
@@ -2760,72 +2760,6 @@ export default function DeploymentPage() {
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
       >
         {/* 네이버 복사 버튼 - 팝업 메뉴 */}
-        <div className="px-3 pt-2 relative">
-          <button
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
-            style={{ background: "#03C75A", color: "white" }}
-            onClick={() => setShowNaverMenu(v => !v)}
-          >
-            <Copy className="w-4 h-4" />
-            네이버 블로그 복사하기 📋 ▲
-          </button>
-          {showNaverMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowNaverMenu(false)} />
-              <div className="absolute top-14 left-0 right-0 mx-0 z-50 rounded-2xl shadow-2xl overflow-hidden"
-                style={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)" }}>
-                {/* 헤더 */}
-                <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-                  <p className="text-sm font-bold text-white">📋 복사 방식 선택</p>
-                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>글 종류에 맞게 선택하세요</p>
-                </div>
-                {/* 옵션 1 */}
-                <button className="w-full text-left px-4 py-4 transition-all active:scale-[0.98] border-b"
-                  style={{ background: "rgba(3,199,90,0.15)", borderColor: "rgba(255,255,255,0.08)" }}
-                  onClick={() => { copyForNaver(); setShowNaverMenu(false); }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#03C75A", color: "white" }}>전체</span>
-                    <span className="text-sm font-bold text-white">전체 복사</span>
-                  </div>
-                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>본문 + FAQ + 참고자료 + 관련글</p>
-                  <p className="text-xs mt-0.5" style={{ color: "#4ade80" }}>✓ 정보성 글 · 리뷰 · 튜토리얼</p>
-                </button>
-                {/* 옵션 2 */}
-                <button className="w-full text-left px-4 py-4 transition-all active:scale-[0.98] border-b"
-                  style={{ background: "rgba(251,191,36,0.12)", borderColor: "rgba(255,255,255,0.08)" }}
-                  onClick={() => { copyForNaverWithFaq(); setShowNaverMenu(false); }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#fbbf24", color: "#000" }}>FAQ</span>
-                    <span className="text-sm font-bold text-white">본문 + FAQ 복사</span>
-                  </div>
-                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>참고자료·관련글 제외, Q&A 포함</p>
-                  <p className="text-xs mt-0.5" style={{ color: "#fbbf24" }}>✓ 일반 블로그 · 상품 리뷰</p>
-                </button>
-                {/* 옵션 3 */}
-                <button className="w-full text-left px-4 py-4 transition-all active:scale-[0.98]"
-                  style={{ background: "rgba(244,114,182,0.12)" }}
-                  onClick={() => { copyForNaverBodyOnly(); setShowNaverMenu(false); }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: "#f472b6", color: "white" }}>본문</span>
-                    <span className="text-sm font-bold text-white">본문만 복사</span>
-                  </div>
-                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>FAQ·참고자료·관련글 전부 제외</p>
-                  <p className="text-xs mt-0.5" style={{ color: "#f472b6" }}>✓ 체험단 · 맛집 · 여행 후기</p>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-        {/* 체험단 작성 버튼 */}
-        <div className="px-3 pt-0 pb-1">
-          <button
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
-            style={{ background:"linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#c77dff)", color:"#000", fontWeight:900 }}
-            onClick={() => setShowCheokdan(true)}
-          >
-            🍽️ 체험단 작성
-          </button>
-        </div>
         <div className="flex gap-2 px-3 py-2">
           <Button className="flex-1 gap-1.5 h-10" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
             <Eye className="w-4 h-4" /> 미리보기
