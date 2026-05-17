@@ -1612,7 +1612,7 @@ export default function DeploymentPage() {
 
   // ── 이미지 위치 마커 자동 삽입 헬퍼 ──
   // AI 이미지 또는 직접 삽입 실사 사진 있으면 절대 건드리지 않음
-  // 없을 때만: 300자 단위로 📸 삽입, 마지막 본문 뒤에는 넣지 않음
+  // 본문에만 300자 단위 📸 삽입, FAQ/참고자료/관련글/해시태그 영역은 절대 건드리지 않음
   function addNaverImageMarkers(text: string): string {
     const hasRealImages =
       text.includes("[이미지]") ||
@@ -1622,28 +1622,55 @@ export default function DeploymentPage() {
       );
     if (hasRealImages) return text;
 
-    // 해시태그 분리
-    const hashtagSuffix = hashtags.length > 0 ? "\n\n" + hashtags.join(" ") : "";
-    const bodyText = hashtagSuffix
-      ? text.slice(0, text.lastIndexOf(hashtags[0])).trimEnd()
-      : text;
+    // ① 본문 / 나머지(FAQ·링크·관련글·해시태그) 분리
+    const extraPatterns = [
+      /\[FAQ시작\]/,
+      /^Q1\s*[:.：]/m,
+      /\[참고자료시작\]/,
+      /^LINK1\s*[:.：]/m,
+      /\[관련글시작\]/,
+      /^POST1\s*[:.：]/m,
+    ];
+    let extraStart = -1;
+    for (const pat of extraPatterns) {
+      const m = pat.exec(text);
+      if (m && (extraStart === -1 || m.index < extraStart)) {
+        extraStart = m.index;
+      }
+    }
 
-    // 줄 단위로 분리 (빈 줄 제거)
-    const lines = bodyText.split(/\n/).map(l => l.trim()).filter(l => l.length > 0);
+    // 해시태그 분리 (마지막 줄)
+    const lastNl = text.lastIndexOf("\n");
+    const lastLine = lastNl >= 0 ? text.slice(lastNl + 1).trim() : "";
+    let hashSuffix = "";
+    let textNoHash = text;
+    if (/^#/.test(lastLine)) {
+      hashSuffix = "\n\n" + lastLine;
+      textNoHash = text.slice(0, lastNl).trimEnd();
+      if (extraStart >= lastNl) extraStart = -1; // extraStart가 해시태그 안이면 무시
+    }
+
+    const bodyRaw = extraStart > 0 ? textNoHash.slice(0, extraStart).trimEnd() : textNoHash;
+    const extraRaw = extraStart > 0 ? textNoHash.slice(extraStart).trimEnd() : "";
+
+    // ② 본문만 줄 단위 분리
+    const lines = bodyRaw.split("\n").map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length <= 1) return text;
 
-    // 첫 줄 = 제목. 두 번째 줄이 제목과 같으면 중복 제거
     const titleLine = lines[0];
-    const bodyLines = lines.slice(1).filter((l, i) => !(i === 0 && l === titleLine));
-
+    let bodyLines = lines.slice(1);
+    // 중복 제목 제거
+    if (bodyLines.length > 0 && bodyLines[0] === titleLine) {
+      bodyLines = bodyLines.slice(1);
+    }
     if (bodyLines.length === 0) return text;
 
-    // 300자 단위로 청크 묶기
+    // ③ 300자 단위 청크
     const CHUNK = 300;
     const chunks: string[] = [];
     let buf = "";
     for (const line of bodyLines) {
-      if (buf.length > 0 && buf.length + line.length > CHUNK) {
+      if (buf.length > 0 && buf.length + line.length + 1 > CHUNK) {
         chunks.push(buf.trim());
         buf = line;
       } else {
@@ -1651,17 +1678,18 @@ export default function DeploymentPage() {
       }
     }
     if (buf.trim()) chunks.push(buf.trim());
+    if (chunks.length <= 1 && !extraRaw) return text;
 
-    if (chunks.length <= 1) return text;
-
-    // 제목 + [📸 + 청크] 순서로 조립, 마지막 청크 뒤에는 이미지 없음
+    // ④ 조립: 제목 + [📸 + 청크] + 나머지(FAQ 등) + 해시태그
+    // 마지막 본문 청크 뒤에는 이미지 없음
     const result: string[] = [titleLine];
-    for (let i = 0; i < chunks.length; i++) {
+    for (const chunk of chunks) {
       result.push("📸 [여기에 사진 삽입]");
-      result.push(chunks[i]);
+      result.push(chunk);
     }
+    if (extraRaw) result.push(extraRaw);
 
-    return result.join("\n\n") + hashtagSuffix;
+    return result.join("\n\n") + hashSuffix;
   }
 
   // ── 네이버 블로그용 복사 (제목 + 본문 + 해시태그) ──
