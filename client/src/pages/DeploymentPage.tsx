@@ -1609,6 +1609,27 @@ export default function DeploymentPage() {
     toast.success(`✅ 티스토리 발행 완료! ${data.url}`);
   }
 
+
+  // ── 이미지 위치 마커 자동 삽입 헬퍼 ──
+  // AI 이미지 또는 직접 삽입한 실사 사진이 있으면 절대 건드리지 않음
+  function addNaverImageMarkers(text: string): string {
+    const hasRealImages =
+      text.includes("[이미지]") ||
+      blocks.some(b =>
+        (b.type === "image" && b.src && b.src.trim() !== "") ||
+        b.type === "image-pair"
+      );
+    if (hasRealImages) return text;
+    const parts = text.split(/\n\n+/).filter(s => s.trim());
+    if (parts.length <= 1) return text;
+    const result: string[] = [parts[0]];
+    for (let i = 1; i < parts.length; i++) {
+      result.push("📸 [여기에 사진 삽입]");
+      result.push(parts[i]);
+    }
+    return result.join("\n\n");
+  }
+
   // ── 네이버 블로그용 복사 (제목 + 본문 + 해시태그) ──
   function copyForNaver() {
     const lines: string[] = [];
@@ -1633,7 +1654,7 @@ export default function DeploymentPage() {
     // 해시태그
     if (hashtags.length > 0) lines.push("\n" + hashtags.join(" "));
 
-    const text = lines.join("\n");
+    const text = addNaverImageMarkers(lines.join("\n"));
     navigator.clipboard.writeText(text).then(() => {
       toast.success("✅ 네이버 블로그용으로 복사됐어요! 네이버 블로그 에디터에 붙여넣으세요 📋", { duration: 4000 });
     });
@@ -1672,7 +1693,7 @@ export default function DeploymentPage() {
       }
     });
     if (hashtags.length > 0) lines.push("\n" + hashtags.join(" "));
-    const text = lines.filter(Boolean).join("\n");
+    const text = addNaverImageMarkers(lines.filter(Boolean).join("\n"));
     navigator.clipboard.writeText(text).then(() => {
       toast.success("✅ 본문만 복사됐어요! (FAQ·참고자료·관련글 제외) 📋", { duration: 4000 });
     });
@@ -1702,7 +1723,7 @@ export default function DeploymentPage() {
       }
     });
     if (hashtags.length > 0) lines.push("\n" + hashtags.join(" "));
-    const text = lines.filter(Boolean).join("\n");
+    const text = addNaverImageMarkers(lines.filter(Boolean).join("\n"));
     navigator.clipboard.writeText(text).then(() => {
       toast.success("✅ 본문 + FAQ 복사됐어요! (참고자료·관련글 제외) 📋", { duration: 4000 });
     });
