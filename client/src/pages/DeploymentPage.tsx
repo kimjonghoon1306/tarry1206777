@@ -14,6 +14,7 @@
 import { useState, useEffect, useRef } from "react";
 import React from "react";
 import Layout from "@/components/Layout";
+import CheokdanModal from "@/components/CheokdanModal";
 import { toast } from "sonner";
 import {
   Send, Calendar, Clock, Image, Plus, X,
@@ -696,6 +697,7 @@ export default function DeploymentPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [showPublishPanel, setShowPublishPanel] = useState(false);
   const [showNaverMenu, setShowNaverMenu] = useState(false);
+  const [showCheokdan, setShowCheokdan] = useState(false);
 
   const [deployImages, setDeployImages] = useState<{ id: number; src: string; alt?: string }[]>(
     () => safeParseJSON("blogauto_deploy_images", [])
@@ -2166,6 +2168,12 @@ export default function DeploymentPage() {
                   </>
                 )}
               </div>
+              {/* 체험단 작성 버튼 */}
+              <Button size="sm" className="gap-1.5 h-9 font-black"
+                style={{ background:"linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#c77dff)", color:"#000", border:"none" }}
+                onClick={() => setShowCheokdan(true)}>
+                🍽️ <span className="hidden sm:inline">체험단 작성</span>
+              </Button>
               <Button size="sm" className="gap-1.5" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
                 <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">구독자 미리보기</span>
@@ -2808,6 +2816,16 @@ export default function DeploymentPage() {
             </>
           )}
         </div>
+        {/* 체험단 작성 버튼 */}
+        <div className="px-3 pt-0 pb-1">
+          <button
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm active:scale-95 transition-transform"
+            style={{ background:"linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#c77dff)", color:"#000", fontWeight:900 }}
+            onClick={() => setShowCheokdan(true)}
+          >
+            🍽️ 체험단 작성
+          </button>
+        </div>
         <div className="flex gap-2 px-3 py-2">
           <Button className="flex-1 gap-1.5 h-10" style={{ background: "oklch(0.62 0.22 300)", color: "white" }} onClick={() => setShowPreview(true)}>
             <Eye className="w-4 h-4" /> 미리보기
@@ -2833,6 +2851,9 @@ export default function DeploymentPage() {
           </p>
         )}
       </div>
+
+      {/* 체험단 작성 모달 */}
+      <CheokdanModal isOpen={showCheokdan} onClose={() => setShowCheokdan(false)} />
 
       {/* 구독자 미리보기 풀스크린 모달 */}
       {showPreview && (
