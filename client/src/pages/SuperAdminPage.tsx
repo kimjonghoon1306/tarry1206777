@@ -17,6 +17,7 @@ import {
   Users, Crown, UserX, RefreshCw, ChevronDown,
   Activity, Cpu, Database, HardDrive, Wifi,
   Send, ShoppingCart, FileText, Search, BarChart3, Bot, Plus, Smartphone,
+  AlertTriangle, Clock, CheckCircle, Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1942,6 +1943,7 @@ const TABS = [
   { id: "popup",   label: "공지",  icon: Bell, color: "#ec4899", grad: "linear-gradient(135deg,#ec4899,#db2777)" },
   { id: "autopublish", label: "자동발행", icon: Send, color: "#03C75A", grad: "linear-gradient(135deg,#03C75A,#059669)" },
   { id: "publy", label: "Publy", icon: Smartphone, color: "#00ff88", grad: "linear-gradient(135deg,#00ff88,#00cc66)" },
+  { id: "errorlog", label: "오류로그", icon: AlertTriangle, color: "#ef4444", grad: "linear-gradient(135deg,#ef4444,#dc2626)" },
 ] as const;
 type TabId = typeof TABS[number]["id"];
 
@@ -2094,6 +2096,172 @@ function PublyWidget() {
 }
 
 
+// ─────────────────────────────────────────────────────
+// 오류 신고 로그 관리
+// ─────────────────────────────────────────────────────
+interface ErrorLog {
+  id: string;
+  userId: string;
+  message: string;
+  page: string;
+  userAgent: string;
+  aiProvider: string;
+  stack: string;
+  status: "pending" | "confirmed" | "resolved";
+  createdAt: string;
+}
+
+function ErrorLogManager() {
+  const [logs, setLogs] = useState<ErrorLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all"|"pending"|"confirmed"|"resolved">("all");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const d = await adminApi("listErrors");
+    if (d.ok) setLogs(d.logs || []);
+    else toast.error(d.error || "불러오기 실패");
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const updateStatus = async (errorId: string, status: string) => {
+    setUpdating(errorId);
+    const d = await adminApi("updateErrorStatus", { errorId, status });
+    if (d.ok) {
+      setLogs(prev => prev.map(l => l.id === errorId ? { ...l, status: status as ErrorLog["status"] } : l));
+      toast.success("상태 변경 완료");
+    } else toast.error(d.error || "변경 실패");
+    setUpdating(null);
+  };
+
+  const deleteLog = async (errorId: string) => {
+    if (!confirm("이 신고를 삭제할까요?")) return;
+    const d = await adminApi("deleteError", { errorId });
+    if (d.ok) { setLogs(prev => prev.filter(l => l.id !== errorId)); toast.success("삭제 완료"); }
+    else toast.error(d.error || "삭제 실패");
+  };
+
+  const STATUS_MAP = {
+    pending:   { label: "미처리", bg: "rgba(239,68,68,0.15)",   text: "#ef4444",  icon: Clock },
+    confirmed: { label: "확인",   bg: "rgba(251,191,36,0.15)",  text: "#f59e0b",  icon: CheckCircle },
+    resolved:  { label: "해결",   bg: "rgba(16,185,129,0.15)",  text: "#10b981",  icon: CheckCircle2 },
+  };
+
+  const filtered = filter === "all" ? logs : logs.filter(l => l.status === filter);
+  const counts = { all: logs.length, pending: logs.filter(l=>l.status==="pending").length, confirmed: logs.filter(l=>l.status==="confirmed").length, resolved: logs.filter(l=>l.status==="resolved").length };
+
+  const formatDate = (s: string) => {
+    try { return new Date(s).toLocaleString("ko-KR", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }); } catch { return s; }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-4 gap-2">
+        {(["all","pending","confirmed","resolved"] as const).map(key => {
+          const labels = { all:"전체", pending:"미처리", confirmed:"확인", resolved:"해결" };
+          const colors = { all:"#6366f1", pending:"#ef4444", confirmed:"#f59e0b", resolved:"#10b981" };
+          return (
+            <button key={key} onClick={() => setFilter(key)}
+              className="rounded-xl p-3 text-center transition-all active:scale-95"
+              style={{
+                background: filter === key ? `${colors[key]}20` : "var(--muted)",
+                border: `1px solid ${filter === key ? colors[key]+"50" : "transparent"}`,
+              }}>
+              <div className="text-lg font-black" style={{ color: colors[key] }}>{counts[key]}</div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{labels[key]}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 새로고침 */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+          {filter === "all" ? "전체" : STATUS_MAP[filter]?.label} 신고 목록
+        </span>
+        <button onClick={load} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all active:scale-95"
+          style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+          <RefreshCw className="w-3 h-3" /> 새로고침
+        </button>
+      </div>
+
+      {/* 목록 */}
+      {loading ? (
+        <div className="text-center py-12 text-sm" style={{ color: "var(--muted-foreground)" }}>불러오는 중...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-sm" style={{ color: "var(--muted-foreground)" }}>신고 내역이 없어요</div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(log => {
+            const s = STATUS_MAP[log.status];
+            const StatusIcon = s.icon;
+            const isOpen = expanded === log.id;
+            return (
+              <div key={log.id} className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                {/* 요약 행 */}
+                <div className="flex items-start gap-3 p-3 cursor-pointer" onClick={() => setExpanded(isOpen ? null : log.id)}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: s.bg }}>
+                    <StatusIcon className="w-3.5 h-3.5" style={{ color: s.text }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>{log.message}</div>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: s.bg, color: s.text }}>{s.label}</span>
+                      <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>👤 {log.userId}</span>
+                      <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>📍 {log.page || "-"}</span>
+                      <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{formatDate(log.createdAt)}</span>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 flex-shrink-0 mt-1 transition-transform" style={{ color: "var(--muted-foreground)", transform: isOpen ? "rotate(180deg)" : "" }} />
+                </div>
+
+                {/* 상세 펼침 */}
+                {isOpen && (
+                  <div style={{ borderTop: "1px solid var(--border)", padding: "12px" }}>
+                    {log.aiProvider && (
+                      <div className="text-xs mb-2" style={{ color: "var(--muted-foreground)" }}>🤖 AI: {log.aiProvider}</div>
+                    )}
+                    {log.userAgent && (
+                      <div className="text-xs mb-2 truncate" style={{ color: "var(--muted-foreground)" }}>🌐 {log.userAgent}</div>
+                    )}
+                    {log.stack && (
+                      <pre className="text-xs p-2 rounded-lg mb-3 overflow-auto max-h-32" style={{ background: "var(--muted)", color: "var(--muted-foreground)", fontSize: "10px" }}>{log.stack}</pre>
+                    )}
+                    {/* 액션 버튼 */}
+                    <div className="flex gap-2 flex-wrap">
+                      {(["pending","confirmed","resolved"] as const).filter(s => s !== log.status).map(s => {
+                        const sm = STATUS_MAP[s];
+                        return (
+                          <button key={s} disabled={updating === log.id}
+                            onClick={() => updateStatus(log.id, s)}
+                            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all active:scale-95"
+                            style={{ background: sm.bg, color: sm.text }}>
+                            → {sm.label}
+                          </button>
+                        );
+                      })}
+                      <button onClick={() => deleteLog(log.id)}
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all active:scale-95 ml-auto"
+                        style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+                        <Trash2 className="w-3 h-3 inline mr-1" />삭제
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminDashboard() {
   const [tab, setTab] = useState<TabId>("apikeys");
   const handleLogout = () => {
@@ -2149,6 +2317,7 @@ function AdminDashboard() {
           {tab === "popup"    && <PopupManager />}
           {tab === "autopublish" && <AutoPublishManager />}
           {tab === "publy"       && <PublyWidget />}
+          {tab === "errorlog"    && <ErrorLogManager />}
         </div>
       </div>
 
