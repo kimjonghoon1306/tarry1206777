@@ -205,6 +205,18 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
               </button>
             </div>
 
+            {/* 기능 안내 */}
+            <div className="rounded-xl p-3 mb-4 space-y-1.5" style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
+              <div className="text-xs font-bold mb-2" style={{ color: "#6366f1" }}>📋 이런 경우에 사용하세요</div>
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>• 버튼을 눌렀는데 아무 반응이 없을 때</div>
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>• AI 글 생성 / 이미지 생성이 계속 실패할 때</div>
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>• 화면이 하얗게 되거나 오류 메시지가 뜰 때</div>
+              <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>• 배포 / 발행이 되지 않을 때</div>
+              <div className="text-xs mt-2 pt-2" style={{ color: "var(--muted-foreground)", borderTop: "1px solid rgba(99,102,241,0.15)" }}>
+                💡 신고 시 현재 페이지·브라우저·AI 설정이 자동 첨부되어 관리자가 빠르게 파악할 수 있어요
+              </div>
+            </div>
+
             <textarea
               className="w-full rounded-xl p-3 text-sm resize-none"
               style={{
