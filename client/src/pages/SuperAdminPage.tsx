@@ -2273,8 +2273,131 @@ function ErrorLogManager() {
   );
 }
 
+const GUIDE_SECTIONS = [
+  {
+    id: "overview", label: "🗺️ 시작 전 필독", color: "#6366f1",
+    items: [
+      { title: "관리자 키 vs 유저 키", desc: "API 키 탭에서 관리자가 설정한 키는 모든 회원의 기본값이 됩니다. 회원이 본인 설정에서 직접 키를 입력하면 본인 키가 우선 적용되고, 비워두면 관리자 키로 자동 폴백됩니다." },
+      { title: "배포 후 초기 설정 순서", desc: "① API 키 탭에서 AI 키 입력 → ② 플랫폼 설정(티스토리/네이버 등) → ③ OG 탭에서 사이트 제목·이미지 설정 → ④ 공지 탭에서 안내 팝업 등록 → ⑤ 회원 탭에서 가입 회원 확인" },
+      { title: "비밀번호 분실 시", desc: "보안 탭에서 관리자 비밀번호를 변경할 수 있습니다. 비밀번호는 서버(KV)에 저장되므로 배포·재시작 후에도 유지됩니다." },
+    ]
+  },
+  {
+    id: "apikeys", label: "🔑 API 키", color: "#10b981",
+    items: [
+      { title: "글 생성 AI (Gemini / Claude / Groq)", desc: "Gemini는 Google AI Studio(aistudio.google.com)에서 무료 발급. Claude는 console.anthropic.com, Groq는 console.groq.com에서 발급. 여러 키 등록 시 한도 초과 자동 순환됩니다." },
+      { title: "이미지 생성 AI", desc: "DALL-E 3는 OpenAI API 키, Replicate는 replicate.com에서 발급. imgbb API 키는 api.imgbb.com에서 발급하며 이미지 저장에 사용됩니다." },
+      { title: "플랫폼 키 (티스토리·워드프레스 등)", desc: "티스토리: 앱 등록 후 Client ID/Secret 입력. 워드프레스: 사이트 URL + Application Password 입력. 네이버 블로그: 별도 API 없이 Publy 앱으로 발행." },
+      { title: "Naver DataLab / 쿠팡 파트너스", desc: "네이버 데이터랩 API는 developers.naver.com에서 발급. 쿠팡 파트너스는 partners.coupang.com에서 Access Key / Secret Key 발급." },
+    ]
+  },
+  {
+    id: "users", label: "👥 회원 관리", color: "#6366f1",
+    items: [
+      { title: "회원 등급", desc: "user(일반회원)와 admin(관리자) 두 가지입니다. admin 등급 부여 시 슈퍼어드민 페이지 접근 권한이 생깁니다. 신중하게 부여하세요." },
+      { title: "등급 변경", desc: "회원 목록에서 드롭다운으로 즉시 변경됩니다. 변경 즉시 서버에 반영되며 해당 회원의 다음 로그인부터 적용됩니다." },
+      { title: "회원 삭제", desc: "삭제 시 해당 회원의 설정·발행글·통계 데이터가 모두 삭제됩니다. 복구 불가이므로 신중하게 사용하세요." },
+    ]
+  },
+  {
+    id: "security", label: "🔒 보안", color: "#f59e0b",
+    items: [
+      { title: "관리자 비밀번호 변경", desc: "현재 비밀번호 확인 후 새 비밀번호로 변경합니다. 비밀번호는 암호화되어 KV에 저장되므로 배포해도 초기화되지 않습니다." },
+      { title: "세션 관리", desc: "관리자 로그인은 세션 스토리지 기반입니다. 브라우저 탭을 닫으면 자동 로그아웃됩니다. '잠금' 버튼으로 수동 로그아웃 가능합니다." },
+    ]
+  },
+  {
+    id: "og", label: "🖼️ OG 설정", color: "#a78bfa",
+    items: [
+      { title: "OG란?", desc: "카카오톡·SNS 등에서 링크를 공유할 때 보이는 미리보기 제목·설명·이미지입니다. 설정하지 않으면 기본값으로 표시됩니다." },
+      { title: "OG 이미지", desc: "1200×630px 권장. imgbb API 키가 설정된 경우 이미지를 직접 업로드할 수 있습니다. URL로 직접 입력도 가능합니다." },
+      { title: "포스트별 이미지", desc: "특정 페이지에 개별 OG 이미지를 지정할 수 있습니다. 일반 OG 이미지보다 포스트별 이미지가 우선 적용됩니다." },
+    ]
+  },
+  {
+    id: "popup", label: "📢 공지 팝업", color: "#ec4899",
+    items: [
+      { title: "팝업 등록", desc: "회원 로그인 후 첫 화면에 표시되는 공지 팝업입니다. 점검 안내, 새 기능 공지, 이벤트 안내 등에 활용하세요." },
+      { title: "노출 기간", desc: "시작일~종료일 설정 가능. 종료일이 지나면 자동으로 노출이 중단됩니다. 기간 미설정 시 상시 노출됩니다." },
+      { title: "다중 팝업", desc: "여러 개 등록 시 순서대로 표시됩니다. 우선순위 조정이 필요하면 등록 순서를 바꿔주세요." },
+    ]
+  },
+  {
+    id: "autopublish", label: "⏰ 자동발행", color: "#03C75A",
+    items: [
+      { title: "자동발행 설정", desc: "키워드·AI·플랫폼을 지정해두면 설정한 시간에 자동으로 글을 생성하고 발행합니다. GitHub Actions로 스케줄링됩니다." },
+      { title: "발행 실패 시", desc: "API 키 한도 초과 또는 플랫폼 연결 오류 시 발행이 실패합니다. 오류로그 탭에서 확인하거나 각 플랫폼 키 상태를 점검하세요." },
+    ]
+  },
+  {
+    id: "errorlog", label: "🚨 오류로그", color: "#ef4444",
+    items: [
+      { title: "신고 접수 경로", desc: "① 회원이 사이드바 하단 '오류 신고' 버튼으로 직접 접수 ② 앱 충돌(화면 오류) 시 자동 접수. 두 경로 모두 여기에 쌓입니다." },
+      { title: "상태 관리", desc: "미처리(빨강) → 확인(노랑) → 해결(초록) 순으로 상태를 바꿔가며 처리하세요. 각 신고를 클릭하면 접속 페이지, 브라우저, AI 설정, 오류 스택이 상세하게 보입니다." },
+      { title: "자동 첨부 정보", desc: "신고 시 현재 페이지 URL, 브라우저·OS 정보, 사용 중인 AI 설정이 자동으로 함께 전송됩니다. 재현 없이도 원인 파악이 쉽습니다." },
+    ]
+  },
+];
+
+function AdminGuideModal({ onClose }: { onClose: () => void }) {
+  const [activeSection, setActiveSection] = useState("overview");
+  const section = GUIDE_SECTIONS.find(s => s.id === activeSection)!;
+
+  return (
+    <div
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col overflow-hidden"
+        style={{ background: "var(--card)", border: "1px solid var(--border)", maxHeight: "85vh" }}>
+
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div>
+            <div className="text-base font-black" style={{ color: "var(--foreground)" }}>운영자 사용 설명서</div>
+            <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>BlogAuto Pro 관리자 가이드</div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-95"
+            style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* 사이드 탭 */}
+          <div className="w-28 flex-shrink-0 overflow-y-auto py-2" style={{ borderRight: "1px solid var(--border)", background: "var(--muted)" }}>
+            {GUIDE_SECTIONS.map(s => (
+              <button key={s.id} onClick={() => setActiveSection(s.id)}
+                className="w-full text-left px-3 py-2.5 text-xs font-medium transition-all"
+                style={{
+                  background: activeSection === s.id ? `${s.color}18` : "transparent",
+                  color: activeSection === s.id ? s.color : "var(--muted-foreground)",
+                  borderLeft: activeSection === s.id ? `2px solid ${s.color}` : "2px solid transparent",
+                }}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 콘텐츠 */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {section.items.map((item, i) => (
+              <div key={i} className="rounded-xl p-3.5" style={{ background: "var(--muted)", border: "1px solid var(--border)" }}>
+                <div className="text-sm font-bold mb-1.5" style={{ color: section.color }}>{item.title}</div>
+                <div className="text-xs leading-relaxed" style={{ color: "var(--muted-foreground)" }}>{item.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboard() {
   const [tab, setTab] = useState<TabId>("apikeys");
+  const [showGuide, setShowGuide] = useState(false);
   const handleLogout = () => {
     sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem("ba_token");
@@ -2285,6 +2408,7 @@ function AdminDashboard() {
 
   return (
     <Layout>
+      {showGuide && <AdminGuideModal onClose={() => setShowGuide(false)} />}
       <div className="pb-24">
         {/* 헤더 */}
         <div className="px-4 pt-5 pb-4">
