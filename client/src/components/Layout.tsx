@@ -32,6 +32,8 @@ import {
   LogOut,
   Gift,
   Palette,
+  AlertTriangle,
+  MessageSquare,
 } from "lucide-react";
 import { clearUserLocalCache, loadNotificationsFromServer, markNotificationsRead } from "@/lib/user-storage";
 import { Button } from "@/components/ui/button";
@@ -91,6 +93,9 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
   const [totalPosts, setTotalPosts] = useState<number>(0);
   const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; desc: string; createdAt: string; read: boolean }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportMsg, setReportMsg] = useState("");
+  const [reportSending, setReportSending] = useState(false);
   const isGuestMode = localStorage.getItem("guest_mode") === "true" && !localStorage.getItem("ba_token");
 
   useEffect(() => {
@@ -147,10 +152,101 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
 
   const currentLangInfo = LANGUAGES.find(l => l.code === selectedLang) || LANGUAGES[0];
 
+  const handleReport = async () => {
+    if (!reportMsg.trim()) { toast.error("증상을 입력해주세요"); return; }
+    setReportSending(true);
+    try {
+      const token = localStorage.getItem("ba_token") || "";
+      const raw = localStorage.getItem("ba_user");
+      const aiProvider = localStorage.getItem(`u:${raw ? JSON.parse(raw).id : "guest"}:content_ai`) || "";
+      await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          action: "reportError",
+          message: reportMsg,
+          page: window.location.pathname,
+          userAgent: navigator.userAgent,
+          aiProvider,
+        }),
+      });
+      toast.success("신고가 접수되었습니다. 빠르게 확인할게요!");
+      setReportMsg("");
+      setReportOpen(false);
+    } catch {
+      toast.error("전송 실패. 잠시 후 다시 시도해주세요");
+    } finally {
+      setReportSending(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex" style={{ overflowX:"hidden", maxWidth:"100vw" }}>
       <style>{PINK_KEYFRAME}</style>
-      {/* Mobile overlay */}
+
+      {/* 오류 신고 모달 */}
+      {reportOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={e => { if (e.target === e.currentTarget) setReportOpen(false); }}
+        >
+          <div className="w-full max-w-sm rounded-2xl p-5 shadow-2xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(239,68,68,0.15)" }}>
+                <AlertTriangle className="w-4 h-4" style={{ color: "#ef4444" }} />
+              </div>
+              <div>
+                <div className="text-sm font-bold" style={{ color: "var(--foreground)" }}>오류 신고</div>
+                <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>현재 페이지: {window.location.pathname}</div>
+              </div>
+              <button onClick={() => setReportOpen(false)} className="ml-auto p-1 rounded-lg" style={{ color: "var(--muted-foreground)" }}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <textarea
+              className="w-full rounded-xl p-3 text-sm resize-none"
+              style={{
+                background: "var(--muted)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+                minHeight: 100,
+                outline: "none",
+              }}
+              placeholder="어떤 증상이 있었나요? 최대한 자세히 적어주세요 :)"
+              value={reportMsg}
+              onChange={e => setReportMsg(e.target.value)}
+              maxLength={500}
+            />
+            <div className="text-xs text-right mt-1 mb-3" style={{ color: "var(--muted-foreground)" }}>
+              {reportMsg.length}/500
+            </div>
+
+            <div className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+              📎 자동 첨부: 현재 페이지, 브라우저 정보, 사용 중인 AI 설정
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                className="flex-1 py-2 rounded-xl text-sm font-medium transition-all active:scale-95"
+                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
+                onClick={() => setReportOpen(false)}
+              >
+                취소
+              </button>
+              <button
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                style={{ background: reportSending ? "rgba(239,68,68,0.5)" : "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff" }}
+                onClick={handleReport}
+                disabled={reportSending}
+              >
+                {reportSending ? "전송 중..." : <><MessageSquare className="w-3.5 h-3.5" />신고 전송</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/60 lg:hidden"
@@ -271,6 +367,22 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
               <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>이번달 수익</div>
             </div>
           </div>
+
+          {/* 오류 신고 버튼 */}
+          <button
+            onClick={() => setReportOpen(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
+            style={{
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              color: "#ef4444",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.15)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.08)"; }}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+            오류 신고
+          </button>
 
           {/* Download button */}
           <Button
