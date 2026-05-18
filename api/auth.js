@@ -733,5 +733,94 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── 오류 신고 저장 ────────────────────────────────────
+  if (action === "reportError") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const uid = (await getSession(tk)) || "guest";
+    const { message, page, userAgent, aiProvider, stack } = body;
+    if (!message?.trim()) return res.json({ ok: false, error: "내용을 입력해주세요" });
+
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const log = {
+      id,
+      userId: uid,
+      message: message.trim(),
+      page: page || "",
+      userAgent: userAgent || "",
+      aiProvider: aiProvider || "",
+      stack: stack || "",
+      status: "pending",   // pending | confirmed | resolved
+      createdAt: new Date().toISOString(),
+    };
+
+    // KV 저장
+    await kvSet(`errorlog:${id}`, log);
+
+    // 에러로그 인덱스에 추가 (최대 200개)
+    const idx = (await kvGet("errorlog:index")) || [];
+    idx.unshift(id);
+    await kvSet("errorlog:index", idx.slice(0, 200));
+
+    // Slack 웹훅 전송 (admin 설정에 slack_webhook_url 있으면)
+    try {
+      const adminUser = await getUser("admin");
+      const slackUrl = adminUser?.settings?.slack_webhook_url;
+      if (slackUrl) {
+        await fetch(slackUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: `🚨 *[BlogAuto Pro] 오류 신고*\n👤 사용자: \`${uid}\`\n📍 페이지: ${page || "-"}\n⚠️ 내용: ${message.trim()}\n🤖 AI: ${aiProvider || "-"}\n🕐 ${new Date().toLocaleString("ko-KR")}`,
+          }),
+        }).catch(() => {});
+      }
+    } catch {}
+
+    return res.json({ ok: true, id });
+  }
+
+  // ── 오류 신고 목록 (관리자) ───────────────────────────
+  if (action === "listErrors") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+
+    const idx = (await kvGet("errorlog:index")) || [];
+    const logs = (await Promise.all(idx.map(id => kvGet(`errorlog:${id}`)))).filter(Boolean);
+    return res.json({ ok: true, logs });
+  }
+
+  // ── 오류 신고 상태 변경 (관리자) ─────────────────────
+  if (action === "updateErrorStatus") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+
+    const { errorId, status } = body;
+    if (!errorId || !["pending","confirmed","resolved"].includes(status))
+      return res.json({ ok: false, error: "잘못된 요청" });
+
+    const log = await kvGet(`errorlog:${errorId}`);
+    if (!log) return res.json({ ok: false, error: "로그를 찾을 수 없습니다" });
+    log.status = status;
+    await kvSet(`errorlog:${errorId}`, log);
+    return res.json({ ok: true });
+  }
+
+  // ── 오류 신고 삭제 (관리자) ──────────────────────────
+  if (action === "deleteError") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info || info.role !== "admin") return res.json({ ok: false, error: "관리자 권한이 필요합니다" });
+
+    const { errorId } = body;
+    if (!errorId) return res.json({ ok: false, error: "errorId 필요" });
+    await kvDel(`errorlog:${errorId}`);
+    const idx = ((await kvGet("errorlog:index")) || []).filter(id => id !== errorId);
+    await kvSet("errorlog:index", idx);
+    return res.json({ ok: true });
+  }
+
   return res.json({ ok: false, error: "알 수 없는 요청" });
 }
+
