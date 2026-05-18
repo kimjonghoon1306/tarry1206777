@@ -2423,9 +2423,38 @@ function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button className="ap-guide-btn" onClick={()=>setShowGuide(v=>!v)}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{position:"relative",zIndex:1}}>
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#000"/>
+              <button
+                onClick={()=>setShowGuide(v=>!v)}
+                className="text-xs px-3 py-2 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-1.5"
+                style={{
+                  background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                  color: "#fff",
+                  boxShadow: "0 0 14px rgba(99,102,241,0.5)",
+                  animation: "guideGlow 2s ease-in-out infinite",
+                  position: "relative",
+                  overflow: "hidden",
+                }}>
+                <style>{`
+                  @keyframes guideGlow {
+                    0%,100% { box-shadow: 0 0 10px rgba(99,102,241,0.4); }
+                    50% { box-shadow: 0 0 22px rgba(139,92,246,0.8); }
+                  }
+                  @keyframes guideShine {
+                    0% { left: -60%; }
+                    100% { left: 150%; }
+                  }
+                  .guide-shine::after {
+                    content: '';
+                    position: absolute;
+                    top: 0; left: -60%;
+                    width: 40%; height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                    animation: guideShine 2.5s ease-in-out infinite;
+                  }
+                `}</style>
+                <div className="guide-shine" style={{position:"absolute",inset:0,pointerEvents:"none"}} />
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{position:"relative",zIndex:1,flexShrink:0}}>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#fff"/>
                 </svg>
                 <span style={{position:"relative",zIndex:1}}>사용 설명서</span>
               </button>
