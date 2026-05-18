@@ -2160,6 +2160,17 @@ function ErrorLogManager() {
 
   return (
     <div className="space-y-4">
+      {/* 기능 설명 */}
+      <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}>
+        <div className="text-sm font-bold mb-2" style={{ color: "#ef4444" }}>🚨 오류 신고 관리</div>
+        <div className="space-y-1">
+          <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>• 회원이 사이드바 하단 <b style={{color:"var(--foreground)"}}>오류 신고</b> 버튼으로 접수한 내역이 여기에 쌓여요</div>
+          <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>• 앱 충돌(화면 오류) 시에도 자동으로 신고가 접수돼요</div>
+          <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>• 신고마다 <b style={{color:"var(--foreground)"}}>미처리 → 확인 → 해결</b> 순으로 상태를 변경해 관리하세요</div>
+          <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>• 각 신고를 클릭하면 접속 페이지, 브라우저, AI 설정, 오류 스택이 상세하게 보여요</div>
+        </div>
+      </div>
+
       {/* 요약 카드 */}
       <div className="grid grid-cols-4 gap-2">
         {(["all","pending","confirmed","resolved"] as const).map(key => {
