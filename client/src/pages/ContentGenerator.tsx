@@ -643,7 +643,7 @@ export default function ContentGenerator() {
 
         {/* 에디터 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="lg:col-span-2 lg:order-1 rounded-xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
             <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
               <div className="flex gap-1">
                 {(["edit", "preview", "blog-preview"] as const).map(tab => (
@@ -738,7 +738,7 @@ export default function ContentGenerator() {
           </div>
 
           {/* 최근 콘텐츠 & 썸네일 선택 */}
-          <div className="space-y-4">
+          <div className="space-y-4 order-first lg:order-2">
             {/* 썸네일 선택 패널 */}
             <div className="rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
@@ -818,25 +818,25 @@ export default function ContentGenerator() {
               const color = qs.score >= 80 ? "#4ade80" : qs.score >= 55 ? "#fbbf24" : "#f87171";
               const label = qs.score >= 80 ? "우수" : qs.score >= 55 ? "보통" : "개선 필요";
               return (
-                <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: `1px solid ${color}40` }}>
-                  <div className="flex items-center justify-between px-4 py-3" style={{ background: `${color}10` }}>
+                <div className="rounded-xl overflow-hidden order-first lg:order-none" style={{ background: "var(--card)", border: `1px solid ${color}40` }}>
+                  <div className="flex items-center justify-between px-3 py-2.5" style={{ background: `${color}10` }}>
                     <div className="flex items-center gap-2">
-                      <span style={{ fontSize: 15 }}>📊</span>
+                      <span style={{ fontSize: 14 }}>📊</span>
                       <span className="text-sm font-bold" style={{ color }}>품질 스코어</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: `${color}20`, color }}>{label}</span>
-                      <span className="text-xl font-black" style={{ color }}>{qs.score}</span>
+                      <span className="text-lg font-black" style={{ color }}>{qs.score}</span>
                     </div>
                   </div>
-                  <div className="px-4 py-2 space-y-1.5">
+                  <div className="px-3 py-2 space-y-1.5">
                     {qs.items.map((it, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span style={{ fontSize: 11 }}>{it.pass ? "✅" : "⚠️"}</span>
-                          <span className="text-xs font-medium" style={{ color: "var(--foreground)" }}>{it.label}</span>
+                      <div key={i} className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span style={{ fontSize: 10 }}>{it.pass ? "✅" : "⚠️"}</span>
+                          <span className="text-xs font-medium whitespace-nowrap" style={{ color: "var(--foreground)" }}>{it.label}</span>
                         </div>
-                        <span className="text-xs" style={{ color: it.pass ? "var(--muted-foreground)" : "#f87171", maxWidth: 140, textAlign: "right" }}>{it.detail}</span>
+                        <span className="text-xs text-right break-words min-w-0" style={{ color: it.pass ? "var(--muted-foreground)" : "#f87171" }}>{it.detail}</span>
                       </div>
                     ))}
                   </div>
