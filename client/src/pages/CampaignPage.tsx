@@ -204,7 +204,7 @@ export default function CampaignPage() {
 
                 {/* 탭 헤더 */}
                 <div style={{ display:"flex", borderBottom:"1px solid var(--border)" }}>
-                  {([["visit","방문체험단","🗺️"],["delivery","배송체험단","📦"]] as const).map(([key, label, icon]) => (
+                  {([["visit","방문체험단","🗺️"],["delivery","배송체험단","📦"]] as ["visit"|"delivery",string,string][]).map(([key, label, icon]) => (
                     <button key={key} className="tab-btn" onClick={() => setRankTab(key)}
                       style={{ flex:1, padding:"14px 8px", background:rankTab===key?"var(--background)":"transparent", border:"none", color:rankTab===key?"var(--foreground)":"var(--muted-foreground)", fontWeight:rankTab===key?800:500, fontSize:12, fontFamily:"Pretendard, sans-serif", borderBottom:rankTab===key?"2px solid #a78bfa":"2px solid transparent", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
                       <span>{icon}</span>{label}
@@ -238,7 +238,7 @@ export default function CampaignPage() {
                       <div style={{ paddingLeft:31 }}>
                         <div style={{ fontSize:9, color:"var(--muted-foreground)", marginBottom:5 }}>{item.tag}</div>
                         <div style={{ height:4, background:"var(--border)", borderRadius:4, overflow:"hidden" }}>
-                          <div className="rank-bar" style={{ height:"100%", borderRadius:4, background:`linear-gradient(90deg,${item.color}99,${item.color})`, width:`${item.score}%`, animationDelay:`${i*.08}s` } as React.CSSProperties} />
+                          <div className="rank-bar" style={{ height:"100%", borderRadius:4, background:`linear-gradient(90deg,${item.color}99,${item.color})`, width:`${item.score}%`, animationDelay:`${i*.08}s` } as any} />
                         </div>
                       </div>
                     </div>
