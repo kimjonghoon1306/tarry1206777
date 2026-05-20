@@ -440,7 +440,7 @@ function FloatingAutoPublishBtn() {
       </div>
 
       <button
-        onClick={() => { window.location.href = "/naver"; }}
+        onClick={() => { window.location.href = "/deploy?cheokdan=1"; }}
         style={{
           position:"fixed", bottom:28, right:28, zIndex:9999,
           display:"flex", alignItems:"center", gap:10,
@@ -496,7 +496,7 @@ function FloatingAutoPublishBtn() {
           </svg>
         </span>
 
-        <span style={{position:"relative", textShadow:"0 1px 2px rgba(0,0,0,.15)"}}>자동 발행</span>
+        <span style={{position:"relative", textShadow:"0 1px 2px rgba(0,0,0,.15)"}}>체험단 작성</span>
 
         {/* 오른쪽 화살표 SVG */}
         <span style={{position:"relative", opacity:.7}}>
