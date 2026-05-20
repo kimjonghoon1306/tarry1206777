@@ -699,6 +699,16 @@ export default function DeploymentPage() {
   const [showNaverMenu, setShowNaverMenu] = useState(false);
   const [showCheokdan, setShowCheokdan] = useState(false);
 
+  // 캠페인 페이지에서 넘어온 경우 자동 오픈
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("cheokdan") === "1") {
+      setShowCheokdan(true);
+      // URL 파라미터 제거 (히스토리 오염 방지)
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const [deployImages, setDeployImages] = useState<{ id: number; src: string; alt?: string }[]>(
     () => safeParseJSON("blogauto_deploy_images", [])
   );
