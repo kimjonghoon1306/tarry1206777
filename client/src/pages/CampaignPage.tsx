@@ -5,7 +5,8 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Layout from "@/components/Layout";
-import { ExternalLink, MapPin, Clock, RefreshCw, Sparkles, ArrowUpRight, Zap } from "lucide-react";
+import { ExternalLink, MapPin, Clock, RefreshCw, Sparkles, ArrowUpRight, Zap, PenLine } from "lucide-react";
+import { useLocation } from "wouter";
 
 // ── 수집 사이트 (모두의체험단만) ──────────────────────
 const SCRAPE_SOURCE = { name: "모두의체험단", key: "modan", url: "https://www.modan.kr", color: "#a78bfa", grad: "linear-gradient(135deg,#7c3aed,#a78bfa)", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.25)" };
@@ -110,6 +111,7 @@ async function loadFromServer() {
 }
 
 export default function CampaignPage() {
+  const [, navigate] = useLocation();
   const [region, setRegion]       = useState("전체");
   const [sort, setSort]           = useState<"latest"|"deadline"|"reward">("latest");
   const [ready, setReady]         = useState(false);
@@ -196,25 +198,36 @@ export default function CampaignPage() {
             </div>
             <div className="rec-grid" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10 }}>
               {RECOMMEND.map((site, i) => (
-                <button key={site.name} className="rec-btn"
-                  onClick={() => window.open(site.url, "_blank", "noopener,noreferrer")}
+                <div key={site.name} className="ch-card"
                   style={{
                     background: site.grad,
-                    border: "none",
                     borderRadius: 14,
                     padding: "16px 14px",
                     color: "#fff",
                     textAlign: "left",
                     boxShadow: `0 8px 24px ${site.glow}`,
                     animation: `fadeUp 0.5s ${0.08+i*0.06}s ease both`,
+                    border: "none",
                   }}>
                   <div style={{ fontSize:22, marginBottom:8, animation:"float 3s ease-in-out infinite", animationDelay:`${i*0.4}s`, display:"inline-block" }}>{site.emoji}</div>
                   <div style={{ fontSize:13, fontWeight:800, marginBottom:3, letterSpacing:"-0.02em" }}>{site.name}</div>
                   <div style={{ fontSize:10, opacity:0.85, marginBottom:10 }}>{site.label}</div>
-                  <div style={{ display:"flex", alignItems:"center", gap:4, fontSize:11, fontWeight:600, background:"rgba(255,255,255,0.2)", padding:"4px 10px", borderRadius:20, width:"fit-content" }}>
-                    방문하기 <ArrowUpRight style={{ width:10, height:10 }} />
+                  <div style={{ display:"flex", gap:5 }}>
+                    <button className="rec-btn"
+                      onClick={() => window.open(site.url, "_blank", "noopener,noreferrer")}
+                      style={{ flex:1, background:"rgba(255,255,255,0.2)", border:"none", borderRadius:20, padding:"5px 6px", color:"#fff", fontSize:10, fontWeight:600, display:"flex", alignItems:"center", justifyContent:"center", gap:2, cursor:"pointer" }}>
+                      방문 <ArrowUpRight style={{ width:9, height:9 }} />
+                    </button>
+                    <button className="rec-btn"
+                      onClick={() => {
+                        localStorage.setItem("cheokdan_prefill", JSON.stringify({ shopName:"", region:"", category:"" }));
+                        navigate("/deploy?cheokdan=1");
+                      }}
+                      style={{ flex:1, background:"rgba(255,255,255,0.25)", border:"1px solid rgba(255,255,255,0.5)", borderRadius:20, padding:"5px 6px", color:"#fff", fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:2, cursor:"pointer" }}>
+                      <PenLine style={{ width:9, height:9 }} /> 글쓰기
+                    </button>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </div>
@@ -323,11 +336,25 @@ export default function CampaignPage() {
                         {/* 하단 */}
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:10, borderTop:"1px solid var(--border)" }}>
                           <div style={{ fontSize:11, fontWeight:600, color:"#a78bfa" }}>{c.reward || "정보 확인 필요"}</div>
-                          <button className="rec-btn"
-                            onClick={() => window.open(c.url, "_blank", "noopener,noreferrer")}
-                            style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", border:"none", borderRadius:8, padding:"6px 13px", color:"#fff", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4, boxShadow:"0 4px 12px rgba(124,58,237,0.35)" }}>
-                            신청 <ExternalLink style={{ width:10, height:10 }} />
-                          </button>
+                          <div style={{ display:"flex", gap:6 }}>
+                            <button className="rec-btn"
+                              onClick={() => {
+                                localStorage.setItem("cheokdan_prefill", JSON.stringify({
+                                  shopName: c.title || "",
+                                  region: c.region || "",
+                                  category: "",
+                                }));
+                                navigate("/deploy?cheokdan=1");
+                              }}
+                              style={{ background:"linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff,#c77dff)", border:"none", borderRadius:8, padding:"6px 10px", color:"#000", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:3 }}>
+                              <PenLine style={{ width:10, height:10 }} /> 글쓰기
+                            </button>
+                            <button className="rec-btn"
+                              onClick={() => window.open(c.url, "_blank", "noopener,noreferrer")}
+                              style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", border:"none", borderRadius:8, padding:"6px 13px", color:"#fff", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4, boxShadow:"0 4px 12px rgba(124,58,237,0.35)" }}>
+                              신청 <ExternalLink style={{ width:10, height:10 }} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
