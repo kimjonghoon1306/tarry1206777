@@ -3,8 +3,8 @@
  * 풀스크린 + 화려한 애니메이션
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { RefreshCw, CheckCircle, XCircle, Clock, ExternalLink, LogOut, Eye, EyeOff, Zap, Sun, Moon, TrendingUp, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { LogOut, Eye, EyeOff, Sun, Moon, Shield } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -235,7 +235,7 @@ function LoginGate({ onAuth }: { onAuth:(t:string)=>void }) {
               <div style={{ position:"absolute", inset:-6, borderRadius:28, border:"2px solid rgba(167,139,250,0.35)", animation:"pulse 2s ease-in-out infinite" }} />
             </div>
             <div style={{ fontSize:28, fontWeight:900, color:"#fff", letterSpacing:"-0.04em", marginBottom:8 }}>체험단 관리자</div>
-            <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>모두의체험단 수집 관리 시스템</div>
+            <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>체험단 허브 관리자 시스템</div>
           </div>
           <div style={{ position:"relative", marginBottom:14 }}>
             <input type={show?"text":"password"} placeholder="관리자 비밀번호" value={pw}
@@ -259,12 +259,6 @@ function LoginGate({ onAuth }: { onAuth:(t:string)=>void }) {
 
 // ── 대시보드 ──────────────────────────────────────────
 function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }) {
-  const [status, setStatus]       = useState<any[]>([]);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [updatedAt, setUpdatedAt] = useState<string|null>(null);
-  const [total, setTotal]         = useState(0);
-  const [scraping, setScraping]   = useState(false);
-  const [loading, setLoading]     = useState(true);
   const [, navigate]              = useLocation();
   const { theme, toggleTheme }    = useTheme();
   const [curPw, setCurPw]   = useState("");
@@ -274,26 +268,6 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
   const [showNew,  setShowNew]  = useState(false);
   const [showConf, setShowConf] = useState(false);
   const [chPwLoading, setChPwLoading] = useState(false);
-
-  useEffect(()=>{ fetchAll(); },[]);
-
-  async function fetchAll() {
-    setLoading(true);
-    const [sr, cr] = await Promise.all([campApi("status",{},token), campApi("load",{},token)]);
-    if (sr.ok) { setStatus(sr.status||[]); setUpdatedAt(sr.updatedAt); setTotal(sr.total||0); }
-    else if (sr.error?.includes("인증")) { toast.error("세션 만료"); onLogout(); }
-    if (cr.ok) setCampaigns(cr.campaigns||[]);
-    setLoading(false);
-  }
-
-  async function handleScrape() {
-    setScraping(true);
-    toast.loading("🚀 수집 시작 — 1분 후 새로고침하세요", {id:"scrape", duration:60000});
-    const d = await campApi("scrape",{},token);
-    if (d.ok) toast.success("✅ 수집 요청 완료",{id:"scrape"});
-    else toast.error(d.error||"실패",{id:"scrape"});
-    setScraping(false);
-  }
 
   async function handleChangePw() {
     if (!curPw||!newPw||!confPw) { toast.error("모든 항목을 입력해주세요"); return; }
@@ -306,26 +280,17 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
     setChPwLoading(false);
   }
 
-  const fmt = (ts:string|null) => {
-    if (!ts) return "없음";
-    try { return new Date(ts).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
-    catch { return ts; }
-  };
-
-  const st  = status.find(s=>s.name===SITE.name);
-  const cnt = campaigns.filter(c=>c.source===SITE.name).length;
-  const filteredCampaigns = useMemo(()=> campaigns.filter(c=>c.source===SITE.name), [campaigns]);
-  const urgentCnt = filteredCampaigns.filter(c=>c.deadline<=3).length;
-
   const pwFields = [
-    { label:"현재 비밀번호", val:curPw,  set:setCurPw,  show:showCur,  setShow:setShowCur  },
-    { label:"새 비밀번호",   val:newPw,  set:setNewPw,  show:showNew,  setShow:setShowNew  },
-    { label:"확인",          val:confPw, set:setConfPw, show:showConf, setShow:setShowConf },
+    { label:"현재 비밀번호", val:curPw, set:setCurPw, show:showCur, setShow:setShowCur },
+    { label:"새 비밀번호",   val:newPw, set:setNewPw, show:showNew, setShow:setShowNew },
+    { label:"비밀번호 확인", val:confPw,set:setConfPw,show:showConf,setShow:setShowConf },
   ];
 
   return (
-    <div style={{ minHeight:"100vh", background:"var(--background)", fontFamily:"Pretendard, sans-serif" }}>
+    <div style={{ minHeight:"100vh", background:"var(--background)", fontFamily:"Pretendard, sans-serif", position:"relative" }}>
       <style>{CSS}</style>
+
+      {/* 배경 장식 */}
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, overflow:"hidden" }}>
         <div style={{ position:"absolute", top:"-10%", right:"5%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle,rgba(124,58,237,0.06) 0%,transparent 70%)" }} />
         <div style={{ position:"absolute", bottom:"5%", left:"2%", width:350, height:350, borderRadius:"50%", background:"radial-gradient(circle,rgba(167,139,250,0.05) 0%,transparent 70%)" }} />
@@ -338,25 +303,11 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
           <button className="ca-back" onClick={()=>navigate("/campaigns")}
             style={{ width:44, height:44, borderRadius:"50%", background:"var(--muted)", border:"1px solid var(--border)", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>🏠</button>
           <div>
-            <div style={{ fontSize:18, fontWeight:900, color:"var(--foreground)", letterSpacing:"-0.04em", display:"flex", alignItems:"center", gap:8 }}>
-              체험단 관리자
-              <span style={{ fontSize:10, padding:"2px 8px", borderRadius:20, background:"rgba(74,222,128,0.1)", border:"1px solid rgba(74,222,128,0.3)", color:"#4ade80", fontWeight:700, display:"inline-flex", alignItems:"center", gap:4 }}>
-                <span style={{ width:6, height:6, borderRadius:"50%", background:"#4ade80", boxShadow:"0 0 6px #4ade80", display:"inline-block", animation:"pulse 1.8s ease-in-out infinite" }} /> LIVE
-              </span>
-            </div>
-            <div style={{ fontSize:11, color:"#a78bfa", fontWeight:600 }}>모두의체험단 수집 관리</div>
+            <div style={{ fontSize:18, fontWeight:900, color:"var(--foreground)", letterSpacing:"-0.04em" }}>체험단 관리자</div>
+            <div style={{ fontSize:11, color:"#a78bfa", fontWeight:600 }}>비밀번호 관리</div>
           </div>
         </div>
-        <div className="topbtns" style={{ display:"flex", gap:10, alignItems:"center" }}>
-          <button onClick={fetchAll} disabled={loading} className="ca-btn"
-            style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, padding:"10px 16px", borderRadius:10, background:"var(--muted)", border:"1px solid var(--border)", color:"var(--foreground)", fontWeight:600 }}>
-            <RefreshCw style={{ width:13, height:13, animation:loading?"spin 1s linear infinite":"none" }} /> 갱신
-          </button>
-          <button onClick={handleScrape} disabled={scraping} className="ca-btn shimmer-btn"
-            style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, padding:"10px 22px", borderRadius:10, background:"linear-gradient(135deg,#7c3aed,#a78bfa)", color:"#fff", fontWeight:700, border:"none", boxShadow:"0 6px 20px rgba(124,58,237,0.4)", animation:!scraping?"glowPurple 3s ease-in-out infinite":"none" }}>
-            <Zap style={{ width:15, height:15, animation:scraping?"spin 0.8s linear infinite":"none" }} />
-            {scraping?"수집 중...":"실시간 수집"}
-          </button>
+        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
           <button onClick={onLogout} className="ca-btn"
             style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, padding:"10px 14px", borderRadius:10, background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", color:"#ef4444" }}>
             <LogOut style={{ width:13, height:13 }} /> 로그아웃
@@ -369,146 +320,19 @@ function AdminDashboard({ token, onLogout }: { token:string; onLogout:()=>void }
       </div>
 
       {/* 메인 */}
-      <div className="ca-main" style={{ width:"100%", padding:"28px 28px 80px", position:"relative", zIndex:1 }}>
-
-        {/* 히어로 카드 */}
-        <div className="ca-card" style={{ background:SITE.bg, border:`1px solid ${SITE.border}`, borderRadius:22, padding:"36px 44px", marginBottom:20, animationDelay:"0.05s" }}>
-          <div style={{ position:"absolute", top:-80, right:-80, width:320, height:320, borderRadius:"50%", background:"radial-gradient(circle,rgba(124,58,237,0.18) 0%,transparent 70%)", pointerEvents:"none" }} />
-          <div style={{ position:"absolute", bottom:-50, left:50, width:200, height:200, borderRadius:"50%", background:"radial-gradient(circle,rgba(167,139,250,0.12) 0%,transparent 70%)", pointerEvents:"none" }} />
-
-          <div className="hero-inner" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:24, position:"relative" }}>
-            <div style={{ flex:1, minWidth:260 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:18 }}>
-                <div style={{ width:60, height:60, borderRadius:18, background:"linear-gradient(135deg,#7c3aed,#a78bfa)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, boxShadow:"0 10px 28px rgba(124,58,237,0.45)", animation:"float 4s ease-in-out infinite" }}>🏆</div>
-                <div>
-                  <div style={{ fontSize:26, fontWeight:900, color:SITE.color, letterSpacing:"-0.03em" }}>{SITE.name}</div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
-                    {st ? (st.ok
-                      ? <><CheckCircle style={{width:14,height:14,color:"#4ade80"}}/><span style={{fontSize:12,color:"#4ade80",fontWeight:700}}>수집 성공</span></>
-                      : <><XCircle style={{width:14,height:14,color:"#f87171"}}/><span style={{fontSize:12,color:"#f87171"}}>{st.error}</span></>
-                    ) : <span style={{fontSize:12,color:"var(--muted-foreground)"}}>수집 대기</span>}
-                    {st && <span style={{fontSize:11,color:"var(--muted-foreground)",display:"flex",alignItems:"center",gap:3}}><Clock style={{width:10,height:10}}/>{fmt(st.scrapedAt)}</span>}
-                  </div>
-                </div>
-              </div>
-              <a href={SITE.url} target="_blank" rel="noreferrer" className="ca-btn shimmer-btn"
-                style={{ display:"inline-flex", alignItems:"center", gap:7, fontSize:13, fontWeight:700, color:"#fff", background:"linear-gradient(135deg,#7c3aed,#a78bfa)", border:"none", padding:"11px 22px", borderRadius:11, textDecoration:"none", boxShadow:"0 6px 20px rgba(124,58,237,0.4)" }}>
-                사이트 방문 <ExternalLink style={{width:13,height:13}}/>
-              </a>
-            </div>
-
-            <div className="hero-nums" style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
-              {[
-                { label:"수집 공고", val:cnt,       color:"#a78bfa", sub:"공고 수집됨" },
-                { label:"마감 임박", val:urgentCnt,  color:"#fb923c", sub:"D-3 이내" },
-                { label:"전체 합산", val:total,      color:"#60a5fa", sub:"누적 데이터" },
-              ].map((s,i) => (
-                <div key={i} style={{ textAlign:"center", background:"rgba(0,0,0,0.18)", borderRadius:16, padding:"20px 28px", border:`1px solid ${s.color}33`, minWidth:100, animation:`countUp 0.6s ${0.1+i*0.1}s ease both` }}>
-                  <div style={{ fontSize:52, fontWeight:900, color:s.color, lineHeight:1 }}><AnimatedCount value={s.val} /></div>
-                  <div style={{ fontSize:11, color:"var(--muted-foreground)", marginTop:6, fontWeight:600 }}>{s.sub}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 통계 */}
-        <div className="stat-grid" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:20 }}>
-          {[
-            { label:"총 수집 공고",  display:String(total),      color:"#a78bfa", emoji:"📋", sub:"전체 합산", delay:"0.1s" },
-            { label:"마지막 수집",   display:fmt(updatedAt),     color:"#60a5fa", emoji:"🕐", sub:"업데이트",  delay:"0.15s", small:true },
-            { label:"수집 성공률",   display:status.length>0?`${Math.round(status.filter(s=>s.ok).length/status.length*100)}%`:"—", color:status.some(s=>!s.ok)?"#fb923c":"#4ade80", emoji:"📡", sub:"사이트 상태", delay:"0.2s" },
-          ].map((s,i)=>(
-            <div key={i} className="ca-card"
-              style={{ background:"var(--muted)", border:"1px solid var(--border)", borderRadius:16, padding:"24px 28px", animationDelay:s.delay }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:11, color:"var(--muted-foreground)", textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:10, fontWeight:600 }}>{s.label}</div>
-                  <div style={{ fontSize:(s as any).small||s.display.length>8?15:32, fontWeight:900, color:s.color, lineHeight:1.1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.display||"—"}</div>
-                  <div style={{ fontSize:11, color:"var(--muted-foreground)", marginTop:8, fontWeight:500 }}>{s.sub}</div>
-                </div>
-                <div style={{ fontSize:30, marginLeft:12, flexShrink:0, animation:"float 4s ease-in-out infinite" }}>{s.emoji}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 공고 목록 */}
-        <div style={{ background:"var(--muted)", border:"1px solid var(--border)", borderRadius:20, padding:28, marginBottom:20, animation:"fadeUp 0.5s 0.25s ease both" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <div style={{ width:38, height:38, borderRadius:11, background:"rgba(167,139,250,0.12)", border:"1px solid rgba(167,139,250,0.25)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <TrendingUp style={{ width:18, height:18, color:"#a78bfa" }} />
-              </div>
-              <div>
-                <div style={{ fontSize:17, fontWeight:800, color:"var(--foreground)" }}>수집된 공고 목록</div>
-                <div style={{ fontSize:11, color:"var(--muted-foreground)" }}>모두의체험단 실시간 데이터</div>
-              </div>
-              <span style={{ fontSize:13, padding:"4px 14px", borderRadius:20, background:"linear-gradient(135deg,rgba(124,58,237,0.15),rgba(167,139,250,0.15))", color:"#a78bfa", border:"1px solid rgba(167,139,250,0.3)", fontWeight:700 }}>
-                {filteredCampaigns.length}개
-              </span>
-            </div>
-            <button onClick={fetchAll} disabled={loading} className="ca-btn"
-              style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, padding:"8px 14px", borderRadius:8, background:"rgba(167,139,250,0.08)", border:"1px solid rgba(167,139,250,0.25)", color:"#a78bfa", fontWeight:600 }}>
-              <RefreshCw style={{ width:12, height:12, animation:loading?"spin 1s linear infinite":"none" }} /> 새로고침
-            </button>
-          </div>
-
-          {loading ? (
-            <div style={{ padding:"60px", textAlign:"center", color:"var(--muted-foreground)" }}>
-              <div style={{ width:52, height:52, borderRadius:"50%", border:"3px solid rgba(167,139,250,0.2)", borderTop:"3px solid #a78bfa", margin:"0 auto 16px", animation:"spin 0.8s linear infinite" }} />
-              <div style={{ fontSize:14, fontWeight:600 }}>불러오는 중...</div>
-            </div>
-          ) : filteredCampaigns.length===0 ? (
-            <div style={{ padding:"60px", textAlign:"center" }}>
-              <div style={{ fontSize:52, marginBottom:16, animation:"bounce 2s ease-in-out infinite" }}>📭</div>
-              <div style={{ fontSize:16, fontWeight:700, color:"var(--foreground)", marginBottom:8 }}>수집된 공고가 없습니다</div>
-              <div style={{ fontSize:13, color:"var(--muted-foreground)" }}>실시간 수집 버튼을 눌러주세요</div>
-            </div>
-          ) : (
-            <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:560, overflowY:"auto", paddingRight:4 }}>
-              {filteredCampaigns.map((c:any,i:number)=>{
-                const urgent = c.deadline<=3;
-                return (
-                  <div key={String(c.id)} className="ca-row"
-                    style={{ display:"flex", alignItems:"center", gap:16, background:"var(--background)", border:`1px solid ${urgent?"rgba(251,146,60,0.3)":"var(--border)"}`, borderRadius:13, padding:"16px 22px", animation:`slideR 0.35s ${i*0.03}s ease both`, boxShadow:urgent?"0 0 14px rgba(251,146,60,0.08)":"none" }}>
-                    <div style={{ width:4, height:48, borderRadius:2, background:urgent?"linear-gradient(180deg,#fb923c,#f97316)":"linear-gradient(180deg,#7c3aed,#a78bfa)", flexShrink:0 }} />
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:14, fontWeight:700, color:"var(--foreground)", marginBottom:5, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.title}</div>
-                      <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                        <span style={{ fontSize:11, color:"#a78bfa", fontWeight:700, background:"rgba(167,139,250,0.1)", padding:"2px 8px", borderRadius:6, whiteSpace:"nowrap", flexShrink:0 }}>{c.source}</span>
-                        <span style={{ fontSize:11, color:"var(--muted-foreground)", display:"flex", alignItems:"center", gap:3 }}>📍 {c.region||"전국"}</span>
-                      </div>
-                    </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
-                      <div style={{ textAlign:"center" }}>
-                        <div style={{ fontSize:18, fontWeight:900, color:urgent?"#fb923c":"var(--muted-foreground)", lineHeight:1 }}>D-{c.deadline}</div>
-                        {urgent && <div style={{ fontSize:9, color:"#fb923c", fontWeight:700 }}>임박⚡</div>}
-                      </div>
-                      <a href={c.url} target="_blank" rel="noreferrer" className="ca-btn shimmer-btn"
-                        style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, fontWeight:700, color:"#fff", background:"linear-gradient(135deg,#7c3aed,#a78bfa)", border:"none", padding:"10px 18px", borderRadius:10, textDecoration:"none", whiteSpace:"nowrap", boxShadow:"0 4px 14px rgba(124,58,237,0.35)" }}>
-                        공고 보기 <ExternalLink style={{width:11,height:11}}/>
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
+      <div style={{ maxWidth:680, margin:"0 auto", padding:"48px 28px 80px", position:"relative", zIndex:1 }}>
         {/* 비밀번호 변경 */}
-        <div style={{ background:"var(--muted)", border:"1px solid var(--border)", borderRadius:20, padding:32, animation:"fadeUp 0.5s 0.35s ease both" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
-            <div style={{ width:40, height:40, borderRadius:12, background:"rgba(167,139,250,0.12)", border:"1px solid rgba(167,139,250,0.25)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <Shield style={{ width:18, height:18, color:"#a78bfa" }} />
+        <div style={{ background:"var(--muted)", border:"1px solid var(--border)", borderRadius:20, padding:36, animation:"fadeUp 0.5s ease both" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:28 }}>
+            <div style={{ width:44, height:44, borderRadius:13, background:"linear-gradient(135deg,#7c3aed,#a78bfa)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 8px 20px rgba(124,58,237,0.4)" }}>
+              <Shield style={{ width:20, height:20, color:"#fff" }} />
             </div>
             <div>
-              <div style={{ fontSize:16, fontWeight:800, color:"var(--foreground)" }}>비밀번호 변경</div>
+              <div style={{ fontSize:18, fontWeight:800, color:"var(--foreground)" }}>비밀번호 변경</div>
               <div style={{ fontSize:12, color:"var(--muted-foreground)" }}>변경 후 자동 로그아웃됩니다</div>
             </div>
           </div>
-          <div className="pw-grid" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:18 }}>
+          <div className="pw-grid" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:20 }}>
             {pwFields.map(f=>(
               <div key={f.label}>
                 <label style={{ fontSize:11, color:"var(--muted-foreground)", display:"block", marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px" }}>{f.label}</label>
