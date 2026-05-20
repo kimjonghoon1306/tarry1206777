@@ -29,6 +29,45 @@ const GREETING_KEY = "blogauto_greeting";
 const STYLE_KEY = "blogauto_writing_style";
 const PERSONA_KEY = "blogauto_persona";
 
+// ── 품질 스코어 계산 ────────────────────────────
+function calcQualityScore(content: string, keyword: string, minChars: string) {
+  if (!content || content.length < 100) return null;
+
+  const target = parseInt(minChars) || 1500;
+  const items: { label: string; pass: boolean; detail: string; weight: number }[] = [];
+
+  // 1. 글자수
+  const charOk = content.length >= target;
+  items.push({ label: "글자수", pass: charOk, detail: `${content.length.toLocaleString()}자 / 목표 ${target.toLocaleString()}자`, weight: 20 });
+
+  // 2. 질문형 소제목 비율
+  const headings = (content.match(/^## .+/gm) || []);
+  const questionHeadings = headings.filter(h => /[?？]/.test(h) || /하는법|방법|이유|이란|이란\?|할까|될까|인가|인지|는지|ㄴ가|ㄴ지/.test(h));
+  const headingOk = headings.length >= 3 && questionHeadings.length >= Math.ceil(headings.length * 0.5);
+  items.push({ label: "질문형 소제목", pass: headingOk, detail: `${headings.length}개 중 ${questionHeadings.length}개 질문형`, weight: 25 });
+
+  // 3. 키워드 밀도 (3~4회 골든존)
+  const kw = keyword.trim();
+  const kwCount = kw ? (content.match(new RegExp(kw, "g")) || []).length : 0;
+  const kwOk = kw ? kwCount >= 2 && kwCount <= 6 : true;
+  items.push({ label: "키워드 밀도", pass: kwOk, detail: kw ? `"${kw}" ${kwCount}회 (권장 2~6회)` : "키워드 없음", weight: 20 });
+
+  // 4. AI 패턴 감지
+  const aiPatterns = ["해보겠습니다", "알아보겠습니다", "살펴보겠습니다", "소개해드리겠습니다", "정리해보겠습니다", "결론적으로"];
+  const aiHits = aiPatterns.filter(p => content.includes(p));
+  const aiOk = aiHits.length === 0;
+  items.push({ label: "AI 패턴 차단", pass: aiOk, detail: aiOk ? "AI 냄새 없음 ✓" : `감지됨: ${aiHits.slice(0, 2).join(", ")}`, weight: 20 });
+
+  // 5. 단락 균형
+  const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 20 && !p.startsWith("##") && !p.startsWith("["));
+  const avgLen = paragraphs.length > 0 ? paragraphs.reduce((a, p) => a + p.length, 0) / paragraphs.length : 0;
+  const paraOk = paragraphs.length >= 4 && avgLen >= 80 && avgLen <= 400;
+  items.push({ label: "단락 균형", pass: paraOk, detail: `단락 ${paragraphs.length}개, 평균 ${Math.round(avgLen)}자`, weight: 15 });
+
+  const score = Math.round(items.reduce((acc, it) => acc + (it.pass ? it.weight : 0), 0));
+  return { score, items };
+}
+
 // ── 페르소나 (화자/독자 스타일) ──────────────────
 const PERSONA_STYLES = [
   { id: "none", label: "🙂 기본", color: "#888", prompt: "" },
@@ -771,6 +810,39 @@ export default function ContentGenerator() {
                 </div>
               )}
             </div>
+
+            {/* 품질 스코어 */}
+            {generatedContent && (() => {
+              const qs = calcQualityScore(generatedContent, keyword, minChars);
+              if (!qs) return null;
+              const color = qs.score >= 80 ? "#4ade80" : qs.score >= 55 ? "#fbbf24" : "#f87171";
+              const label = qs.score >= 80 ? "우수" : qs.score >= 55 ? "보통" : "개선 필요";
+              return (
+                <div className="rounded-xl overflow-hidden" style={{ background: "var(--card)", border: `1px solid ${color}40` }}>
+                  <div className="flex items-center justify-between px-4 py-3" style={{ background: `${color}10` }}>
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontSize: 15 }}>📊</span>
+                      <span className="text-sm font-bold" style={{ color }}>품질 스코어</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: `${color}20`, color }}>{label}</span>
+                      <span className="text-xl font-black" style={{ color }}>{qs.score}</span>
+                    </div>
+                  </div>
+                  <div className="px-4 py-2 space-y-1.5">
+                    {qs.items.map((it, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span style={{ fontSize: 11 }}>{it.pass ? "✅" : "⚠️"}</span>
+                          <span className="text-xs font-medium" style={{ color: "var(--foreground)" }}>{it.label}</span>
+                        </div>
+                        <span className="text-xs" style={{ color: it.pass ? "var(--muted-foreground)" : "#f87171", maxWidth: 140, textAlign: "right" }}>{it.detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 저장 안내 */}
             {generatedContent && (
