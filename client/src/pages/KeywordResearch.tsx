@@ -32,13 +32,33 @@ function getRandomKeywords(count = 15): string[] {
   return [...all].sort(() => Math.random() - 0.5).slice(0, count);
 }
 
-// 황금 키워드 점수 계산 (경쟁 낮음 + 적당한 검색량 + 높은 클릭률)
-function calcGoldScore(kw: { volume: number; competition: string; cpc: number; clicks: number }): number {
+// 황금 키워드 점수 계산 v2 (네이버 2026 로직 대응)
+// 경쟁도 + 검색량 + CTR + CPC + 상업적의도 + 질문형 보너스
+function calcGoldScore(kw: { volume: number; competition: string; cpc: number; clicks: number; keyword?: string }): number {
+  // 1. 경쟁도 (낮을수록 좋음)
   const compScore = kw.competition === "낮음" ? 100 : kw.competition === "중" ? 50 : 10;
-  const volScore = kw.volume >= 1000 && kw.volume <= 50000 ? 100 : kw.volume < 1000 ? 30 : 60;
+
+  // 2. 검색량 (1000~30000 골든존, 너무 많으면 경쟁 심함)
+  const volScore = kw.volume >= 1000 && kw.volume <= 30000 ? 100
+    : kw.volume > 30000 && kw.volume <= 80000 ? 60
+    : kw.volume < 1000 ? 20 : 40;
+
+  // 3. CTR (클릭률)
   const ctrScore = kw.volume > 0 ? Math.min(100, (kw.clicks / kw.volume) * 1000) : 0;
-  const cpcScore = Math.min(100, kw.cpc / 10);
-  return Math.round(compScore * 0.4 + volScore * 0.3 + ctrScore * 0.2 + cpcScore * 0.1);
+
+  // 4. CPC (상업적 가치 - 비중 상향)
+  const cpcScore = Math.min(100, kw.cpc / 8);
+
+  // 5. 상업적 의도 키워드 보너스 (구매/추천/비교/방법 포함 시)
+  const kwText = (kw.keyword || "").toLowerCase();
+  const commercialBonus = /추천|비교|후기|리뷰|방법|가격|구매|어디|어떻게|얼마|순위|최고|좋은|싼/.test(kwText) ? 20 : 0;
+
+  // 6. 질문형/롱테일 보너스 (네이버 AEO 대응 - 3단어 이상)
+  const wordCount = kwText.replace(/\s+/g, " ").trim().split(" ").length;
+  const longtailBonus = wordCount >= 3 ? 15 : wordCount === 2 ? 8 : 0;
+
+  const base = Math.round(compScore * 0.35 + volScore * 0.25 + ctrScore * 0.15 + cpcScore * 0.25);
+  return Math.min(100, base + commercialBonus + longtailBonus);
 }
 
 type KW = {
@@ -526,14 +546,20 @@ export default function KeywordResearch() {
     setIsCollecting(true);
     toast.loading("AI가 키워드를 추천 중...", { id: "collect" });
     try {
-      const prompt = `"${kw}" 주제로 블로그에 쓸 수 있는 롱테일 키워드 20개를 추천해줘.
+      const prompt = `"${kw}" 주제로 네이버 블로그 상위 노출에 유리한 롱테일 키워드 20개를 추천해줘.
+
 조건:
-- 경쟁이 낮고 검색량이 적당한 (월 1000~30000) 키워드
-- 실제 사람들이 검색할 법한 구체적인 표현
-- 반드시 JSON 배열로만 응답: [{"keyword":"키워드","competition":"낮음","volume":5000},...]
+- 월 검색량 1000~30000 사이의 경쟁 낮은 키워드 위주
+- 아래 유형을 골고루 포함할 것:
+  1) 질문형 (예: "~하는 방법", "~이 좋은 이유", "~하면 어떻게")
+  2) 비교/추천형 (예: "~추천", "~비교", "~순위")
+  3) 경험/후기형 (예: "~후기", "~리뷰", "~써봤")
+  4) 구체적 상황형 (예: "초보 ~", "혼자 ~", "저렴한 ~")
+- 단순 단어 1개짜리 키워드 금지, 2단어 이상 조합만
+- 반드시 JSON 배열로만 응답 (설명 없이): [{"keyword":"키워드","competition":"낮음","volume":5000,"intent":"정보성|구매|비교|후기 중 하나"}]
 - competition은 낮음/중/높음 중 하나
 - volume은 예상 월간 검색량 숫자
-- 한글, 영어, 숫자만 사용`;
+- 한글만 사용`;
 
       const resp = await fetch("/api/generate-titles", {
         method: "POST",
