@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import { getAdminField } from "../shared/adminKeys.js";
 
 export default async function handler(req, res) {
   // 캐시 완전 방지
@@ -16,14 +15,13 @@ export default async function handler(req, res) {
     try { body = JSON.parse(body); } catch { return res.status(400).json({ error: "Invalid JSON" }); }
   }
 
-  // 🔒 네이버 검색광고 키는 서버가 KV admin 설정에서 직접 사용 (클라 전달 안 받음)
-  const accessLicense = await getAdminField("naver_access_license");
-  const secretKey = await getAdminField("naver_secret_key");
-  const customerId = (await getAdminField("naver_customer_id")).toString();
+  const accessLicense = (body?.accessLicense || "").trim();
+  const secretKey = (body?.secretKey || "").trim();
+  const customerId = (body?.customerId || "").toString().trim();
   const keywords = body?.keywords || [];
 
   if (!accessLicense || !secretKey || !customerId || !keywords.length) {
-    return res.status(400).json({ error: (!accessLicense || !secretKey || !customerId) ? "네이버 키가 설정되지 않았습니다. 관리자에게 문의하세요." : "키워드가 필요합니다." });
+    return res.status(400).json({ error: "필수 파라미터 누락" });
   }
 
   try {

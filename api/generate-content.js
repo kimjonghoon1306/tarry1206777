@@ -1,6 +1,5 @@
 // BlogAuto Pro - generate-content v5.1
 // 플레인 텍스트 출력 (## 소제목 허용) + FAQ/참고자료 마커 유지
-import { getAdminKey } from "../shared/adminKeys.js";
 
 // Groq가 마커 없이 날것 텍스트로 쓸 때 자동으로 마커 씌우기
 function ensureMarkers(text) {
@@ -83,7 +82,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const {
-    provider, keyword, title,
+    provider, apiKey, keyword, title,
     language = "ko", minChars = 1500,
     stylePrompt = "", adPlatform = "",
     // 체험단 모드
@@ -93,11 +92,8 @@ export default async function handler(req, res) {
     highlight, weakness,
   } = req.body;
 
-  // 🔒 키는 클라이언트에서 받지 않고 서버가 KV admin 설정에서 직접 사용
-  const apiKey = await getAdminKey(provider);
-
   if (!provider || !apiKey) {
-    return res.status(400).json({ error: "AI 키가 설정되지 않았습니다. 관리자에게 문의하세요." });
+    return res.status(400).json({ error: "필수 파라미터 누락" });
   }
 
   // ── 체험단 전용 처리 ──────────────────────────────────────
