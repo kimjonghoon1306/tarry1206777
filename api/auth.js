@@ -211,9 +211,32 @@ async function getUserRole(token) {
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // ── 공개 통계 집계 (ONDA 관제 LIVE 연결용) ────────────
+  //   GET /api/auth?action=stats → 집계 숫자만 반환(개인정보 X), 30초 KV 캐시.
+  //   ※ Vercel Hobby 함수 12개 제한 때문에 별도 stats.js 대신 여기에 통합.
+  if (req.method === "GET" && (req.query?.action === "stats")) {
+    const CACHE_KEY = "stats:cache", CACHE_MS = 30000;
+    const cached = await kvGet(CACHE_KEY);
+    if (cached && cached.updatedAt && Date.now() - cached.updatedAt < CACHE_MS) {
+      return res.status(200).json({ ok: true, cached: true, ...cached });
+    }
+    const userIds = await getUserIndex();
+    const today = new Date().toISOString().slice(0, 10);
+    let posts = 0, todayPosts = 0, views = 0;
+    for (const uid of userIds) {
+      const u = await getUser(uid);
+      const list = (u && u.posts) || [];
+      posts += list.length;
+      for (const p of list) { views += p.views || 0; if ((p.createdAt || "").slice(0, 10) === today) todayPosts++; }
+    }
+    const out = { members: userIds.length, posts, todayPosts, views, updatedAt: Date.now() };
+    await kvSet(CACHE_KEY, out);
+    return res.status(200).json({ ok: true, cached: false, ...out });
+  }
 
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch {} }
