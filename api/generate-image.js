@@ -1,5 +1,6 @@
 // BlogAuto Pro - generate-image v5.1
 // ✅ Vercel 타임아웃 60초로 확장
+import { getAdminKey } from "../shared/adminKeys.js";
 export const config = { maxDuration: 60 };
 
 // ✅ Gemini Imagen 3 지원
@@ -116,10 +117,14 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST만 지원합니다" });
 
-  const { provider, apiKey, prompt, size = "1024x1024", count = 1, imgbbKey = "", action = "start", predictionId } = req.body || {};
+  const { provider, prompt, size = "1024x1024", count = 1, action = "start", predictionId } = req.body || {};
+
+  // 🔒 키는 서버가 KV admin 설정에서 직접 사용 (이미지 생성 키 + imgbb 업로드 키)
+  const apiKey = await getAdminKey(provider);
+  const imgbbKey = await getAdminKey("imgbb");
 
   if (!provider || !apiKey) {
-    return res.status(400).json({ error: "provider, apiKey 필수입니다" });
+    return res.status(400).json({ error: "이미지 생성 키가 설정되지 않았습니다. 관리자에게 문의하세요." });
   }
 
   // poll 요청은 prompt 없이 predictionId만으로 처리 (맨 위에서 바로 처리)

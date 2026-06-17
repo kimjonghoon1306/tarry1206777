@@ -1,5 +1,6 @@
 // BlogAuto Pro - translate-prompt v5.0
 // AI 우선 처리 + 범용 폴백 (키워드 하드코딩 없음)
+import { getAdminKey } from "../shared/adminKeys.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,9 +9,11 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
-  const { provider, apiKey, topic, variation = 0 } = req.body || {};
+  const { provider, topic, variation = 0 } = req.body || {};
+  // 🔒 키는 서버가 KV admin 설정에서 직접 사용
+  const apiKey = await getAdminKey(provider);
   if (!topic) return res.status(400).json({ error: "topic required" });
-  if (!provider || !apiKey) return res.status(400).json({ error: "provider, apiKey required" });
+  if (!provider || !apiKey) return res.status(400).json({ error: "AI 키가 설정되지 않았습니다. 관리자에게 문의하세요." });
 
   const angles = [
     "the main object or product of this topic",

@@ -2,6 +2,7 @@
 // 네이버 데이터랩 검색어 트렌드 API
 // 디바이스(PC/모바일), 성별(남/녀), 연령대별 분석
 // v1.1: 병렬 10요청 → 순차 처리로 Rate Limit 오류 수정
+import { getAdminField } from "../shared/adminKeys.js";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -14,13 +15,14 @@ export default async function handler(req, res) {
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch {} }
 
-  const { clientId, clientSecret, keyword, startDate, endDate, timeUnit = "month" } = body || {};
-  const safeClientId = String(clientId || "").trim();
-  const safeClientSecret = String(clientSecret || "").trim();
+  const { keyword, startDate, endDate, timeUnit = "month" } = body || {};
+  // 🔒 데이터랩 키는 서버가 KV admin 설정에서 직접 사용
+  const safeClientId = await getAdminField("naver_datalab_client_id");
+  const safeClientSecret = await getAdminField("naver_datalab_client_secret");
   const safeKeyword = String(keyword || "").trim();
 
   if (!safeClientId || !safeClientSecret || !safeKeyword) {
-    return res.status(400).json({ error: "clientId, clientSecret, keyword 필요" });
+    return res.status(400).json({ error: (!safeClientId || !safeClientSecret) ? "네이버 데이터랩 키가 설정되지 않았습니다. 관리자에게 문의하세요." : "keyword 필요" });
   }
 
   const end = endDate || new Date().toISOString().slice(0, 10);

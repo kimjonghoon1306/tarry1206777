@@ -1,4 +1,5 @@
 // BlogAuto Pro - generate-titles v3.0
+import { getAdminKey } from "../shared/adminKeys.js";
 function cleanTitles(titles) {
   return titles
     .map(t => String(t || "")
@@ -60,9 +61,11 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { provider, apiKey, keyword, mode, prompt: customPrompt } = req.body || {};
+  const { provider, keyword, mode, prompt: customPrompt } = req.body || {};
+  // 🔒 키는 서버가 KV admin 설정에서 직접 사용
+  const apiKey = await getAdminKey(provider);
   if (!provider || !apiKey || !keyword) {
-    return res.status(400).json({ error: "필수 파라미터 누락 (provider, apiKey, keyword)" });
+    return res.status(400).json({ error: apiKey ? "필수 파라미터 누락 (provider, keyword)" : "AI 키가 설정되지 않았습니다. 관리자에게 문의하세요." });
   }
 
   // mode: "keywords" + customPrompt → AI 키워드 추천 모드

@@ -121,6 +121,9 @@ export async function loadSettingsFromServer(): Promise<Record<string, string> |
   } catch { return null; }
 }
 
+// 키가 서버에서 관리됨을 나타내는 placeholder. 클라 "키 있음" 검사 통과용이며 실제 호출엔 안 쓰임.
+export const SERVER_MANAGED_KEY = "__server_managed__";
+
 // ── admin 설정을 로컬에 캐시 (비로그인 유저도 관리자 키 사용 가능) ──
 // ✅ 앱 시작 시 또는 로그인 후 호출
 export async function syncAdminSettingsToLocal(): Promise<void> {
@@ -135,7 +138,18 @@ export async function syncAdminSettingsToLocal(): Promise<void> {
     if (d.ok && d.settings) {
       // admin 네임스페이스에 캐시
       Object.entries(d.settings).forEach(([k, v]) => {
-        if (typeof v === "string" && v.trim()) {
+        // 🔒 보안: 키/시크릿은 더 이상 서버가 내려주지 않는다.
+        //    "<field>_set: true" 불리언만 오므로, 해당 키 자리엔 placeholder를 넣어
+        //    클라의 "키 있음" 검사는 통과시키고, 실제 호출 시엔 서버가 KV 키로 처리한다.
+        if (k.endsWith("_set")) {
+          const realKey = k.slice(0, -4);
+          // admin 본인은 loadSettings로 받은 진짜 키를 유지해야 하므로 placeholder로 덮지 않음
+          const existing = localStorage.getItem(`u:admin:${realKey}`);
+          if (existing && existing !== SERVER_MANAGED_KEY) return; // 진짜 키 보존
+          if (v === true) localStorage.setItem(`u:admin:${realKey}`, SERVER_MANAGED_KEY);
+          else localStorage.removeItem(`u:admin:${realKey}`);
+        } else if (typeof v === "string" && v.trim()) {
+          // 비민감 설정(provider 선택 등)은 그대로 캐시
           localStorage.setItem(`u:admin:${k}`, v);
         }
       });

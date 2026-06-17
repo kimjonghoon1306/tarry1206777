@@ -510,12 +510,22 @@ export default async function handler(req, res) {
   }
 
   // ── 관리자 공개 설정 불러오기 (토큰 없이 접근 가능) ────
-  // 비로그인 유저도 admin이 설정한 API 키를 사용할 수 있도록
+  // 🔒 보안: API 키/시크릿은 절대 내려주지 않는다. 비민감 설정(provider 선택 등)만 공개하고,
+  //    키는 "설정됨" 여부(불리언)만 알려준다. 실제 키는 서버 엔드포인트가 KV에서 직접 사용.
   if (action === "loadAdminPublicSettings") {
     const u = await getUser("admin");
     if (!u || !u.settings) return res.json({ ok: true, settings: {} });
-    // 민감하지 않은 설정만 공개 (API 키는 공개, 비밀번호는 제외)
-    const publicSettings = { ...u.settings };
+    const s = u.settings;
+    // 클라이언트에 내려도 되는 비민감 필드 화이트리스트
+    const PUBLIC_FIELDS = ["content_ai_provider", "image_ai_provider", "selected_ad_platform", "platform_categories", "gsc_site_url"];
+    const publicSettings = {};
+    for (const f of PUBLIC_FIELDS) if (s[f] !== undefined) publicSettings[f] = s[f];
+    // 키 보유 여부만 불리언으로 (UI '연동됨' 표시용). 실제 값은 노출 금지.
+    const KEY_FIELDS = ["gemini_api_key", "groq_api_key", "openai_api_key", "replicate_api_token", "imgbb_api_key",
+      "naver_access_license", "naver_secret_key", "naver_customer_id", "naver_datalab_client_id", "naver_datalab_client_secret",
+      "coupang_access_key", "coupang_secret_key", "coupang_sub_id", "naver_blog_id", "naver_blog_access_token",
+      "gsc_client_email", "gsc_private_key"];
+    for (const f of KEY_FIELDS) publicSettings[f + "_set"] = !!(s[f] && String(s[f]).trim());
     return res.json({ ok: true, settings: publicSettings });
   }
 
