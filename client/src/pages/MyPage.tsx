@@ -155,6 +155,33 @@ export default function MyPage() {
           </p>
         </div>
 
+        {/* 온종일 서비스 바로가기 */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Globe className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
+            <div>
+              <h3 className="font-semibold text-foreground">퍼블리와 함께 쓰면 더 좋은 서비스</h3>
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>퍼블리는 데스크탑·노트북에 설치해 쓰는 자동화 도구입니다. 상품 선택부터 체험 리뷰, 수익 링크까지 한 번에 이어보세요.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { name: "온종일팜", icon: "🌱", desc: "신선한 산지 상품을 만나고, 콘텐츠에 소개할 상품을 찾아보세요.", cta: "상품 보러가기", href: "https://app.yuanfnb.com", color: "#22c55e" },
+              { name: "온종일 체험단", icon: "🎁", desc: "상품과 매장을 직접 체험하고 진짜 경험이 담긴 리뷰를 만들어보세요.", cta: "체험단 알아보기", href: "https://pick.xn--zk5biyyw.com", color: "#ec4899" },
+              { name: "온파트너", icon: "🔗", desc: "퍼블리로 만든 콘텐츠에 추천 링크를 넣고 판매 수익까지 연결하세요.", cta: "파트너 시작하기", href: "https://partner.yuanfnb.com", color: "#38bdf8" },
+            ].map((service) => (
+              <a key={service.name} href={service.href} target="_blank" rel="noopener noreferrer"
+                className="group rounded-xl p-4 transition-all hover:-translate-y-0.5"
+                style={{ background: "var(--card)", border: `1px solid color-mix(in srgb, ${service.color} 35%, var(--border))` }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-3" style={{ background: `${service.color}18` }}>{service.icon}</div>
+                <div className="font-bold text-foreground mb-1">{service.name}</div>
+                <p className="text-xs leading-relaxed min-h-14" style={{ color: "var(--muted-foreground)" }}>{service.desc}</p>
+                <div className="flex items-center gap-1 mt-3 text-xs font-bold" style={{ color: service.color }}>{service.cta} <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" /></div>
+              </a>
+            ))}
+          </div>
+        </section>
+
         {/* Profile Card */}
         <div
           className="rounded-xl p-6"
