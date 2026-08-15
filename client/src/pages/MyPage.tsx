@@ -161,7 +161,7 @@ export default function MyPage() {
             <Globe className="w-5 h-5" style={{ color: "var(--color-emerald)" }} />
             <div>
               <h3 className="font-semibold text-foreground">퍼블리와 함께 쓰면 더 좋은 서비스</h3>
-              <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>퍼블리는 데스크탑·노트북에 설치해 쓰는 자동화 도구입니다. 상품 선택부터 체험 리뷰, 수익 링크까지 한 번에 이어보세요.</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>퍼블리는 데스크탑·노트북 설치형 네이버 블로그 최적화 자동화 프로그램입니다. AI 글쓰기·발행·서이추·공감·댓글 관리와 상품 홍보를 한 번에 이어보세요.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
