@@ -23,6 +23,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { getImageProvider, getAPIKey, IMAGE_AI_OPTIONS, getContentProvider } from "@/lib/ai-config";
 import { useLocation } from "wouter";
+import { makeCaption } from "@/lib/caption";
 
 // ── 이미지 URL 로드 테스트 ──────────────────────────
 async function testImageUrl(url: string, timeoutMs = 12000): Promise<boolean> {
@@ -585,6 +586,8 @@ export default function ImageGenerator() {
   const autoPrompt = params?.get("prompt") || "";
   const fromContent = !!autoPrompt;
   const maxImagesFromContent = params?.get("maxImages") ? parseInt(params.get("maxImages")!) : 0;
+  // 캡션(이미지 밑 설명)용 키워드 — 콘텐츠 생성에서 넘어온 keyword 우선, 없으면 프롬프트 앞부분.
+  const captionKeyword = params?.get("keyword") || autoPrompt || "";
 
   const [prompt, setPrompt] = useState(() => {
     // URL 파라미터(콘텐츠 생성에서 넘어온 키워드)가 있으면 항상 우선 적용
@@ -698,8 +701,8 @@ export default function ImageGenerator() {
 
       if (!existingIds) {
         setGallery(prev => [
-          ...placeholderIds.map(id => ({
-            id, src: "", title: `${prompt.slice(0, 20)}...`,
+          ...placeholderIds.map((id, ci) => ({
+            id, src: "", title: makeCaption(captionKeyword, undefined, ci),
             keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
             loading: true, failed: false,
             _prompt: fullPrompt, _w: w, _h: h, _seed: Math.floor(Math.random() * 999999), _provider: provider,
@@ -775,8 +778,8 @@ export default function ImageGenerator() {
 
     if (!existingIds) {
       setGallery(prev => [
-        ...placeholderIds.map(id => ({
-          id, src: "", title: `${prompt.slice(0, 20)}...`,
+        ...placeholderIds.map((id, ci) => ({
+          id, src: "", title: makeCaption(captionKeyword, undefined, ci),
           keyword: prompt.slice(0, 15), style: styleLabel, size: sizeStr,
           loading: true, failed: false,
           _prompt: fullPrompt, _w: w, _h: h, _provider: provider,
