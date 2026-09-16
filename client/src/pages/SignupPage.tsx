@@ -70,6 +70,7 @@ export default function SignupPage() {
       if (!d.ok) { toast.error(d.error); return; }
       localStorage.setItem("ba_user", JSON.stringify(d.user));
       localStorage.setItem("ba_token", d.token);
+      localStorage.setItem("ba_show_welcome", "1"); // 최초 진입 시 무료 체험 안내 팝업 트리거(Layout)
       toast.success("가입 완료! 환영해요 🎉");
       navigate("/dashboard");
     } catch { toast.error("네트워크 오류"); }

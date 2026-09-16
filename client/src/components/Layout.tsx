@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { getQuota, type Quota } from "@/lib/quota";
 import { Link, useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
@@ -96,6 +97,19 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
   const [reportOpen, setReportOpen] = useState(false);
   const [reportMsg, setReportMsg] = useState("");
   const [reportSending, setReportSending] = useState(false);
+  const [quota, setQuota] = useState<Quota | null>(null); // 무료 체험 에너지바(오늘 남은 글 생성 횟수)
+  const [showWelcome, setShowWelcome] = useState(false); // 회원가입 직후 무료 체험 안내 팝업
+
+  // 로그인 상태면 사용량 로드 + 글 생성으로 차감될 때 실시간 갱신(ba-quota-changed 이벤트).
+  useEffect(() => {
+    const load = () => { if (localStorage.getItem("ba_token")) getQuota().then(setQuota).catch(() => {}); };
+    load();
+    const onChanged = (e: any) => { if (e.detail) setQuota(e.detail); };
+    window.addEventListener("ba-quota-changed", onChanged);
+    // 회원가입 직후 1회 무료 체험 안내 팝업
+    if (localStorage.getItem("ba_show_welcome") === "1") { setShowWelcome(true); localStorage.removeItem("ba_show_welcome"); }
+    return () => window.removeEventListener("ba-quota-changed", onChanged);
+  }, []);
   const isGuestMode = localStorage.getItem("guest_mode") === "true" && !localStorage.getItem("ba_token");
 
   useEffect(() => {
@@ -480,6 +494,24 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
           </form>
 
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            {/* 🔋 무료 회원 등급 + 에너지바 (오늘 글 생성 남은 횟수). 관리자/유료는 무제한 배지. */}
+            {quota && (
+              quota.unlimited ? (
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "rgba(16,185,129,.12)", color: "#059669", border: "1px solid rgba(16,185,129,.3)" }}>
+                  <span>♾️</span><span>무제한</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full" style={{ background: "var(--muted)", border: "1px solid var(--border)" }} title={quota.trialActive ? `무료 체험 ${quota.trialDaysLeft}일 남음 · 오늘 글 생성 ${quota.remain}/${quota.limit}회 남음` : "무료 체험 종료"}>
+                  <span className="text-xs font-bold" style={{ color: quota.trialActive ? "#059669" : "#ef4444" }}>{quota.trialActive ? "무료" : "만료"}</span>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: quota.limit }).map((_, i) => (
+                      <span key={i} style={{ width: 16, height: 7, borderRadius: 4, background: i < quota.remain ? "linear-gradient(90deg,#10b981,#34d399)" : "var(--border)", transition: "background .2s" }} />
+                    ))}
+                  </div>
+                  <span className="text-xs font-semibold hidden sm:inline" style={{ color: "var(--muted-foreground)" }}>{quota.remain}/{quota.limit}</span>
+                </div>
+              )
+            )}
             {/* Language selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -743,6 +775,23 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
           </div>
         </main>
       </div>
+
+      {/* 🎁 회원가입 직후 무료 체험 안내 팝업 */}
+      {showWelcome && (
+        <div onClick={() => setShowWelcome(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999, padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 420, background: "var(--card,#fff)", color: "var(--foreground,#1a2332)", borderRadius: 20, padding: "32px 26px", boxShadow: "0 20px 60px rgba(0,0,0,.4)", textAlign: "center" }}>
+            <div style={{ fontSize: 46, marginBottom: 10 }}>🎁</div>
+            <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 10 }}>가입을 환영해요!</div>
+            <div style={{ fontSize: 14.5, lineHeight: 1.65, opacity: .85, marginBottom: 8 }}>
+              지금부터 <b style={{ color: "#059669" }}>7일 동안</b>, 매일 <b style={{ color: "#059669" }}>AI 글 생성 2회</b>를<br />완전 무료로 쓸 수 있어요.
+            </div>
+            <div style={{ fontSize: 12.5, lineHeight: 1.6, opacity: .6, marginBottom: 22 }}>
+              이미지 생성·발행은 제한 없이 자유롭게!<br />남은 횟수는 상단 🔋 에너지바에서 확인하세요.
+            </div>
+            <button onClick={() => setShowWelcome(false)} style={{ width: "100%", padding: "14px", borderRadius: 13, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>바로 시작하기 →</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

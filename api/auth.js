@@ -413,6 +413,43 @@ export default async function handler(req, res) {
     return res.json({ ok: true, popups });
   }
 
+  // ── 무료 체험 사용량 (글 생성 하루 2회 · 가입 후 7일) ──────────────
+  //   서버가 계정별로 카운트(localStorage는 조작 가능 → 서버 실측이 정답). admin·유료는 무제한.
+  //   getQuota=오늘 사용량/남은량/체험만료 조회, useQuota=글 생성 직전 +1(초과·만료면 거부).
+  if (action === "getQuota" || action === "useQuota") {
+    const tk = (req.headers.authorization || "").replace("Bearer ", "");
+    const info = await getUserRole(tk);
+    if (!info) return res.json({ ok: false, error: "로그인이 필요합니다", code: "login_required" });
+    // 관리자/유료는 무제한 통과
+    const u = info.uid === "admin" ? { profile: { role: "admin" } } : (await getUser(info.uid)) || {};
+    const plan = u?.profile?.plan || (info.role === "admin" ? "admin" : "free");
+    if (info.role === "admin" || plan === "pro" || plan === "paid" || plan === "unlimited") {
+      if (action === "useQuota") return res.json({ ok: true, unlimited: true });
+      return res.json({ ok: true, unlimited: true, plan, limit: -1, used: 0, remain: -1, trialActive: true, trialDaysLeft: -1 });
+    }
+    // 무료 회원: 가입 후 7일 · 하루 2회
+    const DAILY = 2, TRIAL_DAYS = 7;
+    const createdAt = u?.profile?.createdAt ? new Date(u.profile.createdAt).getTime() : Date.now();
+    const dayMs = 86400000;
+    const daysSince = Math.floor((Date.now() - createdAt) / dayMs);
+    const trialDaysLeft = Math.max(0, TRIAL_DAYS - daysSince);
+    const trialActive = trialDaysLeft > 0;
+    // 한국시간(UTC+9) 기준 오늘 날짜 키
+    const kstNow = new Date(Date.now() + 9 * 3600000);
+    const dateKey = kstNow.toISOString().slice(0, 10);
+    const usageKey = `usage:${info.uid}:${dateKey}`;
+    let used = Number(await kvGet(usageKey)) || 0;
+    if (action === "getQuota") {
+      return res.json({ ok: true, plan: "free", limit: DAILY, used, remain: Math.max(0, DAILY - used), trialActive, trialDaysLeft });
+    }
+    // useQuota — 만료/한도 체크 후 +1
+    if (!trialActive) return res.json({ ok: false, error: "무료 체험 기간(7일)이 끝났어요. 계속 쓰려면 업그레이드가 필요해요.", code: "trial_expired", limit: DAILY, used, remain: 0, trialActive, trialDaysLeft });
+    if (used >= DAILY) return res.json({ ok: false, error: `오늘 무료 글 생성 ${DAILY}회를 다 썼어요. 내일 다시 2회 충전돼요.`, code: "daily_limit", limit: DAILY, used, remain: 0, trialActive, trialDaysLeft });
+    used += 1;
+    await kvSet(usageKey, used);
+    return res.json({ ok: true, plan: "free", limit: DAILY, used, remain: Math.max(0, DAILY - used), trialActive, trialDaysLeft });
+  }
+
   // ── admin 복구 (profile 없을 때) ─────────────────
   // ── 관리자 비번 강제 초기화 (긴급용) ────────────────────
   if (action === "forceResetAdminPw") {

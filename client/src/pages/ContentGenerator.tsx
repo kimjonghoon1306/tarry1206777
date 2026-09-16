@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { getContentProvider, getAPIKey, CONTENT_AI_OPTIONS } from "@/lib/ai-config";
 import { generateContent } from "@/lib/ai-client";
+import { consumeQuota } from "@/lib/quota";
 import { userGet, userSet, SETTINGS_KEYS } from "@/lib/user-storage";
 import { useLocation } from "wouter";
 
@@ -170,6 +171,7 @@ export default function ContentGenerator() {
   const [minChars, setMinChars] = useState(saved?.minChars || "1500");
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [quotaModal, setQuotaModal] = useState<{ type: "limit" | "expired" | "login"; msg: string } | null>(null); // 무료 한도/만료/가입유도 안내
   const [generatedContent, setGeneratedContent] = useState(saved?.content || "");
   const [charCount, setCharCount] = useState(saved?.content?.length || 0);
   const [activeTab, setActiveTab] = useState<"edit" | "preview" | "blog-preview">("edit");
@@ -325,6 +327,16 @@ export default function ContentGenerator() {
       return;
     }
     if (!keyword.trim()) { toast.error("키워드를 입력해주세요"); return; }
+
+    // 🔋 무료 체험 게이트 — 글 생성 직전 서버에서 1회 차감(관리자·유료는 무제한 통과).
+    //   초과·만료면 여기서 막고 안내(생성 안 함). 서버 실측이라 새로고침·localStorage로 우회 불가.
+    const q = await consumeQuota();
+    if (!q.ok) {
+      if (q.code === "login_required") setQuotaModal({ type: "login", msg: "지금 가입하면 7일간 매일 AI 글 생성 2회를 무료로 쓸 수 있어요." });
+      else if (q.code === "trial_expired") setQuotaModal({ type: "expired", msg: q.error || "무료 체험이 끝났어요." });
+      else setQuotaModal({ type: "limit", msg: q.error || "오늘 무료 횟수를 다 썼어요." });
+      return;
+    }
 
     setIsGenerating(true);
     setProgress(0);
@@ -912,6 +924,25 @@ export default function ContentGenerator() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔋 무료 체험 한도/만료 안내 모달 */}
+      {quotaModal && (
+        <div onClick={() => setQuotaModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999, padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 400, background: "var(--card, #fff)", color: "var(--foreground, #1a2332)", borderRadius: 18, padding: "28px 24px", boxShadow: "0 20px 60px rgba(0,0,0,.4)", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{quotaModal.type === "expired" ? "⏰" : quotaModal.type === "login" ? "🎁" : "🔋"}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 8 }}>{quotaModal.type === "expired" ? "무료 체험이 끝났어요" : quotaModal.type === "login" ? "가입하고 무료로 시작하세요" : "오늘 무료 횟수를 다 썼어요"}</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.6, opacity: .8, marginBottom: 20 }}>{quotaModal.msg}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {quotaModal.type === "login" ? (
+                <button onClick={() => { setQuotaModal(null); navigate("/signup"); }} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>무료로 회원가입 →</button>
+              ) : (
+                <button onClick={() => { setQuotaModal(null); navigate("/mypage"); }} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>업그레이드 / 요금제 보기 →</button>
+              )}
+              <button onClick={() => setQuotaModal(null)} style={{ width: "100%", padding: "11px", borderRadius: 12, border: "1px solid var(--border,#d2dbe8)", background: "transparent", color: "var(--foreground,#647084)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>닫기</button>
             </div>
           </div>
         </div>
