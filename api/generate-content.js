@@ -273,6 +273,7 @@ ${sv.tone}
     es: "Español", fr: "Français", de: "Deutsch", pt: "Português",
   };
   const langLabel = langMap[language] || "한국어";
+  const isKo = language === "ko"; // 한국어가 아니면 프롬프트 전체를 해당 언어(영어 등)로 분기
   const targetChars = parseInt(minChars) || 1500;
   const maxTokens = 8000; // 항상 최대 토큰 (잘림 방지)
 
@@ -366,7 +367,7 @@ ${sv.tone}
     experienceHint = pickExp(experienceScenarios.info);
   }
 
-  const prompt = `당신은 대한민국 블로그 작가입니다. 실제로 경험한 사람처럼, 독자와 대화하듯 생생하게 씁니다.
+  const prompt = isKo ? `당신은 대한민국 블로그 작가입니다. 실제로 경험한 사람처럼, 독자와 대화하듯 생생하게 씁니다.
 
 키워드: "${keyword}"
 ${titleInstruction}
@@ -431,6 +432,61 @@ LINK3: (사이트 이름)|(설명)|(https://실제공식URL)
 POST1: (이 글과 연관된 블로그 주제 제목 1)|(독자가 이 글을 읽으면 좋은 이유 한 줄)
 POST2: (연관 주제 제목 2)|(이유)
 POST3: (연관 주제 제목 3)|(이유)
+[관련글끝]` : `You are a top-tier native ${langLabel} blog writer. Write vividly and naturally, like a real person sharing genuine, first-hand experience with the reader.
+
+Keyword: "${keyword}"
+${titleInstruction}
+★Language: Write EVERYTHING 100% in ${langLabel} — title, body, subheadings, FAQ, references, related posts, hashtags and any image captions must ALL be natural ${langLabel}. Never write in Korean.
+Target length: at least ${targetChars} characters
+
+[Required principles]
+① No AI clichés: avoid "In this article", "Let's take a look", "In conclusion" and robotic phrasing
+② Concrete info: real prices, numbers, dates, durations (no vague statements)
+③ Subheadings MUST be reader questions (4~6), e.g. "Why is there always a wait here?"
+④ Each section: 3~5 balanced sentences
+⑤ Use the keyword 3~4 times naturally; use synonyms/related terms elsewhere
+⑥ Emphasis markers: 3~5 times, on their own line at the start of a sentence:
+   [팁] a useful tip / recommendation / know-how
+   [주의] something to be careful about, a common mistake
+   [중요] essential key info, a summary point
+
+[Format rules]
+- Body (subheadings + paragraphs) at least ${targetChars} characters
+- FAQ and references do not count toward the length (added separately)
+- Subheadings use "## Subheading" only (no ### or deeper)
+- No asterisk (*) emphasis
+- No dash (-) bullet lists
+- Plain text + "## Subheading" only
+- Write entirely in natural ${langLabel}. No Korean or Chinese/Japanese characters.${styleGuide}
+
+[Order - follow exactly]
+1) Write the full body (at least ${targetChars} chars) and finish with a proper closing sentence
+2) Then append FAQ in the format below (length-independent)
+3) Then append references (length-independent)
+4) Then append related posts (length-independent)
+
+Keep the [ ] section markers exactly as written (they stay in Korean), but write ALL content in ${langLabel}.
+
+[FAQ시작]
+Q1: (the question readers most want answered)
+A1: (concrete answer)
+Q2: (question)
+A2: (answer)
+Q3: (question)
+A3: (answer)
+[FAQ끝]
+
+[참고자료시작]
+⚠️ URL rule: use only real, existing official site main URLs. If unsure, use well-known official sites relevant to the topic and the reader's country.
+LINK1: (official / trustworthy site name)|(one-line description)|(https://realURL)
+LINK2: (site name)|(description)|(https://realURL)
+LINK3: (site name)|(description)|(https://realURL)
+[참고자료끝]
+
+[관련글시작]
+POST1: (related blog post title 1)|(one line on why it's worth reading)
+POST2: (related post title 2)|(reason)
+POST3: (related post title 3)|(reason)
 [관련글끝]`;
 
   try {

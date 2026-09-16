@@ -390,9 +390,21 @@ export default function ContentGenerator() {
   function generateHashtags(kw: string, ttl: string, content: string): string[] {
     const base = [kw, ttl].filter(Boolean).join(" ");
     const words = base.split(/[\s,]+/).filter(w => w.length >= 2).slice(0, 4);
-    const extra = ["블로그", "정보", "추천", "꿀팁", "리뷰", "2026"];
+    // 출력 언어에 맞춰 부가 해시태그도 그 언어로(영어 선택 시 영어 태그).
+    const year = new Date().getFullYear();
+    const extraByLang: Record<string, string[]> = {
+      ko: ["블로그", "정보", "추천", "꿀팁", "리뷰", String(year)],
+      en: ["blog", "tips", "guide", "review", "howto", String(year)],
+      ja: ["ブログ", "情報", "おすすめ", "レビュー", "コツ", String(year)],
+      zh: ["博客", "信息", "推荐", "评测", "技巧", String(year)],
+      es: ["blog", "consejos", "guia", "reseña", "info", String(year)],
+      fr: ["blog", "conseils", "guide", "avis", "astuces", String(year)],
+      de: ["blog", "tipps", "ratgeber", "test", "info", String(year)],
+      pt: ["blog", "dicas", "guia", "avaliacao", "info", String(year)],
+    };
+    const extra = extraByLang[selectedLang] || extraByLang.ko;
     const all = [...new Set([...words, ...extra])];
-    return all.slice(0, 7).map(w => `#${w}`);
+    return all.slice(0, 7).map(w => `#${String(w).replace(/\s+/g, "")}`);
   }
 
   const handleCopy = () => {

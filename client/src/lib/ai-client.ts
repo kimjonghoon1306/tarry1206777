@@ -159,7 +159,8 @@ export async function generateContent(
     categoryGuide = `[정보/일상]\n- 독자가 몰랐던 새로운 정보\n- 일상에서 바로 써먹는 실용 팁\n- 연령/상황별 활용법`;
   }
 
-  const prompt = `당신은 대한민국 최고의 블로그 작가입니다. 친구한테 카톡 보내듯, 엄마가 딸한테 알려주듯, 기자가 르포 기사 쓰듯 — 가장 자연스럽고 생생한 글을 씁니다.
+  const isKo = language === "ko";
+  const prompt = isKo ? `당신은 대한민국 최고의 블로그 작가입니다. 친구한테 카톡 보내듯, 엄마가 딸한테 알려주듯, 기자가 르포 기사 쓰듯 — 가장 자연스럽고 생생한 글을 씁니다.
 
 키워드: "${keyword}"
 ${titleInstruction}
@@ -207,6 +208,53 @@ LINK3: (사이트 이름)|(설명)|(https://실제URL)
 POST1: (연관 주제 블로그 제목 1)|(이 글을 읽으면 좋은 이유 한 줄)
 POST2: (연관 주제 블로그 제목 2)|(이유)
 POST3: (연관 주제 블로그 제목 3)|(이유)
+[관련글끝]` : `You are a top-tier native ${langLabel} blog writer. Write vividly and naturally, like a real person sharing genuine experience with a friend.
+
+Keyword: "${keyword}"
+${titleInstruction}
+★Language: Write EVERYTHING 100% in ${langLabel} — the title, body, subheadings, FAQ, references, related posts, hashtags and any image captions must ALL be in natural ${langLabel}. Do NOT write in Korean.
+Target length: at least ${minChars} characters
+
+${categoryGuide}
+
+[Core principles]
+- No AI clichés: avoid "In this article", "Let's explore", "In conclusion", robotic phrasing
+- Talk to the reader: "Have you ever wondered...", "You might be curious about..."
+- No vague statements → use concrete numbers, prices, durations, dates
+- Vary sentence rhythm naturally; sound like a real human writer
+- Write at least ${minChars} and at most ${Math.floor(minChars * 1.4)} characters (do not exceed)
+- ⚠️ Never use asterisks (*) — no **bold**, no *italics*
+- Subheadings MUST use "## Subheading" format (4~6 of them), no ### or deeper
+- ⚠️ Never use dash (-) bullet lists
+- ⚠️ Never use underscores (_)
+- Plain text with natural paragraph breaks
+- SEO: include the keyword naturally 7+ times (in ${langLabel})
+- Write entirely in natural ${langLabel}. No Korean, no Chinese/Japanese characters.${styleInstruction}
+
+[Required sections - append at the very end of the body]
+After finishing the body, append these 3 sections in this exact marker format (keep the [ ] markers in English, but write the content in ${langLabel}).
+
+[FAQ시작]
+Q1: (the question readers most want answered)
+A1: (concrete, practical answer)
+Q2: (question 2)
+A2: (answer)
+Q3: (question 3)
+A3: (answer)
+Q4: (question 4)
+A4: (answer)
+[FAQ끝]
+
+[참고자료시작]
+LINK1: (name of a relevant official / trustworthy site)|(one-line description)|(https://realURL)
+LINK2: (site name)|(description)|(https://realURL)
+LINK3: (site name)|(description)|(https://realURL)
+[참고자료끝]
+
+[관련글시작]
+POST1: (related blog post title 1)|(one line on why it's worth reading)
+POST2: (related blog post title 2)|(reason)
+POST3: (related blog post title 3)|(reason)
 [관련글끝]`
 
   // ── Gemini → Vercel 서버 경유 (안정적 처리) ──
