@@ -496,18 +496,18 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
             {/* 🔋 무료 회원 등급 + 에너지바 (오늘 글 생성 남은 횟수). 관리자/유료는 무제한 배지. */}
             {quota && (
               quota.unlimited ? (
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "rgba(16,185,129,.12)", color: "#059669", border: "1px solid rgba(16,185,129,.3)" }}>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "var(--accent)", color: "#5d7350", border: "1px solid var(--border)" }}>
                   <span>♾️</span><span>무제한</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full" style={{ background: "var(--muted)", border: "1px solid var(--border)" }} title={quota.trialActive ? `무료 체험 ${quota.trialDaysLeft}일 남음 · 오늘 글 생성 ${quota.remain}/${quota.limit}회 남음` : "무료 체험 종료"}>
-                  <span className="text-xs font-bold" style={{ color: quota.trialActive ? "#059669" : "#ef4444" }}>{quota.trialActive ? "무료" : "만료"}</span>
+                  <span className="text-xs font-bold" style={{ color: quota.trialActive ? "#5d7350" : "#ef4444" }}>{quota.trialActive ? "무료" : "만료"}</span>
                   <div className="flex items-center gap-1">
                     {Array.from({ length: quota.limit }).map((_, i) => (
-                      <span key={i} style={{ width: 16, height: 7, borderRadius: 4, background: i < quota.remain ? "linear-gradient(90deg,#10b981,#34d399)" : "var(--border)", transition: "background .2s" }} />
+                      <span key={i} style={{ width: 16, height: 7, borderRadius: 4, background: i < quota.remain ? "linear-gradient(90deg,#5d7350,#7d9169)" : "var(--border)", transition: "background .2s" }} />
                     ))}
                   </div>
-                  <span className="text-xs font-semibold hidden sm:inline" style={{ color: "var(--muted-foreground)" }}>{quota.remain}/{quota.limit}</span>
+                  <span className="text-xs font-semibold whitespace-nowrap" style={{ color: "var(--foreground)" }}>오늘 {quota.remain}/{quota.limit}개</span>
                 </div>
               )
             )}
