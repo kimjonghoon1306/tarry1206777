@@ -111,11 +111,11 @@ const ICON_MAP: Record<string, any> = { Bot, Image, Search, BarChart3, FileText,
 
 const API_SECTIONS = [
   {
-    group: "ai", title: "글 생성 AI", icon: "Bot", color: "#10b981", grad: "linear-gradient(135deg,#10b981,#059669)",
+    group: "ai", title: "글 생성 AI", icon: "Bot", color: "#5d7350", grad: "linear-gradient(135deg,#5d7350,#47583b)",
     desc: "Gemini·Groq 무료, Claude·GPT 유료",
     fields: [
-      { label: "Gemini API Key", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "무료", badgeColor: "#10b981" },
-      { label: "Groq API Key (Llama 3)", key: "groq_api_key", placeholder: "gsk_...", link: "https://console.groq.com/keys", badge: "무료", badgeColor: "#10b981" },
+      { label: "Gemini API Key", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "무료", badgeColor: "#5d7350" },
+      { label: "Groq API Key (Llama 3)", key: "groq_api_key", placeholder: "gsk_...", link: "https://console.groq.com/keys", badge: "무료", badgeColor: "#5d7350" },
       { label: "Claude API Key", key: "claude_api_key", placeholder: "sk-ant-...", link: "https://console.anthropic.com/", badge: "유료", badgeColor: "#f59e0b" },
       { label: "OpenAI API Key (GPT-4o)", key: "openai_api_key", placeholder: "sk-...", link: "https://platform.openai.com/api-keys", badge: "유료", badgeColor: "#f59e0b" },
     ],
@@ -127,7 +127,7 @@ const API_SECTIONS = [
       { label: "Gemini API Key (글쓰기 공용)", key: "gemini_api_key", placeholder: "AIza...", link: "https://aistudio.google.com/app/apikey", badge: "글쓰기용", badgeColor: "#4285F4" },
       { label: "OpenAI API Key (gpt-image-1)", key: "openai_api_key", placeholder: "sk-...", link: "https://platform.openai.com/api-keys", badge: "유료", badgeColor: "#f59e0b" },
       { label: "Replicate API Token (Flux)", key: "replicate_api_token", placeholder: "r8_...", link: "https://replicate.com/account/api-tokens", badge: "유료", badgeColor: "#f59e0b" },
-      { label: "imgbb API Key (이미지 영구 저장)", key: "imgbb_api_key", placeholder: "imgbb API 키...", link: "https://api.imgbb.com", badge: "무료", badgeColor: "#10b981" },
+      { label: "imgbb API Key (이미지 영구 저장)", key: "imgbb_api_key", placeholder: "imgbb API 키...", link: "https://api.imgbb.com", badge: "무료", badgeColor: "#5d7350" },
     ],
   },
   {
@@ -152,7 +152,7 @@ const API_SECTIONS = [
     group: "platform", title: "블로거 (Blogger)", icon: "FileText", color: "#FF5722", grad: "linear-gradient(135deg,#FF5722,#E64A19)",
     desc: "구글 블로거 자동 발행 · 애드센스 최적화",
     fields: [
-      { label: "Blog ID", key: "blogger_blog_id", placeholder: "블로그 ID (숫자)", link: "https://www.blogger.com", badge: "자동발행", badgeColor: "#10b981" },
+      { label: "Blog ID", key: "blogger_blog_id", placeholder: "블로그 ID (숫자)", link: "https://www.blogger.com", badge: "자동발행", badgeColor: "#5d7350" },
       { label: "Google API Key", key: "blogger_api_key", placeholder: "AIza...", link: "https://console.cloud.google.com/apis/credentials", badge: "발급", badgeColor: "#4285F4" },
       { label: "OAuth Client ID", key: "blogger_client_id", placeholder: "Client ID", link: "https://console.cloud.google.com/apis/credentials", badge: "", badgeColor: "" },
       { label: "OAuth Client Secret", key: "blogger_client_secret", placeholder: "Client Secret", link: "", badge: "", badgeColor: "" },
@@ -162,7 +162,7 @@ const API_SECTIONS = [
     group: "platform", title: "미디엄 (Medium)", icon: "Send", color: "#000000", grad: "linear-gradient(135deg,#333333,#000000)",
     desc: "미디엄 자동 발행 · 영문 콘텐츠 최적화",
     fields: [
-      { label: "Integration Token", key: "medium_token", placeholder: "Integration Token", link: "https://medium.com/me/settings/security", badge: "자동발행", badgeColor: "#10b981" },
+      { label: "Integration Token", key: "medium_token", placeholder: "Integration Token", link: "https://medium.com/me/settings/security", badge: "자동발행", badgeColor: "#5d7350" },
       { label: "Author ID (선택)", key: "medium_author_id", placeholder: "Author ID", link: "https://api.medium.com/v1/me", badge: "", badgeColor: "" },
     ],
   },
@@ -758,8 +758,8 @@ function ApiKeyManager() {
   return (
     <div className="space-y-3">
       {/* 안내 배너 */}
-      <div className="rounded-2xl p-4 flex items-start gap-3" style={{ background: "linear-gradient(135deg, #10b98115, #05966905)", border: "1px solid #10b98130" }}>
-        <Shield className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#10b981" }} />
+      <div className="rounded-2xl p-4 flex items-start gap-3" style={{ background: "linear-gradient(135deg, #5d735015, #47583b05)", border: "1px solid #5d735030" }}>
+        <Shield className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "#5d7350" }} />
         <div>
           <p className="text-sm font-semibold text-foreground">관리자 API 키 관리</p>
           <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
@@ -771,10 +771,10 @@ function ApiKeyManager() {
       {/* ── 글 생성 AI 선택 ── */}
       <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
-          <Bot className="w-4 h-4" style={{ color: "#10b981" }} />
+          <Bot className="w-4 h-4" style={{ color: "#5d7350" }} />
           <span className="font-semibold text-sm text-foreground">글 생성 AI 선택</span>
           <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{ background: "#10b98120", color: "#10b981" }}>
+            style={{ background: "#5d735020", color: "#5d7350" }}>
             현재: {CONTENT_AI_OPTIONS.find(o => o.value === contentAI)?.label}
           </span>
         </div>
@@ -799,7 +799,7 @@ function ApiKeyManager() {
                   <div className="flex items-center gap-1">
                     {active && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: opt.logoColor }} />}
                     <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                      style={{ background: opt.badge === "무료" ? "#10b98118" : "#f59e0b18", color: opt.badge === "무료" ? "#10b981" : "#f59e0b" }}>
+                      style={{ background: opt.badge === "무료" ? "#5d735018" : "#f59e0b18", color: opt.badge === "무료" ? "#5d7350" : "#f59e0b" }}>
                       {opt.badge}
                     </span>
                   </div>
@@ -808,7 +808,7 @@ function ApiKeyManager() {
                 <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</div>
                 {/* 키 입력 여부 표시 */}
                 <div className="mt-1.5 text-xs flex items-center gap-1"
-                  style={{ color: hasKey ? "#10b981" : "#f59e0b" }}>
+                  style={{ color: hasKey ? "#5d7350" : "#f59e0b" }}>
                   {hasKey ? <><CheckCircle2 className="w-3 h-3" />키 있음</> : "⚠ 키 없음"}
                 </div>
               </button>
@@ -848,7 +848,7 @@ function ApiKeyManager() {
                   <div className="flex items-center gap-1">
                     {active && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: opt.logoColor }} />}
                     <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                      style={{ background: "#10b98118", color: "#10b981" }}>
+                      style={{ background: "#5d735018", color: "#5d7350" }}>
                       {opt.badge}
                     </span>
                   </div>
@@ -856,7 +856,7 @@ function ApiKeyManager() {
                 <div className="text-xs font-semibold text-foreground">{opt.label}</div>
                 <div className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{opt.desc}</div>
                 <div className="mt-1.5 text-xs flex items-center gap-1"
-                  style={{ color: hasKey ? "#10b981" : "#f59e0b" }}>
+                  style={{ color: hasKey ? "#5d7350" : "#f59e0b" }}>
                   {hasKey ? <><CheckCircle2 className="w-3 h-3" />사용 가능</> : "⚠ 키 없음"}
                 </div>
               </button>
@@ -908,7 +908,7 @@ function ApiKeyManager() {
       </div>
       <button
         className="w-full h-12 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
-        style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #10b981, #059669)" }}
+        style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #5d7350, #47583b)" }}
         onClick={handleSaveAll} disabled={saving}>
         {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
         {saving ? "저장 중..." : "관리자 키 저장"}
@@ -917,7 +917,7 @@ function ApiKeyManager() {
       {/* ── 수익 플랫폼 선택 ── */}
       <AdminAdPlatformSection />
       {[
-        { groupKey: "ai",       groupLabel: "🤖 글 · 이미지 AI",  groupColor: "#10b981" },
+        { groupKey: "ai",       groupLabel: "🤖 글 · 이미지 AI",  groupColor: "#5d7350" },
         { groupKey: "platform", groupLabel: "📡 배포 플랫폼 · 커스텀 사이트", groupColor: "#6366f1" },
         { groupKey: "keyword",  groupLabel: "🔍 키워드 · 기타",   groupColor: "#f59e0b" },
       ].map(({ groupKey, groupLabel, groupColor }) => (
@@ -1068,7 +1068,7 @@ function ApiKeyManager() {
       {/* 하단 저장 버튼 */}
       <button
         className="w-full h-12 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
-        style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #10b981, #059669)" }}
+        style={{ background: saving ? "var(--muted)" : "linear-gradient(135deg, #5d7350, #47583b)" }}
         onClick={handleSaveAll} disabled={saving}>
         {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
         {saving ? "저장 중..." : "관리자 키 저장"}
@@ -1225,7 +1225,7 @@ function SecurityPanel() {
     : nw.length < 4 ? { label: "너무 짧음", color: "#ef4444", score: 1 }
     : nw.length < 6 ? { label: "약함", color: "#f59e0b", score: 2 }
     : nw.length < 8 ? { label: "보통", color: "#6366f1", score: 3 }
-    : { label: "강함", color: "#10b981", score: 4 };
+    : { label: "강함", color: "#5d7350", score: 4 };
 
   const handle = async () => {
     if (!cur) { toast.error("현재 비밀번호를 입력해주세요"); return; }
@@ -1244,7 +1244,7 @@ function SecurityPanel() {
   };
 
   const sysMetrics = [
-    { label: "CPU", value: 34, color: "#10b981", icon: Cpu },
+    { label: "CPU", value: 34, color: "#5d7350", icon: Cpu },
     { label: "메모리", value: 67, color: "#f59e0b", icon: HardDrive },
     { label: "API 호출", value: 78, color: "#6366f1", icon: Wifi },
     { label: "디스크", value: 45, color: "#a78bfa", icon: Database },
@@ -1255,7 +1255,7 @@ function SecurityPanel() {
       {/* 비밀번호 변경 */}
       <div className="rounded-2xl p-5 space-y-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#5d7350,#47583b)" }}>
             <Key className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -1288,7 +1288,7 @@ function SecurityPanel() {
               </div>
             )}
             {label === "새 비밀번호 확인" && conf.length > 0 && (
-              <p className="text-xs mt-1 flex items-center gap-1" style={{ color: nw === conf ? "#10b981" : "#ef4444" }}>
+              <p className="text-xs mt-1 flex items-center gap-1" style={{ color: nw === conf ? "#5d7350" : "#ef4444" }}>
                 {nw === conf ? <><CheckCircle2 className="w-3 h-3" />일치</> : "⚠ 불일치"}
               </p>
             )}
@@ -1297,7 +1297,7 @@ function SecurityPanel() {
 
         <button
           className="w-full h-11 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
-          style={{ background: loading ? "var(--muted)" : "linear-gradient(135deg,#10b981,#059669)" }}
+          style={{ background: loading ? "var(--muted)" : "linear-gradient(135deg,#5d7350,#47583b)" }}
           onClick={handle} disabled={loading}>
           {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
           {loading ? "변경 중..." : "비밀번호 변경"}
@@ -1330,7 +1330,7 @@ function SecurityPanel() {
 // ─────────────────────────────────────────────────────
 // 카테고리 관리
 // ─────────────────────────────────────────────────────
-const CUSTOM_COLORS = ["#10b981","#f59e0b","#8b5cf6","#ef4444","#06b6d4","#ec4899","#f97316","#14b8a6","#6366f1","#84cc16"];
+const CUSTOM_COLORS = ["#5d7350","#f59e0b","#8b5cf6","#ef4444","#06b6d4","#ec4899","#f97316","#14b8a6","#6366f1","#84cc16"];
 
 const FIXED_PLATFORMS = [
   { key: "wordpress", label: "워드프레스", color: "#21759B" },
@@ -1590,7 +1590,7 @@ function OGManager() {
           </button>
           <div className="rounded-xl p-3" style={{ background: "oklch(0.12 0.005 285)", border: "1px solid var(--border)" }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold" style={{ color: "#10b981" }}>index.html 코드</span>
+              <span className="text-xs font-semibold" style={{ color: "#5d7350" }}>index.html 코드</span>
               <button className="text-xs px-2.5 py-1 rounded-lg flex items-center gap-1" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
                 onClick={() => { navigator.clipboard.writeText(code); toast.success("복사됐어요!"); }}>
                 <Copy className="w-3 h-3" /> 복사
@@ -1684,7 +1684,7 @@ function PopupManager() {
   const [newStartAt, setNewStartAt] = useState("");
   const [newEndAt, setNewEndAt] = useState("");
   const [newEmoji, setNewEmoji] = useState("📢");
-  const [newColor, setNewColor] = useState("#10b981");
+  const [newColor, setNewColor] = useState("#5d7350");
   const [newFileUrl, setNewFileUrl] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState<"title"|"content"|null>(null);
   const [editingId, setEditingId] = useState<string|null>(null);
@@ -1731,14 +1731,14 @@ function PopupManager() {
       startAt: newStartAt || "",
       endAt: newEndAt || "",
       emoji: newEmoji || "📢",
-      color: newColor || "#10b981",
+      color: newColor || "#5d7350",
       fileUrl: newFileUrl.trim() || "",
     };
     const updated = [...popups, popup];
     setPopups(updated);
     await save(updated);
     setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt("");
-    setNewEmoji("📢"); setNewColor("#10b981"); setNewFileUrl("");
+    setNewEmoji("📢"); setNewColor("#5d7350"); setNewFileUrl("");
     setShowAdd(false);
   };
 
@@ -1762,7 +1762,7 @@ function PopupManager() {
     setNewStartAt(popup.startAt || "");
     setNewEndAt(popup.endAt || "");
     setNewEmoji(popup.emoji || "📢");
-    setNewColor(popup.color || "#10b981");
+    setNewColor(popup.color || "#5d7350");
     setNewFileUrl(popup.fileUrl || "");
     setShowAdd(true);
   };
@@ -1777,14 +1777,14 @@ function PopupManager() {
       startAt: newStartAt || "",
       endAt: newEndAt || "",
       emoji: newEmoji || "📢",
-      color: newColor || "#10b981",
+      color: newColor || "#5d7350",
       fileUrl: newFileUrl.trim() || "",
     } : p);
     setPopups(updated);
     await save(updated);
     setEditingId(null);
     setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt("");
-    setNewEmoji("📢"); setNewColor("#10b981"); setNewFileUrl("");
+    setNewEmoji("📢"); setNewColor("#5d7350"); setNewFileUrl("");
     setShowAdd(false);
   };
 
@@ -1806,7 +1806,7 @@ function PopupManager() {
         <div key={popup.id} className="rounded-2xl p-4 space-y-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: popup.enabled ? "oklch(0.696 0.17 162.48/20%)" : "var(--muted)", color: popup.enabled ? "#10b981" : "var(--muted-foreground)" }}>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: popup.enabled ? "oklch(0.696 0.17 162.48/20%)" : "var(--muted)", color: popup.enabled ? "#5d7350" : "var(--muted-foreground)" }}>
                 {popup.enabled ? "활성" : "비활성"}
               </span>
               <span className="font-semibold text-sm text-foreground">{popup.title}</span>
@@ -1814,7 +1814,7 @@ function PopupManager() {
             <div className="flex items-center gap-2">
               {/* 활성 토글 */}
               <div className="relative w-11 h-6 rounded-full cursor-pointer transition-colors"
-                style={{ background: popup.enabled ? "#10b981" : "var(--muted)" }}
+                style={{ background: popup.enabled ? "#5d7350" : "var(--muted)" }}
                 onClick={() => toggleEnabled(popup.id)}>
                 <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow"
                   style={{ left: popup.enabled ? "22px" : "2px" }} />
@@ -1901,7 +1901,7 @@ function PopupManager() {
               <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--muted-foreground)" }}>헤더 색상</label>
               <div className="flex items-center gap-2">
                 <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} className="w-10 h-9 rounded cursor-pointer border-0" style={{ background: "transparent" }} />
-                <Input value={newColor} onChange={e => setNewColor(e.target.value)} placeholder="#10b981" className="text-sm flex-1" maxLength={7} />
+                <Input value={newColor} onChange={e => setNewColor(e.target.value)} placeholder="#5d7350" className="text-sm flex-1" maxLength={7} />
               </div>
             </div>
           </div>
@@ -1913,7 +1913,7 @@ function PopupManager() {
             <Button className="flex-1" style={{ background: "#ec4899", color: "white" }} onClick={editingId ? saveEdit : addPopup} disabled={saving}>
               {saving ? "저장 중..." : editingId ? "✅ 수정 저장" : "✅ 추가"}
             </Button>
-            <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); setEditingId(null); setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt(""); setNewEmoji("📢"); setNewColor("#10b981"); setNewFileUrl(""); }}>
+            <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); setEditingId(null); setNewTitle(""); setNewContent(""); setNewStartAt(""); setNewEndAt(""); setNewEmoji("📢"); setNewColor("#5d7350"); setNewFileUrl(""); }}>
               취소
             </Button>
           </div>
@@ -1935,14 +1935,14 @@ function PopupManager() {
 // 관리자 대시보드
 // ─────────────────────────────────────────────────────
 const TABS = [
-  { id: "apikeys", label: "API 키", icon: Key, color: "#10b981", grad: "linear-gradient(135deg,#10b981,#059669)" },
+  { id: "apikeys", label: "API 키", icon: Key, color: "#5d7350", grad: "linear-gradient(135deg,#5d7350,#47583b)" },
   { id: "users",   label: "회원",   icon: Users, color: "#6366f1", grad: "linear-gradient(135deg,#6366f1,#4f46e5)" },
   { id: "security",label: "보안",   icon: Shield, color: "#f59e0b", grad: "linear-gradient(135deg,#f59e0b,#d97706)" },
   { id: "category",label: "카테고리", icon: FileText, color: "#06b6d4", grad: "linear-gradient(135deg,#06b6d4,#0284c7)" },
   { id: "og",      label: "OG",    icon: Image, color: "#a78bfa", grad: "linear-gradient(135deg,#a78bfa,#7c3aed)" },
   { id: "popup",   label: "공지",  icon: Bell, color: "#ec4899", grad: "linear-gradient(135deg,#ec4899,#db2777)" },
-  { id: "autopublish", label: "자동발행", icon: Send, color: "#03C75A", grad: "linear-gradient(135deg,#03C75A,#059669)" },
-  { id: "publy", label: "Publy", icon: Smartphone, color: "#00ff88", grad: "linear-gradient(135deg,#00ff88,#00cc66)" },
+  { id: "autopublish", label: "자동발행", icon: Send, color: "#03C75A", grad: "linear-gradient(135deg,#03C75A,#47583b)" },
+  { id: "publy", label: "Publy", icon: Smartphone, color: "#6f855c", grad: "linear-gradient(135deg,#6f855c,#556b40)" },
   { id: "errorlog", label: "오류로그", icon: AlertTriangle, color: "#ef4444", grad: "linear-gradient(135deg,#ef4444,#dc2626)" },
 ] as const;
 type TabId = typeof TABS[number]["id"];
@@ -1994,7 +1994,7 @@ function PublyWidget() {
 
   if (loading) return (
     <div style={{textAlign:"center",padding:"64px",color:"var(--muted-foreground)"}}>
-      <div style={{width:32,height:32,borderRadius:"50%",border:"3px solid rgba(0,255,136,.2)",borderTopColor:"#00ff88",animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/>
+      <div style={{width:32,height:32,borderRadius:"50%",border:"3px solid rgba(111,129,89,.2)",borderTopColor:"#6f855c",animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/>
       Publy 데이터 로딩 중...
     </div>
   );
@@ -2004,14 +2004,14 @@ function PublyWidget() {
       {/* 헤더 */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg,#00ff88,#00cc66)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:900,color:"#000",boxShadow:"0 4px 16px rgba(0,255,136,.3)"}}>P</div>
+          <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg,#6f855c,#556b40)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:900,color:"#000",boxShadow:"0 4px 16px rgba(111,129,89,.3)"}}>P</div>
           <div>
             <div style={{fontSize:"1.1rem",fontWeight:800,color:"var(--foreground)"}}>Publy 회원 현황</div>
             <div style={{fontSize:"0.75rem",color:"var(--muted-foreground)"}}>자동발행 앱 실시간 데이터</div>
           </div>
         </div>
         <a href={PUBLY_DOMAIN} target="_blank" rel="noopener noreferrer"
-          style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:10,background:"linear-gradient(135deg,#00ff88,#00cc66)",color:"#000",fontWeight:700,fontSize:"0.8rem",textDecoration:"none"}}>
+          style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:10,background:"linear-gradient(135deg,#6f855c,#556b40)",color:"#000",fontWeight:700,fontSize:"0.8rem",textDecoration:"none"}}>
           🚀 Publy 관리자 열기
         </a>
       </div>
@@ -2019,11 +2019,11 @@ function PublyWidget() {
       {/* 통계 카드 */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
         {[
-          {label:"전체 회원",value:stats?.total||0,color:"#00ff88",icon:"👥"},
+          {label:"전체 회원",value:stats?.total||0,color:"#6f855c",icon:"👥"},
           {label:"활성 회원",value:stats?.active||0,color:"#00c875",icon:"✅"},
           {label:"PRO",value:stats?.pro||0,color:"#4285F4",icon:"⭐"},
           {label:"BASIC",value:stats?.basic||0,color:"#f59e0b",icon:"🔵"},
-          {label:"오늘 발행",value:stats?.today||0,color:"#00ff88",icon:"🚀"},
+          {label:"오늘 발행",value:stats?.today||0,color:"#6f855c",icon:"🚀"},
           {label:"총 발행",value:stats?.totalPub||0,color:"#a78bfa",icon:"📊"},
         ].map((s,i)=>(
           <div key={i} style={{padding:"16px",borderRadius:14,border:`1px solid ${s.color}25`,background:`${s.color}08`,textAlign:"center"}}>
@@ -2062,7 +2062,7 @@ function PublyWidget() {
         <div style={{fontSize:"0.8rem",fontWeight:700,color:"var(--muted-foreground)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:14}}>최근 가입 회원</div>
         {users.slice(0,8).map((u,i)=>(
           <div key={u.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid var(--border)"}}>
-            <div style={{width:32,height:32,borderRadius:9,background:"linear-gradient(135deg,rgba(0,255,136,.2),rgba(0,255,136,.1))",border:"1px solid rgba(0,255,136,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#00ff88",flexShrink:0}}>
+            <div style={{width:32,height:32,borderRadius:9,background:"linear-gradient(135deg,rgba(111,129,89,.2),rgba(111,129,89,.1))",border:"1px solid rgba(111,129,89,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#6f855c",flexShrink:0}}>
               {(u.name||u.email)[0].toUpperCase()}
             </div>
             <div style={{flex:1,minWidth:0}}>
@@ -2080,14 +2080,14 @@ function PublyWidget() {
       </div>
 
       {/* Publy 앱 다운로드 배너 */}
-      <div style={{padding:"20px 22px",borderRadius:16,background:"linear-gradient(135deg,rgba(0,255,136,.08),rgba(0,200,117,.04))",border:"1px solid rgba(0,255,136,.2)",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+      <div style={{padding:"20px 22px",borderRadius:16,background:"linear-gradient(135deg,rgba(111,129,89,.08),rgba(0,200,117,.04))",border:"1px solid rgba(111,129,89,.2)",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
         <div style={{fontSize:40}}>📱</div>
         <div style={{flex:1,minWidth:160}}>
           <div style={{fontSize:"0.95rem",fontWeight:800,color:"var(--foreground)",marginBottom:4}}>Publy 앱 설치</div>
           <div style={{fontSize:"0.78rem",color:"var(--muted-foreground)",lineHeight:1.6}}>PC/모바일 브라우저에서 접속 후 설치 버튼을 누르면 앱처럼 사용 가능합니다.</div>
         </div>
         <a href={PUBLY_DOMAIN} target="_blank" rel="noopener noreferrer"
-          style={{padding:"10px 20px",borderRadius:12,background:"linear-gradient(135deg,#00ff88,#00cc66)",color:"#000",fontWeight:800,fontSize:"0.82rem",textDecoration:"none",boxShadow:"0 4px 16px rgba(0,255,136,.3)"}}>
+          style={{padding:"10px 20px",borderRadius:12,background:"linear-gradient(135deg,#6f855c,#556b40)",color:"#000",fontWeight:800,fontSize:"0.82rem",textDecoration:"none",boxShadow:"0 4px 16px rgba(111,129,89,.3)"}}>
           ⬇️ Publy 열기
         </a>
       </div>
@@ -2148,7 +2148,7 @@ function ErrorLogManager() {
   const STATUS_MAP = {
     pending:   { label: "미처리", bg: "rgba(239,68,68,0.15)",   text: "#ef4444",  icon: Clock },
     confirmed: { label: "확인",   bg: "rgba(251,191,36,0.15)",  text: "#f59e0b",  icon: CheckCircle },
-    resolved:  { label: "해결",   bg: "rgba(16,185,129,0.15)",  text: "#10b981",  icon: CheckCircle2 },
+    resolved:  { label: "해결",   bg: "rgba(93,115,80,0.15)",  text: "#5d7350",  icon: CheckCircle2 },
   };
 
   const filtered = filter === "all" ? logs : logs.filter(l => l.status === filter);
@@ -2175,7 +2175,7 @@ function ErrorLogManager() {
       <div className="grid grid-cols-4 gap-2">
         {(["all","pending","confirmed","resolved"] as const).map(key => {
           const labels = { all:"전체", pending:"미처리", confirmed:"확인", resolved:"해결" };
-          const colors = { all:"#6366f1", pending:"#ef4444", confirmed:"#f59e0b", resolved:"#10b981" };
+          const colors = { all:"#6366f1", pending:"#ef4444", confirmed:"#f59e0b", resolved:"#5d7350" };
           return (
             <button key={key} onClick={() => setFilter(key)}
               className="rounded-xl p-3 text-center transition-all active:scale-95"
@@ -2283,7 +2283,7 @@ const GUIDE_SECTIONS = [
     ]
   },
   {
-    id: "apikeys", label: "🔑 API 키", color: "#10b981",
+    id: "apikeys", label: "🔑 API 키", color: "#5d7350",
     items: [
       { title: "글 생성 AI (Gemini / Claude / Groq)", desc: "Gemini는 Google AI Studio(aistudio.google.com)에서 무료 발급. Claude는 console.anthropic.com, Groq는 console.groq.com에서 발급. 여러 키 등록 시 한도 초과 자동 순환됩니다." },
       { title: "이미지 생성 AI", desc: "DALL-E 3는 OpenAI API 키, Replicate는 replicate.com에서 발급. imgbb API 키는 api.imgbb.com에서 발급하며 이미지 저장에 사용됩니다." },
@@ -2576,20 +2576,20 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
       {/* ── 화려한 배경 ── */}
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0 }}>
         {/* 메시 그라데이션 */}
-        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 15% 15%, rgba(16,185,129,0.3) 0%, transparent 45%), radial-gradient(ellipse at 85% 10%, rgba(99,102,241,0.35) 0%, transparent 45%), radial-gradient(ellipse at 70% 85%, rgba(236,72,153,0.25) 0%, transparent 45%), radial-gradient(ellipse at 10% 80%, rgba(245,158,11,0.2) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.15) 0%, transparent 55%)" }} />
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 15% 15%, rgba(93,115,80,0.3) 0%, transparent 45%), radial-gradient(ellipse at 85% 10%, rgba(99,102,241,0.35) 0%, transparent 45%), radial-gradient(ellipse at 70% 85%, rgba(236,72,153,0.25) 0%, transparent 45%), radial-gradient(ellipse at 10% 80%, rgba(245,158,11,0.2) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.15) 0%, transparent 55%)" }} />
 
         {/* 움직이는 오브 */}
-        <div style={{ position:"absolute", top:"5%", left:"10%", width:350, height:350, borderRadius:"50%", background:"radial-gradient(circle,rgba(16,185,129,0.4) 0%,transparent 70%)", animation:"sadmin_orb1 9s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:"5%", left:"10%", width:350, height:350, borderRadius:"50%", background:"radial-gradient(circle,rgba(93,115,80,0.4) 0%,transparent 70%)", animation:"sadmin_orb1 9s ease-in-out infinite" }} />
         <div style={{ position:"absolute", top:"15%", right:"5%", width:280, height:280, borderRadius:"50%", background:"radial-gradient(circle,rgba(99,102,241,0.45) 0%,transparent 70%)", animation:"sadmin_orb2 11s ease-in-out infinite" }} />
         <div style={{ position:"absolute", bottom:"10%", left:"15%", width:240, height:240, borderRadius:"50%", background:"radial-gradient(circle,rgba(236,72,153,0.35) 0%,transparent 70%)", animation:"sadmin_orb3 8s ease-in-out infinite" }} />
         <div style={{ position:"absolute", bottom:"20%", right:"15%", width:200, height:200, borderRadius:"50%", background:"radial-gradient(circle,rgba(245,158,11,0.3) 0%,transparent 70%)", animation:"sadmin_orb4 10s ease-in-out infinite" }} />
         <div style={{ position:"absolute", top:"45%", left:"45%", width:180, height:180, borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.3) 0%,transparent 70%)", animation:"sadmin_orb5 7s ease-in-out infinite", transform:"translate(-50%,-50%)" }} />
 
         {/* 격자 패턴 */}
-        <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(16,185,129,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.04) 1px,transparent 1px)", backgroundSize:"50px 50px" }} />
+        <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(93,115,80,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.04) 1px,transparent 1px)", backgroundSize:"50px 50px" }} />
 
         {/* 빛 기둥 */}
-        <div style={{ position:"absolute", top:0, left:"40%", width:2, height:"45%", background:"linear-gradient(180deg,rgba(16,185,129,0.7),transparent)", filter:"blur(1px)", animation:"sadmin_beam1 5s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:0, left:"40%", width:2, height:"45%", background:"linear-gradient(180deg,rgba(93,115,80,0.7),transparent)", filter:"blur(1px)", animation:"sadmin_beam1 5s ease-in-out infinite" }} />
         <div style={{ position:"absolute", top:0, left:"60%", width:1, height:"35%", background:"linear-gradient(180deg,rgba(99,102,241,0.6),transparent)", animation:"sadmin_beam2 7s ease-in-out infinite 1s" }} />
         <div style={{ position:"absolute", top:0, left:"25%", width:1, height:"30%", background:"linear-gradient(180deg,rgba(245,158,11,0.5),transparent)", animation:"sadmin_beam2 6s ease-in-out infinite 2s" }} />
 
@@ -2597,7 +2597,7 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
         {[
           {x:8,y:12,s:3,d:6,dl:0,c:"#6ee7b7"},{x:88,y:8,s:2,d:8,dl:1,c:"#a5b4fc"},
           {x:20,y:82,s:4,d:5,dl:2,c:"#f9a8d4"},{x:78,y:78,s:3,d:9,dl:0.5,c:"#fcd34d"},
-          {x:45,y:6,s:2,d:7,dl:1.5,c:"#10b981"},{x:30,y:40,s:3,d:6,dl:3,c:"#6366f1"},
+          {x:45,y:6,s:2,d:7,dl:1.5,c:"#5d7350"},{x:30,y:40,s:3,d:6,dl:3,c:"#6366f1"},
           {x:72,y:45,s:2,d:8,dl:2,c:"#ec4899"},{x:55,y:88,s:4,d:5,dl:1,c:"#f59e0b"},
           {x:15,y:55,s:2,d:9,dl:0.8,c:"#67e8f9"},{x:85,y:55,s:3,d:6,dl:2.5,c:"#6ee7b7"},
           {x:60,y:20,s:2,d:7,dl:1.8,c:"#a5b4fc"},{x:38,y:70,s:3,d:8,dl:0.3,c:"#fcd34d"},
@@ -2606,7 +2606,7 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
         ))}
 
         {/* 수평 글리치 라인 */}
-        <div style={{ position:"absolute", top:"38%", left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)", animation:"sadmin_line 7s ease-in-out infinite" }} />
+        <div style={{ position:"absolute", top:"38%", left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(93,115,80,0.4),transparent)", animation:"sadmin_line 7s ease-in-out infinite" }} />
         <div style={{ position:"absolute", top:"62%", left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(99,102,241,0.3),transparent)", animation:"sadmin_line 9s ease-in-out infinite 3s" }} />
       </div>
 
@@ -2620,7 +2620,7 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
         @keyframes sadmin_beam1 { 0%,100%{opacity:0.4;transform:translateX(-50%) scaleY(1)} 50%{opacity:0.9;transform:translateX(-50%) scaleY(1.15)} }
         @keyframes sadmin_beam2 { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
         @keyframes sadmin_line { 0%,100%{opacity:0;transform:scaleX(0)} 30%,70%{opacity:1;transform:scaleX(1)} }
-        @keyframes sadmin_card { 0%,100%{box-shadow:0 0 30px rgba(16,185,129,0.2),0 0 60px rgba(99,102,241,0.1)} 50%{box-shadow:0 0 50px rgba(16,185,129,0.4),0 0 100px rgba(99,102,241,0.2)} }
+        @keyframes sadmin_card { 0%,100%{box-shadow:0 0 30px rgba(93,115,80,0.2),0 0 60px rgba(99,102,241,0.1)} 50%{box-shadow:0 0 50px rgba(93,115,80,0.4),0 0 100px rgba(99,102,241,0.2)} }
         @keyframes sadmin_icon { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-8px) rotate(5deg)} }
         @keyframes sadmin_ring { 0%,100%{transform:scale(1);opacity:0.4} 50%{transform:scale(1.15);opacity:0.8} }
         @keyframes sadmin_border { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
@@ -2632,7 +2632,7 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
         <button className="flex items-center gap-2 text-sm font-medium opacity-70 hover:opacity-100" style={{ color: "#fff" }} onClick={() => window.location.href = "/"}>
           <Home className="w-4 h-4" /> 홈으로
         </button>
-        <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "rgba(16,185,129,0.15)", color: "#10b981", border:"1px solid rgba(16,185,129,0.3)" }}>운영자 전용</span>
+        <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "rgba(93,115,80,0.15)", color: "#5d7350", border:"1px solid rgba(93,115,80,0.3)" }}>운영자 전용</span>
       </div>
 
       {/* 중앙 카드 */}
@@ -2641,7 +2641,7 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
 
           {/* 카드 글로우 테두리 */}
           <div style={{ position:"relative" }}>
-            <div style={{ position:"absolute", inset:-2, borderRadius:26, background:"linear-gradient(135deg,#10b981,#6366f1,#ec4899,#10b981)", backgroundSize:"300% 300%", animation:"sadmin_border 4s linear infinite", zIndex:-1, opacity:0.8 }} />
+            <div style={{ position:"absolute", inset:-2, borderRadius:26, background:"linear-gradient(135deg,#5d7350,#6366f1,#ec4899,#5d7350)", backgroundSize:"300% 300%", animation:"sadmin_border 4s linear infinite", zIndex:-1, opacity:0.8 }} />
 
             <div style={{ background:"rgba(8,11,20,0.85)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:24, padding:"44px 40px", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", animation:"sadmin_card 4s ease-in-out infinite" }}>
 
@@ -2649,7 +2649,7 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
               <div style={{ textAlign:"center", marginBottom:32 }}>
                 <div style={{ position:"relative", display:"inline-block", marginBottom:18 }}>
                   <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto relative"
-                    style={{ background:"linear-gradient(135deg, #10b981, #6366f1)", animation:"sadmin_icon 4s ease-in-out infinite", boxShadow:"0 12px 40px rgba(16,185,129,0.5)" }}>
+                    style={{ background:"linear-gradient(135deg, #5d7350, #6366f1)", animation:"sadmin_icon 4s ease-in-out infinite", boxShadow:"0 12px 40px rgba(93,115,80,0.5)" }}>
                     <Shield className="w-10 h-10 text-white" />
                     <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
                       style={{ background: "#f59e0b", boxShadow:"0 4px 12px rgba(245,158,11,0.5)" }}>
@@ -2657,7 +2657,7 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
                     </div>
                   </div>
                   {/* 링 애니메이션 */}
-                  <div style={{ position:"absolute", inset:-8, borderRadius:"50%", border:"2px solid rgba(16,185,129,0.4)", animation:"sadmin_ring 2s ease-in-out infinite" }} />
+                  <div style={{ position:"absolute", inset:-8, borderRadius:"50%", border:"2px solid rgba(93,115,80,0.4)", animation:"sadmin_ring 2s ease-in-out infinite" }} />
                   <div style={{ position:"absolute", inset:-16, borderRadius:"50%", border:"1px solid rgba(99,102,241,0.25)", animation:"sadmin_ring 2s ease-in-out infinite 0.5s" }} />
                 </div>
                 <h1 className="text-2xl font-black" style={{ fontFamily:"'Space Grotesk', sans-serif", color:"#fff", letterSpacing:"-0.04em" }}>관리자 인증</h1>
@@ -2688,7 +2688,7 @@ function AdminGate({ onAuth }: { onAuth: () => void }) {
                 </div>
                 <button
                   className="w-full h-12 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
-                  style={{ background: loading ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #10b981, #6366f1)", boxShadow: loading ? "none" : "0 8px 32px rgba(16,185,129,0.4)" }}
+                  style={{ background: loading ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #5d7350, #6366f1)", boxShadow: loading ? "none" : "0 8px 32px rgba(93,115,80,0.4)" }}
                   onClick={handleSubmit} disabled={loading}>
                   {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
                   {loading ? "인증 중..." : "접속하기"}
@@ -2807,7 +2807,7 @@ function AutoPublishManager() {
               width: 300,
               height: 300,
               borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(0,255,136,0.12) 0%, transparent 70%)",
+              background: "radial-gradient(circle, rgba(111,129,89,0.12) 0%, transparent 70%)",
               animation: "apm-float-2 11s ease-in-out infinite",
               pointerEvents: "none",
             }}
@@ -2837,7 +2837,7 @@ function AutoPublishManager() {
             <path
               d="M0,160 C150,140 350,180 550,140 C700,110 750,150 800,130"
               fill="none"
-              stroke="#00ff88"
+              stroke="#6f855c"
               strokeWidth="1"
               strokeDasharray="3 6"
               opacity="0.6"
@@ -2861,8 +2861,8 @@ function AutoPublishManager() {
               >
                 <circle cx="65" cy="65" r="60" fill="none" stroke="rgba(3,199,90,0.3)" strokeWidth="1.5" strokeDasharray="4 8" />
                 <circle cx="65" cy="5" r="3" fill="#03C75A" />
-                <circle cx="125" cy="65" r="2" fill="#00ff88" />
-                <circle cx="65" cy="125" r="2" fill="#00cc66" />
+                <circle cx="125" cy="65" r="2" fill="#6f855c" />
+                <circle cx="65" cy="125" r="2" fill="#556b40" />
               </svg>
 
               <div
@@ -2871,7 +2871,7 @@ function AutoPublishManager() {
                   width: "clamp(58px, 12vw, 78px)",
                   height: "clamp(58px, 12vw, 78px)",
                   borderRadius: "clamp(16px, 2.5vw, 22px)",
-                  background: "linear-gradient(135deg, #03C75A 0%, #059669 100%)",
+                  background: "linear-gradient(135deg, #03C75A 0%, #47583b 100%)",
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -2926,7 +2926,7 @@ function AutoPublishManager() {
               자동발행 관리는{" "}
               <span
                 style={{
-                  background: "linear-gradient(135deg, #03C75A, #00ff88, #00cc66)",
+                  background: "linear-gradient(135deg, #03C75A, #6f855c, #556b40)",
                   backgroundSize: "200% auto",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
@@ -2968,7 +2968,7 @@ function AutoPublishManager() {
                 gap: 8,
                 padding: "clamp(11px, 2.3vw, 14px) clamp(22px, 4.5vw, 32px)",
                 borderRadius: 14,
-                background: "linear-gradient(135deg, #03C75A, #059669)",
+                background: "linear-gradient(135deg, #03C75A, #47583b)",
                 color: "#fff",
                 fontSize: "clamp(0.9rem, 2.4vw, 1rem)",
                 fontWeight: 800,
@@ -3046,15 +3046,15 @@ function AutoPublishManager() {
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                background: "color-mix(in srgb, #00ff88 18%, transparent)",
-                border: "1px solid color-mix(in srgb, #00ff88 40%, transparent)",
+                background: "color-mix(in srgb, #6f855c 18%, transparent)",
+                border: "1px solid color-mix(in srgb, #6f855c 40%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 10,
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff88" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6f855c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
             </div>
@@ -3081,15 +3081,15 @@ function AutoPublishManager() {
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                background: "color-mix(in srgb, #00cc66 18%, transparent)",
-                border: "1px solid color-mix(in srgb, #00cc66 40%, transparent)",
+                background: "color-mix(in srgb, #556b40 18%, transparent)",
+                border: "1px solid color-mix(in srgb, #556b40 40%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 10,
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00cc66" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#556b40" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
@@ -3129,7 +3129,7 @@ function AutoPublishManager() {
                 width: 4,
                 height: 16,
                 borderRadius: 2,
-                background: "linear-gradient(180deg, #03C75A, #00ff88)",
+                background: "linear-gradient(180deg, #03C75A, #6f855c)",
               }}
             />
             관리자 안내
