@@ -1,8 +1,9 @@
 // BlogAuto Pro - LandingPage v5.0 — World Class UI
+import { useRef } from "react";
 import { useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
-import { Search, FileText, Image, Send, Sun, Moon, Zap, Bot, ArrowRight, DollarSign, Download, Settings, Sparkles } from "lucide-react";
+import { Search, FileText, Image, Send, Sun, Moon, Zap, Bot, ArrowRight, DollarSign, Download, Sparkles } from "lucide-react";
 
 const LANGUAGES = [
   { flag: "🇰🇷", lang: "한국어", code: "ko", sub: "한국 블로그 최적화" },
@@ -128,6 +129,20 @@ export default function LandingPage() {
   const [, navigate] = useLocation();
   const { theme, toggleTheme } = useTheme();
 
+  // 🔒 히든 관리자 진입: 좌측 상단 로고를 2초 내 7번 연속 클릭하면 운영자 페이지로
+  const logoTapRef = useRef(0);
+  const logoTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleLogoTap = () => {
+    logoTapRef.current += 1;
+    if (logoTapTimer.current) clearTimeout(logoTapTimer.current);
+    logoTapTimer.current = setTimeout(() => { logoTapRef.current = 0; }, 2000);
+    if (logoTapRef.current >= 7) {
+      logoTapRef.current = 0;
+      if (logoTapTimer.current) clearTimeout(logoTapTimer.current);
+      navigate("/superadmin");
+    }
+  };
+
   return (
     <div className="landing-wrap" style={{minHeight:"100vh",background:theme==="light"?"#0d1a13":"#060a0e",fontFamily:"'Pretendard Variable',sans-serif",overflowX:"hidden"}}>
       <style>{`
@@ -203,7 +218,7 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav className="nav-glass" style={{position:"fixed",top:0,left:0,right:0,zIndex:50,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",height:64,background:"rgba(6,10,14,0.82)",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer",userSelect:"none"}} onClick={handleLogoTap} title="BlogAuto Pro">
           <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#10b981,#059669)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 20px rgba(16,185,129,0.45)"}}>
             <Bot style={{width:18,height:18,color:"white"}}/>
           </div>
@@ -217,10 +232,6 @@ export default function LandingPage() {
           <button className="btn-main" style={{padding:"9px 16px",fontSize:13,display:"flex",alignItems:"center",gap:5}}
             onClick={()=>{localStorage.setItem("guest_mode","true");toast.success("👀 둘러보기 모드입니다. 실제 기능은 가입 후 이용 가능해요!",{duration:3000});navigate("/dashboard");}}>
             둘러보기 <ArrowRight style={{width:13,height:13}}/>
-          </button>
-          <button style={{width:34,height:34,borderRadius:"50%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",color:"#64748b",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
-            title="운영자" onClick={()=>navigate("/superadmin")}>
-            <Settings style={{width:15,height:15}}/>
           </button>
         </div>
       </nav>
