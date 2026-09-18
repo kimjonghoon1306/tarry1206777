@@ -76,6 +76,7 @@ export default function LandingPage() {
         .sn-link:hover::after { transform:scaleX(1); transform-origin:left; }
         @keyframes floaty { 0%,100%{ transform: rotate(-2.2deg) translateY(0);} 50%{ transform: rotate(-2.2deg) translateY(-10px);} }
         @media(max-width: 940px){ .sn-hero{ grid-template-columns:1fr !important; } .sn-hero-art{ order:-1; margin:0 auto 8px; max-width:440px; } .sn-h1{ font-size:clamp(38px,10vw,60px) !important; } .sn-feat{ grid-template-columns:1fr !important; } }
+        @media(max-width: 600px){ .sn-nav{ padding-left:14px !important; padding-right:14px !important; } .sn-nav-right{ gap:12px !important; flex-wrap:nowrap !important; } .sn-logo-text{ font-size:16px !important; } .sn-nav-right .sn-cta{ padding:8px 13px !important; font-size:13px !important; white-space:nowrap; } .sn-login{ font-size:14px !important; } }
       `}</style>
 
       {/* 종이 그레인 + 노트 罫線 오버레이 */}
@@ -83,16 +84,16 @@ export default function LandingPage() {
       <div aria-hidden style={{ position: "fixed", inset: 0, backgroundImage: `repeating-linear-gradient(${c.line} 0 1px, transparent 1px 34px)`, opacity: 0.6, pointerEvents: "none", zIndex: 1 }} />
 
       {/* ── NAV ── */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px clamp(20px,5vw,72px)", background: dark ? "rgba(26,23,20,0.72)" : "rgba(241,235,223,0.72)", backdropFilter: "blur(14px)", borderBottom: `1px solid ${c.line}` }}>
+      <nav className="sn-nav" style={{ position: "sticky", top: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px clamp(20px,5vw,72px)", background: dark ? "rgba(26,23,20,0.72)" : "rgba(241,235,223,0.72)", backdropFilter: "blur(14px)", borderBottom: `1px solid ${c.line}` }}>
         <div onClick={handleLogoTap} title="BlogAuto Pro" style={{ display: "flex", alignItems: "center", gap: 11, cursor: "pointer", userSelect: "none" }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: c.sage, display: "flex", alignItems: "center", justifyContent: "center", color: dark ? "#1a1714" : "#fff", fontFamily: serifEn, fontWeight: 600, fontSize: 19, boxShadow: `0 4px 14px ${c.sageSoft}` }}>B</div>
-          <span style={{ fontFamily: serifEn, fontSize: 20, letterSpacing: "-0.01em", fontWeight: 500 }}>BlogAuto <span style={{ fontStyle: "italic", color: c.sage }}>Pro</span></span>
+          <span className="sn-logo-text" style={{ fontFamily: serifEn, fontSize: 20, letterSpacing: "-0.01em", fontWeight: 500 }}>BlogAuto <span style={{ fontStyle: "italic", color: c.sage }}>Pro</span></span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "clamp(14px,3vw,30px)" }}>
+        <div className="sn-nav-right" style={{ display: "flex", alignItems: "center", gap: "clamp(14px,3vw,30px)" }}>
           <button onClick={toggleTheme} aria-label="테마 전환" style={{ background: "none", border: "none", cursor: "pointer", color: c.sub, display: "flex", padding: 6 }}>
             {dark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <span className="sn-link" onClick={login} style={{ cursor: "pointer", fontSize: 15, color: c.ink }}>로그인</span>
+          <span className="sn-link sn-login" onClick={login} style={{ cursor: "pointer", fontSize: 15, color: c.ink }}>로그인</span>
           <button className="sn-cta" onClick={peek} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 20px", borderRadius: 999, border: `1px solid ${c.ink}`, background: "transparent", color: c.ink, cursor: "pointer", fontSize: 14.5, fontFamily: body }}>
             둘러보기 <ArrowRight size={15} />
           </button>
