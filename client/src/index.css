@@ -93,40 +93,41 @@
   --sidebar-ring: oklch(0.696 0.17 162.48);
 }
 
-/* ===== LIGHT THEME ===== */
+/* ===== LIGHT THEME — "오브제 × 노트" (따뜻한 크림 종이 + 세이지 그린) ===== */
 .light {
-  --background: oklch(0.98 0.002 286);
-  --foreground: oklch(0.18 0.008 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.008 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.008 285.823);
-  --primary: oklch(0.55 0.17 162.48);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.94 0.004 286.375);
-  --secondary-foreground: oklch(0.3 0.01 285.823);
-  --muted: oklch(0.95 0.003 286.375);
-  --muted-foreground: oklch(0.52 0.016 285.938);
-  --accent: oklch(0.94 0.004 286.375);
-  --accent-foreground: oklch(0.18 0.008 285.823);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.88 0.006 286.32);
-  --input: oklch(0.88 0.006 286.32);
-  --ring: oklch(0.55 0.17 162.48);
-  --chart-1: oklch(0.55 0.17 162.48);
-  --chart-2: oklch(0.65 0.18 70.08);
-  --chart-3: oklch(0.5 0.15 220);
-  --chart-4: oklch(0.6 0.12 300);
-  --chart-5: oklch(0.55 0.18 30);
-  --sidebar: oklch(0.96 0.003 286);
-  --sidebar-foreground: oklch(0.18 0.008 285.823);
-  --sidebar-primary: oklch(0.55 0.17 162.48);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.94 0.004 286.375);
-  --sidebar-accent-foreground: oklch(0.18 0.008 285.823);
-  --sidebar-border: oklch(0.88 0.006 286.32);
-  --sidebar-ring: oklch(0.55 0.17 162.48);
+  --emerald: oklch(0.52 0.05 132);        /* 내부에서 emerald 참조 시에도 세이지로 통일 */
+  --background: oklch(0.94 0.016 88);       /* 크림 종이 */
+  --foreground: oklch(0.28 0.012 78);       /* 잉크 브라운블랙 */
+  --card: oklch(0.975 0.012 88);            /* 밝은 종이 카드 */
+  --card-foreground: oklch(0.28 0.012 78);
+  --popover: oklch(0.975 0.012 88);
+  --popover-foreground: oklch(0.28 0.012 78);
+  --primary: oklch(0.52 0.05 132);          /* 세이지 그린 */
+  --primary-foreground: oklch(0.98 0.012 90);
+  --secondary: oklch(0.9 0.018 88);
+  --secondary-foreground: oklch(0.36 0.014 80);
+  --muted: oklch(0.92 0.015 88);
+  --muted-foreground: oklch(0.5 0.016 82);  /* 뮤트 브라운 */
+  --accent: oklch(0.91 0.028 128);          /* 연한 세이지 면 */
+  --accent-foreground: oklch(0.32 0.03 125);
+  --destructive: oklch(0.55 0.16 32);       /* 톤다운 테라코타 */
+  --destructive-foreground: oklch(0.98 0.01 90);
+  --border: oklch(0.87 0.016 85);
+  --input: oklch(0.87 0.016 85);
+  --ring: oklch(0.52 0.05 132);
+  --chart-1: oklch(0.55 0.06 132);          /* 세이지 */
+  --chart-2: oklch(0.7 0.1 78);             /* 머스타드 */
+  --chart-3: oklch(0.6 0.07 210);           /* 뮤트 블루 */
+  --chart-4: oklch(0.62 0.08 300);
+  --chart-5: oklch(0.6 0.11 40);            /* 테라코타 */
+  --sidebar: oklch(0.955 0.016 88);
+  --sidebar-foreground: oklch(0.28 0.012 78);
+  --sidebar-primary: oklch(0.52 0.05 132);
+  --sidebar-primary-foreground: oklch(0.98 0.012 90);
+  --sidebar-accent: oklch(0.91 0.026 128);
+  --sidebar-accent-foreground: oklch(0.32 0.03 125);
+  --sidebar-border: oklch(0.87 0.016 85);
+  --sidebar-ring: oklch(0.52 0.05 132);
 }
 
 @layer base {
