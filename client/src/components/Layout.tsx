@@ -64,7 +64,6 @@ const NAV_ITEMS = [
   { path: "/template", icon: Palette, label: "템플릿 선택", labelEn: "Template", pink: false },
   { path: "/images", icon: Image, label: "이미지 생성", labelEn: "Images", pink: false },
   { path: "/deploy", icon: Send, label: "배포 관리", labelEn: "Deploy", pink: false },
-  { path: "/campaigns", icon: Gift, label: "체험단 허브", labelEn: "Campaigns", pink: true },
   { path: "/mypage", icon: User, label: "마이페이지", labelEn: "My Page", pink: false },
   { path: "/settings", icon: Settings, label: "설정", labelEn: "Settings", pink: false },
 ];
@@ -422,7 +421,7 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
           </Button>
 
           {/* Publy 앱 바로가기 */}
-          <a href="https://publy-bap.vercel.app" target="_blank" rel="noopener noreferrer"
+          <a href="https://pdown.blogautopro.com" target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-all"
             style={{
               background: "linear-gradient(135deg,rgba(0,255,136,.1),rgba(0,200,117,.06))",
@@ -743,27 +742,6 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
               style={{ width: 36, height: 36, minWidth: 36, color: "var(--muted-foreground)" }}
             >
               <Settings style={{ width: 20, height: 20 }} />
-            </button>
-
-            {/* 체험단 허브 관리자 버튼 */}
-            <button
-              title="체험단 허브 관리자"
-              onClick={() => navigate("/admin-campaigns")}
-              className="flex items-center justify-center rounded-full transition-all hover:bg-accent/20 flex-shrink-0"
-              style={{
-                width: 36, height: 36, minWidth: 36,
-                color: "var(--muted-foreground)",
-                position: "relative",
-                animation: "campGlow 3s ease-in-out infinite",
-              }}
-            >
-              <span style={{ fontSize: 18, lineHeight: 1 }}>⚙️</span>
-              <style>{`
-                @keyframes campGlow {
-                  0%,100% { filter: drop-shadow(0 0 0px rgba(236,72,153,0)); }
-                  50%     { filter: drop-shadow(0 0 5px rgba(236,72,153,0.7)); }
-                }
-              `}</style>
             </button>
           </div>
         </header>

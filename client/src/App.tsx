@@ -21,8 +21,6 @@ import MyPage from "./pages/MyPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import MonetizationPage from "./pages/MonetizationPage";
 import AdminRevenueDashboard from "./pages/AdminRevenueDashboard";
-import CampaignPage from "./pages/CampaignPage";
-import AdminCampaignPage from "./pages/AdminCampaignPage";
 import TemplatePage from "./pages/TemplatePage";
 
 function PrivateRoute({ component: Component }: { component: React.ComponentType }) {
@@ -60,8 +58,6 @@ function Router() {
       <Route path="/settings" component={() => <PrivateRoute component={SettingsPage} />} />
       <Route path="/admin" component={() => <PrivateRoute component={MyPage} />} />
       <Route path="/mypage" component={() => <PrivateRoute component={MyPage} />} />
-      <Route path="/campaigns" component={() => <PrivateRoute component={CampaignPage} />} />
-      <Route path="/admin-campaigns" component={AdminCampaignPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
