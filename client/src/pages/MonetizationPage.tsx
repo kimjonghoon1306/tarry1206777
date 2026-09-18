@@ -486,18 +486,6 @@ export default function MonetizationPage() {
             </div>
             {/* 테마 - PC: 아이콘+텍스트, 모바일: 아이콘만 */}
             <ThemeNavBtn isLight={isLight} onToggle={toggleTheme} border={lc.border} textColor={lc.text} />
-            {/* 슈퍼어드민 버튼 - 연한 빨강 + 호버 애니메이션 */}
-            <NavBtn
-              emoji="🏠"
-              title="슈퍼어드민"
-              href="/superadmin"
-              bg="#ff000018"
-              bgHov="#ff000030"
-              border="#ff000045"
-              borderHov="#ff000080"
-              color="#ff6b6b"
-              glow="#ff000040"
-            />
             {/* 대시보드 버튼 - 연한 핑크 + 호버 애니메이션 */}
             <NavBtn
               emoji="📊"

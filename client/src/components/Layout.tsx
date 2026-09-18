@@ -733,16 +733,6 @@ export default function Layout({ children, currentLang = "ko", onLangChange }: L
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* 관리자 톱니바퀴 */}
-            <button
-              title="관리자"
-              onClick={() => navigate("/superadmin")}
-              className="flex items-center justify-center rounded-full transition-colors hover:bg-accent/20 flex-shrink-0"
-              style={{ width: 36, height: 36, minWidth: 36, color: "var(--muted-foreground)" }}
-            >
-              <Settings style={{ width: 20, height: 20 }} />
-            </button>
           </div>
         </header>
 
