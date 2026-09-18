@@ -53,8 +53,8 @@ function toAspectRatio(size) {
 function optimizePrompt(prompt) {
   const p = prompt.toLowerCase();
 
-  // 스타일 기본값
-  const base = "photorealistic, ultra detailed, 8K resolution, professional photography";
+  // 스타일 기본값 (★이미지 안 글자 깨짐 방지: 모든 이미지에 텍스트/문자 금지를 공통 적용)
+  const base = "photorealistic, ultra detailed, 8K resolution, professional photography, no text, no letters, no words, no numbers, no captions, no watermark, no signage, no logos, no UI screens";
 
   // 음식/맛집
   if (p.match(/맛집|음식|요리|식당|레스토랑|먹|카페|디저트|food|restaurant|cafe|cooking|recipe/)) {
@@ -70,7 +70,7 @@ function optimizePrompt(prompt) {
   }
   // 재테크/금융/투자
   if (p.match(/재테크|투자|주식|부동산|금융|돈|수익|finance|investment|money|stock|real estate/)) {
-    return `${prompt}, professional business photography, modern office, financial charts, clean minimal design, corporate style, ${base}`;
+    return `${prompt}, professional business photography, modern office, abstract financial growth concept with coins and upward arrows, clean minimal design, corporate style, ${base}`;
   }
   // IT/기술/AI
   if (p.match(/IT|기술|ai|인공지능|코딩|개발|앱|소프트웨어|tech|software|app|digital|computer/i)) {

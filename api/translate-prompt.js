@@ -28,6 +28,7 @@ Convert this Korean blog topic into ONE English image prompt.
 RULES:
 - English ONLY
 - NO people, NO faces, NO persons, NO hands
+- NO text, NO letters, NO words, NO numbers, NO signs, NO UI screens, NO charts or documents with readable writing
 - Describe physical objects, scenery, or settings
 - Be specific to the exact topic meaning
 - Max 12 words
